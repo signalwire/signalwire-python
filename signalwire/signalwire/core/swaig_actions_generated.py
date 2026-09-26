@@ -91,13 +91,13 @@ class SwaigAction(TypedDict, total=False):
 
 
 class SwaigResponse(TypedDict, total=False):
-    """Parsed at actions.c:2228-2276.
+    """Parsed at actions.c:2479-2521.
 
     Open shape: extra server keys are permitted and partial payloads are valid;
     not validated at runtime (a TypedDict is a plain ``dict``).
     """
 
-    response: str
+    response: str | dict[str, Any]
     action: SwaigAction | list[SwaigAction]
     post_process: bool
 

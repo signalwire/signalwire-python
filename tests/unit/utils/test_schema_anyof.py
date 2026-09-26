@@ -228,7 +228,9 @@ class TestRefFollowingStillWorks:
 
 
 class TestEngagedVerbCount:
-    """The aggregate: 41 engaged verbs in the shipped schema, with the
+    """The aggregate: 44 engaged verbs in the shipped schema (41 + the three
+    experimental verbs the bundle now publishes -- bind_digit,
+    clear_digit_bindings, set_capabilities -- each with a closed key set), with the
     union-shaped ones named. An aggregate-only assertion would let a resolver
     that engaged the WRONG four pass, so both are pinned."""
 
@@ -240,13 +242,22 @@ class TestEngagedVerbCount:
         }
         disengaged = set(schema_utils.verbs) - engaged
 
-        assert len(engaged) == 41, (
-            f"expected 41 engaged verbs, got {len(engaged)}; "
+        assert len(engaged) == 44, (
+            f"expected 44 engaged verbs, got {len(engaged)}; "
             f"disengaged = {sorted(disengaged)}"
         )
         # The union-shaped verbs with object branches, which the pre-fix
         # resolver bailed on.
-        for verb in ["sleep", "play", "send_sms", "connect", "label"]:
+        for verb in [
+            "sleep",
+            "play",
+            "send_sms",
+            "connect",
+            "label",
+            "bind_digit",
+            "clear_digit_bindings",
+            "set_capabilities",
+        ]:
             assert verb in engaged, f"{verb} must be engaged after the fix"
         # Nothing may be weakened: these have no closed key-set.
         assert disengaged == set(NON_ENUMERABLE_VERBS), (

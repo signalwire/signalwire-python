@@ -25,7 +25,7 @@
       "properties": {
         "ai": {
           "title": "ai Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "ai Method",
@@ -58,7 +58,7 @@
                             ]
                           },
                           "argument": {
-                            "type": "object"
+                            "$ref": "#/$defs/JsonSchemaUnion"
                           },
                           "data_map": {
                             "$ref": "#/$defs/DataMap"
@@ -76,7 +76,7 @@
                             "type": "string"
                           },
                           "parameters": {
-                            "type": "object"
+                            "$ref": "#/$defs/JsonSchemaUnion"
                           },
                           "purpose": {
                             "type": "string"
@@ -157,7 +157,7 @@
                                 ]
                               },
                               "argument": {
-                                "$ref": "#/$defs/JsonSchema"
+                                "$ref": "#/$defs/JsonSchemaUnion"
                               },
                               "data_map": {
                                 "$ref": "#/$defs/DataMap"
@@ -175,7 +175,7 @@
                                 "type": "string"
                               },
                               "parameters": {
-                                "$ref": "#/$defs/JsonSchema"
+                                "$ref": "#/$defs/JsonSchemaUnion"
                               },
                               "purpose": {
                                 "type": "string"
@@ -250,7 +250,7 @@
                                 ]
                               },
                               "argument": {
-                                "type": "object"
+                                "$ref": "#/$defs/JsonSchemaUnion"
                               },
                               "data_map": {
                                 "$ref": "#/$defs/DataMap"
@@ -268,7 +268,7 @@
                                 "type": "string"
                               },
                               "parameters": {
-                                "type": "object"
+                                "$ref": "#/$defs/JsonSchemaUnion"
                               },
                               "purpose": {
                                 "type": "string"
@@ -493,24 +493,10 @@
                         "type": "string"
                       },
                       "fillers": {
-                        "anyOf": [
-                          {
-                            "type": "array"
-                          },
-                          {
-                            "type": "object"
-                          }
-                        ]
+                        "type": "array"
                       },
                       "function_fillers": {
-                        "anyOf": [
-                          {
-                            "type": "array"
-                          },
-                          {
-                            "type": "object"
-                          }
-                        ]
+                        "type": "array"
                       },
                       "listen_language": {
                         "anyOf": [
@@ -620,14 +606,7 @@
                         "type": "array"
                       },
                       "speech_fillers": {
-                        "anyOf": [
-                          {
-                            "type": "array"
-                          },
-                          {
-                            "type": "object"
-                          }
-                        ]
+                        "type": "array"
                       },
                       "turn_fillers": {
                         "type": "array"
@@ -1781,7 +1760,29 @@
                       "type": "string"
                     },
                     "inner_dialog_scorecard": {
-                      "type": "boolean"
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "dials": {
+                              "type": "array"
+                            },
+                            "replace": {
+                              "anyOf": [
+                                {
+                                  "type": "boolean"
+                                },
+                                {
+                                  "type": "string"
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      ]
                     },
                     "input_poll_freq": {
                       "minimum": 1000,
@@ -2790,7 +2791,6 @@
                       ]
                     },
                     "transparent_barge": {
-                      "default": true,
                       "anyOf": [
                         {
                           "type": "boolean"
@@ -3007,6 +3007,7 @@
                   "description": "The final set of instructions and configuration settings to send to the agent.",
                   "type": "object",
                   "properties": {
+                    "frequency_penalty": {},
                     "max_completion_tokens": {
                       "type": "number"
                     },
@@ -3042,6 +3043,7 @@
                         }
                       }
                     },
+                    "presence_penalty": {},
                     "reasoning_effort": {
                       "type": "string"
                     },
@@ -3099,8 +3101,12 @@
                   "type": "object",
                   "properties": {
                     "contexts": {
-                      "type": "object"
+                      "type": "object",
+                      "additionalProperties": {
+                        "$ref": "#/$defs/Context"
+                      }
                     },
+                    "frequency_penalty": {},
                     "max_completion_tokens": {
                       "type": "number"
                     },
@@ -3136,6 +3142,7 @@
                         }
                       }
                     },
+                    "presence_penalty": {},
                     "reasoning_effort": {
                       "type": "string"
                     },
@@ -3320,7 +3327,7 @@
       "properties": {
         "ai_sidecar": {
           "title": "ai_sidecar Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "ai_sidecar Method",
@@ -3349,7 +3356,7 @@
                                 "type": "string"
                               },
                               "parameters": {
-                                "$ref": "#/$defs/JsonSchema"
+                                "$ref": "#/$defs/JsonSchemaUnion"
                               },
                               "purpose": {
                                 "type": "string"
@@ -3696,7 +3703,7 @@
       "properties": {
         "amazon_bedrock": {
           "title": "amazon_bedrock Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "amazon_bedrock Method",
@@ -3719,7 +3726,7 @@
                             "type": "string"
                           },
                           "data_map": {
-                            "type": "object"
+                            "$ref": "#/$defs/DataMap"
                           },
                           "function": {
                             "type": "string"
@@ -3731,7 +3738,7 @@
                             "type": "string"
                           },
                           "parameters": {
-                            "type": "object"
+                            "$ref": "#/$defs/JsonSchema"
                           },
                           "web_hook_url": {
                             "type": "string"
@@ -3844,7 +3851,30 @@
                   "type": "object",
                   "properties": {
                     "pom": {
-                      "type": "array"
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "title": {
+                            "type": "string"
+                          },
+                          "body": {
+                            "type": "string"
+                          },
+                          "bullets": {
+                            "type": "array"
+                          },
+                          "numbered": {
+                            "type": "boolean"
+                          },
+                          "numberedBullets": {
+                            "type": "boolean"
+                          },
+                          "subsections": {
+                            "type": "array"
+                          }
+                        }
+                      }
                     },
                     "text": {
                       "type": "string"
@@ -3864,7 +3894,30 @@
                   "type": "object",
                   "properties": {
                     "pom": {
-                      "type": "array"
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "title": {
+                            "type": "string"
+                          },
+                          "body": {
+                            "type": "string"
+                          },
+                          "bullets": {
+                            "type": "array"
+                          },
+                          "numbered": {
+                            "type": "boolean"
+                          },
+                          "numberedBullets": {
+                            "type": "boolean"
+                          },
+                          "subsections": {
+                            "type": "array"
+                          }
+                        }
+                      }
                     },
                     "temperature": {
                       "anyOf": [
@@ -3948,7 +4001,7 @@
       "properties": {
         "answer": {
           "title": "answer Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "answer Method",
@@ -4126,6 +4179,54 @@
         "not": {}
       }
     },
+    "BindDigit": {
+      "title": "BindDigit object",
+      "type": "object",
+      "properties": {
+        "bind_digit": {
+          "title": "bind_digit",
+          "description": "Bind DTMF digit actions.",
+          "type": "object",
+          "properties": {
+            "digits": {
+              "type": "string"
+            },
+            "max_triggers": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "$ref": "#/$defs/SWMLVar"
+                }
+              ]
+            },
+            "method": {
+              "type": "string"
+            },
+            "params": {
+              "type": "object"
+            },
+            "realm": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "digits",
+            "method"
+          ],
+          "unevaluatedProperties": {
+            "not": {}
+          }
+        }
+      },
+      "required": [
+        "bind_digit"
+      ],
+      "unevaluatedProperties": {
+        "not": {}
+      }
+    },
     "CallDeviceStream": {
       "title": "CallDeviceStream",
       "type": "object",
@@ -4259,13 +4360,38 @@
         "not": {}
       }
     },
+    "ClearDigitBindings": {
+      "title": "ClearDigitBindings object",
+      "type": "object",
+      "properties": {
+        "clear_digit_bindings": {
+          "title": "clear_digit_bindings",
+          "description": "Clear all digit bindings.",
+          "type": "object",
+          "properties": {
+            "realm": {
+              "type": "string"
+            }
+          },
+          "unevaluatedProperties": {
+            "not": {}
+          }
+        }
+      },
+      "required": [
+        "clear_digit_bindings"
+      ],
+      "unevaluatedProperties": {
+        "not": {}
+      }
+    },
     "Cond": {
       "title": "Cond object",
       "type": "object",
       "properties": {
         "cond": {
           "title": "cond Method",
-          "description": "Body shape enforced by is_valid_cond_method, swml_schema.c:1249.",
+          "description": "Body shape enforced by is_valid_cond_method, swml_schema.c:1271.",
           "type": "array",
           "items": {
             "type": "object",
@@ -4600,11 +4726,73 @@
               "description": "Action to take based on the result of the call. This will run once the peer leg of the call has ended.\nWill use the switch method when the return_value is an object, and will use the cond method when the return_value is an array.",
               "anyOf": [
                 {
+                  "description": "Body shape enforced by is_valid_cond_method, swml_schema.c:1271.",
                   "type": "array",
-                  "items": {}
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "else": {
+                        "type": "array"
+                      },
+                      "then": {
+                        "type": "array"
+                      },
+                      "when": {
+                        "type": "string"
+                      }
+                    },
+                    "unevaluatedProperties": {
+                      "not": {}
+                    }
+                  }
                 },
                 {
-                  "type": "object"
+                  "description": "Execute different instructions based on a variable's value.",
+                  "type": "object",
+                  "properties": {
+                    "default": {
+                      "description": "Array of SWML methods to execute if no `case` matches. If omitted and no case\nmatches, execution stops with an error.",
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/$defs/SWMLMethod"
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "code": {},
+                            "meta": {}
+                          },
+                          "unevaluatedProperties": {
+                            "not": {}
+                          }
+                        }
+                      ]
+                    },
+                    "case": {
+                      "description": "Map of values to arrays of SWML methods to execute. The key is the value to compare\nagainst `variable` (after applying `transform`); the value is the array of methods\nto run on match.",
+                      "type": "object"
+                    },
+                    "variable": {
+                      "description": "Variable path to match. Specified without the `%{}` wrapper (e.g. `message.body`).",
+                      "examples": [
+                        "message.body"
+                      ],
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "$ref": "#/$defs/SWMLVar"
+                        }
+                      ]
+                    }
+                  },
+                  "unevaluatedProperties": {
+                    "not": {}
+                  }
                 }
               ]
             },
@@ -5133,11 +5321,126 @@
         "not": {}
       }
     },
+    "Context": {
+      "title": "Context",
+      "type": "object",
+      "properties": {
+        "consolidate": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "enter_fillers": {
+          "type": "object"
+        },
+        "exit_fillers": {
+          "type": "object"
+        },
+        "full_reset": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "history": {
+          "type": "string"
+        },
+        "initial_step": {
+          "type": "string"
+        },
+        "isolated": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "pom": {
+          "type": "array"
+        },
+        "post_prompt": {
+          "type": "object"
+        },
+        "prompt": {
+          "type": "string"
+        },
+        "reset": {
+          "anyOf": [
+            {
+              "type": "array"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "object"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "steps": {
+          "type": "array"
+        },
+        "system_prompt": {
+          "type": "string"
+        },
+        "user_prompt": {
+          "type": "string"
+        },
+        "valid_contexts": {
+          "type": "array"
+        },
+        "valid_steps": {
+          "type": "array"
+        }
+      }
+    },
     "DataMap": {
       "title": "DataMap",
       "type": "object",
       "properties": {
-        "contexts": {},
+        "contexts": {
+          "anyOf": [
+            {
+              "type": "array"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "object"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
         "expressions": {
           "anyOf": [
             {
@@ -5151,7 +5454,9 @@
             }
           ]
         },
-        "output": {},
+        "output": {
+          "$ref": "#/$defs/SwaigResponse"
+        },
         "webhooks": {
           "anyOf": [
             {
@@ -5173,7 +5478,7 @@
       "properties": {
         "denoise": {
           "title": "denoise Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "denoise Method",
@@ -5212,7 +5517,7 @@
       "properties": {
         "detect_machine": {
           "title": "detect_machine Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "detect_machine Method",
@@ -5798,7 +6103,7 @@
       "properties": {
         "echo": {
           "title": "echo",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "echo",
@@ -5899,7 +6204,7 @@
       "properties": {
         "enter_queue": {
           "title": "enter_queue Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "enter_queue Method",
@@ -5979,8 +6284,7 @@
                 "whisper_url": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "format": "uri"
+                      "type": "string"
                     },
                     {
                       "$ref": "#/$defs/SWMLVar"
@@ -6036,7 +6340,7 @@
       "properties": {
         "execute": {
           "title": "execute Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "execute Method",
@@ -6103,11 +6407,73 @@
                   "description": "Action to take based on the result of the call. This will run once the peer leg of the call has ended.\nWill use the switch method when the return_value is an object, and will use the cond method when the return_value is an array.",
                   "anyOf": [
                     {
+                      "description": "Body shape enforced by is_valid_cond_method, swml_schema.c:1271.",
                       "type": "array",
-                      "items": {}
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "else": {
+                            "type": "array"
+                          },
+                          "then": {
+                            "type": "array"
+                          },
+                          "when": {
+                            "type": "string"
+                          }
+                        },
+                        "unevaluatedProperties": {
+                          "not": {}
+                        }
+                      }
                     },
                     {
-                      "type": "object"
+                      "description": "Execute different instructions based on a variable's value.",
+                      "type": "object",
+                      "properties": {
+                        "default": {
+                          "description": "Array of SWML methods to execute if no `case` matches. If omitted and no case\nmatches, execution stops with an error.",
+                          "anyOf": [
+                            {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/$defs/SWMLMethod"
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "code": {},
+                                "meta": {}
+                              },
+                              "unevaluatedProperties": {
+                                "not": {}
+                              }
+                            }
+                          ]
+                        },
+                        "case": {
+                          "description": "Map of values to arrays of SWML methods to execute. The key is the value to compare\nagainst `variable` (after applying `transform`); the value is the array of methods\nto run on match.",
+                          "type": "object"
+                        },
+                        "variable": {
+                          "description": "Variable path to match. Specified without the `%{}` wrapper (e.g. `message.body`).",
+                          "examples": [
+                            "message.body"
+                          ],
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "$ref": "#/$defs/SWMLVar"
+                            }
+                          ]
+                        }
+                      },
+                      "unevaluatedProperties": {
+                        "not": {}
+                      }
                     }
                   ]
                 }
@@ -6178,7 +6544,7 @@
       "properties": {
         "execute_rpc": {
           "title": "execute_rpc",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "execute_rpc",
@@ -6262,8 +6628,12 @@
         "expr": {
           "type": "string"
         },
-        "nomatch-output": {},
-        "output": {},
+        "nomatch-output": {
+          "$ref": "#/$defs/SwaigResponse"
+        },
+        "output": {
+          "$ref": "#/$defs/SwaigResponse"
+        },
         "string": {
           "type": "string"
         }
@@ -6279,7 +6649,16 @@
         "input_key": {
           "type": "string"
         },
-        "max": {},
+        "max": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
         "output_key": {
           "type": "string"
         }
@@ -6291,7 +6670,7 @@
       "properties": {
         "goto": {
           "title": "goto Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "goto Method",
@@ -6410,7 +6789,7 @@
       "properties": {
         "hangup": {
           "title": "hangup Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "hangup Method",
@@ -6519,7 +6898,7 @@
       "properties": {
         "if": {
           "title": "if",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "deprecated": true,
           "anyOf": [
             {
@@ -6611,7 +6990,7 @@
       "properties": {
         "join_conference": {
           "title": "join_conference Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "join_conference Method",
@@ -7093,7 +7472,7 @@
       "properties": {
         "join_room": {
           "title": "join_room Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "join_room Method",
@@ -7177,7 +7556,7 @@
     },
     "JsonSchema": {
       "title": "JsonSchema",
-      "description": "A JSON Schema (draft 2020-12). The value is forwarded verbatim to the receiving tool-call API, which owns this contract; the engine does not inspect it.",
+      "description": "A JSON Schema (draft 2020-12). The value is forwarded verbatim to the receiving model API, which owns this contract; the engine does not inspect it.",
       "type": "object",
       "properties": {
         "title": {
@@ -7499,13 +7878,347 @@
         }
       }
     },
+    "JsonSchemaUnion": {
+      "title": "JsonSchemaUnion",
+      "description": "A JSON Schema (draft 2020-12) that may also carry `example`, `nullable`, `propertyOrdering`: the value is forwarded verbatim to whichever model API the session resolves to, and those receivers do not accept one vocabulary, so a schema here must be able to express their UNION (vocabulary_union). The engine does not inspect it.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "array",
+                "boolean",
+                "integer",
+                "null",
+                "number",
+                "object",
+                "string"
+              ]
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "array",
+                  "boolean",
+                  "integer",
+                  "null",
+                  "number",
+                  "object",
+                  "string"
+                ]
+              }
+            }
+          ]
+        },
+        "const": {},
+        "enum": {
+          "type": "array"
+        },
+        "format": {
+          "type": "string"
+        },
+        "pattern": {
+          "type": "string"
+        },
+        "minimum": {
+          "type": "number"
+        },
+        "maximum": {
+          "type": "number"
+        },
+        "exclusiveMinimum": {
+          "type": "number"
+        },
+        "exclusiveMaximum": {
+          "type": "number"
+        },
+        "minLength": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxLength": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "minItems": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxItems": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "minProperties": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxProperties": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "default": {},
+        "examples": {
+          "type": "array"
+        },
+        "deprecated": {
+          "type": "boolean"
+        },
+        "nullable": {
+          "type": "boolean"
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/JsonSchemaUnion"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          }
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "prefixItems": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/JsonSchemaUnion"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          }
+        },
+        "items": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonSchemaUnion"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "propertyNames": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonSchemaUnion"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "additionalProperties": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonSchemaUnion"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "unevaluatedProperties": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonSchemaUnion"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "oneOf": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/JsonSchemaUnion"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          }
+        },
+        "anyOf": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/JsonSchemaUnion"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          }
+        },
+        "allOf": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/JsonSchemaUnion"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          }
+        },
+        "not": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonSchemaUnion"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "contains": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonSchemaUnion"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "dependentRequired": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "dependentSchemas": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/JsonSchemaUnion"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          }
+        },
+        "else": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonSchemaUnion"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "example": {},
+        "if": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonSchemaUnion"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "maxContains": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "minContains": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "multipleOf": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "patternProperties": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/JsonSchemaUnion"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          }
+        },
+        "propertyOrdering": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "readOnly": {
+          "type": "boolean"
+        },
+        "then": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonSchemaUnion"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "unevaluatedItems": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonSchemaUnion"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "uniqueItems": {
+          "type": "boolean"
+        },
+        "writeOnly": {
+          "type": "boolean"
+        }
+      }
+    },
     "Label": {
       "title": "Label object",
       "type": "object",
       "properties": {
         "label": {
           "title": "label Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "label Method",
@@ -7575,7 +8288,7 @@
       "properties": {
         "live_transcribe": {
           "title": "live_transcribe Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "live_transcribe Method",
@@ -7768,7 +8481,7 @@
       "properties": {
         "live_translate": {
           "title": "live_translate Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "live_translate Method",
@@ -7950,7 +8663,7 @@
       "properties": {
         "pay": {
           "title": "pay Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "pay Method",
@@ -8357,7 +9070,7 @@
       "properties": {
         "play": {
           "title": "play Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "play Method",
@@ -8548,7 +9261,7 @@
       "properties": {
         "prompt": {
           "title": "prompt Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "prompt Method",
@@ -8901,13 +9614,47 @@
         "not": {}
       }
     },
+    "PromptPomSection": {
+      "title": "PromptPomSection",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "bullets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "numbered": {
+          "type": "boolean"
+        },
+        "numberedBullets": {
+          "type": "boolean"
+        },
+        "subsections": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PromptPomSection"
+          }
+        }
+      },
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": true
+    },
     "ReceiveFax": {
       "title": "ReceiveFax object",
       "type": "object",
       "properties": {
         "receive_fax": {
           "title": "receive_fax Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "receive_fax Method",
@@ -8995,7 +9742,7 @@
       "properties": {
         "record": {
           "title": "record Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "record Method",
@@ -9197,7 +9944,7 @@
       "properties": {
         "record_call": {
           "title": "record_call Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "record_call Method",
@@ -9413,7 +10160,7 @@
       "properties": {
         "request": {
           "title": "request Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "request Method",
@@ -9573,7 +10320,7 @@
       "properties": {
         "return": {
           "title": "return Method",
-          "description": "Body shape enforced by CHECK_swml_method_return, swml_schema.c:1468.",
+          "description": "Body shape enforced by CHECK_swml_method_return, swml_schema.c:1495.",
           "anyOf": [
             {
               "title": "return Method",
@@ -9612,7 +10359,7 @@
       "properties": {
         "ring": {
           "title": "ring",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "ring",
@@ -9694,7 +10441,7 @@
       "properties": {
         "sip_refer": {
           "title": "sip_refer Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "sip_refer Method",
@@ -9862,6 +10609,12 @@
           "$ref": "#/$defs/Answer"
         },
         {
+          "$ref": "#/$defs/BindDigit"
+        },
+        {
+          "$ref": "#/$defs/ClearDigitBindings"
+        },
+        {
           "$ref": "#/$defs/Cond"
         },
         {
@@ -9958,6 +10711,9 @@
           "$ref": "#/$defs/Set"
         },
         {
+          "$ref": "#/$defs/SetCapabilities"
+        },
+        {
           "$ref": "#/$defs/SetMeta"
         },
         {
@@ -10033,7 +10789,7 @@
       "properties": {
         "send_digits": {
           "title": "send_digits Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "send_digits Method",
@@ -10121,7 +10877,7 @@
       "properties": {
         "send_fax": {
           "title": "send_fax Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "send_fax Method",
@@ -10434,13 +11190,66 @@
         "not": {}
       }
     },
+    "SetCapabilities": {
+      "title": "SetCapabilities object",
+      "type": "object",
+      "properties": {
+        "set_capabilities": {
+          "title": "set_capabilities",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
+          "anyOf": [
+            {
+              "title": "set_capabilities",
+              "description": "Override subscriber capabilities",
+              "type": "object",
+              "properties": {
+                "capabilities": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "capabilities"
+              ],
+              "unevaluatedProperties": {
+                "not": {}
+              }
+            },
+            {
+              "type": "array"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "set_capabilities"
+      ],
+      "unevaluatedProperties": {
+        "not": {}
+      }
+    },
     "SetMeta": {
       "title": "SetMeta object",
       "type": "object",
       "properties": {
         "set_meta": {
           "title": "set_meta",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "set_meta",
@@ -10483,7 +11292,7 @@
       "properties": {
         "sleep": {
           "title": "sleep Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "sleep Method",
@@ -10581,13 +11390,79 @@
         "not": {}
       }
     },
+    "Step": {
+      "title": "Step",
+      "type": "object",
+      "properties": {
+        "end": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "functions": {
+          "type": "array"
+        },
+        "gather_info": {
+          "type": "object"
+        },
+        "history": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "pom": {
+          "type": "array"
+        },
+        "reset": {
+          "type": "object"
+        },
+        "skip_to_next_step": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "skip_user_turn": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "step_criteria": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "valid_contexts": {
+          "type": "array"
+        },
+        "valid_steps": {
+          "type": "array"
+        }
+      }
+    },
     "StopDenoise": {
       "title": "StopDenoise object",
       "type": "object",
       "properties": {
         "stop_denoise": {
           "title": "stop_denoise Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "stop_denoise Method",
@@ -10626,7 +11501,7 @@
       "properties": {
         "stop_record_call": {
           "title": "stop_record_call Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "stop_record_call Method",
@@ -10711,7 +11586,7 @@
       "properties": {
         "stop_stream": {
           "title": "stop_stream Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "stop_stream Method",
@@ -10790,7 +11665,7 @@
       "properties": {
         "stop_tap": {
           "title": "stop_tap Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "stop_tap Method",
@@ -10869,7 +11744,7 @@
       "properties": {
         "stream": {
           "title": "stream Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "stream Method",
@@ -11066,13 +11941,437 @@
         "not": {}
       }
     },
+    "SwaigAction": {
+      "title": "SwaigAction",
+      "type": "object",
+      "properties": {
+        "SWML": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": true
+            }
+          ]
+        },
+        "add_dynamic_hints": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "pattern": {
+                    "type": "string"
+                  },
+                  "hint": {
+                    "type": "string"
+                  },
+                  "ignore_case": {
+                    "type": [
+                      "boolean",
+                      "string"
+                    ]
+                  },
+                  "replace": {
+                    "type": "string"
+                  }
+                },
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": true
+              },
+              {
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "back_to_back_functions": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "const": "forever"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "change_context": {
+          "type": "string"
+        },
+        "change_step": {
+          "type": "string"
+        },
+        "change_voice": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "voice": {}
+              }
+            }
+          ]
+        },
+        "clear_dynamic_hints": {
+          "type": [
+            "boolean",
+            "string"
+          ]
+        },
+        "context_switch": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "consolidate": {
+                  "type": [
+                    "boolean",
+                    "string"
+                  ]
+                },
+                "full_reset": {
+                  "type": [
+                    "boolean",
+                    "string"
+                  ]
+                },
+                "system_pom": {
+                  "type": "object",
+                  "properties": {
+                    "pom": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/PromptPomSection"
+                      }
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": true
+                },
+                "system_prompt": {
+                  "type": "string"
+                },
+                "user_pom": {
+                  "type": "object",
+                  "properties": {
+                    "pom": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/PromptPomSection"
+                      }
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": true
+                },
+                "user_prompt": {
+                  "type": "string"
+                }
+              }
+            }
+          ]
+        },
+        "end_of_speech_timeout": {
+          "type": "integer"
+        },
+        "extensive_data": {
+          "type": [
+            "boolean",
+            "string"
+          ]
+        },
+        "functions_on_speaker_timeout": {
+          "type": [
+            "boolean",
+            "string"
+          ]
+        },
+        "hangup": {
+          "type": [
+            "boolean",
+            "string"
+          ]
+        },
+        "hold": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "step": {
+                  "type": "string"
+                },
+                "timeout": {
+                  "type": [
+                    "number",
+                    "string"
+                  ]
+                },
+                "timeout_step": {
+                  "type": "string"
+                }
+              },
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": true
+            }
+          ]
+        },
+        "playback_bg": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "file": {
+                  "type": "string"
+                },
+                "wait": {
+                  "type": [
+                    "boolean",
+                    "string"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "replace_in_history": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "const": true
+            }
+          ]
+        },
+        "say": {
+          "type": "string"
+        },
+        "set_global_data": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": true
+        },
+        "set_meta_data": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": true
+        },
+        "settings": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": true
+        },
+        "speech_event_timeout": {
+          "type": "integer"
+        },
+        "stop": {
+          "type": [
+            "boolean",
+            "string"
+          ]
+        },
+        "stop_playback_bg": {
+          "type": [
+            "boolean",
+            "string",
+            "integer",
+            "object",
+            "array",
+            "null"
+          ],
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": true
+        },
+        "toggle_functions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "active": {
+                "type": [
+                  "boolean",
+                  "number",
+                  "string"
+                ]
+              },
+              "function": {
+                "type": "string"
+              }
+            },
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": true
+          }
+        },
+        "transfer": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "dest": {
+                  "type": "string"
+                },
+                "summarize": {
+                  "type": [
+                    "boolean",
+                    "string"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "unset_global_data": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "unset_meta_data": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "user_event": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": true
+        },
+        "user_input": {
+          "type": "string"
+        },
+        "wait_for_user": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "const": "answer_first"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "SwaigResponse": {
+      "title": "SwaigResponse",
+      "type": "object",
+      "properties": {
+        "action": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/SwaigAction"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/SwaigAction"
+              }
+            }
+          ]
+        },
+        "post_process": {
+          "type": "boolean"
+        },
+        "response": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "tool_prompt": {
+                  "type": "string"
+                },
+                "tool_result": {
+                  "type": "string"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
     "Switch": {
       "title": "Switch object",
       "type": "object",
       "properties": {
         "switch": {
           "title": "switch Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "switch Method",
@@ -11151,7 +12450,7 @@
       "properties": {
         "tap": {
           "title": "tap Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "tap Method",
@@ -11347,7 +12646,7 @@
       "properties": {
         "transcribe": {
           "title": "transcribe Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "transcribe Method",
@@ -11399,7 +12698,7 @@
       "properties": {
         "transcribe_stop": {
           "title": "transcribe_stop Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "transcribe_stop Method",
@@ -11432,7 +12731,7 @@
       "properties": {
         "transfer": {
           "title": "transfer Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "transfer Method",
@@ -11570,7 +12869,7 @@
       "properties": {
         "user_event": {
           "title": "user_event Method",
-          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
           "anyOf": [
             {
               "title": "user_event Method",
@@ -11620,45 +12919,78 @@
       "type": "object",
       "properties": {
         "error_keys": {
-          "type": "array"
+          "anyOf": [
+            {
+              "type": "array"
+            },
+            {
+              "type": "string"
+            }
+          ]
         },
         "expressions": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Expression"
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Expression"
+              }
             },
             {
-              "not": {
-                "type": "object"
-              }
+              "$ref": "#/$defs/Expression"
             }
           ]
         },
         "foreach": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Foreach"
-            },
-            {
-              "not": {
-                "type": "object"
-              }
-            }
-          ]
+          "$ref": "#/$defs/Foreach"
         },
         "form_param": {
           "type": "string"
         },
-        "headers": {},
+        "headers": {
+          "type": "object"
+        },
         "input_args_as_params": {
           "type": "boolean"
         },
         "method": {
           "type": "string"
         },
-        "output": {},
-        "params": {},
-        "require_args": {},
+        "output": {
+          "$ref": "#/$defs/SwaigResponse"
+        },
+        "params": {
+          "anyOf": [
+            {
+              "type": "array"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "object"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "require_args": {
+          "anyOf": [
+            {
+              "type": "array"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
         "url": {
           "type": "string"
         }
