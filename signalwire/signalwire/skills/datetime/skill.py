@@ -101,7 +101,7 @@ class DateTimeSkill(SkillBase):
         # return ["time", "date", "today", "now", "current", "timezone"]
         return []
 
-    def get_prompt_sections(self) -> list[dict[str, Any]]:
+    def _get_prompt_sections(self) -> list[dict[str, Any]]:
         """Return prompt sections to add to agent"""
         return [
             {

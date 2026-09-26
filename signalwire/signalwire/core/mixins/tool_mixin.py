@@ -199,6 +199,7 @@ class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
 
         @agent.tool(name="example_function", parameters={...})
         def example_function(self, param1):
+            '''Describe here, for the model, what the tool does.'''
             # ...
         """
         # ToolDecorator.create_instance_decorator is untyped (cross-file:
@@ -218,6 +219,7 @@ class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
 
         @AgentBase.tool(name="example_function", parameters={...})
         def example_function(self, param1):
+            '''Describe here, for the model, what the tool does.'''
             # ...
         """
         # ToolDecorator.create_class_decorator is untyped (cross-file:

@@ -58,6 +58,9 @@ except ImportError:
 from signalwire.utils.schema_utils import (  # noqa: E402
     SchemaUtils,
     SchemaValidationError,
+    _verb_body,
+    _verb_method_name,
+    _verb_name_for_attribute,
 )
 from signalwire.core.swml_handler import (  # noqa: E402
     VerbHandlerRegistry,
@@ -87,7 +90,7 @@ class _NullLog:
     """
 
     def debug(self, *args: Any, **kwargs: Any) -> None:
-        return None
+        """Discard the log call."""
 
 
 _NULL_LOG = _NullLog()
@@ -267,7 +270,8 @@ class SWMLService(ToolMixin):
         # Create a method for each verb
         for verb_name in verb_names:
             # Skip verbs that already have specific methods
-            if hasattr(self, verb_name):
+            method_name = _verb_method_name(verb_name)
+            if hasattr(self, method_name):
                 self.log.debug("skipping_verb_has_method", verb=verb_name)
                 continue
 
@@ -297,7 +301,7 @@ class SWMLService(ToolMixin):
                     raise TypeError("sleep() missing required argument: 'duration'")
 
                 # Set it as an attribute of self
-                setattr(self, verb_name, types.MethodType(sleep_method, self))
+                setattr(self, method_name, types.MethodType(sleep_method, self))
 
                 # Also cache it for later
                 self._verb_methods_cache[verb_name] = sleep_method
@@ -307,17 +311,51 @@ class SWMLService(ToolMixin):
 
             # Generate the method implementation for normal verbs
             def make_verb_method(name: str) -> Callable[..., bool]:
-                def verb_method(self_instance: "SWMLService", **kwargs: Any) -> bool:
+                """
+                Build the service method for one SWML verb.
+
+                The closure binds ``name`` per verb; without it every generated
+                method would close over the shared loop variable and emit the
+                last verb in the schema.
+
+                The returned function takes the verb's config as one optional
+                positional mapping and/or keyword arguments, merges the keywords
+                over the mapping, drops every keyword whose value is None (so
+                unset options never reach the wire), and calls
+                ``add_verb(name, config)`` — returning that
+                call's bool, i.e. **False when the verb fails schema
+                validation** rather than raising. It carries the verb's schema
+                ``description`` as its ``__doc__`` when the schema has one.
+
+                This differs from the ``SWMLBuilder`` method of the same name,
+                which returns the builder for chaining instead of a bool.
+
+                ``sleep`` is NOT built here — it takes a bare integer rather
+                than an object in SWML and is special-cased by the caller.
+
+                Args:
+                    name: The SWML verb name, used as the emitted key. The
+                        method is installed under it, or under ``return_`` for
+                        a keyword verb such as ``return``.
+
+                Returns:
+                    An unbound function of ``(self_instance, config=None,
+                    **kwargs) -> bool``, which the caller binds with ``types.MethodType``
+                    and caches in ``_verb_methods_cache``.
+                """
+
+                def verb_method(
+                    self_instance: "SWMLService", config: Any = None, **kwargs: Any
+                ) -> bool:
                     """
                     Dynamically generated method for SWML verb
                     """
                     self.log.debug(
                         "executing_verb_method", verb=name, kwargs_count=len(kwargs)
                     )
-                    config = {
-                        key: value for key, value in kwargs.items() if value is not None
-                    }
-                    return self_instance.add_verb(name, config)
+                    return self_instance.add_verb(
+                        name, _verb_body(name, config, kwargs)
+                    )
 
                 # Add docstring to the method
                 verb_properties = self.schema_utils.get_verb_properties(name)
@@ -332,7 +370,7 @@ class SWMLService(ToolMixin):
             method = make_verb_method(verb_name)
 
             # Set it as an attribute of self
-            setattr(self, verb_name, types.MethodType(method, self))
+            setattr(self, method_name, types.MethodType(method, self))
 
             # Also cache it for later
             self._verb_methods_cache[verb_name] = method
@@ -410,7 +448,9 @@ class SWMLService(ToolMixin):
 
         verb_names = _schema_utils.get_all_verb_names()
 
-        if name in verb_names:
+        verb = _verb_name_for_attribute(name, verb_names)
+        if verb is not None:
+            name = verb
             _log.debug("getattr_valid_verb", verb=name)
 
             # Check if we already have this method in the cache
@@ -454,17 +494,16 @@ class SWMLService(ToolMixin):
                 return types.MethodType(sleep_method, self)
 
             # Generate the method implementation for normal verbs
-            def verb_method(self_instance: "SWMLService", **kwargs: Any) -> bool:
+            def verb_method(
+                self_instance: "SWMLService", config: Any = None, **kwargs: Any
+            ) -> bool:
                 """
                 Dynamically generated method for SWML verb
                 """
                 self.log.debug(
                     "executing_dynamic_verb", verb=name, kwargs_count=len(kwargs)
                 )
-                config = {
-                    key: value for key, value in kwargs.items() if value is not None
-                }
-                return self_instance.add_verb(name, config)
+                return self_instance.add_verb(name, _verb_body(name, config, kwargs))
 
             # Add docstring to the method
             verb_properties = self.schema_utils.get_verb_properties(name)
@@ -765,6 +804,31 @@ class SWMLService(ToolMixin):
         @router.post("/swaig")
         @router.post("/swaig/")
         async def handle_swaig(request: Request, response: Response) -> Response:
+            """Serve the ``/swaig`` endpoint (all four slash/method variants).
+
+            Delegates to ``_handle_swaig_request`` and coerces its result
+            through ``_as_response`` (that method may hand back a bare dict —
+            its historical contract — which FastAPI route handlers cannot
+            declare, so dicts become a ``JSONResponse``).
+
+            The underlying handler is basic-auth-gated and answers:
+
+            - GET → the SWML document, via ``_swaig_render_get_response``
+              (``call_id`` may be passed as a query param).
+            - POST → dispatch of the named SWAIG function from the JSON body's
+              ``function`` / ``argument`` / ``call_id`` fields, returning the
+              ``FunctionResult``-shaped payload.
+
+            Failure statuses come from that handler: 401 with
+            ``WWW-Authenticate: Basic`` when auth fails, 415 for a non-JSON
+            Content-Type, 413 for an oversized body, and 400 for a missing
+            ``function`` or a name that is not a bare identifier.
+
+            This endpoint is registered by ``SWMLService.as_router()``, so it
+            is available on ANY SWMLService, not just AgentBase — AgentBase
+            layers its extra behaviour on by overriding the handler's
+            extension points rather than by adding the route.
+            """
             return _as_response(await self._handle_swaig_request(request, response))
 
         # Register routing callbacks as needed
@@ -1407,13 +1471,35 @@ class SWMLService(ToolMixin):
         ssl_cert_path = ssl_cert or getattr(self, "ssl_cert_path", None)
         ssl_key_path = ssl_key or getattr(self, "ssl_key_path", None)
 
-        # Validate SSL configuration if enabled
+        # Validate SSL configuration if enabled.
+        #
+        # TLS that cannot be configured is a FATAL misconfiguration, never a
+        # silent downgrade: the operator asked for encryption, and starting a
+        # cleartext listener instead would ship their traffic — including the
+        # credentials carried in Basic auth — in the clear, with no error and
+        # no way to notice. Refuse to start.
         if self.ssl_enabled:
-            is_valid, error = self.security.validate_ssl_config()
-            if not is_valid:
-                self.log.warning("ssl_config_invalid", error=error)
-                self.ssl_enabled = False
-            elif not self.domain:
+            # Validate the paths that will actually reach uvicorn: they may
+            # come from the serve(ssl_cert=/ssl_key=) arguments, which the
+            # security config has never seen.
+            error: str | None = None
+            if not ssl_cert_path:
+                error = "SSL enabled but no certificate path configured"
+            elif not Path(ssl_cert_path).exists():
+                error = f"SSL certificate file not found: {ssl_cert_path}"
+            elif not ssl_key_path:
+                error = "SSL enabled but no private key path configured"
+            elif not Path(ssl_key_path).exists():
+                error = f"SSL key file not found: {ssl_key_path}"
+            if error is not None:
+                self.log.error("ssl_config_invalid", error=error)
+                raise RuntimeError(
+                    f"SSL is enabled but the TLS configuration is invalid: {error}. "
+                    f"Refusing to start a plaintext listener when TLS was "
+                    f"requested — fix SWML_SSL_CERT_PATH / SWML_SSL_KEY_PATH, or "
+                    f"disable SSL to serve plain HTTP deliberately."
+                )
+            if not self.domain:
                 self.log.warning("ssl_domain_not_specified")
                 # We'll continue, but URLs might not be correctly generated
 
@@ -1439,6 +1525,37 @@ class SWMLService(ToolMixin):
             async def handle_all_routes(
                 request: Request, response: Response, full_path: str
             ) -> Response:
+                """Catch-all that accepts this service's route with or without
+                a trailing slash.
+
+                The router is mounted under a prefix normalized to have no
+                trailing slash, and the app is built with
+                ``redirect_slashes=False``, so ``/<route>/`` and its subpaths
+                would otherwise 404. This handler recovers them:
+
+                - ``full_path`` exactly equal to the route → handled as root.
+                - ``full_path`` equal to ``<route>/`` → handled as root.
+                - ``full_path`` under ``<route>/`` whose remainder matches a
+                  registered routing callback (exactly, or as its parent
+                  segment) → that callback path is stashed on
+                  ``request.state.callback_path`` and the request is handled as
+                  root.
+
+                Anything else returns ``JSONResponse({"error": "Path not
+                found"})`` — note this is a **200**, not a 404: the status code
+                is left at FastAPI's default, so a caller must inspect the body
+                to detect a miss.
+
+                Args:
+                    request: The incoming request.
+                    response: FastAPI-injected response object, forwarded to
+                        ``_handle_request``.
+                    full_path: The matched path with no leading slash.
+
+                Returns:
+                    The service's SWML/handler response, or the error body
+                    above.
+                """
                 # Get our route path without leading slash for comparison
                 route_path = normalized_route.lstrip("/")
                 route_with_slash = route_path + "/"
@@ -1824,6 +1941,7 @@ class SWMLService(ToolMixin):
         """
 
         def _hget(name: str, default: str | None = None) -> str | None:
+            """Return a header's value, trying the name as given and then lowercased."""
             # Tolerate both the original casing and the lowercase form that
             # ``dict(request.headers)`` produces, so direct callers of
             # handle_request may pass conventionally-cased header names.

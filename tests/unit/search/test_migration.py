@@ -35,11 +35,13 @@ class TestMigratePgvectorToSqlite:
         _index_with_rows(output, 250)
         before = output.read_bytes()
 
-        with patch("signalwire.search.pgvector_backend.PgVectorBackend") as backend:
-            with pytest.raises(NotImplementedError):
-                SearchIndexMigrator().migrate_pgvector_to_sqlite(
-                    "postgresql://localhost/db", "docs", str(output)
-                )
+        with (
+            patch("signalwire.search.pgvector_backend.PgVectorBackend") as backend,
+            pytest.raises(NotImplementedError),
+        ):
+            SearchIndexMigrator().migrate_pgvector_to_sqlite(
+                "postgresql://localhost/db", "docs", str(output)
+            )
 
         backend.assert_not_called()
         assert output.read_bytes() == before
@@ -47,11 +49,13 @@ class TestMigratePgvectorToSqlite:
     def test_creates_no_output_file(self, tmp_path: Path) -> None:
         output = tmp_path / "new.swsearch"
 
-        with patch("signalwire.search.pgvector_backend.PgVectorBackend") as backend:
-            with pytest.raises(NotImplementedError):
-                SearchIndexMigrator().migrate_pgvector_to_sqlite(
-                    "postgresql://localhost/db", "docs", str(output)
-                )
+        with (
+            patch("signalwire.search.pgvector_backend.PgVectorBackend") as backend,
+            pytest.raises(NotImplementedError),
+        ):
+            SearchIndexMigrator().migrate_pgvector_to_sqlite(
+                "postgresql://localhost/db", "docs", str(output)
+            )
 
         backend.assert_not_called()
         assert not output.exists()

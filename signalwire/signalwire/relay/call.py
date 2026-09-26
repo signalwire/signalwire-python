@@ -79,6 +79,11 @@ class Action:
         terminal_event: str,
         terminal_states: tuple[str, ...],
     ):
+        """Bind the action to its call and control_id and arm its completion future.
+
+        ``terminal_event`` is the event type that reports this operation's state, and
+        ``terminal_states`` are the states of that event that end it.
+        """
         self.call = call
         self.control_id = control_id
         self._terminal_event = terminal_event
@@ -125,6 +130,16 @@ class Action:
 
     @property
     def is_done(self) -> bool:
+        """Whether the terminal event for this action has already arrived.
+
+        A non-blocking poll of the completion future — ``True`` once the server
+        reported one of this action's terminal states, so ``wait()`` would
+        return immediately. Use it to check completion without awaiting.
+
+        Note this reflects the *future*, not the ``completed`` flag: they move
+        together in ``_resolve``, but ``is_done`` is the authoritative signal
+        for whether ``wait()`` blocks.
+        """
         return self._done.done()
 
 
@@ -136,6 +151,23 @@ class StoppableAction(Action):
     _command_prefix: str = ""
 
     async def stop(self) -> dict[str, Any]:
+        """Stop this in-flight operation on the server.
+
+        Posts ``calling.<prefix>.stop`` with this action's ``control_id``,
+        where ``<prefix>`` is the concrete subclass's command family
+        (``play``, ``record``, ``detect``, ``collect``, ``tap``, ``stream``,
+        ``pay``, ``transcribe``, ``ai``, or the fax direction).
+
+        The command only asks the server to stop; it does not itself mark the
+        action complete. Completion still arrives as the operation's terminal
+        event, so ``await action.wait()`` after ``stop()`` to observe the final
+        state. Requires the call to still be alive and the operation not yet
+        finished — stopping an already-finished operation is answered by the
+        server, not guarded locally.
+
+        Returns:
+            The RELAY command result dict.
+        """
         return await self.call._execute(
             f"{self._command_prefix}.stop", {"control_id": self.control_id}
         )
@@ -145,12 +177,39 @@ class PausableAction(StoppableAction):
     """A stoppable action that can also pause/resume (record, play, collect)."""
 
     async def pause(self, behavior: str | None = None) -> dict[str, Any]:
+        """Pause this operation, leaving it resumable.
+
+        Posts ``calling.<prefix>.pause`` with this action's ``control_id``.
+        Unlike :meth:`stop` the operation stays alive and holds its control_id,
+        so :meth:`resume` picks it back up and the terminal event still comes
+        later.
+
+        Args:
+            behavior: Only meaningful for a recording, where the engine accepts
+                ``"skip"`` (omit the paused span from the recording) or
+                ``"silence"`` (write silence for its duration). Omitted from
+                the wire params when falsy, letting the server default apply.
+                The play/collect pause commands carry no ``behavior`` field.
+
+        Returns:
+            The RELAY command result dict.
+        """
         params: dict[str, Any] = {"control_id": self.control_id}
         if behavior:
             params["behavior"] = behavior
         return await self.call._execute(f"{self._command_prefix}.pause", params)
 
     async def resume(self) -> dict[str, Any]:
+        """Resume this operation after :meth:`pause`.
+
+        Posts ``calling.<prefix>.resume`` with this action's ``control_id``.
+        Takes no options — a paused recording resumes under whatever
+        ``behavior`` the pause selected. Requires the operation to be paused
+        and its control_id still valid on the call.
+
+        Returns:
+            The RELAY command result dict.
+        """
         return await self.call._execute(
             f"{self._command_prefix}.resume", {"control_id": self.control_id}
         )
@@ -160,6 +219,20 @@ class VolumeAction(PausableAction):
     """A pausable action that also supports a volume adjustment (play)."""
 
     async def volume(self, volume: float) -> dict[str, Any]:
+        """Adjust the playback gain of this in-flight operation.
+
+        Posts ``calling.<prefix>.volume`` with this action's ``control_id``.
+        Takes effect on the audio still to be played; it does not restart or
+        reposition the media.
+
+        Args:
+            volume: Gain in **decibels**, not a 0-to-1 multiplier. ``0`` is
+                unmodified; negative attenuates, positive amplifies. The engine
+                requires the value and rejects anything outside -40 to +40 dB.
+
+        Returns:
+            The RELAY command result dict.
+        """
         return await self.call._execute(
             f"{self._command_prefix}.volume",
             {"control_id": self.control_id, "volume": volume},
@@ -172,6 +245,7 @@ class PlayAction(VolumeAction):
     _command_prefix = "play"
 
     def __init__(self, call: Call, control_id: str):
+        """Track a play operation; it ends on the ``finished`` or ``error`` state."""
         super().__init__(
             call, control_id, EVENT_CALL_PLAY, (PLAY_STATE_FINISHED, PLAY_STATE_ERROR)
         )
@@ -183,6 +257,7 @@ class RecordAction(PausableAction):
     _command_prefix = "record"
 
     def __init__(self, call: Call, control_id: str):
+        """Track a record operation; it ends on ``finished`` or ``no_input``."""
         super().__init__(
             call,
             control_id,
@@ -197,9 +272,11 @@ class DetectAction(StoppableAction):
     _command_prefix = "detect"
 
     def __init__(self, call: Call, control_id: str):
+        """Track a detect operation; it ends on ``finished`` or ``error``."""
         super().__init__(call, control_id, EVENT_CALL_DETECT, ("finished", "error"))
 
     def _check_event(self, event: RelayEvent) -> None:
+        """Resolve on the first detect result, or on a terminal state."""
         # Detect delivers results continuously. Resolve on first result or
         # when finished/error.
         detect = event.params.get("detect", {})
@@ -215,6 +292,7 @@ class CollectAction(VolumeAction):
     _command_prefix = "play_and_collect"
 
     def __init__(self, call: Call, control_id: str):
+        """Track a play_and_collect; it ends on a collect result or terminal state."""
         super().__init__(
             call,
             control_id,
@@ -223,6 +301,7 @@ class CollectAction(VolumeAction):
         )
 
     def _check_event(self, event: RelayEvent) -> None:
+        """Resolve on collect events only, ignoring the play phase's events."""
         # play_and_collect shares a control_id across play and collect
         # phases.  Only resolve on collect events, not play events.
         if event.event_type != EVENT_CALL_COLLECT:
@@ -246,6 +325,7 @@ class StandaloneCollectAction(StoppableAction):
     _command_prefix = "collect"
 
     def __init__(self, call: Call, control_id: str):
+        """Track a collect; it ends on a result or a terminal collect state."""
         super().__init__(
             call,
             control_id,
@@ -254,6 +334,7 @@ class StandaloneCollectAction(StoppableAction):
         )
 
     def _check_event(self, event: RelayEvent) -> None:
+        """Resolve on the first collect result or a terminal collect state."""
         if event.event_type != EVENT_CALL_COLLECT:
             return
         result = event.params.get("result", {})
@@ -273,6 +354,7 @@ class FaxAction(StoppableAction):
     (``send_fax``/``receive_fax``) is set per-instance from the constructor."""
 
     def __init__(self, call: Call, control_id: str, method_prefix: str):
+        """Track a fax operation; ``method_prefix`` names send or receive."""
         super().__init__(call, control_id, EVENT_CALL_FAX, ("finished", "error"))
         self._command_prefix = method_prefix
 
@@ -283,6 +365,7 @@ class TapAction(StoppableAction):
     _command_prefix = "tap"
 
     def __init__(self, call: Call, control_id: str):
+        """Track a tap operation; it ends on the ``finished`` tap state."""
         super().__init__(call, control_id, EVENT_CALL_TAP, ("finished",))
 
 
@@ -292,6 +375,7 @@ class StreamAction(StoppableAction):
     _command_prefix = "stream"
 
     def __init__(self, call: Call, control_id: str):
+        """Track a stream operation; it ends on the ``finished`` stream state."""
         super().__init__(call, control_id, EVENT_CALL_STREAM, ("finished",))
 
 
@@ -301,6 +385,7 @@ class PayAction(StoppableAction):
     _command_prefix = "pay"
 
     def __init__(self, call: Call, control_id: str):
+        """Track a pay operation; it ends on the ``finished`` or ``error`` pay state."""
         super().__init__(call, control_id, EVENT_CALL_PAY, ("finished", "error"))
 
 
@@ -310,6 +395,7 @@ class TranscribeAction(StoppableAction):
     _command_prefix = "transcribe"
 
     def __init__(self, call: Call, control_id: str):
+        """Track a transcribe operation; it ends on the ``finished`` state."""
         super().__init__(call, control_id, EVENT_CALL_TRANSCRIBE, ("finished",))
 
 
@@ -319,6 +405,7 @@ class AIAction(StoppableAction):
     _command_prefix = "ai"
 
     def __init__(self, call: Call, control_id: str):
+        """Track an AI session; it ends on a ``finished`` or ``error`` AI event."""
         # AI sessions don't have a standard event type with state field —
         # they end when the call ends or when stopped. We treat "finished"
         # and "error" as terminal states from calling.call.ai events if any.
@@ -351,6 +438,11 @@ class Call:
         state: str = "",
         segment_id: str = "",
     ):
+        """Create the call object for a call the client dialed or received.
+
+        The identifiers come from the server's ``calling.call.receive`` event or a dial
+        response; ``state`` is the call state known at creation time.
+        """
         self._client = client
         self.call_id = call_id
         self.node_id = node_id
@@ -460,6 +552,7 @@ class Call:
         future: asyncio.Future[RelayEvent] = asyncio.get_running_loop().create_future()
 
         def _handler(event: RelayEvent) -> None:
+            """Complete the future with the first event the predicate accepts."""
             if future.done():
                 return
             if predicate is None or predicate(event):
@@ -776,6 +869,14 @@ class Call:
         )
 
         def rank(s: str) -> int:
+            """Position of a call state in the lifecycle order.
+
+            Maps ``created`` → ``ringing`` → ``answered`` → ``ending`` →
+            ``ended`` onto 0-4 so the two states can be compared with ``>=``.
+            An unrecognized or empty state returns ``-1``, which sorts before
+            every real state — so a call whose state is not yet known never
+            counts as having reached the target and the caller waits.
+            """
             return order.index(s) if s in order else -1
 
         # Already at or past the target -> return immediately (matches legacy SDK).
@@ -1627,6 +1728,7 @@ class Call:
     # ------------------------------------------------------------------
 
     def __repr__(self) -> str:
+        """Show the call id, state and direction."""
         return (
             f"<Call id={self.call_id!r} state={self.state!r} "
             f"direction={self.direction!r}>"

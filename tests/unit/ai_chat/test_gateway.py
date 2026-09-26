@@ -7,7 +7,7 @@ chat service.
 """
 
 import json
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterator
 from typing import Any
 
 import pytest
@@ -442,10 +442,8 @@ async def test_the_relay_streams_rather_than_collects(
     from fastapi.responses import StreamingResponse
 
     client = slow_gateway._client
-    chunks = []
     async with client.raw_post("chat", {"id": "c", "message": "hi"}) as resp:
-        async for chunk in resp.content.iter_any():
-            chunks.append(chunk)
+        chunks = [chunk async for chunk in resp.content.iter_any()]
     assert len(chunks) > 1, f"upstream body arrived in one piece: {chunks!r}"
     assert chunks[0].strip() == b"", "first chunk should be keepalive padding"
 

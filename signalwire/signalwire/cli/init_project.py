@@ -36,6 +36,18 @@ DEFAULT_REGIONS = {
 
 # ANSI colors
 class Colors:
+    """Raw ANSI SGR escape sequences used by this generator's console output.
+
+    A namespace of constants, never instantiated. ``NC`` ("no color") is the
+    reset sequence every other constant must be closed with. The codes are
+    emitted unconditionally — there is no TTY detection or ``NO_COLOR``
+    handling — so redirected output contains the escapes verbatim.
+
+    This is ``sw-agent-init``'s own copy; ``cli/dokku.py`` defines a separate
+    ``Colors`` for ``sw-agent-dokku`` that additionally carries ``MAGENTA``.
+    The two are independent, not a shared module.
+    """
+
     RED = "\033[0;31m"
     GREEN = "\033[0;32m"
     YELLOW = "\033[1;33m"
@@ -47,18 +59,49 @@ class Colors:
 
 
 def print_step(msg: str) -> None:
+    """Print ``msg`` to stdout as a progress step, prefixed with a blue ``==>``.
+
+    Announces the scaffolding action about to be performed; the outcome is then
+    reported with :func:`print_success`, :func:`print_warning` or
+    :func:`print_error`.
+
+    Args:
+        msg: Text to display after the marker.
+    """
     print(f"{Colors.BLUE}==>{Colors.NC} {msg}")
 
 
 def print_success(msg: str) -> None:
+    """Print ``msg`` to stdout marked with a green check, reporting success.
+
+    Args:
+        msg: Text to display after the marker.
+    """
     print(f"{Colors.GREEN}✓{Colors.NC} {msg}")
 
 
 def print_warning(msg: str) -> None:
+    """Print ``msg`` to stdout marked with a yellow ``!``.
+
+    For conditions the user should know about that do not stop project
+    generation — it writes to stdout like the rest and does not change the
+    exit status.
+
+    Args:
+        msg: Text to display after the marker.
+    """
     print(f"{Colors.YELLOW}!{Colors.NC} {msg}")
 
 
 def print_error(msg: str) -> None:
+    """Print ``msg`` to stdout marked with a red ``✗``.
+
+    Reports a failure only; it does NOT write to stderr, raise, or exit — the
+    caller is responsible for aborting and returning a non-zero exit code.
+
+    Args:
+        msg: Text to display after the marker.
+    """
     print(f"{Colors.RED}✗{Colors.NC} {msg}")
 
 
@@ -249,6 +292,7 @@ class {agent_class}(AgentBase):
     """{agent_name} agent for AWS Lambda deployment."""
 
     def __init__(self):
+        """Set up the agent's prompt, language and tools."""
         super().__init__(name="{agent_name_slug}")
 
         self._configure_prompts()
@@ -256,6 +300,7 @@ class {agent_class}(AgentBase):
         self._setup_functions()
 
     def _configure_prompts(self):
+        """Define the agent's role and guidelines."""
         self.prompt_add_section(
             "Role",
             "You are a helpful AI assistant deployed on AWS Lambda."
@@ -271,6 +316,7 @@ class {agent_class}(AgentBase):
         )
 
     def _setup_functions(self):
+        """Register the agent's tools."""
         @self.tool(
             description="Get information about a topic",
             parameters={{
@@ -285,6 +331,7 @@ class {agent_class}(AgentBase):
             }}
         )
         def get_info(args, raw_data):
+            """Return information about the requested topic."""
             topic = args.get("topic", "")
             return FunctionResult(
                 f"Information about {{topic}}: This is a placeholder response."
@@ -292,6 +339,7 @@ class {agent_class}(AgentBase):
 
         @self.tool(description="Get AWS Lambda deployment information")
         def get_platform_info(args, raw_data):
+            """Report the Lambda function, region, memory and runtime."""
             region = os.getenv("AWS_REGION", "unknown")
             function_name = os.getenv("AWS_LAMBDA_FUNCTION_NAME", "unknown")
             memory = os.getenv("AWS_LAMBDA_FUNCTION_MEMORY_SIZE", "unknown")
@@ -632,6 +680,7 @@ class {agent_class}(AgentBase):
     """{agent_name} agent for Google Cloud Functions deployment."""
 
     def __init__(self):
+        """Set up the agent's prompt, language and tools."""
         super().__init__(name="{agent_name_slug}")
 
         self._configure_prompts()
@@ -639,6 +688,7 @@ class {agent_class}(AgentBase):
         self._setup_functions()
 
     def _configure_prompts(self):
+        """Define the agent's role and guidelines."""
         self.prompt_add_section(
             "Role",
             "You are a helpful AI assistant deployed on Google Cloud Functions."
@@ -654,6 +704,7 @@ class {agent_class}(AgentBase):
         )
 
     def _setup_functions(self):
+        """Register the agent's tools."""
         @self.tool(
             description="Get information about a topic",
             parameters={{
@@ -668,6 +719,7 @@ class {agent_class}(AgentBase):
             }}
         )
         def get_info(args, raw_data):
+            """Return information about the requested topic."""
             topic = args.get("topic", "")
             return FunctionResult(
                 f"Information about {{topic}}: This is a placeholder response."
@@ -675,6 +727,7 @@ class {agent_class}(AgentBase):
 
         @self.tool(description="Get Google Cloud deployment information")
         def get_platform_info(args, raw_data):
+            """Report the Cloud Run service, revision and project this agent runs on."""
             import urllib.request
 
             # Gen 2 Cloud Functions run on Cloud Run with these env vars
@@ -864,6 +917,7 @@ class {agent_class}(AgentBase):
     """{agent_name} agent for Azure Functions deployment."""
 
     def __init__(self):
+        """Set up the agent's prompt, language and tools."""
         super().__init__(name="{agent_name_slug}")
 
         self._configure_prompts()
@@ -871,6 +925,7 @@ class {agent_class}(AgentBase):
         self._setup_functions()
 
     def _configure_prompts(self):
+        """Define the agent's role and guidelines."""
         self.prompt_add_section(
             "Role",
             "You are a helpful AI assistant deployed on Azure Functions."
@@ -886,6 +941,7 @@ class {agent_class}(AgentBase):
         )
 
     def _setup_functions(self):
+        """Register the agent's tools."""
         @self.tool(
             description="Get information about a topic",
             parameters={{
@@ -900,6 +956,7 @@ class {agent_class}(AgentBase):
             }}
         )
         def get_info(args, raw_data):
+            """Return information about the requested topic."""
             topic = args.get("topic", "")
             return FunctionResult(
                 f"Information about {{topic}}: This is a placeholder response."
@@ -907,6 +964,7 @@ class {agent_class}(AgentBase):
 
         @self.tool(description="Get Azure Functions deployment information")
         def get_platform_info(args, raw_data):
+            """Report the function app, region and runtime this agent runs on."""
             function_name = os.getenv("WEBSITE_SITE_NAME", "unknown")
             region = os.getenv("REGION_NAME", "unknown")
             runtime = os.getenv("FUNCTIONS_WORKER_RUNTIME", "unknown")
@@ -1290,6 +1348,7 @@ class MainAgent(AgentBase):
     """Main voice AI agent."""
 
     def __init__(self):
+        """Set up the agent at the /swml route."""
         super().__init__(
             name="main-agent",
             route="/swml"
@@ -1377,6 +1436,7 @@ MAGENTA = "\\033[35m"
 
 
 def print_separator(char="-", width=80):
+    """Print a dimmed separator line."""
     print(f"{DIM}{char * width}{RESET}")
 
 
@@ -1454,15 +1514,16 @@ def print_post_prompt_data(data):
 
     # Main function
     main_body_parts = [
-        """
+        '''
 def main():
+    """Start the server and serve the agent."""
     host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", "5000"))
 
     # Create server and register agent
     server = AgentServer(host=host, port=port)
     server.register(agent)
-"""
+'''
     ]
 
     if has_web_ui:
@@ -1746,6 +1807,7 @@ Add new tools to your agent using the `@AgentBase.tool` decorator:
     }}
 )
 def my_tool(self, args, raw_data):
+    '''Return the result for ``param1``.'''
     param1 = args.get("param1")
     return FunctionResult(f"Result: {{param1}}")
 ```
@@ -1860,6 +1922,11 @@ class ProjectGenerator:
     """Generates a new SignalWire agent project."""
 
     def __init__(self, config: dict[str, Any]):
+        """Prepare to generate the project ``config`` describes.
+
+        ``config`` carries the project directory and name, the selected features, and
+        optionally the credentials, the target platform and its cloud settings.
+        """
         self.config = config
         self.project_dir = Path(config["project_dir"])
         self.project_name = config["project_name"]
@@ -1916,17 +1983,19 @@ class ProjectGenerator:
 
         # handler.py
         handler_code = AWS_HANDLER_TEMPLATE.format(**template_vars)
-        (self.project_dir / "handler.py").write_text(handler_code)
+        (self.project_dir / "handler.py").write_text(handler_code, encoding="utf-8")
         print_success("Created handler.py")
 
         # requirements.txt
-        (self.project_dir / "requirements.txt").write_text(AWS_REQUIREMENTS_TEMPLATE)
+        (self.project_dir / "requirements.txt").write_text(
+            AWS_REQUIREMENTS_TEMPLATE, encoding="utf-8"
+        )
         print_success("Created requirements.txt")
 
         # deploy.sh
         deploy_code = AWS_DEPLOY_TEMPLATE.format(**template_vars)
         deploy_path = self.project_dir / "deploy.sh"
-        deploy_path.write_text(deploy_code)
+        deploy_path.write_text(deploy_code, encoding="utf-8")
         deploy_path.chmod(0o755)
         print_success("Created deploy.sh")
 
@@ -1934,7 +2003,9 @@ class ProjectGenerator:
         self._create_cloud_env_example("aws")
 
         # .gitignore
-        (self.project_dir / ".gitignore").write_text(TEMPLATE_GITIGNORE)
+        (self.project_dir / ".gitignore").write_text(
+            TEMPLATE_GITIGNORE, encoding="utf-8"
+        )
         print_success("Created .gitignore")
 
         # README.md
@@ -1953,17 +2024,19 @@ class ProjectGenerator:
 
         # main.py
         main_code = GCP_MAIN_TEMPLATE.format(**template_vars)
-        (self.project_dir / "main.py").write_text(main_code)
+        (self.project_dir / "main.py").write_text(main_code, encoding="utf-8")
         print_success("Created main.py")
 
         # requirements.txt
-        (self.project_dir / "requirements.txt").write_text(GCP_REQUIREMENTS_TEMPLATE)
+        (self.project_dir / "requirements.txt").write_text(
+            GCP_REQUIREMENTS_TEMPLATE, encoding="utf-8"
+        )
         print_success("Created requirements.txt")
 
         # deploy.sh
         deploy_code = GCP_DEPLOY_TEMPLATE.format(**template_vars)
         deploy_path = self.project_dir / "deploy.sh"
-        deploy_path.write_text(deploy_code)
+        deploy_path.write_text(deploy_code, encoding="utf-8")
         deploy_path.chmod(0o755)
         print_success("Created deploy.sh")
 
@@ -1971,7 +2044,9 @@ class ProjectGenerator:
         self._create_cloud_env_example("gcp")
 
         # .gitignore
-        (self.project_dir / ".gitignore").write_text(TEMPLATE_GITIGNORE)
+        (self.project_dir / ".gitignore").write_text(
+            TEMPLATE_GITIGNORE, encoding="utf-8"
+        )
         print_success("Created .gitignore")
 
         # README.md
@@ -1994,31 +2069,37 @@ class ProjectGenerator:
 
         # function_app/__init__.py
         init_code = AZURE_INIT_TEMPLATE.format(**template_vars)
-        (function_dir / "__init__.py").write_text(init_code)
+        (function_dir / "__init__.py").write_text(init_code, encoding="utf-8")
         print_success("Created function_app/__init__.py")
 
         # function_app/function.json
-        (function_dir / "function.json").write_text(AZURE_FUNCTION_JSON_TEMPLATE)
+        (function_dir / "function.json").write_text(
+            AZURE_FUNCTION_JSON_TEMPLATE, encoding="utf-8"
+        )
         print_success("Created function_app/function.json")
 
         # host.json
-        (self.project_dir / "host.json").write_text(AZURE_HOST_JSON_TEMPLATE)
+        (self.project_dir / "host.json").write_text(
+            AZURE_HOST_JSON_TEMPLATE, encoding="utf-8"
+        )
         print_success("Created host.json")
 
         # local.settings.json
         (self.project_dir / "local.settings.json").write_text(
-            AZURE_LOCAL_SETTINGS_TEMPLATE
+            AZURE_LOCAL_SETTINGS_TEMPLATE, encoding="utf-8"
         )
         print_success("Created local.settings.json")
 
         # requirements.txt
-        (self.project_dir / "requirements.txt").write_text(AZURE_REQUIREMENTS_TEMPLATE)
+        (self.project_dir / "requirements.txt").write_text(
+            AZURE_REQUIREMENTS_TEMPLATE, encoding="utf-8"
+        )
         print_success("Created requirements.txt")
 
         # deploy.sh
         deploy_code = AZURE_DEPLOY_TEMPLATE.format(**template_vars)
         deploy_path = self.project_dir / "deploy.sh"
-        deploy_path.write_text(deploy_code)
+        deploy_path.write_text(deploy_code, encoding="utf-8")
         deploy_path.chmod(0o755)
         print_success("Created deploy.sh")
 
@@ -2026,7 +2107,9 @@ class ProjectGenerator:
         self._create_cloud_env_example("azure")
 
         # .gitignore
-        (self.project_dir / ".gitignore").write_text(TEMPLATE_GITIGNORE)
+        (self.project_dir / ".gitignore").write_text(
+            TEMPLATE_GITIGNORE, encoding="utf-8"
+        )
         print_success("Created .gitignore")
 
         # README.md
@@ -2077,7 +2160,7 @@ class ProjectGenerator:
 SWML_BASIC_AUTH_USER=admin
 SWML_BASIC_AUTH_PASSWORD=your-secure-password
 """
-        (self.project_dir / ".env.example").write_text(env_content)
+        (self.project_dir / ".env.example").write_text(env_content, encoding="utf-8")
         print_success("Created .env.example")
 
     def _create_cloud_readme(self, platform: str) -> None:
@@ -2273,7 +2356,7 @@ curl -X POST https://YOUR-APP.azurewebsites.net/api/function_app/swaig \\
 Set your phone number's SWML URL to the endpoint URL shown after deployment.
 """
 
-        (self.project_dir / "README.md").write_text(readme)
+        (self.project_dir / "README.md").write_text(readme, encoding="utf-8")
         print_success("Created README.md")
 
     def _create_directories(self) -> None:
@@ -2295,24 +2378,26 @@ Set your phone number's SWML URL to the endpoint URL shown after deployment.
         agents_dir = self.project_dir / "agents"
 
         # __init__.py
-        (agents_dir / "__init__.py").write_text(TEMPLATE_AGENTS_INIT)
+        (agents_dir / "__init__.py").write_text(TEMPLATE_AGENTS_INIT, encoding="utf-8")
         print_success("Created agents/__init__.py")
 
         # main_agent.py
         agent_code = get_agent_template(
             self.config.get("agent_type", "basic"), self.features
         )
-        (agents_dir / "main_agent.py").write_text(agent_code)
+        (agents_dir / "main_agent.py").write_text(agent_code, encoding="utf-8")
         print_success("Created agents/main_agent.py")
 
         # skills/__init__.py
-        (self.project_dir / "skills" / "__init__.py").write_text(TEMPLATE_SKILLS_INIT)
+        (self.project_dir / "skills" / "__init__.py").write_text(
+            TEMPLATE_SKILLS_INIT, encoding="utf-8"
+        )
         print_success("Created skills/__init__.py")
 
     def _create_app_file(self) -> None:
         """Create main app.py entry point."""
         app_code = get_app_template(self.features)
-        (self.project_dir / "app.py").write_text(app_code)
+        (self.project_dir / "app.py").write_text(app_code, encoding="utf-8")
         print_success("Created app.py")
 
     def _create_config_files(self) -> None:
@@ -2346,43 +2431,49 @@ SWML_PROXY_URL_BASE=
 DEBUG_WEBHOOK_LEVEL=1
 """
 
-        (self.project_dir / ".env").write_text(env_content)
+        (self.project_dir / ".env").write_text(env_content, encoding="utf-8")
         print_success("Created .env")
 
         # .env.example
-        (self.project_dir / ".env.example").write_text(TEMPLATE_ENV_EXAMPLE)
+        (self.project_dir / ".env.example").write_text(
+            TEMPLATE_ENV_EXAMPLE, encoding="utf-8"
+        )
         print_success("Created .env.example")
 
         # .gitignore
-        (self.project_dir / ".gitignore").write_text(TEMPLATE_GITIGNORE)
+        (self.project_dir / ".gitignore").write_text(
+            TEMPLATE_GITIGNORE, encoding="utf-8"
+        )
         print_success("Created .gitignore")
 
         # requirements.txt
-        (self.project_dir / "requirements.txt").write_text(TEMPLATE_REQUIREMENTS)
+        (self.project_dir / "requirements.txt").write_text(
+            TEMPLATE_REQUIREMENTS, encoding="utf-8"
+        )
         print_success("Created requirements.txt")
 
     def _create_test_files(self) -> None:
         """Create test files."""
         tests_dir = self.project_dir / "tests"
 
-        (tests_dir / "__init__.py").write_text(TEMPLATE_TESTS_INIT)
+        (tests_dir / "__init__.py").write_text(TEMPLATE_TESTS_INIT, encoding="utf-8")
         print_success("Created tests/__init__.py")
 
         test_code = get_test_template(self.features.get("example_tool", True))
-        (tests_dir / "test_agent.py").write_text(test_code)
+        (tests_dir / "test_agent.py").write_text(test_code, encoding="utf-8")
         print_success("Created tests/test_agent.py")
 
     def _create_web_files(self) -> None:
         """Create web UI files."""
         web_dir = self.project_dir / "web"
 
-        (web_dir / "index.html").write_text(get_web_index_template())
+        (web_dir / "index.html").write_text(get_web_index_template(), encoding="utf-8")
         print_success("Created web/index.html")
 
     def _create_readme(self) -> None:
         """Create README.md."""
         readme = get_readme_template(self.project_name, self.features)
-        (self.project_dir / "README.md").write_text(readme)
+        (self.project_dir / "README.md").write_text(readme, encoding="utf-8")
         print_success("Created README.md")
 
     def _create_agents_note(self) -> None:

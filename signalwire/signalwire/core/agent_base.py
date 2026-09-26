@@ -106,6 +106,7 @@ def _record_explicit_args(init: Callable[_P, None]) -> Callable[_P, None]:
 
     @functools.wraps(init)
     def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> None:
+        """Record the names of the arguments passed, then run ``__init__``."""
         bound = signature.bind_partial(*args, **kwargs)
         self = args[0]
         self._explicit_init_args = frozenset(bound.arguments) - {"self"}  # type: ignore[attr-defined]  # set before __init__ runs, read in it
@@ -191,8 +192,13 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
     3. Declarative PROMPT_SECTIONS class attribute
     """
 
-    # Subclasses can define this to declaratively set prompt sections
-    PROMPT_SECTIONS = None
+    # Subclasses can define this to declaratively set prompt sections.
+    # ClassVar: this is read off the CLASS (`cls.PROMPT_SECTIONS` in
+    # PromptMixin._process_prompt_sections) and is never assigned per-instance.
+    # Untyped, mypy inferred it as an INSTANCE variable, which made every
+    # subclass that correctly declared `PROMPT_SECTIONS: ClassVar[...]` a
+    # "Cannot override instance variable with class variable" [misc] error.
+    PROMPT_SECTIONS: ClassVar[dict[str, Any] | list[Any] | None] = None
 
     # Attributes set dynamically (on ephemeral copies / when native functions are
     # configured) rather than unconditionally in __init__. Declared here so the
@@ -677,6 +683,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         Example:
             @agent.on_call_end
             def archive(call_log, raw_data):
+                '''Store the conversation's call log under its conversation id.'''
                 conversation_id = raw_data.get("global_data", {}).get("conversation_id")
                 store(conversation_id, call_log)
         """
@@ -705,6 +712,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
             self._params["swaig_post_conversation"] = True
 
         def _hangup_handler(args: Any, raw_data: Any) -> FunctionResult:
+            """Pass the call log to each call-end handler, isolating failures."""
             raw = raw_data or {}
             # Both spellings are seen in the wild depending on engine.
             call_log = raw.get("call_log") or raw.get("raw_call_log") or []
@@ -752,6 +760,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         Example:
             @agent.on_debug_event
             def handle(event_type, data):
+                '''Report barge events as they arrive.'''
                 if event_type == "barge":
                     print(f"Barge detected: {data.get('barge_elapsed_ms')}ms")
         """
@@ -939,6 +948,33 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         def sip_routing_callback(
             body: dict[str, Any], headers: dict[str, Any]
         ) -> str | None:
+            """
+            Routing callback registered at ``path`` for inbound SIP requests.
+
+            Pulls the SIP username out of the body with
+            ``extract_sip_username`` (the user part of the ``call.to`` SIP/TEL
+            URI) and logs whether it is one of this agent's registered
+            ``_sip_usernames``, compared lower-cased.
+
+            **Always returns None**, on every branch — matched, unmatched, and
+            no-username-found alike. Under the routing contract
+            (``register_routing_callback``) None means "keep processing here",
+            so this endpoint never emits the 307 redirect that a non-None
+            return would produce: an unmatched username is logged and then
+            still handled by this agent rather than being sent elsewhere. The
+            match check is observational only.
+
+            ``headers`` is part of the framework-free ``(body, headers)``
+            callback shape shared with the other ports; this implementation
+            does not read it.
+
+            Args:
+                body: Parsed JSON request body.
+                headers: Request headers (unused here).
+
+            Returns:
+                Always None — continue normal processing at this route.
+            """
             # Extract SIP username from the request body
             sip_username = self.extract_sip_username(body)
 
@@ -1055,6 +1091,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
 
         Example:
             def dynamic_config(query_params, body_params, headers, agent):
+                '''Add the advanced search skill for premium callers.'''
                 if query_params.get('tier') == 'premium':
                     agent.add_skill('advanced_search')
                     # Preserve the tier param so SWAIG callbacks work
@@ -1640,6 +1677,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         return Response(content=swml, media_type="application/json")
 
     def _swaig_configures_per_call(self) -> bool:
+        """Whether a dynamic config callback builds a per-call copy for each request."""
         return self._dynamic_config_callback is not None
 
     def _swaig_pre_dispatch(
@@ -1649,6 +1687,12 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         call_id: str | None,
         function_name: str,
     ) -> tuple[Any, dict[str, Any] | None]:
+        """Pick the agent that runs a SWAIG function and check the request's token.
+
+        Per-call configuration is applied first, so the token is checked against the
+        agent that will run the function. Returns that agent and ``None``, or this agent
+        and the refusal body when the token is rejected.
+        """
         # Apply per-call configuration first, then check the token against the
         # agent that will run the function: a tool that configuration adds must
         # meet the same rule as one registered up front.

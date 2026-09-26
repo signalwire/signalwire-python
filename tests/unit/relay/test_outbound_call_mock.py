@@ -14,6 +14,7 @@ The mock's ``/__mock__/scenarios/dial`` endpoint scripts the entire dance
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import re
 import uuid
 from typing import Any
@@ -37,7 +38,9 @@ pytestmark = pytest.mark.skipif(
 # ---------------------------------------------------------------------------
 
 
-def _phone_device(to: str = "+15551112222", frm: str = "+15553334444") -> dict[str, Any]:
+def _phone_device(
+    to: str = "+15551112222", frm: str = "+15553334444"
+) -> dict[str, Any]:
     return {"type": "phone", "params": {"to_number": to, "from_number": frm}}
 
 
@@ -168,10 +171,8 @@ async def test_dial_auto_generates_uuid_tag_when_omitted(
         )
     finally:
         pusher.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await pusher
-        except asyncio.CancelledError:
-            pass
 
     assert call.call_id == "auto-tag-winner"
     # The tag the SDK generated should be a UUID.
@@ -231,10 +232,8 @@ async def test_dial_failed_raises_relay_error(
             )
     finally:
         pusher.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await pusher
-        except asyncio.CancelledError:
-            pass
 
 
 async def test_dial_timeout_when_no_dial_event(
@@ -281,7 +280,8 @@ async def test_dial_winner_carries_dial_winner_true(
     sends = mock_relay.journal_send(event_type="calling.call.dial")
     assert sends, "no calling.call.dial event was pushed"
     [final] = [
-        e for e in sends
+        e
+        for e in sends
         if (e.frame.get("params", {}).get("params", {}).get("dial_state") == "answered")
     ]
     inner = final.frame["params"]["params"]
@@ -289,7 +289,9 @@ async def test_dial_winner_carries_dial_winner_true(
     assert inner["call"]["call_id"] == "WIN-ID"
 
 
-async def test_dial_losers_get_state_events(signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness) -> None:
+async def test_dial_losers_get_state_events(
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """Loser legs receive their own state events ending in ``ended``."""
     mock_relay.arm_dial(
         tag="t-losers",
@@ -365,15 +367,12 @@ async def test_dial_devices_serial_two_legs_on_wire(
             _phone_device(to="+15551110002"),
         ]
     ]
-    await signalwire_relay_client.dial(
-        devs, tag="t-serial", dial_timeout=5.0
-    )
+    await signalwire_relay_client.dial(devs, tag="t-serial", dial_timeout=5.0)
     [entry] = mock_relay.journal_recv(method="calling.dial")
     assert len(entry.frame["params"]["devices"]) == 1
     assert len(entry.frame["params"]["devices"][0]) == 2
     assert (
-        entry.frame["params"]["devices"][0][0]["params"]["to_number"]
-        == "+15551110001"
+        entry.frame["params"]["devices"][0][0]["params"]["to_number"] == "+15551110001"
     )
 
 
@@ -456,7 +455,9 @@ async def test_dialed_call_can_send_subsequent_command(
     assert end_frames[-1].frame["params"]["call_id"] == "WIN-AFTER"
 
 
-async def test_dialed_call_can_play(signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness) -> None:
+async def test_dialed_call_can_play(
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """A dialed (outbound) call can issue calling.play via the same Call object."""
     mock_relay.arm_dial(
         tag="t-play",
@@ -481,7 +482,9 @@ async def test_dialed_call_can_play(signalwire_relay_client: RelayClient, mock_r
 # ---------------------------------------------------------------------------
 
 
-async def test_dial_preserves_explicit_tag(signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness) -> None:
+async def test_dial_preserves_explicit_tag(
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """An explicit tag flows verbatim into the SDK's Call.tag."""
     mock_relay.arm_dial(
         tag="my-very-explicit-tag-99",
@@ -503,7 +506,9 @@ async def test_dial_preserves_explicit_tag(signalwire_relay_client: RelayClient,
 # ---------------------------------------------------------------------------
 
 
-async def test_dial_uses_jsonrpc_2_0(signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness) -> None:
+async def test_dial_uses_jsonrpc_2_0(
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """The dial frame on the wire is JSON-RPC 2.0 with id+method+params."""
     mock_relay.arm_dial(
         tag="t-rpc",

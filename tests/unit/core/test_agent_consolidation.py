@@ -34,8 +34,8 @@ class TestSwaigSecret:
         assert not b._session_manager.validate_tool_token("search", token, "call-1")
 
     def test_a_shared_secret_survives_the_restart(self) -> None:
-        a = agent(swaig_secret="shared")  # noqa: S106 - test fixture
-        b = agent(swaig_secret="shared")  # noqa: S106 - test fixture
+        a = agent(swaig_secret="shared")
+        b = agent(swaig_secret="shared")
         token = a._session_manager.create_tool_token("search", "call-1")
         assert b._session_manager.validate_tool_token("search", token, "call-1")
 
@@ -49,10 +49,7 @@ class TestSwaigSecret:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setenv("SIGNALWIRE_SWAIG_SECRET", "from-env")
-        assert (
-            agent(swaig_secret="explicit")._swaig_secret  # noqa: S106 - test fixture
-            == "explicit"  # noqa: S105 - test fixture
-        )
+        assert agent(swaig_secret="explicit")._swaig_secret == "explicit"
 
 
 # ── per-call config ──────────────────────────────────────────────────

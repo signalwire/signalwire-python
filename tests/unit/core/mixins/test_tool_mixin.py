@@ -11,10 +11,10 @@ See LICENSE file in the project root for full license information.
 Unit tests for ToolMixin
 """
 
-import json
 import pytest
-from typing import Any, Callable
-from unittest.mock import Mock, MagicMock, patch
+from typing import Any
+from collections.abc import Callable
+from unittest.mock import Mock
 
 from signalwire.core.mixins.tool_mixin import ToolMixin
 from signalwire.core.function_result import FunctionResult
@@ -37,6 +37,7 @@ class MockToolHost(ToolMixin):
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def mock_registry() -> Mock:
@@ -75,10 +76,13 @@ def _make_swaig_function(
 # Tests for define_tool
 # ===========================================================================
 
+
 class TestDefineTool:
     """Tests for ToolMixin.define_tool"""
 
-    def test_delegates_to_registry(self, host: MockToolHost, mock_registry: Mock) -> None:
+    def test_delegates_to_registry(
+        self, host: MockToolHost, mock_registry: Mock
+    ) -> None:
         handler = Mock()
         host.define_tool(
             name="my_func",
@@ -121,40 +125,49 @@ class TestDefineTool:
 
     def test_passes_webhook_url(self, host: MockToolHost, mock_registry: Mock) -> None:
         host.define_tool(
-            name="f", description="d", parameters={}, handler=Mock(),
-            webhook_url="https://example.com/hook"
+            name="f",
+            description="d",
+            parameters={},
+            handler=Mock(),
+            webhook_url="https://example.com/hook",
         )
         call_kwargs = mock_registry.define_tool.call_args[1]
         assert call_kwargs["webhook_url"] == "https://example.com/hook"
 
     def test_passes_required(self, host: MockToolHost, mock_registry: Mock) -> None:
         host.define_tool(
-            name="f", description="d", parameters={}, handler=Mock(),
-            required=["x", "y"]
+            name="f",
+            description="d",
+            parameters={},
+            handler=Mock(),
+            required=["x", "y"],
         )
         call_kwargs = mock_registry.define_tool.call_args[1]
         assert call_kwargs["required"] == ["x", "y"]
 
     def test_chain_multiple_define_tool_calls(self, host: MockToolHost) -> None:
-        result = (
-            host
-            .define_tool(name="a", description="A", parameters={}, handler=Mock())
-            .define_tool(name="b", description="B", parameters={}, handler=Mock())
-        )
+        result = host.define_tool(
+            name="a", description="A", parameters={}, handler=Mock()
+        ).define_tool(name="b", description="B", parameters={}, handler=Mock())
         assert result is host
 
-    def test_passes_is_typed_handler(self, host: MockToolHost, mock_registry: Mock) -> None:
+    def test_passes_is_typed_handler(
+        self, host: MockToolHost, mock_registry: Mock
+    ) -> None:
         host.define_tool(
-            name="f", description="d", parameters={}, handler=Mock(),
-            is_typed_handler=True
+            name="f",
+            description="d",
+            parameters={},
+            handler=Mock(),
+            is_typed_handler=True,
         )
         call_kwargs = mock_registry.define_tool.call_args[1]
         assert call_kwargs["is_typed_handler"] is True
 
-    def test_is_typed_handler_defaults_false(self, host: MockToolHost, mock_registry: Mock) -> None:
-        host.define_tool(
-            name="f", description="d", parameters={}, handler=Mock()
-        )
+    def test_is_typed_handler_defaults_false(
+        self, host: MockToolHost, mock_registry: Mock
+    ) -> None:
+        host.define_tool(name="f", description="d", parameters={}, handler=Mock())
         call_kwargs = mock_registry.define_tool.call_args[1]
         assert call_kwargs["is_typed_handler"] is False
 
@@ -163,11 +176,17 @@ class TestDefineTool:
 # Tests for register_swaig_function
 # ===========================================================================
 
+
 class TestRegisterSwaigFunction:
     """Tests for ToolMixin.register_swaig_function"""
 
-    def test_delegates_to_registry(self, host: MockToolHost, mock_registry: Mock) -> None:
-        func_dict = {"function": "data_map_func", "data_map": {"url": "https://example.com"}}
+    def test_delegates_to_registry(
+        self, host: MockToolHost, mock_registry: Mock
+    ) -> None:
+        func_dict = {
+            "function": "data_map_func",
+            "data_map": {"url": "https://example.com"},
+        }
         host.register_swaig_function(func_dict)
         mock_registry.register_swaig_function.assert_called_once_with(func_dict)
 
@@ -180,22 +199,29 @@ class TestRegisterSwaigFunction:
 # Tests for define_tools
 # ===========================================================================
 
+
 class TestDefineTools:
     """Tests for ToolMixin.define_tools"""
 
-    def test_returns_empty_list_when_no_functions(self, host: MockToolHost, mock_registry: Mock) -> None:
+    def test_returns_empty_list_when_no_functions(
+        self, host: MockToolHost, mock_registry: Mock
+    ) -> None:
         mock_registry._swaig_functions = {}
         result = host.define_tools()
         assert result == []
 
-    def test_returns_swaig_function_objects(self, host: MockToolHost, mock_registry: Mock) -> None:
+    def test_returns_swaig_function_objects(
+        self, host: MockToolHost, mock_registry: Mock
+    ) -> None:
         func = _make_swaig_function("tool1")
         mock_registry._swaig_functions = {"tool1": func}
         result = host.define_tools()
         assert len(result) == 1
         assert result[0] is func
 
-    def test_returns_raw_dicts_for_data_map(self, host: MockToolHost, mock_registry: Mock) -> None:
+    def test_returns_raw_dicts_for_data_map(
+        self, host: MockToolHost, mock_registry: Mock
+    ) -> None:
         data_map = {"function": "dm_func", "data_map": {"url": "https://example.com"}}
         mock_registry._swaig_functions = {"dm_func": data_map}
         result = host.define_tools()
@@ -214,28 +240,37 @@ class TestDefineTools:
 # Tests for on_function_call
 # ===========================================================================
 
+
 class TestOnFunctionCall:
     """Tests for ToolMixin.on_function_call"""
 
-    def test_unknown_function_returns_error(self, host: MockToolHost, mock_registry: Mock) -> None:
+    def test_unknown_function_returns_error(
+        self, host: MockToolHost, mock_registry: Mock
+    ) -> None:
         mock_registry._swaig_functions = {}
         result = host.on_function_call("nonexistent", {})
         assert "not found" in result["response"]
 
-    def test_data_map_function_returns_error(self, host: MockToolHost, mock_registry: Mock) -> None:
-        mock_registry._swaig_functions = {
-            "dm": {"function": "dm", "data_map": {}}
-        }
+    def test_data_map_function_returns_error(
+        self, host: MockToolHost, mock_registry: Mock
+    ) -> None:
+        mock_registry._swaig_functions = {"dm": {"function": "dm", "data_map": {}}}
         result = host.on_function_call("dm", {})
         assert "Data map" in result["response"]
 
-    def test_webhook_function_returns_error(self, host: MockToolHost, mock_registry: Mock) -> None:
+    def test_webhook_function_returns_error(
+        self, host: MockToolHost, mock_registry: Mock
+    ) -> None:
         func = _make_swaig_function("webhook_func", webhook_url="https://example.com")
         mock_registry._swaig_functions = {"webhook_func": func}
         result = host.on_function_call("webhook_func", {})
-        assert "webhook" in result["response"].lower() or "External" in result["response"]
+        assert (
+            "webhook" in result["response"].lower() or "External" in result["response"]
+        )
 
-    def test_calls_handler_successfully(self, host: MockToolHost, mock_registry: Mock) -> None:
+    def test_calls_handler_successfully(
+        self, host: MockToolHost, mock_registry: Mock
+    ) -> None:
         expected_result = FunctionResult("success")
         handler = Mock(return_value=expected_result)
         func = _make_swaig_function("my_tool", handler=handler)
@@ -245,7 +280,9 @@ class TestOnFunctionCall:
         handler.assert_called_once_with({"key": "val"}, {"raw": "data"})
         assert result is expected_result
 
-    def test_handler_returning_none_creates_default(self, host: MockToolHost, mock_registry: Mock) -> None:
+    def test_handler_returning_none_creates_default(
+        self, host: MockToolHost, mock_registry: Mock
+    ) -> None:
         handler = Mock(return_value=None)
         func = _make_swaig_function("my_tool", handler=handler)
         mock_registry._swaig_functions = {"my_tool": func}
@@ -253,7 +290,9 @@ class TestOnFunctionCall:
         result = host.on_function_call("my_tool", {})
         assert isinstance(result, FunctionResult)
 
-    def test_handler_exception_returns_error(self, host: MockToolHost, mock_registry: Mock) -> None:
+    def test_handler_exception_returns_error(
+        self, host: MockToolHost, mock_registry: Mock
+    ) -> None:
         handler = Mock(side_effect=RuntimeError("handler crash"))
         func = _make_swaig_function("my_tool", handler=handler)
         mock_registry._swaig_functions = {"my_tool": func}
@@ -266,6 +305,7 @@ class TestOnFunctionCall:
 # Tests for _execute_swaig_function
 # ===========================================================================
 
+
 class TestExecuteSwaigFunction:
     """Tests for ToolMixin._execute_swaig_function"""
 
@@ -274,7 +314,9 @@ class TestExecuteSwaigFunction:
         result = host._execute_swaig_function("nonexistent")
         assert "error" in result
 
-    def test_default_args_when_none(self, host: MockToolHost, mock_registry: Mock) -> None:
+    def test_default_args_when_none(
+        self, host: MockToolHost, mock_registry: Mock
+    ) -> None:
         handler = Mock(return_value=FunctionResult("done"))
         func = _make_swaig_function("tool", handler=handler)
         mock_registry._swaig_functions = {"tool": func}
@@ -283,7 +325,9 @@ class TestExecuteSwaigFunction:
         assert "response" in result
         assert result["response"] == "done"
 
-    def test_passes_args_and_raw_data(self, host: MockToolHost, mock_registry: Mock) -> None:
+    def test_passes_args_and_raw_data(
+        self, host: MockToolHost, mock_registry: Mock
+    ) -> None:
         handler = Mock(return_value=FunctionResult("ok"))
         func = _make_swaig_function("tool", handler=handler)
         mock_registry._swaig_functions = {"tool": func}
@@ -301,7 +345,9 @@ class TestExecuteSwaigFunction:
         result = host._execute_swaig_function("tool", args={}, call_id="call-42")
         assert result["response"] == "ok"
 
-    def test_constructs_raw_data_with_args(self, host: MockToolHost, mock_registry: Mock) -> None:
+    def test_constructs_raw_data_with_args(
+        self, host: MockToolHost, mock_registry: Mock
+    ) -> None:
         handler = Mock(return_value=FunctionResult("fine"))
         func = _make_swaig_function("tool", handler=handler)
         mock_registry._swaig_functions = {"tool": func}
@@ -313,7 +359,9 @@ class TestExecuteSwaigFunction:
         assert raw_data["function"] == "tool"
         assert raw_data["call_id"] == "c1"
 
-    def test_handler_returning_dict(self, host: MockToolHost, mock_registry: Mock) -> None:
+    def test_handler_returning_dict(
+        self, host: MockToolHost, mock_registry: Mock
+    ) -> None:
         handler = Mock(return_value={"response": "dict result"})
         func = _make_swaig_function("tool", handler=handler)
         mock_registry._swaig_functions = {"tool": func}
@@ -321,7 +369,9 @@ class TestExecuteSwaigFunction:
         result = host._execute_swaig_function("tool")
         assert result["response"] == "dict result"
 
-    def test_handler_returning_string(self, host: MockToolHost, mock_registry: Mock) -> None:
+    def test_handler_returning_string(
+        self, host: MockToolHost, mock_registry: Mock
+    ) -> None:
         handler = Mock(return_value="just a string")
         func = _make_swaig_function("tool", handler=handler)
         mock_registry._swaig_functions = {"tool": func}
@@ -329,7 +379,9 @@ class TestExecuteSwaigFunction:
         result = host._execute_swaig_function("tool")
         assert "response" in result
 
-    def test_handler_exception_returns_error_response(self, host: MockToolHost, mock_registry: Mock) -> None:
+    def test_handler_exception_returns_error_response(
+        self, host: MockToolHost, mock_registry: Mock
+    ) -> None:
         handler = Mock(side_effect=RuntimeError("boom"))
         func = _make_swaig_function("tool", handler=handler)
         mock_registry._swaig_functions = {"tool": func}
@@ -340,7 +392,9 @@ class TestExecuteSwaigFunction:
         assert "response" in result
         assert "Error" in result["response"]
 
-    def test_empty_args_creates_empty_raw_data_argument(self, host: MockToolHost, mock_registry: Mock) -> None:
+    def test_empty_args_creates_empty_raw_data_argument(
+        self, host: MockToolHost, mock_registry: Mock
+    ) -> None:
         handler = Mock(return_value=FunctionResult("ok"))
         func = _make_swaig_function("tool", handler=handler)
         mock_registry._swaig_functions = {"tool": func}
@@ -355,6 +409,7 @@ class TestExecuteSwaigFunction:
 # Tests for _tool_decorator
 # ===========================================================================
 
+
 class TestToolDecorator:
     """Tests for ToolMixin._tool_decorator"""
 
@@ -362,10 +417,16 @@ class TestToolDecorator:
         decorator = host._tool_decorator(name="test_func")
         assert callable(decorator)
 
-    def test_decorated_function_is_registered(self, host: MockToolHost, mock_registry: Mock) -> None:
+    def test_decorated_function_is_registered(
+        self, host: MockToolHost, mock_registry: Mock
+    ) -> None:
         mock_registry.define_tool = Mock()
 
-        @host._tool_decorator(name="greet", description="Greet user", parameters={"name": {"type": "string"}})
+        @host._tool_decorator(
+            name="greet",
+            description="Greet user",
+            parameters={"name": {"type": "string"}},
+        )
         def greet(args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
             return FunctionResult("Hello")
 
@@ -379,13 +440,16 @@ class TestToolDecorator:
 # Tests for tool class decorator
 # ===========================================================================
 
+
 class TestToolClassDecorator:
     """Tests for ToolMixin.tool class method decorator"""
 
     def test_class_decorator_marks_function(self) -> None:
         decorator = ToolMixin.tool(name="class_func", parameters={})
 
-        def my_func(self: Any, args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
+        def my_func(
+            self: Any, args: dict[str, Any], raw_data: dict[str, Any]
+        ) -> FunctionResult:
             return FunctionResult("hi")
 
         decorated = decorator(my_func)

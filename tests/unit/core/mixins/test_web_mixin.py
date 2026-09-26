@@ -17,13 +17,15 @@ import json
 import base64
 import asyncio
 import types
-from typing import Any, Awaitable, TypeVar
+from typing import Any, TypeVar
+from collections.abc import Awaitable
 from unittest.mock import Mock, patch, MagicMock, AsyncMock
 
 from fastapi import FastAPI
 
 from signalwire.core.mixins.web_mixin import WebMixin
 from signalwire.core.function_result import FunctionResult
+
 # SWAIG handler was lifted from WebMixin into SWMLService, with extension
 # points overridden in AgentBase. Tests in this file historically tested the
 # monolithic WebMixin handler — we bind the lifted methods onto FakeAgent so
@@ -35,6 +37,7 @@ from signalwire.core.agent_base import AgentBase as _AgentBase
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_auth_header(username: str, password: str) -> str:
     """Create a Basic Auth header value."""
@@ -57,9 +60,7 @@ def _router_mounted_under(app: FastAPI, prefix: str) -> bool:
         if p and p.startswith(prefix):
             return True
     # Starlette 1.x: a non-leaf container route holds the prefixed sub-router.
-    return any(
-        type(r).__name__ in ("_IncludedRouter", "Mount") for r in app.routes
-    )
+    return any(type(r).__name__ in ("_IncludedRouter", "Mount") for r in app.routes)
 
 
 def _make_request(
@@ -76,12 +77,16 @@ def _make_request(
     request.url = Mock()
     request.url.path = url_path
     request.query_params = query_params or {}
-    request.state = Mock(spec=[])  # empty spec so getattr(..., "callback_path", None) returns None
+    request.state = Mock(
+        spec=[]
+    )  # empty spec so getattr(..., "callback_path", None) returns None
 
     if body is not None:
         raw = json.dumps(body).encode() if isinstance(body, dict) else body
         request.body = AsyncMock(return_value=raw)
-        request.json = AsyncMock(return_value=body if isinstance(body, dict) else json.loads(body))
+        request.json = AsyncMock(
+            return_value=body if isinstance(body, dict) else json.loads(body)
+        )
     else:
         request.body = AsyncMock(return_value=b"")
         request.json = AsyncMock(side_effect=Exception("No body"))
@@ -100,27 +105,27 @@ def _build_mixin(**overrides: Any) -> Any:
     tool_registry = MagicMock()
     tool_registry._swaig_functions = {}
 
-    defaults: dict[str, Any] = dict(
-        _app=None,
-        _basic_auth=("user", "pass"),
-        _proxy_url_base=None,
-        _proxy_url_base_from_env=False,
-        _proxy_detection_done=False,
-        _current_request=None,
-        _dynamic_config_callback=None,
-        _is_ephemeral=False,
-        _suppress_logs=False,
-        _routing_callbacks={},
-        _tool_registry=tool_registry,
-        _session_manager=MagicMock(),
-        log=log,
-        name="test_agent",
-        route="/agent",
-        host="0.0.0.0",
-        port=3000,
-        ssl_enabled=False,
-        schema_utils=MagicMock(),
-    )
+    defaults: dict[str, Any] = {
+        "_app": None,
+        "_basic_auth": ("user", "pass"),
+        "_proxy_url_base": None,
+        "_proxy_url_base_from_env": False,
+        "_proxy_detection_done": False,
+        "_current_request": None,
+        "_dynamic_config_callback": None,
+        "_is_ephemeral": False,
+        "_suppress_logs": False,
+        "_routing_callbacks": {},
+        "_tool_registry": tool_registry,
+        "_session_manager": MagicMock(),
+        "log": log,
+        "name": "test_agent",
+        "route": "/agent",
+        "host": "0.0.0.0",
+        "port": 3000,
+        "ssl_enabled": False,
+        "schema_utils": MagicMock(),
+    }
     defaults.update(overrides)
 
     # WebMixin is typed as Any to mypy (its module isn't fully resolvable under
@@ -146,7 +151,9 @@ def _build_mixin(**overrides: Any) -> Any:
     if "_find_summary_in_post_data" not in overrides:
         agent._find_summary_in_post_data = MagicMock(return_value=None)
     if "get_basic_auth_credentials" not in overrides:
-        agent.get_basic_auth_credentials = MagicMock(return_value=("user", "pass", "provided"))
+        agent.get_basic_auth_credentials = MagicMock(
+            return_value=("user", "pass", "provided")
+        )
     if "get_full_url" not in overrides:
         agent.get_full_url = MagicMock(return_value="http://localhost:3000/agent")
     if "_create_ephemeral_copy" not in overrides:
@@ -160,25 +167,41 @@ def _build_mixin(**overrides: Any) -> Any:
     # Bind the real implementations so size/content-type tests still trigger
     # real 413/415 paths.
     if "_check_content_type" not in overrides:
-        agent._check_content_type = types.MethodType(_SWMLSvc._check_content_type, agent)
+        agent._check_content_type = types.MethodType(
+            _SWMLSvc._check_content_type, agent
+        )
     if "_read_body_with_limit" not in overrides:
-        agent._read_body_with_limit = types.MethodType(_SWMLSvc._read_body_with_limit, agent)
+        agent._read_body_with_limit = types.MethodType(
+            _SWMLSvc._read_body_with_limit, agent
+        )
     # Bind the lifted SWAIG handler + AgentBase extension overrides so tests
     # of SWAIG behavior (token validation, ephemeral dynamic config) keep
     # exercising the same path. AgentBase's override IS what these tests
     # historically asserted on.
     if "_handle_swaig_request" not in overrides:
-        agent._handle_swaig_request = types.MethodType(_SWMLSvc._handle_swaig_request, agent)
+        agent._handle_swaig_request = types.MethodType(
+            _SWMLSvc._handle_swaig_request, agent
+        )
     if "_swaig_render_get_response" not in overrides:
-        agent._swaig_render_get_response = types.MethodType(_AgentBase._swaig_render_get_response, agent)
+        agent._swaig_render_get_response = types.MethodType(
+            _AgentBase._swaig_render_get_response, agent
+        )
     if "_swaig_pre_dispatch" not in overrides:
-        agent._swaig_pre_dispatch = types.MethodType(_AgentBase._swaig_pre_dispatch, agent)
+        agent._swaig_pre_dispatch = types.MethodType(
+            _AgentBase._swaig_pre_dispatch, agent
+        )
     if "_swaig_configures_per_call" not in overrides:
-        agent._swaig_configures_per_call = types.MethodType(_AgentBase._swaig_configures_per_call, agent)
+        agent._swaig_configures_per_call = types.MethodType(
+            _AgentBase._swaig_configures_per_call, agent
+        )
     if "_swaig_handler_is_async" not in overrides:
-        agent._swaig_handler_is_async = types.MethodType(_SWMLSvc._swaig_handler_is_async, agent)
+        agent._swaig_handler_is_async = types.MethodType(
+            _SWMLSvc._swaig_handler_is_async, agent
+        )
     if "_tool_token_rejection" not in overrides:
-        agent._tool_token_rejection = types.MethodType(_AgentBase._tool_token_rejection, agent)
+        agent._tool_token_rejection = types.MethodType(
+            _AgentBase._tool_token_rejection, agent
+        )
     if "_per_call_agent" not in overrides:
         agent._per_call_agent = types.MethodType(_AgentBase._per_call_agent, agent)
     if "_warn_unsigned_webhooks" not in overrides:
@@ -202,6 +225,7 @@ def _run(coro: Awaitable[_T]) -> _T:
 # ===========================================================================
 # get_app
 # ===========================================================================
+
 
 class TestGetApp:
     """Tests for WebMixin.get_app()"""
@@ -258,11 +282,13 @@ class TestGetApp:
 # as_router
 # ===========================================================================
 
+
 class TestAsRouter:
     """Tests for WebMixin.as_router()"""
 
     def test_as_router_returns_api_router(self) -> None:
         from fastapi import APIRouter
+
         agent = _build_mixin()
         router = agent.as_router()
         assert isinstance(router, APIRouter)
@@ -290,12 +316,14 @@ class TestAsRouter:
 # _register_routes
 # ===========================================================================
 
+
 class TestRegisterRoutes:
     """Tests for WebMixin._register_routes()"""
 
     def test_register_routes_creates_slash_variants(self) -> None:
         agent = _build_mixin()
         from fastapi import APIRouter
+
         router = APIRouter()
         agent._register_routes(router)
         paths = [r.path for r in router.routes if hasattr(r, "path")]
@@ -310,6 +338,7 @@ class TestRegisterRoutes:
         cb = MagicMock()
         agent = _build_mixin(_routing_callbacks={"/": cb, "/custom": MagicMock()})
         from fastapi import APIRouter
+
         router = APIRouter()
         agent._register_routes(router)
         paths = [r.path for r in router.routes if hasattr(r, "path")]
@@ -320,6 +349,7 @@ class TestRegisterRoutes:
 # ===========================================================================
 # Token enforcement / auth in request handlers
 # ===========================================================================
+
 
 class TestTokenEnforcement:
     """Tests for basic auth enforcement across endpoints."""
@@ -382,6 +412,7 @@ class TestTokenEnforcement:
 # _handle_root_request
 # ===========================================================================
 
+
 class TestHandleRootRequest:
     """Tests for _handle_root_request."""
 
@@ -420,7 +451,7 @@ class TestHandleRootRequest:
         request = _make_request("POST", body={"call_id": "cid-xyz"})
         _run(agent._handle_root_request(request))
         # Verify _render_swml was called with the extracted call_id
-        args, kwargs = agent._render_swml.call_args
+        args, _kwargs = agent._render_swml.call_args
         assert args[0] == "cid-xyz"
 
     def test_call_id_extracted_from_nested_call(self) -> None:
@@ -428,14 +459,14 @@ class TestHandleRootRequest:
         body = {"call": {"call_id": "nested-id"}}
         request = _make_request("POST", body=body)
         _run(agent._handle_root_request(request))
-        args, kwargs = agent._render_swml.call_args
+        args, _kwargs = agent._render_swml.call_args
         assert args[0] == "nested-id"
 
     def test_call_id_from_query_params_on_get(self) -> None:
         agent = _build_mixin()
         request = _make_request("GET", query_params={"call_id": "q-id"})
         _run(agent._handle_root_request(request))
-        args, kwargs = agent._render_swml.call_args
+        args, _kwargs = agent._render_swml.call_args
         assert args[0] == "q-id"
 
     def test_proxy_detection_from_forwarded_headers(self) -> None:
@@ -526,6 +557,7 @@ class TestHandleRootRequest:
 # _handle_debug_request
 # ===========================================================================
 
+
 class TestHandleDebugRequest:
     """Tests for _handle_debug_request."""
 
@@ -538,16 +570,20 @@ class TestHandleDebugRequest:
 
     def test_post_extracts_call_id_from_body(self) -> None:
         agent = _build_mixin()
-        request = _make_request("POST", body={"call_id": "debug-call-1"}, url_path="/agent/debug")
+        request = _make_request(
+            "POST", body={"call_id": "debug-call-1"}, url_path="/agent/debug"
+        )
         _run(agent._handle_debug_request(request))
-        args, kwargs = agent._render_swml.call_args
+        args, _kwargs = agent._render_swml.call_args
         assert args[0] == "debug-call-1"
 
     def test_get_extracts_call_id_from_query(self) -> None:
         agent = _build_mixin()
-        request = _make_request("GET", query_params={"call_id": "q-debug"}, url_path="/agent/debug")
+        request = _make_request(
+            "GET", query_params={"call_id": "q-debug"}, url_path="/agent/debug"
+        )
         _run(agent._handle_debug_request(request))
-        args, kwargs = agent._render_swml.call_args
+        args, _kwargs = agent._render_swml.call_args
         assert args[0] == "q-debug"
 
     def test_post_malformed_body_still_renders(self) -> None:
@@ -576,6 +612,7 @@ class TestHandleDebugRequest:
 # _handle_swaig_request
 # ===========================================================================
 
+
 class TestHandleSwaigRequest:
     """Tests for _handle_swaig_request."""
 
@@ -583,7 +620,9 @@ class TestHandleSwaigRequest:
         agent = _build_mixin()
         resp = MagicMock()
         resp.headers = {}
-        request = _make_request("GET", query_params={"call_id": "c1"}, url_path="/agent/swaig")
+        request = _make_request(
+            "GET", query_params={"call_id": "c1"}, url_path="/agent/swaig"
+        )
         response = _run(agent._handle_swaig_request(request, resp))
         assert response.status_code == 200
 
@@ -591,7 +630,9 @@ class TestHandleSwaigRequest:
         agent = _build_mixin()
         resp = MagicMock()
         resp.headers = {}
-        request = _make_request("POST", body={"no_function": True}, url_path="/agent/swaig")
+        request = _make_request(
+            "POST", body={"no_function": True}, url_path="/agent/swaig"
+        )
         response = _run(agent._handle_swaig_request(request, resp))
         assert response.status_code == 400
 
@@ -646,14 +687,20 @@ class TestHandleSwaigRequest:
         resp.headers = {}
         body = {"function": "my_func", "call_id": "c1"}
         request = _make_request(
-            "POST", body=body,
+            "POST",
+            body=body,
             query_params={"__token": "valid-token"},
-            url_path="/agent/swaig"
+            url_path="/agent/swaig",
         )
         result = _run(agent._handle_swaig_request(request, resp))
-        agent._session_manager.validate_tool_token.assert_called_once_with("my_func", "valid-token", "c1")
+        agent._session_manager.validate_tool_token.assert_called_once_with(
+            "my_func", "valid-token", "c1"
+        )
         # Function should still be called
         agent.on_function_call.assert_called()
+        # A valid token must yield the function's SWAIG result, not an error dict.
+        assert isinstance(result, dict)
+        assert "response" in result
 
     def test_token_validation_invalid_secure_function_returns_swaig_error(self) -> None:
         """When a secure function has an invalid token, the handler returns a
@@ -667,15 +714,19 @@ class TestHandleSwaigRequest:
         resp.headers = {}
         body = {"function": "secure_fn", "call_id": "c1"}
         request = _make_request(
-            "POST", body=body,
+            "POST",
+            body=body,
             query_params={"token": "bad-token"},
-            url_path="/agent/swaig"
+            url_path="/agent/swaig",
         )
         result = _run(agent._handle_swaig_request(request, resp))
         # Should be a plain dict (not an HTTP Response object)
         assert isinstance(result, dict)
         assert "response" in result
-        assert "token" in result["response"].lower() or "invalid" in result["response"].lower()
+        assert (
+            "token" in result["response"].lower()
+            or "invalid" in result["response"].lower()
+        )
         # Function should NOT have been called
         agent.on_function_call.assert_not_called()
 
@@ -689,13 +740,16 @@ class TestHandleSwaigRequest:
         resp.headers = {}
         body = {"function": "open_fn", "call_id": "c1"}
         request = _make_request(
-            "POST", body=body,
+            "POST",
+            body=body,
             query_params={"__token": "bad-token"},
-            url_path="/agent/swaig"
+            url_path="/agent/swaig",
         )
         result = _run(agent._handle_swaig_request(request, resp))
         # Should proceed since function is not secure
         agent.on_function_call.assert_called()
+        # ...and the caller gets the function's result, not a token error.
+        assert result == {"response": "allowed"}
 
     def test_missing_token_secure_function_is_refused(self) -> None:
         """A secure function without a token is refused like a wrong token:
@@ -725,9 +779,10 @@ class TestHandleSwaigRequest:
         resp.headers = {}
         body = {"function": "secure_fn"}
         request = _make_request(
-            "POST", body=body,
+            "POST",
+            body=body,
             query_params={"__token": "some-token"},
-            url_path="/agent/swaig"
+            url_path="/agent/swaig",
         )
         result = _run(agent._handle_swaig_request(request, resp))
         assert isinstance(result, dict)
@@ -764,6 +819,9 @@ class TestHandleSwaigRequest:
         # The token is checked by the per-call copy, the agent that runs the function
         ephemeral._tool_token_rejection.assert_called_once_with("f1", None, "c1")
         ephemeral.on_function_call.assert_called_once()
+        # The response must come from the EPHEMERAL copy — that is the whole
+        # point of the dynamic-config path.
+        assert result == {"response": "ephemeral"}
 
     def test_function_execution_error_returns_error_dict(self) -> None:
         agent = _build_mixin()
@@ -801,6 +859,7 @@ class TestHandleSwaigRequest:
 # _handle_post_prompt_request
 # ===========================================================================
 
+
 class TestHandlePostPromptRequest:
     """Tests for _handle_post_prompt_request."""
 
@@ -813,11 +872,17 @@ class TestHandlePostPromptRequest:
 
     def test_post_calls_on_summary(self) -> None:
         agent = _build_mixin()
-        agent._find_summary_in_post_data = MagicMock(return_value={"summary": "the call ended"})
+        agent._find_summary_in_post_data = MagicMock(
+            return_value={"summary": "the call ended"}
+        )
         agent.on_summary = MagicMock(return_value=None)
         body = {"summary": "the call ended", "call_id": "c1"}
-        request = _make_request("POST", body=body, query_params={"__token": "t"},
-                                url_path="/agent/post_prompt")
+        request = _make_request(
+            "POST",
+            body=body,
+            query_params={"__token": "t"},
+            url_path="/agent/post_prompt",
+        )
         result = _run(agent._handle_post_prompt_request(request))
         agent.on_summary.assert_called_once_with({"summary": "the call ended"}, body)
         assert result == {"success": True}
@@ -837,8 +902,12 @@ class TestHandlePostPromptRequest:
         agent._find_summary_in_post_data = MagicMock(return_value=None)
         agent.on_summary = MagicMock(return_value=None)
         body = {"call_id": "c1"}
-        request = _make_request("POST", body=body, query_params={"__token": "t"},
-                                url_path="/agent/post_prompt")
+        request = _make_request(
+            "POST",
+            body=body,
+            query_params={"__token": "t"},
+            url_path="/agent/post_prompt",
+        )
         result = _run(agent._handle_post_prompt_request(request))
         agent.on_summary.assert_called_once_with(None, body)
         assert result == {"success": True}
@@ -848,9 +917,17 @@ class TestHandlePostPromptRequest:
         agent._find_summary_in_post_data = MagicMock(return_value="some summary")
         fetch_result = {"conversation": [{"role": "user", "content": "hi"}]}
         agent.on_summary = MagicMock(return_value=fetch_result)
-        body = {"action": "fetch_conversation", "summary": "some summary", "call_id": "c1"}
-        request = _make_request("POST", body=body, query_params={"__token": "t"},
-                                url_path="/agent/post_prompt")
+        body = {
+            "action": "fetch_conversation",
+            "summary": "some summary",
+            "call_id": "c1",
+        }
+        request = _make_request(
+            "POST",
+            body=body,
+            query_params={"__token": "t"},
+            url_path="/agent/post_prompt",
+        )
         result = _run(agent._handle_post_prompt_request(request))
         assert result == fetch_result
 
@@ -859,24 +936,30 @@ class TestHandlePostPromptRequest:
         agent._session_manager.validate_tool_token = MagicMock(return_value=True)
         body = {"call_id": "c1"}
         request = _make_request(
-            "POST", body=body,
+            "POST",
+            body=body,
             query_params={"__token": "good", "call_id": "c1"},
             url_path="/agent/post_prompt",
         )
         _run(agent._handle_post_prompt_request(request))
-        agent._session_manager.validate_tool_token.assert_called_once_with("post_prompt", "good", "c1")
+        agent._session_manager.validate_tool_token.assert_called_once_with(
+            "post_prompt", "good", "c1"
+        )
 
     def test_post_token_fallback_to_token_param(self) -> None:
         agent = _build_mixin()
         agent._session_manager.validate_tool_token = MagicMock(return_value=True)
         body = {"call_id": "c1"}
         request = _make_request(
-            "POST", body=body,
+            "POST",
+            body=body,
             query_params={"token": "fallback-tok", "call_id": "c1"},
             url_path="/agent/post_prompt",
         )
         _run(agent._handle_post_prompt_request(request))
-        agent._session_manager.validate_tool_token.assert_called_once_with("post_prompt", "fallback-tok", "c1")
+        agent._session_manager.validate_tool_token.assert_called_once_with(
+            "post_prompt", "fallback-tok", "c1"
+        )
 
     def test_post_dynamic_config_creates_ephemeral(self) -> None:
         ephemeral = MagicMock()
@@ -886,8 +969,12 @@ class TestHandlePostPromptRequest:
         agent = _build_mixin(_dynamic_config_callback=config_cb)
         agent._create_ephemeral_copy = MagicMock(return_value=ephemeral)
         body = {"call_id": "c1"}
-        request = _make_request("POST", body=body, query_params={"__token": "t"},
-                                url_path="/agent/post_prompt")
+        request = _make_request(
+            "POST",
+            body=body,
+            query_params={"__token": "t"},
+            url_path="/agent/post_prompt",
+        )
         _run(agent._handle_post_prompt_request(request))
         agent._create_ephemeral_copy.assert_called_once()
         config_cb.assert_called_once()
@@ -897,8 +984,12 @@ class TestHandlePostPromptRequest:
         agent = _build_mixin()
         agent._find_summary_in_post_data = MagicMock(side_effect=RuntimeError("oops"))
         body = {"call_id": "c1"}
-        request = _make_request("POST", body=body, query_params={"__token": "t"},
-                                url_path="/agent/post_prompt")
+        request = _make_request(
+            "POST",
+            body=body,
+            query_params={"__token": "t"},
+            url_path="/agent/post_prompt",
+        )
         response = _run(agent._handle_post_prompt_request(request))
         assert response.status_code == 500
 
@@ -925,6 +1016,7 @@ class TestHandlePostPromptRequest:
 # _handle_check_for_input_request
 # ===========================================================================
 
+
 class TestHandleCheckForInputRequest:
     """Tests for _handle_check_for_input_request."""
 
@@ -939,7 +1031,11 @@ class TestHandleCheckForInputRequest:
 
     def test_get_with_conversation_id(self) -> None:
         agent = _build_mixin()
-        request = _make_request("GET", query_params={"conversation_id": "conv-456"}, url_path="/agent/check_for_input")
+        request = _make_request(
+            "GET",
+            query_params={"conversation_id": "conv-456"},
+            url_path="/agent/check_for_input",
+        )
         result = _run(agent._handle_check_for_input_request(request))
         assert result["status"] == "success"
         assert result["conversation_id"] == "conv-456"
@@ -955,6 +1051,7 @@ class TestHandleCheckForInputRequest:
 # ===========================================================================
 # on_request / on_swml_request
 # ===========================================================================
+
 
 class TestOnRequestAndOnSwmlRequest:
     """Tests for on_request and on_swml_request methods."""
@@ -973,7 +1070,9 @@ class TestOnRequestAndOnSwmlRequest:
         result = agent.on_request(None, None)
         assert result is None
 
-    def test_on_swml_request_returns_ephemeral_marker_with_dynamic_callback(self) -> None:
+    def test_on_swml_request_returns_ephemeral_marker_with_dynamic_callback(
+        self,
+    ) -> None:
         cb = MagicMock()
         agent = _build_mixin(_dynamic_config_callback=cb)
         result = agent.on_swml_request({"data": True}, None, None)
@@ -1003,6 +1102,7 @@ class TestOnRequestAndOnSwmlRequest:
 # ===========================================================================
 # register_routing_callback
 # ===========================================================================
+
 
 class TestRegisterRoutingCallback:
     """Tests for register_routing_callback."""
@@ -1041,6 +1141,7 @@ class TestRegisterRoutingCallback:
 # set_dynamic_config_callback
 # ===========================================================================
 
+
 class TestSetDynamicConfigCallback:
     """Tests for set_dynamic_config_callback."""
 
@@ -1055,6 +1156,7 @@ class TestSetDynamicConfigCallback:
 # ===========================================================================
 # manual_set_proxy_url
 # ===========================================================================
+
 
 class TestManualSetProxyUrl:
     """Tests for manual_set_proxy_url."""
@@ -1087,12 +1189,14 @@ class TestManualSetProxyUrl:
 # setup_graceful_shutdown
 # ===========================================================================
 
+
 class TestSetupGracefulShutdown:
     """Tests for setup_graceful_shutdown."""
 
     def test_registers_signal_handlers(self) -> None:
         agent = _build_mixin()
         import signal as sig_module
+
         with patch.object(sig_module, "signal") as mock_signal:
             agent.setup_graceful_shutdown()
             calls = mock_signal.call_args_list
@@ -1104,6 +1208,7 @@ class TestSetupGracefulShutdown:
 # ===========================================================================
 # enable_debug_routes
 # ===========================================================================
+
 
 class TestEnableDebugRoutes:
     """Tests for enable_debug_routes."""
@@ -1117,6 +1222,7 @@ class TestEnableDebugRoutes:
 # ===========================================================================
 # Route prefix handling
 # ===========================================================================
+
 
 class TestRoutePrefixHandling:
     """Tests verifying route prefix behaviour with different route configurations."""
@@ -1152,13 +1258,17 @@ class TestRoutePrefixHandling:
     def test_serve_with_prefix(self) -> None:
         agent = _build_mixin(route="/bot")
         app = agent.get_app()
-        # Verify the router was created
+        # Verify the router was created, and that get_app() hands back that same
+        # assembled app rather than building a throwaway one.
         assert agent._app is not None
+        assert app is agent._app
+        assert agent.route == "/bot"
 
 
 # ===========================================================================
 # Azure mode behavior (via run() method)
 # ===========================================================================
+
 
 class TestAzureModeBehavior:
     """Tests for Azure Function mode in the run() method."""
@@ -1168,7 +1278,9 @@ class TestAzureModeBehavior:
         mock_event = MagicMock()
         agent.handle_serverless_request = MagicMock(return_value="azure-response")
         result = agent.run(event=mock_event, context=None, force_mode="azure_function")
-        agent.handle_serverless_request.assert_called_once_with(mock_event, None, "azure_function")
+        agent.handle_serverless_request.assert_called_once_with(
+            mock_event, None, "azure_function"
+        )
         assert result == "azure-response"
 
     def test_run_lambda_mode(self) -> None:
@@ -1176,7 +1288,9 @@ class TestAzureModeBehavior:
         mock_event = {"headers": {}, "body": "{}"}
         agent.handle_serverless_request = MagicMock(return_value={"statusCode": 200})
         result = agent.run(event=mock_event, context=None, force_mode="lambda")
-        agent.handle_serverless_request.assert_called_once_with(mock_event, None, "lambda")
+        agent.handle_serverless_request.assert_called_once_with(
+            mock_event, None, "lambda"
+        )
         assert result == {"statusCode": 200}
 
     def test_run_cgi_mode(self) -> None:
@@ -1203,7 +1317,9 @@ class TestAzureModeBehavior:
 
     def test_run_lambda_error_returns_500(self) -> None:
         agent = _build_mixin()
-        agent.handle_serverless_request = MagicMock(side_effect=RuntimeError("lambda fail"))
+        agent.handle_serverless_request = MagicMock(
+            side_effect=RuntimeError("lambda fail")
+        )
         result = agent.run(force_mode="lambda")
         assert result["statusCode"] == 500
         body = json.loads(result["body"])
@@ -1211,15 +1327,21 @@ class TestAzureModeBehavior:
 
     def test_run_non_lambda_error_raises(self) -> None:
         agent = _build_mixin()
-        agent.handle_serverless_request = MagicMock(side_effect=RuntimeError("cgi fail"))
-        with pytest.raises(RuntimeError, match="cgi fail"):
-            with patch("builtins.print"):
-                agent.run(force_mode="cgi")
+        agent.handle_serverless_request = MagicMock(
+            side_effect=RuntimeError("cgi fail")
+        )
+        with (
+            pytest.raises(RuntimeError, match="cgi fail"),
+            patch("builtins.print"),
+        ):
+            agent.run(force_mode="cgi")
 
     def test_run_auto_detection_defaults_to_server(self) -> None:
         agent = _build_mixin()
         agent.serve = MagicMock()
-        with patch("signalwire.core.mixins.web_mixin.get_execution_mode", return_value="server"):
+        with patch(
+            "signalwire.core.mixins.web_mixin.get_execution_mode", return_value="server"
+        ):
             agent.run()
         agent.serve.assert_called_once()
 
@@ -1227,6 +1349,7 @@ class TestAzureModeBehavior:
 # ===========================================================================
 # serve() method
 # ===========================================================================
+
 
 class TestServe:
     """Tests for serve() method."""
@@ -1237,6 +1360,7 @@ class TestServe:
 
     def test_serve_uses_default_host_and_port(self) -> None:
         import sys
+
         mock_uvicorn = MagicMock()
         with patch.dict(sys.modules, {"uvicorn": mock_uvicorn}):
             agent = _build_mixin(host="0.0.0.0", port=3000)
@@ -1248,6 +1372,7 @@ class TestServe:
 
     def test_serve_uses_override_host_and_port(self) -> None:
         import sys
+
         mock_uvicorn = MagicMock()
         with patch.dict(sys.modules, {"uvicorn": mock_uvicorn}):
             agent = _build_mixin(host="0.0.0.0", port=3000)
@@ -1258,6 +1383,7 @@ class TestServe:
 
     def test_serve_with_ssl(self) -> None:
         import sys
+
         mock_uvicorn = MagicMock()
         with patch.dict(sys.modules, {"uvicorn": mock_uvicorn}):
             agent = _build_mixin(
@@ -1272,6 +1398,7 @@ class TestServe:
 
     def test_serve_without_ssl(self) -> None:
         import sys
+
         mock_uvicorn = MagicMock()
         with patch.dict(sys.modules, {"uvicorn": mock_uvicorn}):
             agent = _build_mixin(ssl_enabled=False)
@@ -1282,6 +1409,7 @@ class TestServe:
 
     def test_serve_caches_app(self) -> None:
         import sys
+
         mock_uvicorn = MagicMock()
         with patch.dict(sys.modules, {"uvicorn": mock_uvicorn}):
             agent = _build_mixin()
@@ -1290,6 +1418,7 @@ class TestServe:
 
     def test_serve_reuses_cached_app(self) -> None:
         import sys
+
         mock_uvicorn = MagicMock()
         fake_app = MagicMock()
         with patch.dict(sys.modules, {"uvicorn": mock_uvicorn}):
@@ -1303,6 +1432,7 @@ class TestServe:
 
     def test_serve_root_route_includes_router_without_prefix(self) -> None:
         import sys
+
         mock_uvicorn = MagicMock()
         with patch.dict(sys.modules, {"uvicorn": mock_uvicorn}):
             agent = _build_mixin(route="/")
@@ -1314,6 +1444,7 @@ class TestServe:
 # Additional coverage tests
 # ===========================================================================
 
+
 class TestHandleRootRequestModifications:
     """Tests for on_swml_request modification paths in _handle_root_request."""
 
@@ -1324,7 +1455,7 @@ class TestHandleRootRequestModifications:
         agent.on_swml_request = MagicMock(return_value=mods)
         request = _make_request("POST", body={"call_id": "c1"})
         _run(agent._handle_root_request(request))
-        args, kwargs = agent._render_swml.call_args
+        args, _kwargs = agent._render_swml.call_args
         assert args[1] == mods
 
     def test_on_swml_request_exception_handled(self) -> None:
@@ -1390,6 +1521,9 @@ class TestHandleSwaigRequestMalformedBody:
         result = _run(agent._handle_swaig_request(request, resp))
         # Function should still be called on the ephemeral copy
         ephemeral.on_function_call.assert_called_once()
+        # ...and the caller still gets its result — the config-callback failure
+        # is logged, not surfaced as an error response.
+        assert result == {"response": "ok"}
 
 
 class TestHandlePostPromptRequestExtraPaths:
@@ -1420,12 +1554,15 @@ class TestHandlePostPromptRequestExtraPaths:
         """Lines 834-840: invalid token triggers debug_token call."""
         agent = _build_mixin()
         agent._session_manager.validate_tool_token = MagicMock(return_value=False)
-        agent._session_manager.debug_token = MagicMock(return_value={"reason": "expired"})
+        agent._session_manager.debug_token = MagicMock(
+            return_value={"reason": "expired"}
+        )
         agent._find_summary_in_post_data = MagicMock(return_value=None)
         agent.on_summary = MagicMock(return_value=None)
         body = {"call_id": "c1"}
         request = _make_request(
-            "POST", body=body,
+            "POST",
+            body=body,
             query_params={"__token": "bad-tok", "call_id": "c1"},
             url_path="/agent/post_prompt",
         )
@@ -1437,12 +1574,15 @@ class TestHandlePostPromptRequestExtraPaths:
     def test_token_validation_error(self) -> None:
         """An exception during token validation is caught, and the POST refused."""
         agent = _build_mixin()
-        agent._session_manager.validate_tool_token = MagicMock(side_effect=RuntimeError("token err"))
+        agent._session_manager.validate_tool_token = MagicMock(
+            side_effect=RuntimeError("token err")
+        )
         agent._find_summary_in_post_data = MagicMock(return_value=None)
         agent.on_summary = MagicMock(return_value=None)
         body = {"call_id": "c1"}
         request = _make_request(
-            "POST", body=body,
+            "POST",
+            body=body,
             query_params={"__token": "tok", "call_id": "c1"},
             url_path="/agent/post_prompt",
         )
@@ -1478,7 +1618,9 @@ class TestHandlePostPromptRequestExtraPaths:
         agent._find_summary_in_post_data = MagicMock(return_value=None)
         agent.on_summary = MagicMock(return_value=None)
         # Use a Mock with spec to prevent auto-attribute creation
-        request = Mock(spec=["method", "headers", "url", "query_params", "state", "body", "json"])
+        request = Mock(
+            spec=["method", "headers", "url", "query_params", "state", "body", "json"]
+        )
         request.method = "POST"
         request.headers = {}
         request.url = Mock()
@@ -1505,8 +1647,12 @@ class TestHandlePostPromptRequestExtraPaths:
         agent = _build_mixin(_dynamic_config_callback=config_cb)
         agent._create_ephemeral_copy = MagicMock(return_value=ephemeral)
         body = {"call_id": "c1"}
-        request = _make_request("POST", body=body, query_params={"__token": "t"},
-                                url_path="/agent/post_prompt")
+        request = _make_request(
+            "POST",
+            body=body,
+            query_params={"__token": "t"},
+            url_path="/agent/post_prompt",
+        )
         result = _run(agent._handle_post_prompt_request(request))
         # Even though config callback failed, summary should still be processed
         ephemeral.on_summary.assert_called_once()
@@ -1518,8 +1664,12 @@ class TestHandlePostPromptRequestExtraPaths:
         agent._find_summary_in_post_data = MagicMock(return_value="some summary")
         agent.on_summary = MagicMock(side_effect=RuntimeError("summary boom"))
         body = {"call_id": "c1"}
-        request = _make_request("POST", body=body, query_params={"__token": "t"},
-                                url_path="/agent/post_prompt")
+        request = _make_request(
+            "POST",
+            body=body,
+            query_params={"__token": "t"},
+            url_path="/agent/post_prompt",
+        )
         result = _run(agent._handle_post_prompt_request(request))
         # Should still return success; the error is logged but not raised
         assert result == {"success": True}
@@ -1541,7 +1691,11 @@ class TestHandleCheckForInputExtraPaths:
         agent = _build_mixin()
         # Make _check_basic_auth raise to trigger the outer exception handler
         agent._check_basic_auth = MagicMock(side_effect=RuntimeError("unexpected"))
-        request = _make_request("GET", query_params={"conversation_id": "c1"}, url_path="/agent/check_for_input")
+        request = _make_request(
+            "GET",
+            query_params={"conversation_id": "c1"},
+            url_path="/agent/check_for_input",
+        )
         response = _run(agent._handle_check_for_input_request(request))
         assert response.status_code == 500
         body = json.loads(response.body)
@@ -1575,6 +1729,7 @@ class TestGracefulShutdownHandler:
         # Make the log.info raise during "cleanup_completed" to trigger the except branch
         call_count = [0]
         original_info = agent.log.info
+
         def info_side_effect(*args: Any, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 2:  # second log.info call is "cleanup_completed"
@@ -1603,6 +1758,7 @@ class TestGetAppEndpointsViaTestClient:
     def test_health_endpoint(self) -> None:
         """Lines 54: health endpoint returns healthy status."""
         from starlette.testclient import TestClient
+
         agent = _build_mixin()
         app = agent.get_app()
         client = TestClient(app)
@@ -1615,6 +1771,7 @@ class TestGetAppEndpointsViaTestClient:
     def test_ready_endpoint(self) -> None:
         """Line 65: ready endpoint returns ready status."""
         from starlette.testclient import TestClient
+
         agent = _build_mixin()
         app = agent.get_app()
         client = TestClient(app)
@@ -1629,6 +1786,7 @@ class TestRootRequestProxyParentDetection:
 
     def test_no_proxy_headers_calls_parent_detect_proxy(self) -> None:
         """Lines 452-457: when parent has _detect_proxy_from_request, it is called."""
+
         class FakeParent:
             def __init__(self) -> None:
                 self._proxy_url_base: str | None = None
@@ -1685,20 +1843,27 @@ class TestRootRequestProxyParentDetection:
 # Security audit tests
 # ===========================================================================
 
+
 class TestSecurityBodySizeLimit:
     """Test request body size limit enforcement (413)."""
 
     def test_oversized_body_returns_413_root(self) -> None:
         agent = _build_mixin()
         # Simulate a request with Content-Length > 10MB
-        headers = {"content-length": str(11 * 1024 * 1024), "content-type": "application/json"}
+        headers = {
+            "content-length": str(11 * 1024 * 1024),
+            "content-type": "application/json",
+        }
         request = _make_request("POST", headers=headers, body={"key": "value"})
         response = _run(agent._handle_root_request(request))
         assert response.status_code == 413
 
     def test_oversized_body_returns_413_swaig(self) -> None:
         agent = _build_mixin()
-        headers = {"content-length": str(11 * 1024 * 1024), "content-type": "application/json"}
+        headers = {
+            "content-length": str(11 * 1024 * 1024),
+            "content-type": "application/json",
+        }
         request = _make_request("POST", headers=headers, body={"function": "test"})
         response_obj = MagicMock()
         response_obj.headers = {}
@@ -1707,28 +1872,42 @@ class TestSecurityBodySizeLimit:
 
     def test_oversized_body_returns_413_debug(self) -> None:
         agent = _build_mixin()
-        headers = {"content-length": str(11 * 1024 * 1024), "content-type": "application/json"}
+        headers = {
+            "content-length": str(11 * 1024 * 1024),
+            "content-type": "application/json",
+        }
         request = _make_request("POST", headers=headers, body={})
         response = _run(agent._handle_debug_request(request))
         assert response.status_code == 413
 
     def test_oversized_body_returns_413_post_prompt(self) -> None:
         agent = _build_mixin()
-        headers = {"content-length": str(11 * 1024 * 1024), "content-type": "application/json"}
+        headers = {
+            "content-length": str(11 * 1024 * 1024),
+            "content-type": "application/json",
+        }
         request = _make_request("POST", headers=headers, body={"summary": "x"})
         response = _run(agent._handle_post_prompt_request(request))
         assert response.status_code == 413
 
     def test_oversized_body_returns_413_check_for_input(self) -> None:
         agent = _build_mixin()
-        headers = {"content-length": str(11 * 1024 * 1024), "content-type": "application/json"}
-        request = _make_request("POST", headers=headers, body={"conversation_id": "abc"})
+        headers = {
+            "content-length": str(11 * 1024 * 1024),
+            "content-type": "application/json",
+        }
+        request = _make_request(
+            "POST", headers=headers, body={"conversation_id": "abc"}
+        )
         response = _run(agent._handle_check_for_input_request(request))
         assert response.status_code == 413
 
     def test_oversized_body_returns_413_debug_events(self) -> None:
         agent = _build_mixin()
-        headers = {"content-length": str(11 * 1024 * 1024), "content-type": "application/json"}
+        headers = {
+            "content-length": str(11 * 1024 * 1024),
+            "content-type": "application/json",
+        }
         request = _make_request("POST", headers=headers, body={"label": "test"})
         response = _run(agent._handle_debug_events_request(request))
         assert response.status_code == 413
@@ -1781,8 +1960,9 @@ class TestSecurityFunctionNameValidation:
     def test_invalid_function_name_returns_400(self) -> None:
         agent = _build_mixin()
         headers = {"content-type": "application/json"}
-        request = _make_request("POST", headers=headers,
-                               body={"function": "../etc/passwd"})
+        request = _make_request(
+            "POST", headers=headers, body={"function": "../etc/passwd"}
+        )
         response_obj = MagicMock()
         response_obj.headers = {}
         response = _run(agent._handle_swaig_request(request, response_obj))
@@ -1791,8 +1971,9 @@ class TestSecurityFunctionNameValidation:
     def test_function_name_with_spaces_returns_400(self) -> None:
         agent = _build_mixin()
         headers = {"content-type": "application/json"}
-        request = _make_request("POST", headers=headers,
-                               body={"function": "my function"})
+        request = _make_request(
+            "POST", headers=headers, body={"function": "my function"}
+        )
         response_obj = MagicMock()
         response_obj.headers = {}
         response = _run(agent._handle_swaig_request(request, response_obj))
@@ -1800,15 +1981,18 @@ class TestSecurityFunctionNameValidation:
 
     def test_valid_function_name_passes(self) -> None:
         agent = _build_mixin()
-        agent._tool_registry._swaig_functions = {"get_balance": {"handler": MagicMock()}}
+        agent._tool_registry._swaig_functions = {
+            "get_balance": {"handler": MagicMock()}
+        }
         headers = {"content-type": "application/json"}
-        request = _make_request("POST", headers=headers,
-                               body={"function": "get_balance", "argument": {}})
+        request = _make_request(
+            "POST", headers=headers, body={"function": "get_balance", "argument": {}}
+        )
         response_obj = MagicMock()
         response_obj.headers = {}
         result = _run(agent._handle_swaig_request(request, response_obj))
         # Should not be a 400 error
-        if hasattr(result, 'status_code'):
+        if hasattr(result, "status_code"):
             assert result.status_code != 400
 
 
@@ -1821,6 +2005,7 @@ class TestSecurityCORS:
         # Check that CORS middleware was added with allow_credentials=False
         # We check the middleware stack
         from starlette.middleware.cors import CORSMiddleware as StarletteCORS
+
         for middleware in app.user_middleware:
             if middleware.cls is StarletteCORS:
                 assert middleware.kwargs.get("allow_credentials") is False
@@ -1834,13 +2019,16 @@ class TestSecurityHeaders:
 
     def test_security_headers_present_via_get_app(self) -> None:
         from starlette.testclient import TestClient
+
         agent = _build_mixin(route="/")
         app = agent.get_app()
         client = TestClient(app)
         response = client.get("/health")
         assert response.headers.get("X-Content-Type-Options") == "nosniff"
         assert response.headers.get("X-Frame-Options") == "DENY"
-        assert response.headers.get("Referrer-Policy") == "strict-origin-when-cross-origin"
+        assert (
+            response.headers.get("Referrer-Policy") == "strict-origin-when-cross-origin"
+        )
 
 
 class TestSecurityDebugGuard:
@@ -1876,7 +2064,9 @@ class TestSecurityProxyValidation:
         with patch.dict(os.environ, {"SWML_TRUST_PROXY_HEADERS": "true"}):
             _run(agent._handle_root_request(request))
         # proxy should NOT have been set
-        assert agent._proxy_url_base is None or "DROP TABLE" not in str(agent._proxy_url_base)
+        assert agent._proxy_url_base is None or "DROP TABLE" not in str(
+            agent._proxy_url_base
+        )
 
     def test_invalid_proto_rejected(self) -> None:
         agent = _build_mixin()
@@ -1908,6 +2098,7 @@ class TestSessionManagerDebugGuard:
 
     def test_debug_token_disabled_by_default(self) -> None:
         from signalwire.core.security.session_manager import SessionManager
+
         manager = SessionManager()
         token = manager.generate_token("func", "call_123")
         result = manager.debug_token(token)
@@ -1915,6 +2106,7 @@ class TestSessionManagerDebugGuard:
 
     def test_debug_token_enabled(self) -> None:
         from signalwire.core.security.session_manager import SessionManager
+
         manager = SessionManager()
         manager._debug_mode = True
         token = manager.generate_token("func", "call_123")

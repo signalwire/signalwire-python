@@ -22,7 +22,10 @@ class TestDataSphereServerlessSkillClassAttributes:
 
     def _get_skill_class(self) -> "type[DataSphereServerlessSkill]":
         """Import and return the skill class with mocked dependencies"""
-        from signalwire.skills.datasphere_serverless.skill import DataSphereServerlessSkill
+        from signalwire.skills.datasphere_serverless.skill import (
+            DataSphereServerlessSkill,
+        )
+
         return DataSphereServerlessSkill
 
     def test_skill_name(self) -> None:
@@ -33,7 +36,10 @@ class TestDataSphereServerlessSkillClassAttributes:
     def test_skill_description(self) -> None:
         """Test SKILL_DESCRIPTION is set correctly"""
         cls = self._get_skill_class()
-        assert cls.SKILL_DESCRIPTION == "Search knowledge using SignalWire DataSphere with serverless DataMap execution"
+        assert (
+            cls.SKILL_DESCRIPTION
+            == "Search knowledge using SignalWire DataSphere with serverless DataMap execution"
+        )
 
     def test_skill_version(self) -> None:
         """Test SKILL_VERSION is set correctly"""
@@ -60,7 +66,10 @@ class TestDataSphereServerlessSkillParameterSchema:
     """Test get_parameter_schema class method"""
 
     def _get_skill_class(self) -> "type[DataSphereServerlessSkill]":
-        from signalwire.skills.datasphere_serverless.skill import DataSphereServerlessSkill
+        from signalwire.skills.datasphere_serverless.skill import (
+            DataSphereServerlessSkill,
+        )
+
         return DataSphereServerlessSkill
 
     def test_schema_includes_base_params(self) -> None:
@@ -162,7 +171,12 @@ class TestDataSphereServerlessSkillParameterSchema:
         assert "pos_to_expand" in schema
         assert schema["pos_to_expand"]["type"] == "array"
         assert schema["pos_to_expand"]["required"] is False
-        assert schema["pos_to_expand"]["items"]["enum"] == ["NOUN", "VERB", "ADJ", "ADV"]
+        assert schema["pos_to_expand"]["items"]["enum"] == [
+            "NOUN",
+            "VERB",
+            "ADJ",
+            "ADV",
+        ]
 
     def test_schema_includes_max_synonyms(self) -> None:
         """Test max_synonyms parameter is defined with bounds"""
@@ -191,10 +205,19 @@ class TestDataSphereServerlessSkillParameterSchema:
         schema = cls.get_parameter_schema()
 
         expected_params = [
-            "swaig_fields", "tool_name",  # from base class
-            "space_name", "project_id", "token", "document_id",
-            "count", "distance", "tags", "language",
-            "pos_to_expand", "max_synonyms", "no_results_message"
+            "swaig_fields",
+            "tool_name",  # from base class
+            "space_name",
+            "project_id",
+            "token",
+            "document_id",
+            "count",
+            "distance",
+            "tags",
+            "language",
+            "pos_to_expand",
+            "max_synonyms",
+            "no_results_message",
         ]
 
         for param in expected_params:
@@ -241,7 +264,7 @@ class TestDataSphereServerlessSkillInit:
         skill, _ = _create_skill()
         assert skill.params["space_name"] == "testspace"
         assert skill.params["project_id"] == "test-project-id"
-        assert skill.params["token"] == "test-token-secret"  # noqa: S105
+        assert skill.params["token"] == "test-token-secret"
         assert skill.params["document_id"] == "doc-123"
 
     def test_init_creates_logger(self) -> None:
@@ -265,7 +288,10 @@ class TestDataSphereServerlessSkillInit:
 
     def test_init_with_empty_params(self) -> None:
         """Test that init works with None params"""
-        from signalwire.skills.datasphere_serverless.skill import DataSphereServerlessSkill
+        from signalwire.skills.datasphere_serverless.skill import (
+            DataSphereServerlessSkill,
+        )
+
         mock_agent = Mock()
         skill = DataSphereServerlessSkill(mock_agent, None)
         assert skill.params == {}
@@ -310,7 +336,7 @@ class TestDataSphereServerlessSkillSetup:
 
         assert skill.space_name == "testspace"
         assert skill.project_id == "test-project-id"
-        assert skill.token == "test-token-secret"  # noqa: S105
+        assert skill.token == "test-token-secret"
         assert skill.document_id == "doc-123"
 
     def test_setup_missing_space_name(self) -> None:
@@ -339,7 +365,10 @@ class TestDataSphereServerlessSkillSetup:
 
     def test_setup_missing_all_required_params(self) -> None:
         """Test that setup returns False when all required params are missing"""
-        from signalwire.skills.datasphere_serverless.skill import DataSphereServerlessSkill
+        from signalwire.skills.datasphere_serverless.skill import (
+            DataSphereServerlessSkill,
+        )
+
         mock_agent = Mock()
         skill = DataSphereServerlessSkill(mock_agent, {})
         result = skill.setup()
@@ -458,13 +487,19 @@ class TestDataSphereServerlessSkillSetup:
         """Test that setup builds the correct API URL"""
         skill, _ = _create_skill()
         skill.setup()
-        assert skill.api_url == "https://testspace.signalwire.com/api/datasphere/documents/search"
+        assert (
+            skill.api_url
+            == "https://testspace.signalwire.com/api/datasphere/documents/search"
+        )
 
     def test_setup_api_url_with_different_space(self) -> None:
         """Test API URL with a different space name"""
         skill, _ = _create_skill(params={"space_name": "mycompany"})
         skill.setup()
-        assert skill.api_url == "https://mycompany.signalwire.com/api/datasphere/documents/search"
+        assert (
+            skill.api_url
+            == "https://mycompany.signalwire.com/api/datasphere/documents/search"
+        )
 
     def test_setup_builds_auth_header(self) -> None:
         """Test that setup builds the correct base64 auth header"""
@@ -476,10 +511,7 @@ class TestDataSphereServerlessSkillSetup:
 
     def test_setup_auth_header_encoding(self) -> None:
         """Test that auth header is proper base64 of project_id:token"""
-        skill, _ = _create_skill(params={
-            "project_id": "proj-abc",
-            "token": "tok-xyz"
-        })
+        skill, _ = _create_skill(params={"project_id": "proj-abc", "token": "tok-xyz"})
         skill.setup()
 
         decoded = base64.b64decode(skill.auth_header).decode()
@@ -591,7 +623,10 @@ class TestDataSphereServerlessSkillRegisterTools:
 
         swaig_func = mock_agent.register_swaig_function.call_args[0][0]
         webhook = swaig_func["data_map"]["webhooks"][0]
-        assert webhook["url"] == "https://testspace.signalwire.com/api/datasphere/documents/search"
+        assert (
+            webhook["url"]
+            == "https://testspace.signalwire.com/api/datasphere/documents/search"
+        )
 
     def test_register_tools_webhook_auth_header(self) -> None:
         """Test that webhook has correct Authorization header"""
@@ -707,12 +742,14 @@ class TestDataSphereServerlessSkillRegisterTools:
 
     def test_register_tools_includes_all_optional_params(self) -> None:
         """Test that all optional params are included when all are provided"""
-        skill, mock_agent = _create_skill(params={
-            "tags": ["doc"],
-            "language": "en",
-            "pos_to_expand": ["VERB"],
-            "max_synonyms": 2
-        })
+        skill, mock_agent = _create_skill(
+            params={
+                "tags": ["doc"],
+                "language": "en",
+                "pos_to_expand": ["VERB"],
+                "max_synonyms": 2,
+            }
+        )
         skill.setup()
         skill.register_tools()
 
@@ -817,7 +854,7 @@ class TestDataSphereServerlessSkillRegisterTools:
         skill.register_tools()
 
         swaig_func = mock_agent.register_swaig_function.call_args[0][0]
-        assert swaig_func["meta_data_token"] == "custom_token"  # noqa: S105
+        assert swaig_func["meta_data_token"] == "custom_token"
         assert swaig_func["fillers"] == {"en": ["hmm"]}
 
     def test_register_tools_swaig_fields_do_not_overwrite_core_fields(self) -> None:
@@ -869,7 +906,11 @@ class TestDataSphereServerlessSkillGetGlobalData:
         skill.setup()
         data = skill.get_global_data()
 
-        expected_keys = {"datasphere_serverless_enabled", "document_id", "knowledge_provider"}
+        expected_keys = {
+            "datasphere_serverless_enabled",
+            "document_id",
+            "knowledge_provider",
+        }
         assert set(data.keys()) == expected_keys
 
 
@@ -918,7 +959,9 @@ class TestDataSphereServerlessSkillGetPromptSections:
         skill, _ = _create_skill()
         skill.setup()
         section = skill.get_prompt_sections()[0]
-        tool_name_found = any("search_knowledge" in bullet for bullet in section["bullets"])
+        tool_name_found = any(
+            "search_knowledge" in bullet for bullet in section["bullets"]
+        )
         assert tool_name_found
 
     def test_get_prompt_sections_mentions_serverless(self) -> None:
@@ -926,7 +969,9 @@ class TestDataSphereServerlessSkillGetPromptSections:
         skill, _ = _create_skill()
         skill.setup()
         section = skill.get_prompt_sections()[0]
-        serverless_found = any("server" in bullet.lower() for bullet in section["bullets"])
+        serverless_found = any(
+            "server" in bullet.lower() for bullet in section["bullets"]
+        )
         assert serverless_found
 
 
@@ -937,14 +982,16 @@ class TestDataSphereServerlessSkillEdgeCases:
         """Test setup with special characters in space name"""
         skill, _ = _create_skill(params={"space_name": "my-company-123"})
         skill.setup()
-        assert skill.api_url == "https://my-company-123.signalwire.com/api/datasphere/documents/search"
+        assert (
+            skill.api_url
+            == "https://my-company-123.signalwire.com/api/datasphere/documents/search"
+        )
 
     def test_setup_with_special_characters_in_credentials(self) -> None:
         """Test that auth header is correctly encoded with special characters"""
-        skill, _ = _create_skill(params={
-            "project_id": "proj+id/special",
-            "token": "tok=en/special+chars"
-        })
+        skill, _ = _create_skill(
+            params={"project_id": "proj+id/special", "token": "tok=en/special+chars"}
+        )
         skill.setup()
 
         decoded = base64.b64decode(skill.auth_header).decode()
@@ -952,16 +999,12 @@ class TestDataSphereServerlessSkillEdgeCases:
 
     def test_multiple_skills_with_different_configs(self) -> None:
         """Test creating multiple skill instances with different configs"""
-        skill1, _agent1 = _create_skill(params={
-            "tool_name": "search_docs",
-            "document_id": "doc-1",
-            "count": 3
-        })
-        skill2, _agent2 = _create_skill(params={
-            "tool_name": "search_faq",
-            "document_id": "doc-2",
-            "count": 1
-        })
+        skill1, _agent1 = _create_skill(
+            params={"tool_name": "search_docs", "document_id": "doc-1", "count": 3}
+        )
+        skill2, _agent2 = _create_skill(
+            params={"tool_name": "search_faq", "document_id": "doc-2", "count": 1}
+        )
 
         skill1.setup()
         skill2.setup()

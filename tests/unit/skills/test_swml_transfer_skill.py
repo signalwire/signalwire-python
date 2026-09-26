@@ -45,13 +45,13 @@ def _make_skill(params: dict[str, Any] | None = None) -> SWMLTransferSkill:
     mock_agent = Mock()
     mock_agent.define_tool = Mock()
     mock_agent.register_swaig_function = Mock()
-    skill = SWMLTransferSkill(agent=mock_agent, params=default_params)
-    return skill
+    return SWMLTransferSkill(agent=mock_agent, params=default_params)
 
 
 # ---------------------------------------------------------------------------
 # Class-level attributes
 # ---------------------------------------------------------------------------
+
 
 class TestSWMLTransferSkillClassAttributes:
     """Verify class-level constants and metadata."""
@@ -60,7 +60,10 @@ class TestSWMLTransferSkillClassAttributes:
         assert SWMLTransferSkill.SKILL_NAME == "swml_transfer"
 
     def test_skill_description(self) -> None:
-        assert SWMLTransferSkill.SKILL_DESCRIPTION == "Transfer calls between agents based on pattern matching"
+        assert (
+            SWMLTransferSkill.SKILL_DESCRIPTION
+            == "Transfer calls between agents based on pattern matching"
+        )
 
     def test_skill_version(self) -> None:
         assert SWMLTransferSkill.SKILL_VERSION == "1.0.0"
@@ -78,6 +81,7 @@ class TestSWMLTransferSkillClassAttributes:
 # ---------------------------------------------------------------------------
 # Initialization
 # ---------------------------------------------------------------------------
+
 
 class TestSWMLTransferSkillInit:
     """Tests for __init__ (inherited from SkillBase)."""
@@ -112,6 +116,7 @@ class TestSWMLTransferSkillInit:
 # get_instance_key
 # ---------------------------------------------------------------------------
 
+
 class TestGetInstanceKey:
     """Tests for get_instance_key method."""
 
@@ -134,6 +139,7 @@ class TestGetInstanceKey:
 # ---------------------------------------------------------------------------
 # setup() behaviour
 # ---------------------------------------------------------------------------
+
 
 class TestSetup:
     """Tests for setup() validation and configuration."""
@@ -210,14 +216,15 @@ class TestSetup:
 
     def test_setup_sets_defaults_on_transfer_configs(self) -> None:
         """Verify setup fills in defaults for optional config fields."""
-        transfers = {
-            "/billing/": {"url": "https://example.com/billing"}
-        }
+        transfers = {"/billing/": {"url": "https://example.com/billing"}}
         skill = _make_skill({"transfers": transfers})
         skill.setup()
         config = skill.transfers["/billing/"]
         assert config["message"] == "Transferring you now..."
-        assert config["return_message"] == "The transfer is complete. How else can I help you?"
+        assert (
+            config["return_message"]
+            == "The transfer is complete. How else can I help you?"
+        )
         assert config["post_process"] is True
         assert config["final"] is True
 
@@ -245,20 +252,23 @@ class TestSetup:
         assert skill.setup() is False
 
     def test_setup_fails_transfer_has_both_url_and_address(self) -> None:
-        skill = _make_skill({
-            "transfers": {
-                "/both/": {
-                    "url": "https://example.com/agent",
-                    "address": "+15551234567"
+        skill = _make_skill(
+            {
+                "transfers": {
+                    "/both/": {
+                        "url": "https://example.com/agent",
+                        "address": "+15551234567",
+                    }
                 }
             }
-        })
+        )
         assert skill.setup() is False
 
 
 # ---------------------------------------------------------------------------
 # register_tools()
 # ---------------------------------------------------------------------------
+
 
 class TestRegisterTools:
     """Tests for register_tools() method."""
@@ -334,11 +344,11 @@ class TestRegisterTools:
         call_args = skill.agent.register_swaig_function.call_args[0][0]
         expressions = call_args["data_map"]["expressions"]
         # Find the sales expression (url-based)
-        sales_expr = [e for e in expressions if e["pattern"] == "/sales/i"][0]
+        sales_expr = next(e for e in expressions if e["pattern"] == "/sales/i")
         actions = sales_expr["output"]["action"]
         # Should have a SWML action with transfer key
         assert any("SWML" in a for a in actions)
-        swml_action = [a for a in actions if "SWML" in a][0]
+        swml_action = next(a for a in actions if "SWML" in a)
         assert swml_action["transfer"] == "true"
         # Check the dest in the SWML
         main_section = swml_action["SWML"]["sections"]["main"]
@@ -352,31 +362,26 @@ class TestRegisterTools:
         call_args = skill.agent.register_swaig_function.call_args[0][0]
         expressions = call_args["data_map"]["expressions"]
         # Find the support expression (address-based)
-        support_expr = [e for e in expressions if e["pattern"] == "/support/i"][0]
+        support_expr = next(e for e in expressions if e["pattern"] == "/support/i")
         actions = support_expr["output"]["action"]
-        swml_action = [a for a in actions if "SWML" in a][0]
+        swml_action = next(a for a in actions if "SWML" in a)
         main_section = swml_action["SWML"]["sections"]["main"]
-        connect_step = [s for s in main_section if "connect" in s][0]
+        connect_step = next(s for s in main_section if "connect" in s)
         assert connect_step["connect"]["to"] == "+15551234567"
 
     def test_address_transfer_with_from_addr(self) -> None:
         """An address config with from_addr should include 'from' in the connect action."""
-        transfers = {
-            "/vip/": {
-                "address": "+15559876543",
-                "from_addr": "+15550001111"
-            }
-        }
+        transfers = {"/vip/": {"address": "+15559876543", "from_addr": "+15550001111"}}
         skill = _make_skill({"transfers": transfers})
         skill.setup()
         skill.register_tools()
         call_args = skill.agent.register_swaig_function.call_args[0][0]
         expressions = call_args["data_map"]["expressions"]
-        vip_expr = [e for e in expressions if e["pattern"] == "/vip/"][0]
+        vip_expr = next(e for e in expressions if e["pattern"] == "/vip/")
         actions = vip_expr["output"]["action"]
-        swml_action = [a for a in actions if "SWML" in a][0]
+        swml_action = next(a for a in actions if "SWML" in a)
         main_section = swml_action["SWML"]["sections"]["main"]
-        connect_step = [s for s in main_section if "connect" in s][0]
+        connect_step = next(s for s in main_section if "connect" in s)
         assert connect_step["connect"]["from"] == "+15550001111"
 
     def test_address_transfer_non_final(self) -> None:
@@ -386,9 +391,9 @@ class TestRegisterTools:
         skill.register_tools()
         call_args = skill.agent.register_swaig_function.call_args[0][0]
         expressions = call_args["data_map"]["expressions"]
-        support_expr = [e for e in expressions if e["pattern"] == "/support/i"][0]
+        support_expr = next(e for e in expressions if e["pattern"] == "/support/i")
         actions = support_expr["output"]["action"]
-        swml_action = [a for a in actions if "SWML" in a][0]
+        swml_action = next(a for a in actions if "SWML" in a)
         assert swml_action["transfer"] == "false"
 
     def test_required_fields_added_as_parameters(self) -> None:
@@ -434,7 +439,7 @@ class TestRegisterTools:
         skill = _make_skill()
         skill.setup()
         # Remove register_swaig_function so the fallback branch is taken.
-        delattr(skill.agent, 'register_swaig_function')
+        delattr(skill.agent, "register_swaig_function")
         with patch.object(skill, "logger") as mock_logger:
             skill.register_tools()
         # The fallback branch logged the missing-method error.
@@ -446,6 +451,7 @@ class TestRegisterTools:
 # ---------------------------------------------------------------------------
 # get_hints()
 # ---------------------------------------------------------------------------
+
 
 class TestGetHints:
     """Tests for get_hints() method."""
@@ -473,9 +479,7 @@ class TestGetHints:
         assert "support" in hints
 
     def test_get_hints_handles_pipe_separated_patterns(self) -> None:
-        transfers = {
-            "/billing|accounts/i": {"url": "https://example.com/billing"}
-        }
+        transfers = {"/billing|accounts/i": {"url": "https://example.com/billing"}}
         skill = _make_skill({"transfers": transfers})
         skill.setup()
         hints = skill.get_hints()
@@ -484,9 +488,7 @@ class TestGetHints:
 
     def test_get_hints_skips_catch_all_patterns(self) -> None:
         """Patterns starting with '.' (like '.*') should be skipped."""
-        transfers = {
-            "/.*/": {"url": "https://example.com/fallback"}
-        }
+        transfers = {"/.*/": {"url": "https://example.com/fallback"}}
         skill = _make_skill({"transfers": transfers})
         skill.setup()
         hints = skill.get_hints()
@@ -496,9 +498,7 @@ class TestGetHints:
 
     def test_get_hints_strips_regex_delimiters(self) -> None:
         """Leading/trailing slashes should be stripped from patterns."""
-        transfers = {
-            "/billing/": {"url": "https://example.com/billing"}
-        }
+        transfers = {"/billing/": {"url": "https://example.com/billing"}}
         skill = _make_skill({"transfers": transfers})
         skill.setup()
         hints = skill.get_hints()
@@ -506,9 +506,7 @@ class TestGetHints:
 
     def test_get_hints_strips_flags(self) -> None:
         """Trailing flags like /i should be stripped."""
-        transfers = {
-            "/technical/i": {"url": "https://example.com/tech"}
-        }
+        transfers = {"/technical/i": {"url": "https://example.com/tech"}}
         skill = _make_skill({"transfers": transfers})
         skill.setup()
         hints = skill.get_hints()
@@ -518,6 +516,7 @@ class TestGetHints:
 # ---------------------------------------------------------------------------
 # get_prompt_sections()
 # ---------------------------------------------------------------------------
+
 
 class TestGetPromptSections:
     """Tests for get_prompt_sections() method."""
@@ -580,7 +579,9 @@ class TestGetPromptSections:
         assert "transfer_type" in combined
 
     def test_required_fields_appear_in_instructions(self) -> None:
-        skill = _make_skill({"required_fields": {"caller_name": "The name of the caller"}})
+        skill = _make_skill(
+            {"required_fields": {"caller_name": "The name of the caller"}}
+        )
         skill.setup()
         sections = skill.get_prompt_sections()
         bullets = sections[1]["bullets"]
@@ -614,9 +615,7 @@ class TestGetPromptSections:
 
     def test_address_destination_in_bullets(self) -> None:
         """Address-based transfers should show the address in bullets."""
-        transfers = {
-            "/helpdesk/": {"address": "+15559990000"}
-        }
+        transfers = {"/helpdesk/": {"address": "+15559990000"}}
         skill = _make_skill({"transfers": transfers})
         skill.setup()
         sections = skill.get_prompt_sections()
@@ -628,6 +627,7 @@ class TestGetPromptSections:
 # ---------------------------------------------------------------------------
 # get_parameter_schema()
 # ---------------------------------------------------------------------------
+
 
 class TestGetParameterSchema:
     """Tests for get_parameter_schema() classmethod."""
@@ -661,7 +661,10 @@ class TestGetParameterSchema:
     def test_includes_default_message_key(self) -> None:
         schema = SWMLTransferSkill.get_parameter_schema()
         assert "default_message" in schema
-        assert schema["default_message"]["default"] == "Please specify a valid transfer type."
+        assert (
+            schema["default_message"]["default"]
+            == "Please specify a valid transfer type."
+        )
 
     def test_includes_default_post_process_key(self) -> None:
         schema = SWMLTransferSkill.get_parameter_schema()
@@ -687,6 +690,7 @@ class TestGetParameterSchema:
 # ---------------------------------------------------------------------------
 # Edge cases
 # ---------------------------------------------------------------------------
+
 
 class TestEdgeCases:
     """Edge-case and integration tests."""

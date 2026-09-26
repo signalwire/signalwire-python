@@ -23,8 +23,10 @@ class TestInvalidJson200:
     ) -> None:
         resp = MockResponse(200, None, content=b"<html>oops</html>")
         resp.text = "<html>oops</html>"
+
         def _raise_json() -> object:
             raise ValueError("Expecting value: line 1 column 1 (char 0)")
+
         resp.json = _raise_json  # type: ignore[method-assign]
         mock_session.request.return_value = resp
         with pytest.raises(SignalWireRestError) as exc_info:
@@ -41,19 +43,25 @@ class TestErrorObservability:
         self, http: HttpClient, mock_session: MagicMock
     ) -> None:
         resp = MockResponse(500, {"error": "boom"})
-        resp.headers = {"X-Request-Id": "req-abc-123", "Content-Type": "application/json"}
+        resp.headers = {
+            "X-Request-Id": "req-abc-123",
+            "Content-Type": "application/json",
+        }
         mock_session.request.return_value = resp
         with pytest.raises(SignalWireRestError) as exc_info:
             http.get("/api/x")
         err = exc_info.value
         assert err.request_id == "req-abc-123"
-        assert err.headers is not None and err.headers.get("X-Request-Id") == "req-abc-123"
+        assert (
+            err.headers is not None and err.headers.get("X-Request-Id") == "req-abc-123"
+        )
         assert "req-abc-123" in str(err)
 
     def test_transport_error_has_no_headers(
         self, http: HttpClient, mock_session: MagicMock
     ) -> None:
         import requests
+
         mock_session.request.side_effect = requests.ConnectionError("refused")
         with pytest.raises(SignalWireRestTransportError) as exc_info:
             http.get("/api/x")
@@ -66,16 +74,26 @@ class TestBaseUrlScheme:
     https://. Lets a shipped example run verbatim against the local mock without a
     separate URL knob. Pure _base_url construction — no transport mocked."""
 
-    @pytest.mark.parametrize("host", [
-        "127.0.0.1:8790", "127.0.0.1", "localhost:3000", "localhost",
-    ])
+    @pytest.mark.parametrize(
+        "host",
+        [
+            "127.0.0.1:8790",
+            "127.0.0.1",
+            "localhost:3000",
+            "localhost",
+        ],
+    )
     def test_loopback_host_uses_http(self, host: str) -> None:
         c = HttpClient("proj", "tok", host)
         assert c._base_url == f"http://{host}", c._base_url
 
-    @pytest.mark.parametrize("host", [
-        "example.signalwire.com", "myspace.signalwire.com",
-    ])
+    @pytest.mark.parametrize(
+        "host",
+        [
+            "example.signalwire.com",
+            "myspace.signalwire.com",
+        ],
+    )
     def test_real_space_uses_https(self, host: str) -> None:
         c = HttpClient("proj", "tok", host)
         assert c._base_url == f"https://{host}", c._base_url
@@ -100,8 +118,11 @@ class TestHttpClient:
         mock_session.request.return_value = MockResponse(200, {"data": [1, 2]})
         result = http.get("/api/test", params={"page": 1})
         mock_session.request.assert_called_once_with(
-            "GET", "https://test.signalwire.com/api/test",
-            json=None, params={"page": 1}, timeout=30.0,
+            "GET",
+            "https://test.signalwire.com/api/test",
+            json=None,
+            params={"page": 1},
+            timeout=30.0,
         )
         assert result == {"data": [1, 2]}
 
@@ -109,8 +130,11 @@ class TestHttpClient:
         mock_session.request.return_value = MockResponse(201, {"id": "abc"})
         result = http.post("/api/test", body={"name": "x"})
         mock_session.request.assert_called_once_with(
-            "POST", "https://test.signalwire.com/api/test",
-            json={"name": "x"}, params=None, timeout=30.0,
+            "POST",
+            "https://test.signalwire.com/api/test",
+            json={"name": "x"},
+            params=None,
+            timeout=30.0,
         )
         assert result == {"id": "abc"}
 
@@ -118,30 +142,42 @@ class TestHttpClient:
         mock_session.request.return_value = MockResponse(200, {"ok": True})
         result = http.put("/api/test/1", body={"name": "y"})
         mock_session.request.assert_called_once_with(
-            "PUT", "https://test.signalwire.com/api/test/1",
-            json={"name": "y"}, params=None, timeout=30.0,
+            "PUT",
+            "https://test.signalwire.com/api/test/1",
+            json={"name": "y"},
+            params=None,
+            timeout=30.0,
         )
+        assert result == {"ok": True}
 
     def test_patch(self, http: HttpClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {"ok": True})
         http.patch("/api/test/1", body={"name": "z"})
         mock_session.request.assert_called_once_with(
-            "PATCH", "https://test.signalwire.com/api/test/1",
-            json={"name": "z"}, params=None, timeout=30.0,
+            "PATCH",
+            "https://test.signalwire.com/api/test/1",
+            json={"name": "z"},
+            params=None,
+            timeout=30.0,
         )
 
     def test_delete(self, http: HttpClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(204, None, content=b"")
         result = http.delete("/api/test/1")
         mock_session.request.assert_called_once_with(
-            "DELETE", "https://test.signalwire.com/api/test/1",
-            json=None, params=None, timeout=30.0,
+            "DELETE",
+            "https://test.signalwire.com/api/test/1",
+            json=None,
+            params=None,
+            timeout=30.0,
         )
         assert result == {}
 
     def test_error_raises(self, http: HttpClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(
-            404, {"error": "not found"}, content=b'{"error":"not found"}',
+            404,
+            {"error": "not found"},
+            content=b'{"error":"not found"}',
         )
         with pytest.raises(SignalWireRestError) as exc_info:
             http.get("/api/missing")
@@ -187,35 +223,50 @@ class TestCrudResource:
         res: CrudResource[Any, Any, Any, Any] = CrudResource(http, "/api/items")
         result = res.list(page=1)
         mock_session.request.assert_called_with(
-            "GET", "https://test.signalwire.com/api/items",
-            json=None, params={"page": 1}, timeout=30.0,
+            "GET",
+            "https://test.signalwire.com/api/items",
+            json=None,
+            params={"page": 1},
+            timeout=30.0,
         )
+        assert result == {"data": []}
 
     def test_create(self, http: HttpClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(201, {"id": "new"})
         res: CrudResource[Any, Any, Any, Any] = CrudResource(http, "/api/items")
         result = res.create(name="test")
         mock_session.request.assert_called_with(
-            "POST", "https://test.signalwire.com/api/items",
-            json={"name": "test"}, params=None, timeout=30.0,
+            "POST",
+            "https://test.signalwire.com/api/items",
+            json={"name": "test"},
+            params=None,
+            timeout=30.0,
         )
+        assert result == {"id": "new"}
 
     def test_get(self, http: HttpClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {"id": "abc"})
         res: CrudResource[Any, Any, Any, Any] = CrudResource(http, "/api/items")
         result = res.get("abc")
         mock_session.request.assert_called_with(
-            "GET", "https://test.signalwire.com/api/items/abc",
-            json=None, params=None, timeout=30.0,
+            "GET",
+            "https://test.signalwire.com/api/items/abc",
+            json=None,
+            params=None,
+            timeout=30.0,
         )
+        assert result == {"id": "abc"}
 
     def test_update_patch(self, http: HttpClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {"ok": True})
         res: CrudResource[Any, Any, Any, Any] = CrudResource(http, "/api/items")
         res.update("abc", name="updated")
         mock_session.request.assert_called_with(
-            "PATCH", "https://test.signalwire.com/api/items/abc",
-            json={"name": "updated"}, params=None, timeout=30.0,
+            "PATCH",
+            "https://test.signalwire.com/api/items/abc",
+            json={"name": "updated"},
+            params=None,
+            timeout=30.0,
         )
 
     def test_update_put(self, http: HttpClient, mock_session: MagicMock) -> None:
@@ -227,8 +278,11 @@ class TestCrudResource:
         res = PutResource(http, "/api/items")
         res.update("abc", name="updated")
         mock_session.request.assert_called_with(
-            "PUT", "https://test.signalwire.com/api/items/abc",
-            json={"name": "updated"}, params=None, timeout=30.0,
+            "PUT",
+            "https://test.signalwire.com/api/items/abc",
+            json={"name": "updated"},
+            params=None,
+            timeout=30.0,
         )
 
     def test_delete(self, http: HttpClient, mock_session: MagicMock) -> None:
@@ -236,17 +290,25 @@ class TestCrudResource:
         res: CrudResource[Any, Any, Any, Any] = CrudResource(http, "/api/items")
         res.delete("abc")
         mock_session.request.assert_called_with(
-            "DELETE", "https://test.signalwire.com/api/items/abc",
-            json=None, params=None, timeout=30.0,
+            "DELETE",
+            "https://test.signalwire.com/api/items/abc",
+            json=None,
+            params=None,
+            timeout=30.0,
         )
 
 
 class TestCrudWithAddresses:
     def test_list_addresses(self, http: HttpClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {"data": []})
-        res: CrudWithAddresses[Any, Any, Any, Any] = CrudWithAddresses(http, "/api/fabric/resources/ai_agents")
+        res: CrudWithAddresses[Any, Any, Any, Any] = CrudWithAddresses(
+            http, "/api/fabric/resources/ai_agents"
+        )
         res.list_addresses("abc")
         mock_session.request.assert_called_with(
-            "GET", "https://test.signalwire.com/api/fabric/resources/ai_agents/abc/addresses",
-            json=None, params=None, timeout=30.0,
+            "GET",
+            "https://test.signalwire.com/api/fabric/resources/ai_agents/abc/addresses",
+            json=None,
+            params=None,
+            timeout=30.0,
         )

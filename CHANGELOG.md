@@ -1,5 +1,43 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- `FunctionResult.change_voice(voice)` emits the SWAIG `change_voice` action,
+  which changes the agent's voice mid-call. `voice` is an `engine.voice:model`
+  spec, the same form the SWML `languages` list uses (the `engine.` prefix and
+  `:model` suffix are optional), and it replaces the voice of the language
+  currently in use; a different TTS engine is allowed. The platform applies it
+  at the next speech batch boundary, never mid-utterance, keeps it for that
+  language for the rest of the call, and falls back to the fallback voice if the
+  new one will not open.
+- `SWMLBuilder` and `SWMLService` gain the experimental SWML verbs
+  `bind_digit`, `clear_digit_bindings` and `set_capabilities`, which the
+  bundled schema now publishes.
+- `SWMLBuilder` and `SWMLService` gain the SWML verbs `echo`, `execute_rpc`,
+  `ring`, `set_meta`, `stream`, `stop_stream`, `transcribe` and
+  `transcribe_stop`. The type stubs already declared them, but the bundled
+  `schema.json` the methods are installed from did not, so calling one raised
+  `AttributeError`. The bundle is now the current SWML schema.
+
+### Changed
+- The bundled SWML `schema.json` is the current engine-derived schema: SWAIG
+  function `parameters` / `argument` are typed as JSON Schema (plus the
+  `nullable` / `example` / `propertyOrdering` keywords some model APIs accept),
+  `amazon_bedrock` function `data_map` and prompt `pom` are typed, and
+  `connect` / `execute` `result` carry the `cond` / `switch` shapes. The typed
+  `SwaigResponse.response` accepts a string or `{tool_result, tool_prompt}`.
+- The typed `AiParams` config no longer declares `audible_debug`,
+  `audible_latency`, `cache_mode`, `debug`, `enable_accounting` or
+  `verbose_logs`; the SWML schema withholds them.
+
+### Fixed
+- Generated SWML verb methods accept the verb's config as one positional
+  mapping, the form the type stubs declare (`builder.echo({"timeout": 30})`).
+  Keyword arguments still work and are merged over the mapping.
+- The `return` verb is available as `return_()`, the name the type stubs
+  declare. It still emits the `return` key.
+
 ## [3.5.0] - 2026-09-24
 
 Webhook signatures and SWAIG tokens are now enforced on every path, including

@@ -166,6 +166,7 @@ class HandoffRouter:
         capture_timeout: float = DEFAULT_CAPTURE_TIMEOUT,
         registry: dict[str, NonceEntry] | None = None,
     ) -> None:
+        """Configure the handoff; the parameters are described on the class."""
         self.gateway = gateway
         self.capture_leg = capture_leg
         self.end_call = end_call
@@ -214,11 +215,13 @@ class HandoffRouter:
         )
 
     def _prune(self) -> None:
+        """Drop every nonce older than ``nonce_ttl``."""
         cutoff = time.monotonic() - self.nonce_ttl
         for nonce in [n for n, e in self._nonces.items() if e.issued_at < cutoff]:
             self._nonces.pop(nonce, None)
 
     def _lookup(self, nonce: Any) -> NonceEntry | None:
+        """Return the live entry for ``nonce``, or ``None`` if unknown or expired."""
         if not nonce or not isinstance(nonce, str):
             return None
         self._prune()
@@ -346,6 +349,7 @@ class HandoffRouter:
         router = APIRouter()
 
         def _forbidden_origin(request: Request) -> JSONResponse | None:
+            """Return a 403 response for a disallowed Origin, else ``None``."""
             try:
                 self.gateway.check_origin(request.headers.get("origin"))
             except Exception:

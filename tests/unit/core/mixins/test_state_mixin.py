@@ -12,7 +12,7 @@ Unit tests for StateMixin
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock, PropertyMock, patch
+from unittest.mock import Mock
 
 
 from signalwire.core.mixins.state_mixin import StateMixin
@@ -39,6 +39,7 @@ class MockStateHost(StateMixin):
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def mock_session_manager() -> Mock:
@@ -95,12 +96,17 @@ def host(mock_session_manager: Mock, mock_tool_registry: Mock) -> MockStateHost:
 # Tests for _create_tool_token
 # ===========================================================================
 
+
 class TestCreateToolToken:
     """Tests for StateMixin._create_tool_token"""
 
-    def test_creates_token_successfully(self, host: MockStateHost, mock_session_manager: Mock) -> None:
+    def test_creates_token_successfully(
+        self, host: MockStateHost, mock_session_manager: Mock
+    ) -> None:
         token = host._create_tool_token("my_tool", "call-123")
-        mock_session_manager.create_tool_token.assert_called_once_with("my_tool", "call-123")
+        mock_session_manager.create_tool_token.assert_called_once_with(
+            "my_tool", "call-123"
+        )
         assert token == "test-token-abc123"
 
     def test_returns_empty_string_when_no_session_manager(self) -> None:
@@ -110,18 +116,26 @@ class TestCreateToolToken:
         assert result == ""
         h.log.error.assert_called_once()
 
-    def test_returns_empty_string_on_exception(self, host: MockStateHost, mock_session_manager: Mock) -> None:
+    def test_returns_empty_string_on_exception(
+        self, host: MockStateHost, mock_session_manager: Mock
+    ) -> None:
         """When session_manager.create_tool_token raises, return empty string."""
         mock_session_manager.create_tool_token.side_effect = RuntimeError("boom")
         result = host._create_tool_token("tool", "call-1")
         assert result == ""
         host.log.error.assert_called_once()
 
-    def test_passes_correct_args_to_session_manager(self, host: MockStateHost, mock_session_manager: Mock) -> None:
+    def test_passes_correct_args_to_session_manager(
+        self, host: MockStateHost, mock_session_manager: Mock
+    ) -> None:
         host._create_tool_token("func_name", "call-xyz")
-        mock_session_manager.create_tool_token.assert_called_once_with("func_name", "call-xyz")
+        mock_session_manager.create_tool_token.assert_called_once_with(
+            "func_name", "call-xyz"
+        )
 
-    def test_returns_whatever_session_manager_returns(self, host: MockStateHost, mock_session_manager: Mock) -> None:
+    def test_returns_whatever_session_manager_returns(
+        self, host: MockStateHost, mock_session_manager: Mock
+    ) -> None:
         mock_session_manager.create_tool_token.return_value = "custom-token-value"
         result = host._create_tool_token("t", "c")
         assert result == "custom-token-value"
@@ -130,6 +144,7 @@ class TestCreateToolToken:
 # ===========================================================================
 # Tests for validate_tool_token - basic validation
 # ===========================================================================
+
 
 class TestValidateToolTokenBasic:
     """Tests for StateMixin.validate_tool_token basic paths"""
@@ -144,12 +159,16 @@ class TestValidateToolTokenBasic:
         result = host.validate_tool_token("non_secure_tool", "any-token", "call-123")
         assert result is True
 
-    def test_validates_secure_function_with_valid_token(self, host: MockStateHost, mock_session_manager: Mock) -> None:
+    def test_validates_secure_function_with_valid_token(
+        self, host: MockStateHost, mock_session_manager: Mock
+    ) -> None:
         mock_session_manager.validate_tool_token.return_value = True
         result = host.validate_tool_token("secure_tool", "valid-token", "call-123")
         assert result is True
 
-    def test_rejects_secure_function_with_invalid_token(self, host: MockStateHost, mock_session_manager: Mock) -> None:
+    def test_rejects_secure_function_with_invalid_token(
+        self, host: MockStateHost, mock_session_manager: Mock
+    ) -> None:
         mock_session_manager.validate_tool_token.return_value = False
         result = host.validate_tool_token("secure_tool", "bad-token", "call-123")
         assert result is False
@@ -159,10 +178,13 @@ class TestValidateToolTokenBasic:
 # Tests for validate_tool_token - data_map functions
 # ===========================================================================
 
+
 class TestValidateToolTokenDataMap:
     """Tests for data_map function handling in validate_tool_token"""
 
-    def test_data_map_functions_are_always_secure(self, host: MockStateHost, mock_session_manager: Mock) -> None:
+    def test_data_map_functions_are_always_secure(
+        self, host: MockStateHost, mock_session_manager: Mock
+    ) -> None:
         """Data map functions (raw dicts) are treated as secure by default."""
         mock_session_manager.validate_tool_token.return_value = True
         result = host.validate_tool_token("data_map_tool", "valid-token", "call-123")
@@ -184,15 +206,20 @@ class TestValidateToolTokenDataMap:
 # Tests for validate_tool_token - missing session manager
 # ===========================================================================
 
+
 class TestValidateToolTokenNoSessionManager:
     """Tests for validate_tool_token when session_manager is absent"""
 
-    def test_returns_false_when_no_session_manager(self, mock_tool_registry: Mock) -> None:
+    def test_returns_false_when_no_session_manager(
+        self, mock_tool_registry: Mock
+    ) -> None:
         h = MockStateHost(tool_registry=mock_tool_registry)
         result = h.validate_tool_token("secure_tool", "token", "call-1")
         assert result is False
 
-    def test_non_secure_still_allowed_without_session_manager(self, mock_tool_registry: Mock) -> None:
+    def test_non_secure_still_allowed_without_session_manager(
+        self, mock_tool_registry: Mock
+    ) -> None:
         """Non-secure functions should still be allowed even without session manager."""
         h = MockStateHost(tool_registry=mock_tool_registry)
         result = h.validate_tool_token("non_secure_tool", "token", "call-1")
@@ -203,14 +230,19 @@ class TestValidateToolTokenNoSessionManager:
 # Tests for validate_tool_token - token debugging
 # ===========================================================================
 
+
 class TestValidateToolTokenDebug:
     """Tests for the debug_token branch in validate_tool_token"""
 
-    def test_debug_token_called_when_available(self, host: MockStateHost, mock_session_manager: Mock) -> None:
+    def test_debug_token_called_when_available(
+        self, host: MockStateHost, mock_session_manager: Mock
+    ) -> None:
         host.validate_tool_token("secure_tool", "some-token", "call-123")
         mock_session_manager.debug_token.assert_called()
 
-    def test_function_mismatch_logged(self, host: MockStateHost, mock_session_manager: Mock) -> None:
+    def test_function_mismatch_logged(
+        self, host: MockStateHost, mock_session_manager: Mock
+    ) -> None:
         """When the token's function name doesn't match, a warning is logged."""
         mock_session_manager.debug_token.return_value = {
             "valid_format": True,
@@ -228,7 +260,9 @@ class TestValidateToolTokenDebug:
             for call in host.log.warning.call_args_list
         )
 
-    def test_call_id_mismatch_logged(self, host: MockStateHost, mock_session_manager: Mock) -> None:
+    def test_call_id_mismatch_logged(
+        self, host: MockStateHost, mock_session_manager: Mock
+    ) -> None:
         """When the token's call_id doesn't match, a warning is logged."""
         mock_session_manager.debug_token.return_value = {
             "valid_format": True,
@@ -245,7 +279,9 @@ class TestValidateToolTokenDebug:
             for call in host.log.warning.call_args_list
         )
 
-    def test_expired_token_logged(self, host: MockStateHost, mock_session_manager: Mock) -> None:
+    def test_expired_token_logged(
+        self, host: MockStateHost, mock_session_manager: Mock
+    ) -> None:
         """When the token is expired, a warning is logged."""
         mock_session_manager.debug_token.return_value = {
             "valid_format": True,
@@ -261,11 +297,12 @@ class TestValidateToolTokenDebug:
         }
         host.validate_tool_token("secure_tool", "some-token", "call-123")
         assert any(
-            "token_expired" in str(call)
-            for call in host.log.warning.call_args_list
+            "token_expired" in str(call) for call in host.log.warning.call_args_list
         )
 
-    def test_debug_token_exception_handled(self, host: MockStateHost, mock_session_manager: Mock) -> None:
+    def test_debug_token_exception_handled(
+        self, host: MockStateHost, mock_session_manager: Mock
+    ) -> None:
         """If debug_token raises, it should be caught and logged."""
         mock_session_manager.debug_token.side_effect = RuntimeError("debug failed")
         # Should not raise, should still return validation result
@@ -280,10 +317,13 @@ class TestValidateToolTokenDebug:
 # Tests for validate_tool_token - call_id extraction from token
 # ===========================================================================
 
+
 class TestValidateToolTokenCallIdExtraction:
     """Tests for extracting call_id from token when provided call_id is empty"""
 
-    def test_uses_call_id_from_token_when_empty(self, host: MockStateHost, mock_session_manager: Mock) -> None:
+    def test_uses_call_id_from_token_when_empty(
+        self, host: MockStateHost, mock_session_manager: Mock
+    ) -> None:
         """When call_id is empty, tries to extract from the token."""
         mock_session_manager.debug_token.return_value = {
             "valid_format": True,
@@ -297,8 +337,11 @@ class TestValidateToolTokenCallIdExtraction:
         result = host.validate_tool_token("secure_tool", "some-token", "")
         assert result is True
 
-    def test_extracted_call_id_validation_fails_falls_through(self, host: MockStateHost, mock_session_manager: Mock) -> None:
+    def test_extracted_call_id_validation_fails_falls_through(
+        self, host: MockStateHost, mock_session_manager: Mock
+    ) -> None:
         """When extracted call_id validation fails, falls through to normal validation."""
+
         def validate_side_effect(fn: str, token: str, cid: str) -> bool:
             if cid == "extracted-call-id":
                 return False
@@ -321,12 +364,17 @@ class TestValidateToolTokenCallIdExtraction:
 # Tests for validate_tool_token - exception handling
 # ===========================================================================
 
+
 class TestValidateToolTokenExceptions:
     """Tests for exception handling in validate_tool_token"""
 
-    def test_returns_false_on_unexpected_exception(self, host: MockStateHost, mock_session_manager: Mock) -> None:
+    def test_returns_false_on_unexpected_exception(
+        self, host: MockStateHost, mock_session_manager: Mock
+    ) -> None:
         """Any unexpected exception should result in False."""
-        mock_session_manager.validate_tool_token.side_effect = RuntimeError("unexpected")
+        mock_session_manager.validate_tool_token.side_effect = RuntimeError(
+            "unexpected"
+        )
         # Also need debug_token to not cause issue
         mock_session_manager.debug_token.return_value = {
             "valid_format": False,

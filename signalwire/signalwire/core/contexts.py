@@ -33,6 +33,7 @@ HISTORY_MODES = ("keep", "default", "hide")
 
 
 def _validate_history(mode: str) -> str:
+    """Return ``mode`` if it is one of ``HISTORY_MODES``, else raise ``ValueError``."""
     if mode not in HISTORY_MODES:
         raise ValueError(f"history must be one of {HISTORY_MODES}, got {mode!r}")
     return mode
@@ -51,6 +52,15 @@ class GatherQuestion:
         functions: list[str] | None = None,
         isolated: bool | None = None,
     ):
+        """Define one question.
+
+        ``key`` names where the answer is stored and ``question`` is the text to ask.
+        ``type`` is the answer's type, ``confirm`` asks the caller to confirm the
+        answer, ``prompt`` adds instructions for this question, ``functions`` lists
+        tools the model may call while asking it, and ``isolated`` (``None`` inherits
+        the gather's default) hides the sibling questions and answers while this one is
+        asked.
+        """
         self.key = key
         self.question = question
         self.type = type
@@ -92,6 +102,7 @@ class GatherInfo:
         prompt: str | None = None,
         isolated: bool = False,
     ):
+        """Configure a gather; see ``Step.set_gather_info`` for each argument."""
         self._questions: list[GatherQuestion] = []
         self._output_key = output_key
         self._completion_action = completion_action
@@ -142,6 +153,7 @@ class Step:
     """Represents a single step within a context"""
 
     def __init__(self, name: str):
+        """Create an empty step named ``name``."""
         self.name = name
         self._text: str | None = None
         self._step_criteria: str | None = None
@@ -677,6 +689,7 @@ class Context:
     """
 
     def __init__(self, name: str):
+        """Create an empty context named ``name``."""
         self.name = name
         self._steps: dict[str, Step] = {}
         self._step_order: list[str] = []
@@ -1301,6 +1314,7 @@ class ContextBuilder:
     """
 
     def __init__(self, agent: Any) -> None:
+        """Create an empty builder for ``agent``'s contexts."""
         self._agent = agent
         self._contexts: dict[str, Context] = {}
         self._context_order: list[str] = []
@@ -1319,6 +1333,7 @@ class ContextBuilder:
         Example::
 
             def on_dynamic_config(query, body, headers, agent):
+                '''Rebuild the contexts from scratch for a transfer request.'''
                 if query.get("transfer"):
                     agent.define_contexts().reset()
                     ctx = agent.define_contexts().add_context("default")

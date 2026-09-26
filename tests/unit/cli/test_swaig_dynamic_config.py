@@ -11,7 +11,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-AGENT = '''
+AGENT = """
 from signalwire import AgentBase, FunctionResult
 
 
@@ -29,12 +29,18 @@ class DynAgent(AgentBase):
             parameters={"type": "object", "properties": {}},
             handler=lambda args, raw_data: FunctionResult("ok"),
         )
-'''
+"""
 
 
 def _swaig_test(agent_file: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(  # noqa: S603  # fixed arguments: this interpreter and the CLI module
-        [sys.executable, "-m", "signalwire.cli.swaig_test_wrapper", str(agent_file), *args],
+        [
+            sys.executable,
+            "-m",
+            "signalwire.cli.swaig_test_wrapper",
+            str(agent_file),
+            *args,
+        ],
         capture_output=True,
         text=True,
         timeout=120,

@@ -19,6 +19,7 @@ class CustomArgumentParser(argparse.ArgumentParser):
     """Custom ArgumentParser with better error handling"""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Create the parser, with usage output enabled."""
         super().__init__(*args, **kwargs)
         self._suppress_usage = False
 

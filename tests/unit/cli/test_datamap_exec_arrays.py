@@ -40,15 +40,19 @@ def _response(payload: Any) -> Mock:
 @pytest.mark.parametrize("error_keys", [None, ["error"], "error"])
 def test_array_response_reaches_the_output_template(error_keys: Any) -> None:
     payload = [{"joke": "Why did the webhook cross the road?"}]
-    with patch("signalwire.utils.url_validator.validate_url", return_value=True), \
-         patch("requests.get", return_value=_response(payload)):
+    with (
+        patch("signalwire.utils.url_validator.validate_url", return_value=True),
+        patch("requests.get", return_value=_response(payload)),
+    ):
         result = execute_datamap_function(_config(error_keys), {"type": "dad"})
     assert "Why did the webhook cross the road?" in str(result)
     assert "failed" not in str(result)
 
 
 def test_error_key_in_an_object_response_still_fails_the_webhook() -> None:
-    with patch("signalwire.utils.url_validator.validate_url", return_value=True), \
-         patch("requests.get", return_value=_response({"error": "rate limited"})):
+    with (
+        patch("signalwire.utils.url_validator.validate_url", return_value=True),
+        patch("requests.get", return_value=_response({"error": "rate limited"})),
+    ):
         result = execute_datamap_function(_config(["error"]), {"type": "dad"})
     assert "The joke service failed." in str(result)

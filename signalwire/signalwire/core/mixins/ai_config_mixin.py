@@ -532,6 +532,7 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
 
             @agent.on_debug_event
             def handle_debug(event_type, data):
+                '''Alert the operations team when the model returns an error.'''
                 if event_type == "llm_error":
                     alert_ops_team(data)
         """

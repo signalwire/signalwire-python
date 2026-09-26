@@ -41,16 +41,19 @@ _COMMANDS = ("topics", "api", "examples", "grep", "show", "path", "init", "help"
 
 
 def _out(text: str) -> int:
+    """Write ``text`` to stdout, ending it with a newline, and return exit status 0."""
     sys.stdout.write(text if text.endswith("\n") else text + "\n")
     return 0
 
 
 def _err(text: str, code: int = 1) -> int:
+    """Write ``text`` to stderr, ending it with a newline, and return ``code``."""
     sys.stderr.write(text if text.endswith("\n") else text + "\n")
     return code
 
 
 def _cmd_api(argv: list[str]) -> int:
+    """Run ``sw-pydocs api``: print a name's signature and docstring."""
     from . import _api
 
     parser = argparse.ArgumentParser(
@@ -77,6 +80,7 @@ def _cmd_api(argv: list[str]) -> int:
 
 
 def _cmd_examples(argv: list[str]) -> int:
+    """Run ``sw-pydocs examples``: list the installed examples, optionally filtered."""
     from ._bundle import docs_root
     from ._render import render_examples
 
@@ -89,6 +93,7 @@ def _cmd_examples(argv: list[str]) -> int:
 
 
 def _cmd_grep(argv: list[str]) -> int:
+    """Run ``sw-pydocs grep``: search the docs, examples and optionally code."""
     from ._bundle import docs_root
     from ._files import all_doc_files, grep, package_dir, source_files
 
@@ -127,6 +132,7 @@ def _cmd_grep(argv: list[str]) -> int:
 
 
 def _cmd_show(argv: list[str]) -> int:
+    """Run ``sw-pydocs show``: print an installed doc, its headings, or one section."""
     from ._bundle import docs_root
     from ._files import all_doc_files, headings, is_text, resolve, section
 
@@ -178,6 +184,7 @@ def _cmd_show(argv: list[str]) -> int:
 
 
 def _cmd_path(argv: list[str]) -> int:
+    """Run ``sw-pydocs path``: print where the docs, or one doc file, are installed."""
     from ._bundle import docs_root
     from ._files import all_doc_files, resolve
 
@@ -199,6 +206,7 @@ def _cmd_path(argv: list[str]) -> int:
 
 
 def _cmd_init(argv: list[str]) -> int:
+    """Run ``sw-pydocs init``: add the sw-pydocs note to a project."""
     from ._agents_note import init, note
 
     parser = argparse.ArgumentParser(
@@ -230,6 +238,7 @@ def _cmd_init(argv: list[str]) -> int:
 
 
 def _cmd_topic(name: str, argv: list[str]) -> int:
+    """Print the topic page ``name``."""
     from ._bundle import docs_root
     from ._render import render_topic
     from ._topics import TOPICS_BY_NAME

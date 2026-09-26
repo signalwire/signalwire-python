@@ -32,6 +32,18 @@ from typing import Any
 
 
 class Colors:
+    """Raw ANSI SGR escape sequences used by this tool's console output.
+
+    A namespace of constants, never instantiated. ``NC`` ("no color") is the
+    reset sequence every other constant must be closed with. The codes are
+    emitted unconditionally — there is no TTY detection or ``NO_COLOR``
+    handling — so redirected output contains the escapes verbatim.
+
+    This is ``sw-agent-dokku``'s own copy; ``cli/init_project.py`` defines a
+    separate ``Colors`` for ``sw-agent-init`` (which has no ``MAGENTA``). The
+    two are independent, not a shared module.
+    """
+
     RED = "\033[0;31m"
     GREEN = "\033[0;32m"
     YELLOW = "\033[1;33m"
@@ -44,26 +56,78 @@ class Colors:
 
 
 def print_step(msg: str) -> None:
+    """Print ``msg`` to stdout as a progress step, prefixed with a blue ``==>``.
+
+    Used to announce the action about to be performed; the outcome is then
+    reported with :func:`print_success`, :func:`print_warning` or
+    :func:`print_error`.
+
+    Args:
+        msg: Text to display after the marker.
+    """
     print(f"{Colors.BLUE}==>{Colors.NC} {msg}")
 
 
 def print_success(msg: str) -> None:
+    """Print ``msg`` to stdout marked with a green check, reporting success.
+
+    Args:
+        msg: Text to display after the marker.
+    """
     print(f"{Colors.GREEN}✓{Colors.NC} {msg}")
 
 
 def print_warning(msg: str) -> None:
+    """Print ``msg`` to stdout marked with a yellow ``!``.
+
+    For conditions the user should know about that do not stop the command —
+    it writes to stdout like the rest and does not change the exit status.
+
+    Args:
+        msg: Text to display after the marker.
+    """
     print(f"{Colors.YELLOW}!{Colors.NC} {msg}")
 
 
 def print_error(msg: str) -> None:
+    """Print ``msg`` to stdout marked with a red ``✗``.
+
+    Reports a failure only; it does NOT write to stderr, raise, or exit — the
+    caller is responsible for returning a non-zero exit code.
+
+    Args:
+        msg: Text to display after the marker.
+    """
     print(f"{Colors.RED}✗{Colors.NC} {msg}")
 
 
 def print_header(msg: str) -> None:
+    """Print ``msg`` as a bold cyan section heading, preceded by a blank line.
+
+    Used to separate the phases of a multi-step command; unlike the other
+    helpers it emits no marker glyph.
+
+    Args:
+        msg: Heading text.
+    """
     print(f"\n{Colors.BOLD}{Colors.CYAN}{msg}{Colors.NC}")
 
 
 def prompt(question: str, default: str = "") -> str:
+    """Ask ``question`` on the console and return the user's answer.
+
+    Blocks on stdin. Surrounding whitespace is stripped from the reply. When
+    ``default`` is non-empty it is shown in brackets and returned if the user
+    just presses Enter; with no default, an empty string is returned as-is
+    (the caller must validate it).
+
+    Args:
+        question: Text shown before the input cursor.
+        default: Value substituted for an empty reply.
+
+    Returns:
+        The stripped user input, or ``default``.
+    """
     if default:
         result = input(f"{question} [{default}]: ").strip()
         return result if result else default
@@ -71,6 +135,20 @@ def prompt(question: str, default: str = "") -> str:
 
 
 def prompt_yes_no(question: str, default: bool = True) -> bool:
+    """Ask ``question`` as a yes/no question and return the answer.
+
+    Blocks on stdin and displays the default as ``[Y/n]`` or ``[y/N]``. An
+    empty reply yields ``default``; otherwise only ``y`` and ``yes``
+    (case-insensitive) count as yes — every other input, including a typo,
+    is treated as NO rather than re-prompting.
+
+    Args:
+        question: Text shown before the input cursor.
+        default: Answer used when the user just presses Enter.
+
+    Returns:
+        ``True`` for yes, ``False`` for no.
+    """
     hint = "Y/n" if default else "y/N"
     result = input(f"{question} [{hint}]: ").strip().lower()
     if not result:
@@ -79,6 +157,22 @@ def prompt_yes_no(question: str, default: bool = True) -> bool:
 
 
 def generate_password(length: int = 32) -> str:
+    """Generate a random URL-safe secret of exactly ``length`` characters.
+
+    Drawn from :func:`secrets.token_urlsafe`, i.e. the OS cryptographic RNG,
+    so it is suitable for the credentials this tool sets as Dokku config vars.
+    ``token_urlsafe(length)`` yields MORE than ``length`` characters
+    (base64url of ``length`` random bytes), and the result is truncated to
+    ``length``; the retained entropy is therefore roughly ``6 * length`` bits,
+    not ``8 * length``. The alphabet is base64url — ``A-Z``, ``a-z``, ``0-9``,
+    ``-`` and ``_``.
+
+    Args:
+        length: Number of characters to return. Defaults to 32.
+
+    Returns:
+        A random string of exactly ``length`` characters.
+    """
     return secrets.token_urlsafe(length)[:length]
 
 
@@ -185,6 +279,7 @@ class {agent_class}(AgentBase):
     """{agent_name} agent for Dokku deployment."""
 
     def __init__(self):
+        """Set up the agent's prompt, language and tools."""
         super().__init__(name="{agent_slug}")
 
         self._configure_prompts()
@@ -192,6 +287,7 @@ class {agent_class}(AgentBase):
         self._setup_functions()
 
     def _configure_prompts(self):
+        """Define the agent's role and guidelines."""
         self.prompt_add_section(
             "Role",
             "You are a helpful AI assistant deployed on Dokku."
@@ -207,6 +303,7 @@ class {agent_class}(AgentBase):
         )
 
     def _setup_functions(self):
+        """Register the agent's tools."""
         @self.tool(
             description="Get information about a topic",
             parameters={{
@@ -221,6 +318,7 @@ class {agent_class}(AgentBase):
             }}
         )
         def get_info(args, raw_data):
+            """Return information about the requested topic."""
             topic = args.get("topic", "")
             return FunctionResult(
                 f"Information about {{topic}}: This is a placeholder response."
@@ -228,6 +326,7 @@ class {agent_class}(AgentBase):
 
         @self.tool(description="Get deployment information")
         def get_deployment_info(args, raw_data):
+            """Report the Dokku app name and environment."""
             app_name = os.getenv("APP_NAME", "unknown")
             app_env = os.getenv("APP_ENV", "unknown")
 
@@ -270,6 +369,7 @@ class {agent_class}(AgentBase):
     """{agent_name} agent for Dokku deployment."""
 
     def __init__(self):
+        """Set up the agent's prompt, language and tools."""
         super().__init__(name="{agent_slug}", route="/swml")
 
         self._configure_prompts()
@@ -277,6 +377,7 @@ class {agent_class}(AgentBase):
         self._setup_functions()
 
     def _configure_prompts(self):
+        """Define the agent's role and guidelines."""
         self.prompt_add_section(
             "Role",
             "You are a helpful AI assistant deployed on Dokku."
@@ -292,6 +393,7 @@ class {agent_class}(AgentBase):
         )
 
     def _setup_functions(self):
+        """Register the agent's tools."""
         @self.tool(
             description="Get information about a topic",
             parameters={{
@@ -306,6 +408,7 @@ class {agent_class}(AgentBase):
             }}
         )
         def get_info(args, raw_data):
+            """Return information about the requested topic."""
             topic = args.get("topic", "")
             return FunctionResult(
                 f"Information about {{topic}}: This is a placeholder response."
@@ -313,6 +416,7 @@ class {agent_class}(AgentBase):
 
         @self.tool(description="Get deployment information")
         def get_deployment_info(args, raw_data):
+            """Report the Dokku app name and environment."""
             app_name = os.getenv("APP_NAME", "unknown")
             app_env = os.getenv("APP_ENV", "unknown")
 
@@ -1815,6 +1919,11 @@ class DokkuProjectGenerator:
     """Generates Dokku deployment files for SignalWire agents."""
 
     def __init__(self, app_name: str, options: dict[str, Any]):
+        """Prepare to generate the deployment for ``app_name``.
+
+        The agent's slug and class name are derived from ``app_name``; ``options`` may
+        set ``project_dir`` (default ``./<app_name>``) among the generation options.
+        """
         self.app_name = app_name
         self.options = options
         self.project_dir = Path(options.get("project_dir", f"./{app_name}"))
@@ -1961,7 +2070,11 @@ class DokkuProjectGenerator:
         """Write a file to the project directory."""
         file_path = self.project_dir / path
         file_path.parent.mkdir(parents=True, exist_ok=True)
-        file_path.write_text(content)
+        # Always UTF-8, never the platform default. Several templates embed
+        # box-drawing characters (U+2500/U+2550) and arrows, which the Windows
+        # default codec (cp1252) cannot encode -- writing without an explicit
+        # encoding raises UnicodeEncodeError there.
+        file_path.write_text(content, encoding="utf-8")
 
         if executable:
             file_path.chmod(0o755)
@@ -2101,7 +2214,7 @@ def cmd_deploy(args: argparse.Namespace) -> int:
 
         try:
             with open(  # noqa: PTH123  # tests patch builtins.open while mocking Path; Path.open() would bypass the mock seam
-                "app.json"
+                "app.json", encoding="utf-8"
             ) as f:
                 app_json = json.load(f)
                 app_name = app_json.get("name")
@@ -2232,7 +2345,7 @@ def _get_app_name() -> str:
 
         try:
             with open(  # noqa: PTH123  # tests patch builtins.open while mocking Path; Path.open() would bypass the mock seam
-                "app.json"
+                "app.json", encoding="utf-8"
             ) as f:
                 # json.load() is typed -> Any; the "name" field is a string
                 # (default "" when absent). Coerce to satisfy the str return.
@@ -2248,6 +2361,33 @@ def _get_app_name() -> str:
 
 
 def main() -> int:
+    """Entry point for the ``sw-agent-dokku`` command.
+
+    Parses ``sys.argv`` and dispatches to one of five subcommands, each of
+    which drives a Dokku deployment of a SignalWire agent:
+
+    - ``init NAME`` — scaffold a new project directory (Procfile, runtime,
+      requirements, agent source, ``app.json``), optionally with GitHub Actions
+      CI/CD (``--cicd``), a static web interface at ``/`` (``--web``), a
+      preconfigured Dokku ``--host``, an explicit ``--dir``, and ``--force`` to
+      overwrite an existing directory.
+    - ``deploy`` — deploy the current directory: create the Dokku app if
+      needed, point a ``dokku`` git remote at it, and force-push ``HEAD`` to
+      its ``main``. Requires a ``Procfile`` in the working directory.
+    - ``logs`` — show the app's logs, with ``--tail`` to follow and ``--num``
+      to limit the number of lines.
+    - ``config show|set|unset [KEY=value ...]`` — read or change the app's
+      Dokku config variables.
+    - ``scale [web=2 ...]`` — set process-type scale.
+
+    Every subcommand except ``init`` accepts ``--app``/``-a`` and
+    ``--host``/``-H``; when omitted these are inferred from ``app.json`` or the
+    current directory name, falling back to an interactive prompt.
+
+    Returns:
+        The subcommand's exit code, or ``1`` after printing help when no
+        subcommand was given.
+    """
     parser = argparse.ArgumentParser(
         description="SignalWire Agent Dokku Deployment Tool",
         formatter_class=argparse.RawDescriptionHelpFormatter,

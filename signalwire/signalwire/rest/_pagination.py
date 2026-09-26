@@ -36,6 +36,11 @@ class PaginatedIterator:
         data_key: str = "data",
         request_options: RequestOptions | None = None,
     ) -> None:
+        """Page through ``path``; nothing is fetched until iteration starts.
+
+        ``data_key`` names the list in each page body; ``request_options`` apply to
+        every page request.
+        """
         self._http = http
         self._path = path
         self._params: dict[str, Any] = dict(params or {})
@@ -54,9 +59,11 @@ class PaginatedIterator:
         self._seen_next: set[str] = set()
 
     def __iter__(self) -> "PaginatedIterator":
+        """Return the iterator itself."""
         return self
 
     def __next__(self) -> Any:
+        """Return the next item, fetching further pages as needed."""
         while self._index >= len(self._items):
             if self._done:
                 raise StopIteration
@@ -67,6 +74,7 @@ class PaginatedIterator:
         return item
 
     def _fetch_next(self) -> None:
+        """Fetch the next page, buffer its items, and follow its ``links.next`` link."""
         resp = self._http.get(
             self._path,
             params=self._params or None,

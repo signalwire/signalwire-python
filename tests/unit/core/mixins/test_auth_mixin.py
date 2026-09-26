@@ -39,6 +39,7 @@ def _make_basic_auth_header(username: str, password: str) -> str:
 # validate_basic_auth
 # ---------------------------------------------------------------------------
 
+
 class TestValidateBasicAuth:
     """Tests for validate_basic_auth method."""
 
@@ -86,7 +87,7 @@ class TestValidateBasicAuth:
 
             def validate_basic_auth(self, username: str, password: str) -> bool:
                 # Always accept a specific master key
-                if password == "master-key":  # noqa: S105  # test literal, not a real secret
+                if password == "master-key":  # test literal, not a real secret
                     return True
                 result: bool = super().validate_basic_auth(username, password)
                 return result
@@ -100,6 +101,7 @@ class TestValidateBasicAuth:
 # ---------------------------------------------------------------------------
 # get_basic_auth_credentials
 # ---------------------------------------------------------------------------
+
 
 class TestGetBasicAuthCredentials:
     """Tests for get_basic_auth_credentials method."""
@@ -116,17 +118,26 @@ class TestGetBasicAuthCredentials:
         result = mixin.get_basic_auth_credentials(include_source=True)
         assert result == ("myuser", "mypass", "provided")
 
-    @pytest.mark.parametrize("source", ["provided", "environment", "config file", "generated"])
+    @pytest.mark.parametrize(
+        "source", ["provided", "environment", "config file", "generated"]
+    )
     def test_returns_the_recorded_source(self, source: str) -> None:
         """The source is the one recorded when the credentials were resolved (B26)."""
         mixin = ConcreteAuthMixin(("myuser", "mypass"))
         mixin._basic_auth_source = source  # set by SWMLService.__init__ in a real agent
-        assert mixin.get_basic_auth_credentials(include_source=True) == ("myuser", "mypass", source)
+        assert mixin.get_basic_auth_credentials(include_source=True) == (
+            "myuser",
+            "mypass",
+            source,
+        )
 
     def test_source_is_not_guessed_from_the_credentials(self) -> None:
         """A user_ name with a long password used to be labeled generated."""
         mixin = ConcreteAuthMixin(("user_abc123", "a" * 25))
-        env = {"SWML_BASIC_AUTH_USER": "user_abc123", "SWML_BASIC_AUTH_PASSWORD": "a" * 25}
+        env = {
+            "SWML_BASIC_AUTH_USER": "user_abc123",
+            "SWML_BASIC_AUTH_PASSWORD": "a" * 25,
+        }
         with patch.dict(os.environ, env, clear=True):
             _, _, source = mixin.get_basic_auth_credentials(include_source=True)  # type: ignore[misc]  # include_source=True returns 3-tuple
         assert source == "provided"
@@ -143,6 +154,7 @@ class TestGetBasicAuthCredentials:
 # _check_basic_auth (FastAPI request)
 # ---------------------------------------------------------------------------
 
+
 class TestCheckBasicAuth:
     """Tests for _check_basic_auth with FastAPI request objects."""
 
@@ -153,7 +165,9 @@ class TestCheckBasicAuth:
         if auth_header is not None:
             headers["Authorization"] = auth_header
         request.headers = Mock()
-        request.headers.get = Mock(side_effect=lambda key, default=None: headers.get(key, default))
+        request.headers.get = Mock(
+            side_effect=lambda key, default=None: headers.get(key, default)
+        )
         return request
 
     def test_valid_credentials(self) -> None:
@@ -224,6 +238,7 @@ class TestCheckBasicAuth:
 # ---------------------------------------------------------------------------
 # _check_cgi_auth
 # ---------------------------------------------------------------------------
+
 
 class TestCheckCgiAuth:
     """Tests for _check_cgi_auth method."""
@@ -301,6 +316,7 @@ class TestCheckCgiAuth:
 # _send_cgi_auth_challenge
 # ---------------------------------------------------------------------------
 
+
 class TestSendCgiAuthChallenge:
     """Tests for _send_cgi_auth_challenge method."""
 
@@ -348,6 +364,7 @@ class TestSendCgiAuthChallenge:
 # ---------------------------------------------------------------------------
 # _check_lambda_auth
 # ---------------------------------------------------------------------------
+
 
 class TestCheckLambdaAuth:
     """Tests for _check_lambda_auth method."""
@@ -430,6 +447,7 @@ class TestCheckLambdaAuth:
 # _send_lambda_auth_challenge
 # ---------------------------------------------------------------------------
 
+
 class TestSendLambdaAuthChallenge:
     """Tests for _send_lambda_auth_challenge method."""
 
@@ -470,6 +488,7 @@ class TestSendLambdaAuthChallenge:
 # _check_google_cloud_function_auth
 # ---------------------------------------------------------------------------
 
+
 class TestCheckGoogleCloudFunctionAuth:
     """Tests for _check_google_cloud_function_auth method."""
 
@@ -478,7 +497,11 @@ class TestCheckGoogleCloudFunctionAuth:
         request = Mock()
         headers = Mock()
         if auth_header is not None:
-            headers.get = Mock(side_effect=lambda key, default=None: auth_header if key == "Authorization" else default)
+            headers.get = Mock(
+                side_effect=lambda key, default=None: (
+                    auth_header if key == "Authorization" else default
+                )
+            )
         else:
             headers.get = Mock(return_value=None)
         request.headers = headers
@@ -546,10 +569,13 @@ class TestCheckGoogleCloudFunctionAuth:
 # _send_google_cloud_function_auth_challenge
 # ---------------------------------------------------------------------------
 
+
 class TestSendGoogleCloudFunctionAuthChallenge:
     """Tests for _send_google_cloud_function_auth_challenge method."""
 
-    @patch("signalwire.core.mixins.auth_mixin.AuthMixin._send_google_cloud_function_auth_challenge")
+    @patch(
+        "signalwire.core.mixins.auth_mixin.AuthMixin._send_google_cloud_function_auth_challenge"
+    )
     def test_returns_response_object(self, mock_challenge: Mock) -> None:
         """Challenge returns a Flask Response-like object."""
         mock_response = Mock()
@@ -561,7 +587,11 @@ class TestSendGoogleCloudFunctionAuthChallenge:
         mock_challenge.return_value = mock_response
 
         mixin = ConcreteAuthMixin()
-        result = mock_challenge()
+        # Call the method ON THE MIXIN, not the patched mock directly —
+        # `mock_challenge()` would only assert that a Mock returns its own
+        # configured return_value, which proves nothing about AuthMixin.
+        result = mixin._send_google_cloud_function_auth_challenge()
+        mock_challenge.assert_called_once()
         assert result.status_code == 401
         assert "WWW-Authenticate" in result.headers
 
@@ -575,6 +605,8 @@ class TestSendGoogleCloudFunctionAuthChallenge:
         with patch.dict("sys.modules", {"flask": Mock(Response=mock_response_cls)}):
             result = mixin._send_google_cloud_function_auth_challenge()
 
+        # The constructed Response must be the one handed back to the caller.
+        assert result is mock_response_instance
         mock_response_cls.assert_called_once()
         call_kwargs = mock_response_cls.call_args
         assert call_kwargs[1]["status"] == 401
@@ -587,6 +619,7 @@ class TestSendGoogleCloudFunctionAuthChallenge:
 # _check_azure_function_auth
 # ---------------------------------------------------------------------------
 
+
 class TestCheckAzureFunctionAuth:
     """Tests for _check_azure_function_auth method."""
 
@@ -595,7 +628,11 @@ class TestCheckAzureFunctionAuth:
         req = Mock()
         headers = Mock()
         if auth_header is not None:
-            headers.get = Mock(side_effect=lambda key, default=None: auth_header if key == "Authorization" else default)
+            headers.get = Mock(
+                side_effect=lambda key, default=None: (
+                    auth_header if key == "Authorization" else default
+                )
+            )
         else:
             headers.get = Mock(return_value=None)
         req.headers = headers
@@ -663,6 +700,7 @@ class TestCheckAzureFunctionAuth:
 # _send_azure_function_auth_challenge
 # ---------------------------------------------------------------------------
 
+
 class TestSendAzureFunctionAuthChallenge:
     """Tests for _send_azure_function_auth_challenge method."""
 
@@ -682,6 +720,7 @@ class TestSendAzureFunctionAuthChallenge:
         # Remove any previously cached azure modules so the import inside
         # the method picks up our mocks.
         import sys
+
         modules_to_patch = {
             "azure": mock_azure,
             "azure.functions": mock_func_module,
@@ -699,6 +738,8 @@ class TestSendAzureFunctionAuthChallenge:
                 else:
                     sys.modules.pop(mod_name, None)
 
+        # The constructed HttpResponse must be the one handed back to the caller.
+        assert result is mock_http_response_instance
         mock_http_response_cls.assert_called_once()
         call_kwargs = mock_http_response_cls.call_args
         assert call_kwargs[1]["status_code"] == 401
@@ -710,6 +751,7 @@ class TestSendAzureFunctionAuthChallenge:
 # ---------------------------------------------------------------------------
 # Integration: validate_basic_auth delegation across all check methods
 # ---------------------------------------------------------------------------
+
 
 class TestValidateBasicAuthDelegationIntegration:
     """Verify that all auth check methods ultimately delegate to validate_basic_auth."""
@@ -813,6 +855,7 @@ class TestValidateBasicAuthDelegationIntegration:
 # Integration: security_config credential flow
 # ---------------------------------------------------------------------------
 
+
 class TestSecurityConfigIntegration:
     """Test AuthMixin behavior when _basic_auth is set from SecurityConfig.get_basic_auth."""
 
@@ -845,17 +888,29 @@ class TestSecurityConfigIntegration:
 
         env = {"SWML_BASIC_AUTH_USER": "user_x", "SWML_BASIC_AUTH_PASSWORD": "a" * 25}
         with patch.dict(os.environ, env, clear=True):
-            agent = AgentBase(name="ctor-creds", route="/c", basic_auth=("user_x", "a" * 25))
+            agent = AgentBase(
+                name="ctor-creds", route="/c", basic_auth=("user_x", "a" * 25)
+            )
             _, _, source = agent.get_basic_auth_credentials(include_source=True)  # type: ignore[misc]  # include_source=True returns 3-tuple
         assert source == "provided"
 
-    def test_config_file_credentials_are_labeled_config_file(self, tmp_path: Path) -> None:
+    def test_config_file_credentials_are_labeled_config_file(
+        self, tmp_path: Path
+    ) -> None:
         import json
 
         from signalwire import AgentBase
 
         config = tmp_path / "agent.json"
-        config.write_text(json.dumps({"security": {"auth": {"basic": {"user": "cfg", "password": "cfgpass"}}}}))
+        config.write_text(
+            json.dumps(
+                {
+                    "security": {
+                        "auth": {"basic": {"user": "cfg", "password": "cfgpass"}}
+                    }
+                }
+            )
+        )
         with patch.dict(os.environ, {}, clear=True):
             agent = AgentBase(name="cfg-creds", route="/f", config_file=str(config))
             creds = agent.get_basic_auth_credentials(include_source=True)

@@ -6,11 +6,10 @@ calling.call.dial events matched by tag.
 """
 
 import asyncio
-import json
 from typing import Any
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 from signalwire.relay.client import RelayClient, RelayError
 from signalwire.relay.call import Call
@@ -25,6 +24,7 @@ from signalwire.relay.constants import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_client(**kwargs: Any) -> RelayClient:
     """Create a RelayClient with mocked internals for unit testing."""
     client = RelayClient(project="test-proj", token="test-token", **kwargs)
@@ -35,8 +35,12 @@ def _make_client(**kwargs: Any) -> RelayClient:
     return client
 
 
-def _make_dial_event(tag: str, dial_state: str, call_id: str = "winner-call-id",
-                     node_id: str = "winner-node-id") -> dict[str, Any]:
+def _make_dial_event(
+    tag: str,
+    dial_state: str,
+    call_id: str = "winner-call-id",
+    node_id: str = "winner-node-id",
+) -> dict[str, Any]:
     """Build a calling.call.dial event payload."""
     return {
         "event_type": EVENT_CALL_DIAL,
@@ -48,18 +52,22 @@ def _make_dial_event(tag: str, dial_state: str, call_id: str = "winner-call-id",
                 "call_id": call_id,
                 "node_id": node_id,
                 "tag": tag,
-                "device": {"type": "phone", "params": {
-                    "from_number": "+15551234567",
-                    "to_number": "+15559876543",
-                }},
+                "device": {
+                    "type": "phone",
+                    "params": {
+                        "from_number": "+15551234567",
+                        "to_number": "+15559876543",
+                    },
+                },
                 "dial_winner": True,
             },
         },
     }
 
 
-def _make_state_event(call_id: str, tag: str, call_state: str,
-                      node_id: str = "node-1") -> dict[str, Any]:
+def _make_state_event(
+    call_id: str, tag: str, call_state: str, node_id: str = "node-1"
+) -> dict[str, Any]:
     """Build a calling.call.state event payload."""
     return {
         "event_type": EVENT_CALL_STATE,
@@ -68,10 +76,13 @@ def _make_state_event(call_id: str, tag: str, call_state: str,
             "call_id": call_id,
             "tag": tag,
             "call_state": call_state,
-            "device": {"type": "phone", "params": {
-                "from_number": "+15551234567",
-                "to_number": "+15559876543",
-            }},
+            "device": {
+                "type": "phone",
+                "params": {
+                    "from_number": "+15551234567",
+                    "to_number": "+15559876543",
+                },
+            },
         },
     }
 
@@ -79,6 +90,7 @@ def _make_state_event(call_id: str, tag: str, call_state: str,
 # ---------------------------------------------------------------------------
 # Tests for _handle_dial_event
 # ---------------------------------------------------------------------------
+
 
 class TestHandleDialEvent:
     @pytest.mark.asyncio
@@ -154,6 +166,7 @@ class TestHandleDialEvent:
 # Tests for _handle_event routing with dial
 # ---------------------------------------------------------------------------
 
+
 class TestHandleEventDialRouting:
     @pytest.mark.asyncio
     async def test_state_event_creates_call_for_pending_dial(self) -> None:
@@ -210,13 +223,19 @@ class TestHandleEventDialRouting:
         client._dial_calls_by_tag[tag] = []
 
         # State events create the call
-        await client._handle_event(_make_state_event("winner-id", tag, "created", "node-win"))
-        await client._handle_event(_make_state_event("winner-id", tag, "answered", "node-win"))
+        await client._handle_event(
+            _make_state_event("winner-id", tag, "created", "node-win")
+        )
+        await client._handle_event(
+            _make_state_event("winner-id", tag, "answered", "node-win")
+        )
 
         assert "winner-id" in client._calls
 
         # Dial answered event resolves with existing call
-        payload = _make_dial_event(tag, "answered", call_id="winner-id", node_id="node-win")
+        payload = _make_dial_event(
+            tag, "answered", call_id="winner-id", node_id="node-win"
+        )
         await client._handle_event(payload)
 
         assert fut.done()
@@ -247,6 +266,7 @@ class TestHandleEventDialRouting:
 # ---------------------------------------------------------------------------
 # Tests for _handle_event with inbound calls
 # ---------------------------------------------------------------------------
+
 
 class TestHandleEventInbound:
     @pytest.mark.asyncio
@@ -282,6 +302,7 @@ class TestHandleEventInbound:
 # Tests for event routing by call_id
 # ---------------------------------------------------------------------------
 
+
 class TestHandleEventCallIdRouting:
     @pytest.mark.asyncio
     async def test_event_routes_to_call_by_call_id(self) -> None:
@@ -301,10 +322,12 @@ class TestHandleEventCallIdRouting:
         dispatched = []
         call.on("calling.call.play", lambda e: dispatched.append(e))
 
-        await client._handle_event({
-            "event_type": "calling.call.play",
-            "params": {"call_id": "c1", "control_id": "ctl1", "state": "playing"},
-        })
+        await client._handle_event(
+            {
+                "event_type": "calling.call.play",
+                "params": {"call_id": "c1", "control_id": "ctl1", "state": "playing"},
+            }
+        )
 
         assert len(dispatched) == 1
 
@@ -316,10 +339,16 @@ class TestHandleEventCallIdRouting:
         # Sanity: nothing registered.
         assert client._calls == {}
 
-        await client._handle_event({
-            "event_type": "calling.call.play",
-            "params": {"call_id": "unknown-id", "control_id": "ctl1", "state": "playing"},
-        })
+        await client._handle_event(
+            {
+                "event_type": "calling.call.play",
+                "params": {
+                    "call_id": "unknown-id",
+                    "control_id": "ctl1",
+                    "state": "playing",
+                },
+            }
+        )
         # Unknown call_id must NOT be added to the registry as a side effect.
         assert "unknown-id" not in client._calls
         assert client._calls == {}
@@ -328,6 +357,7 @@ class TestHandleEventCallIdRouting:
 # ---------------------------------------------------------------------------
 # Tests for _register_dial_leg
 # ---------------------------------------------------------------------------
+
 
 class TestRegisterDialLeg:
     @pytest.mark.asyncio
@@ -355,6 +385,7 @@ class TestRegisterDialLeg:
 # ---------------------------------------------------------------------------
 # Tests for disconnect cleanup
 # ---------------------------------------------------------------------------
+
 
 class TestDisconnectCleanup:
     @pytest.mark.asyncio

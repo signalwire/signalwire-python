@@ -22,6 +22,11 @@ except ImportError:
     from typing_extensions import Self  # For Python 3.9-3.10
 
 from signalwire.core.swml_service import SWMLService
+from signalwire.utils.schema_utils import (
+    _verb_body,
+    _verb_method_name,
+    _verb_name_for_attribute,
+)
 
 if TYPE_CHECKING:
     # The SWML verb methods are installed dynamically at runtime (_create_verb_methods,
@@ -289,7 +294,8 @@ class SWMLBuilder(_VerbsBase):
         # Create a method for each verb
         for verb_name in verb_names:
             # Skip verbs that already have specific methods
-            if hasattr(self, verb_name):
+            method_name = _verb_method_name(verb_name)
+            if hasattr(self, method_name):
                 continue
 
             # Handle sleep verb specially since it takes an integer directly
@@ -319,7 +325,7 @@ class SWMLBuilder(_VerbsBase):
                     return self_instance
 
                 # Set it as an attribute of self
-                setattr(self, verb_name, types.MethodType(sleep_method, self))
+                setattr(self, method_name, types.MethodType(sleep_method, self))
 
                 # Also cache it for later
                 self._verb_methods_cache[verb_name] = sleep_method
@@ -329,16 +335,45 @@ class SWMLBuilder(_VerbsBase):
             def make_verb_method(
                 name: str,
             ) -> Callable[..., "SWMLBuilder"]:
+                """
+                Build the builder method for one SWML verb.
+
+                The closure exists to bind ``name`` per verb — without it every
+                generated method would share the loop variable and emit the
+                last verb in the schema.
+
+                The returned function takes the verb's config as one optional
+                positional mapping (the form the static stub declares) and/or
+                keyword arguments, merges the keywords over the mapping, drops
+                every keyword whose value is None (so unset options never reach
+                the wire), passes the result to
+                ``service.add_verb(name, config)``, and returns the builder for
+                chaining. It carries the verb's schema ``description`` as its
+                ``__doc__`` when the schema supplies one.
+
+                ``sleep`` is NOT built here — it takes a bare integer rather
+                than an object in SWML and is special-cased by the caller.
+
+                Args:
+                    name: The SWML verb name, used as the emitted key. The
+                        method is installed under it, or under ``return_`` for
+                        a keyword verb such as ``return``.
+
+                Returns:
+                    An unbound function of ``(self_instance, config=None,
+                    **kwargs) -> SWMLBuilder``, which the caller binds with
+                    ``types.MethodType`` and caches.
+                """
+
                 def verb_method(
-                    self_instance: "SWMLBuilder", **kwargs: Any
+                    self_instance: "SWMLBuilder", config: Any = None, **kwargs: Any
                 ) -> "SWMLBuilder":
                     """
                     Dynamically generated method for SWML verb - returns self for chaining
                     """
-                    config: dict[str, Any] = {
-                        key: value for key, value in kwargs.items() if value is not None
-                    }
-                    self_instance.service.add_verb(name, config)
+                    self_instance.service.add_verb(
+                        name, _verb_body(name, config, kwargs)
+                    )
                     return self_instance
 
                 # Add docstring to the method
@@ -359,7 +394,7 @@ class SWMLBuilder(_VerbsBase):
             method = make_verb_method(verb_name)
 
             # Set it as an attribute of self
-            setattr(self, verb_name, types.MethodType(method, self))
+            setattr(self, method_name, types.MethodType(method, self))
 
             # Also cache it for later
             self._verb_methods_cache[verb_name] = method
@@ -389,7 +424,9 @@ class SWMLBuilder(_VerbsBase):
 
         verb_names = self.service.schema_utils.get_all_verb_names()
 
-        if name in verb_names:
+        verb = _verb_name_for_attribute(name, verb_names)
+        if verb is not None:
+            name = verb
             # Check if we already have this method in the cache
             if not hasattr(self, "_verb_methods_cache"):
                 self._verb_methods_cache = {}
@@ -431,15 +468,12 @@ class SWMLBuilder(_VerbsBase):
 
             # Generate the method implementation for normal verbs
             def verb_method(
-                self_instance: "SWMLBuilder", **kwargs: Any
+                self_instance: "SWMLBuilder", config: Any = None, **kwargs: Any
             ) -> "SWMLBuilder":
                 """
                 Dynamically generated method for SWML verb - returns self for chaining
                 """
-                config: dict[str, Any] = {
-                    key: value for key, value in kwargs.items() if value is not None
-                }
-                self_instance.service.add_verb(name, config)
+                self_instance.service.add_verb(name, _verb_body(name, config, kwargs))
                 return self_instance
 
             # Add docstring to the method

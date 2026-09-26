@@ -57,6 +57,7 @@ class SessionManager:
     """Manages MCP server sessions with automatic cleanup"""
 
     def __init__(self, config: dict[str, Any], max_total_sessions: int = 500):
+        """Create a manager with the limits and timeouts in ``config["session"]``."""
         self.config = config
         self.sessions: dict[str, Session] = {}
         self.lock = threading.RLock()

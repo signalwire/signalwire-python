@@ -32,6 +32,23 @@ class InfoGathererSkill(SkillBase):
 
     @classmethod
     def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
+        """
+        Return the base skill parameter schema extended with this skill's config.
+
+        Adds three parameters on top of :meth:`SkillBase.get_parameter_schema`:
+
+        - ``questions`` (array, required) — the question objects, each with
+          ``key_name`` and ``question_text`` plus optional ``confirm`` and
+          ``prompt_add``.
+        - ``prefix`` (string, optional) — namespaces the tool names and the
+          global_data key so several instances can coexist.
+        - ``completion_message`` (string, optional) — returned once every question
+          has been answered.
+
+        Returns:
+            Dict[str, Dict[str, Any]]: The merged parameter schema, used by the
+            skill registry to describe this skill's configuration.
+        """
         schema = super().get_parameter_schema()
         schema.update(
             {
@@ -81,6 +98,20 @@ class InfoGathererSkill(SkillBase):
     # ------------------------------------------------------------------ #
 
     def get_instance_key(self) -> str:
+        """
+        Return the key that distinguishes this instance from other copies of the skill.
+
+        Overrides the base implementation (which keys on ``tool_name``) to key on the
+        ``prefix`` param instead, because ``prefix`` is what actually differentiates
+        two info_gatherer instances — it drives both the tool names
+        (``<prefix>_start_questions`` / ``<prefix>_submit_answer``) and the
+        global_data namespace. Two instances configured with different prefixes
+        therefore get different keys and can be loaded onto one agent side by side.
+
+        Returns:
+            str: ``"info_gatherer_<prefix>"`` when a prefix is configured, otherwise
+            ``"info_gatherer"`` — so at most one un-prefixed instance is possible.
+        """
         prefix = self.params.get("prefix")
         if prefix:
             return f"info_gatherer_{prefix}"
@@ -91,6 +122,22 @@ class InfoGathererSkill(SkillBase):
     # ------------------------------------------------------------------ #
 
     def setup(self) -> bool:
+        """
+        Validate the configuration and precompute this instance's names and messages.
+
+        Requires the ``questions`` param and checks it through
+        ``_validate_questions``: it must be a non-empty list of dicts, each carrying
+        both ``key_name`` and ``question_text``. On success it stores the question
+        list on ``self.questions``, derives ``self.start_tool_name`` and
+        ``self.submit_tool_name`` (prefixed with the ``prefix`` param when set), and
+        resolves ``self.completion_message``.
+
+        Returns:
+            bool: True when the skill is usable. False when ``questions`` is missing
+            or fails validation — the reason is logged as an error and the skill is
+            NOT loaded onto the agent, so neither of its tools nor its prompt section
+            is registered.
+        """
         questions = self.params.get("questions")
         if questions is None:
             self.logger.error("'questions' parameter is required")
@@ -127,6 +174,20 @@ class InfoGathererSkill(SkillBase):
     # ------------------------------------------------------------------ #
 
     def get_global_data(self) -> dict[str, Any]:
+        """
+        Return this instance's initial questionnaire state for the agent's global_data.
+
+        The state is stored under this skill instance's namespace key
+        (``skill:<prefix>``, or ``skill:<instance_key>`` when no prefix is set), which
+        is what keeps two info_gatherer instances from overwriting each other's
+        progress.
+
+        Returns:
+            Dict[str, Any]: ``{namespace: {"questions": [...], "question_index": 0,
+            "answers": []}}`` — the configured questions plus a cursor at the first
+            question and an empty answer list. The tool handlers advance
+            ``question_index`` and append to ``answers`` from here.
+        """
         namespace = self._get_skill_namespace()
         return {
             namespace: {
@@ -141,6 +202,7 @@ class InfoGathererSkill(SkillBase):
     # ------------------------------------------------------------------ #
 
     def _get_prompt_sections(self) -> list[dict[str, Any]]:
+        """Return the prompt section telling the model how to run the question flow."""
         return [
             {
                 "title": f"Info Gatherer ({self.get_instance_key()})",
@@ -162,6 +224,18 @@ class InfoGathererSkill(SkillBase):
     # ------------------------------------------------------------------ #
 
     def register_tools(self) -> None:
+        """
+        Register the two SWAIG tools that drive the question loop.
+
+        Both names come from ``setup()`` and carry the configured prefix:
+
+        - ``start_questions`` — no parameters; returns the instruction for the first
+          unanswered question.
+        - ``submit_answer`` — takes ``answer`` and ``confirmed_by_user``; records the
+          answer and returns the next question, or the completion message plus a
+          ``toggle_functions`` that deactivates both tools once the list is
+          exhausted.
+        """
         self.define_tool(
             name=self.start_tool_name,
             description="Start the question sequence with the first question",
@@ -192,6 +266,7 @@ class InfoGathererSkill(SkillBase):
     def _handle_start_questions(
         self, args: dict[str, Any], raw_data: dict[str, Any]
     ) -> FunctionResult:
+        """Return the instruction for the current question, or say there are none."""
         state = self.get_skill_data(raw_data)
         questions = state.get("questions", [])
         question_index = state.get("question_index", 0)
@@ -214,6 +289,12 @@ class InfoGathererSkill(SkillBase):
     def _handle_submit_answer(
         self, args: dict[str, Any], raw_data: dict[str, Any]
     ) -> FunctionResult:
+        """Record the answer and return the next question, or finish the flow.
+
+        A question that needs confirmation is refused until the answer is confirmed.
+        After the last answer, both tools are deactivated and the completion message is
+        returned.
+        """
         answer = args.get("answer", "")
         confirmed = args.get("confirmed_by_user", False)
         state = self.get_skill_data(raw_data)
@@ -283,6 +364,7 @@ class InfoGathererSkill(SkillBase):
         question_number: int = 1,
         total_questions: int = 1,
     ) -> str:
+        """Build the instruction to ask one question and submit its answer."""
         if is_first_question:
             instruction = (
                 f"Ask each question one at a time, wait for the user's answer, "
@@ -306,6 +388,10 @@ class InfoGathererSkill(SkillBase):
 
     @staticmethod
     def _validate_questions(questions: Any) -> None:
+        """Raise ``ValueError`` unless ``questions`` is a non-empty list of dicts.
+
+        Each question must carry ``key_name`` and ``question_text``.
+        """
         if not questions:
             raise ValueError("At least one question is required")
         if not isinstance(questions, list):

@@ -24,7 +24,7 @@ _PROJECT = os.environ.get("SIGNALWIRE_PROJECT_ID", "")
 _TOKEN = os.environ.get("SIGNALWIRE_API_TOKEN", "")
 _HOST = os.environ.get("SIGNALWIRE_SPACE", "")
 _FROM_NUMBER = os.environ.get("RELAY_FROM_NUMBER", "")  # A number on your SW project
-_TO_NUMBER = os.environ.get("RELAY_TO_NUMBER", "")      # Destination number
+_TO_NUMBER = os.environ.get("RELAY_TO_NUMBER", "")  # Destination number
 
 skip_no_creds = pytest.mark.skipif(
     not (_PROJECT and _TOKEN),
@@ -96,7 +96,14 @@ class TestRelayLive:
         client = RelayClient(**kwargs)
         await client.connect()
 
-        devices = [[{"type": "phone", "params": {"to_number": _TO_NUMBER, "from_number": _FROM_NUMBER}}]]
+        devices = [
+            [
+                {
+                    "type": "phone",
+                    "params": {"to_number": _TO_NUMBER, "from_number": _FROM_NUMBER},
+                }
+            ]
+        ]
         call = await client.dial(devices)
 
         assert call.call_id

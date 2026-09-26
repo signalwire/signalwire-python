@@ -176,6 +176,9 @@ class CallingCollectStopParams(TypedDict, total=False):
     node_id: str
 
 
+CallingConferenceParams: TypeAlias = "dict[str, Any]"
+
+
 class CallingConnectParams(TypedDict, total=False):
     """Wire schema for the JSON payload of `calling.connect` (params). Extracted from switchblade `PublicCallConnectParams.cs`.
 
@@ -1037,6 +1040,9 @@ class CallingCollectStopResult(TypedDict, total=False):
     message: str
 
 
+CallingConferenceResult: TypeAlias = "dict[str, Any]"
+
+
 class CallingConnectResult(TypedDict, total=False):
     """Wire schema for the JSON payload of `calling.connect` (result). Extracted from switchblade `PublicCallConnectResult.cs`.
 
@@ -1719,4 +1725,4 @@ class SignalwireReauthenticateResult(TypedDict, total=False):
     authentication: str
     authorization: dict[str, Any]
     ice_servers: list[Any]
-    result: Any
+    result: dict[str, Any]

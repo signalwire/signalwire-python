@@ -98,6 +98,24 @@ class ConfigLoader:
             pattern = r"\$\{([^}|]+)(?:\|([^}]*))?\}"
 
             def replacer(match: "re.Match[str]") -> str:
+                """
+                Expand one ``${VAR}`` / ``${VAR|default}`` match.
+
+                Group 1 is the variable name, group 2 the optional default
+                after the ``|``. Returns ``os.environ[VAR]`` when set,
+                otherwise the default; an absent default (``${VAR}`` with no
+                pipe) and an empty one (``${VAR|}``) both yield the empty
+                string. A missing variable is never an error and the ``${...}``
+                text is never left in place.
+
+                Args:
+                    match: The regex match for a single ``${...}`` occurrence.
+
+                Returns:
+                    The replacement text, always a string — the caller
+                    (``substitute_vars``) re-types the fully-substituted result
+                    to bool/int/float afterwards.
+                """
                 var_name = match.group(1)
                 default = match.group(2) if match.group(2) is not None else ""
                 return os.environ.get(var_name, default)

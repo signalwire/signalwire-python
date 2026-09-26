@@ -14,6 +14,8 @@ Uses jsonschema-rs for full JSON Schema validation with type checking.
 
 import os
 import json
+import keyword
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, cast
 
@@ -21,11 +23,17 @@ import jsonschema_rs
 
 from signalwire.core.logging_config import get_logger
 
+# Bounds $ref / union following in _closed_key_set so a schema with a
+# self-referential $ref cannot spin the resolver. Eight levels is well past
+# anything the SWML schema needs (verb body -> $ref -> union branch -> $ref).
+_MAX_SCHEMA_RESOLVE_DEPTH = 8
+
 
 class SchemaValidationError(Exception):
     """Raised when SWML schema validation fails."""
 
     def __init__(self, verb_name: str, errors: list[str]):
+        """Record the verb and its validation errors."""
         self.verb_name = verb_name
         self.errors = errors
         message = f"Schema validation failed for '{verb_name}': {'; '.join(errors)}"
@@ -34,6 +42,78 @@ class SchemaValidationError(Exception):
 
 # Create a logger
 logger = get_logger("signalwire.utils.schema_utils")
+
+
+def _verb_method_name(verb_name: str) -> str:
+    """
+    The Python attribute name a SWML verb method is installed under.
+
+    A verb whose name is a Python keyword (``return``) cannot be called as
+    ``builder.return()``, so it is installed as ``return_`` — the same name the
+    generated static stub (``swml_verbs_generated._SwmlVerbs``) declares. The
+    verb still emits its wire key (``return``).
+    """
+    return f"{verb_name}_" if keyword.iskeyword(verb_name) else verb_name
+
+
+def _verb_name_for_attribute(name: str, verb_names: list[str]) -> str | None:
+    """
+    The SWML verb an attribute name reaches, or None if it reaches none.
+
+    Accepts the verb's own name and its keyword-escaped method name
+    (``return_`` -> ``return``).
+    """
+    if name in verb_names:
+        return name
+    if name.endswith("_") and keyword.iskeyword(name[:-1]) and name[:-1] in verb_names:
+        return name[:-1]
+    return None
+
+
+def _verb_body(verb_name: str, config: Any, kwargs: dict[str, Any]) -> Any:
+    """
+    Build a verb's body from a generated verb method's arguments.
+
+    The static stub declares each verb method as ``verb(config)`` — one
+    positional mapping — and the runtime methods also take keyword arguments.
+    Both forms are accepted: the mapping is copied, keyword arguments are
+    merged over it, and any keyword whose value is None is dropped so unset
+    options never reach the wire. A non-mapping ``config`` (a verb's positional
+    array or scalar form) is passed through unchanged and cannot be combined
+    with keyword arguments.
+
+    Raises:
+        TypeError: If a non-mapping ``config`` is combined with keyword arguments.
+    """
+    extra = {key: value for key, value in kwargs.items() if value is not None}
+    if config is None:
+        return extra
+    if isinstance(config, Mapping):
+        return {**config, **extra}
+    if extra:
+        msg = f"{verb_name}() takes either a positional non-object body or keyword arguments, not both"
+        raise TypeError(msg)
+    return config
+
+
+def _verb_is_deprecated(verb_def: dict[str, Any], verb_name: str) -> bool:
+    """
+    Whether a SWML verb wrapper is marked deprecated in the schema.
+
+    The flag is JSON Schema's ``deprecated`` annotation, carried on the
+    wrapper definition or on its single verb property.
+
+    Args:
+        verb_def: The verb's wrapper definition from ``$defs``.
+        verb_name: The verb's property name inside that wrapper.
+
+    Returns:
+        True when either carries ``"deprecated": true``.
+    """
+    if verb_def.get("deprecated") is True:
+        return True
+    prop = (verb_def.get("properties") or {}).get(verb_name)
+    return isinstance(prop, dict) and prop.get("deprecated") is True
 
 
 class SchemaUtils:
@@ -254,6 +334,9 @@ class SchemaUtils:
                                         "name": actual_verb,
                                         "schema_name": verb_name,
                                         "definition": verb_def,
+                                        "deprecated": _verb_is_deprecated(
+                                            verb_def, actual_verb
+                                        ),
                                     }
                                     self.log.debug("verb_added", verb=actual_verb)
         else:
@@ -384,7 +467,18 @@ class SchemaUtils:
         """
         Perform lightweight validation (verb existence + required fields only).
 
-        This is the fallback when jsonschema-rs is not available.
+        There is NO missing-dependency fallback: ``jsonschema_rs`` is imported
+        unconditionally at module scope, so if it is absent this module fails to
+        import and nothing here runs. This path is reached only for a PARTIAL
+        SCHEMA — one whose top-level ``properties`` has no ``sections`` key, so
+        the verb cannot be wrapped in a full SWML document for deep validation
+        (see ``_validate_verb_full``) — or when ``_full_validator`` was never
+        initialized because ``__init__`` did not run (mocked test instances).
+
+        Note that reaching this path does NOT imply
+        ``full_validation_available`` is False: with a partial schema the
+        validator is still constructed, so that property reports True while
+        every verb is nonetheless validated here.
 
         Args:
             verb_name: The name of the verb
@@ -409,9 +503,9 @@ class SchemaUtils:
 
     def _verb_top_level_property_names(self, verb_name: str) -> set[str] | None:
         """Resolve the set of KNOWN top-level property names for a verb's config
-        object, following a single ``$ref`` (e.g. AI -> AIObject). Returns None
-        when the verb's config schema is not a closed object-with-properties
-        (i.e. we cannot enumerate a known-key set, so no shallow check applies)."""
+        object, following a single ``$ref`` (e.g. AI -> AIObject) and UNIONING the
+        branches of an ``anyOf``/``oneOf`` union. Returns None only when there is
+        genuinely no enumerable closed key-set, so no shallow check applies."""
         if verb_name not in self.verbs:
             return None
         verb_def = self.verbs[verb_name]["definition"]
@@ -419,12 +513,69 @@ class SchemaUtils:
         body = props.get(verb_name)
         if not isinstance(body, dict):
             return None
-        # Follow a single $ref (AI -> AIObject) to the object that declares the
-        # verb config's own properties.
-        if "$ref" in body:
-            ref_name = body["$ref"].split("/")[-1]
-            body = self.schema.get("$defs", {}).get(ref_name, {})
-        if not isinstance(body, dict) or body.get("type") != "object":
+        return self._closed_key_set(body, 0)
+
+    def _closed_key_set(self, body: Any, depth: int) -> set[str] | None:
+        """Resolve ONE schema node to the set of top-level property names it closes
+        over, returning None when the node has no such enumerable closed key-set.
+
+        Three node shapes are handled, and the union case is the one that matters:
+
+        * ``$ref`` — followed into ``$defs`` and resolved recursively
+          (ai -> AIObject).
+        * ``anyOf`` / ``oneOf`` — resolved BRANCH BY BRANCH and UNIONED. Without
+          this the resolver bailed on the first ``type != "object"`` test, because
+          a union node carries no ``type`` of its own. That bail silently
+          DISENGAGED the closed-key check: ``_validate_verb_top_level_keys`` reads
+          None as "nothing to enforce" and reports valid for any key whatsoever.
+          Five verbs in the shipped schema are union-shaped — connect, play,
+          send_sms, sleep, unset — so the check was doing nothing for all of them.
+          A union's known-key set is the union of its object branches' keys: a
+          config satisfying the union satisfies SOME branch, so a key belonging to
+          no branch belongs to no valid document. Non-object branches (sleep's
+          bare ``integer``, SWMLVar) contribute no keys and are skipped — they
+          constrain the config to not be an object at all, a different question
+          from which keys an object config may carry.
+        * a plain closed object — its own ``properties``.
+
+        ``depth`` bounds ``$ref``/union following so a schema with a
+        self-referential ``$ref`` cannot spin the resolver. Eight levels is well
+        past anything the SWML schema needs (verb body -> $ref -> union branch ->
+        $ref).
+        """
+        if not isinstance(body, dict) or depth > _MAX_SCHEMA_RESOLVE_DEPTH:
+            return None
+
+        # Follow a $ref (AI -> AIObject) to the node that declares the properties.
+        ref = body.get("$ref")
+        if isinstance(ref, str):
+            ref_name = ref.split("/")[-1]
+            resolved = self.schema.get("$defs", {}).get(ref_name)
+            if not isinstance(resolved, dict):
+                return None
+            return self._closed_key_set(resolved, depth + 1)
+
+        # A union node: resolve every branch and union the ones that yield a set.
+        branches = body.get("anyOf")
+        if not isinstance(branches, list):
+            branches = body.get("oneOf")
+        if isinstance(branches, list):
+            union: set[str] = set()
+            found = False
+            for branch in branches:
+                keys = self._closed_key_set(branch, depth + 1)
+                if keys is None:
+                    continue
+                found = True
+                union |= keys
+            if not found:
+                # No branch is a closed object (e.g. unset: string |
+                # array-of-string). There is no key-set to enforce; the deep
+                # validator owns this shape.
+                return None
+            return union
+
+        if body.get("type") != "object":
             return None
         prop_map = body.get("properties")
         if not isinstance(prop_map, dict):
@@ -448,7 +599,9 @@ class SchemaUtils:
         the full deep schema (which would false-reject legitimate deep emissions
         such as the ai verb's empty prompt.pom). Used for handler verbs (the ai
         verb) whose deep shapes the handler owns. A no-op when validation is
-        disabled or when the verb has no enumerable closed key-set."""
+        disabled or when the verb genuinely has no enumerable closed key-set (an
+        open object such as ``set``, or a union with no object branch such as
+        ``unset``)."""
         if not self._validation_enabled:
             return True, []
         if verb_name not in self.verbs:
@@ -489,12 +642,17 @@ class SchemaUtils:
 
     def get_all_verb_names(self) -> list[str]:
         """
-        Get all verb names defined in the schema
+        Get the names of the verbs the SDK exposes as builder/service methods.
+
+        A verb the schema marks ``"deprecated": true`` is left out: it is not
+        SDK surface, so no ``dial()``/``eval()``/``if()`` method is installed for
+        it. It stays known to validation, so a document that already carries
+        it still validates.
 
         Returns:
             List of verb names
         """
-        return list(self.verbs.keys())
+        return [name for name, info in self.verbs.items() if not info.get("deprecated")]
 
     def get_verb_parameters(self, verb_name: str) -> dict[str, Any]:
         """

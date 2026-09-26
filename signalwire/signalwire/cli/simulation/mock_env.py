@@ -21,24 +21,53 @@ class MockQueryParams:
     """Mock FastAPI QueryParams (simple dict-like)"""
 
     def __init__(self, params: dict[str, str] | None = None):
+        """Wrap ``params``, the query parameters, matched case-sensitively."""
         self._params = params or {}
 
     def get(self, key: str, default: str | None = None) -> str | None:
+        """Return the query-string value for ``key``, or ``default`` if absent.
+
+        Lookup is exact and case-SENSITIVE, unlike :meth:`MockHeaders.get`.
+
+        Args:
+            key: Query parameter name, matched exactly as given.
+            default: Value returned when the parameter was not supplied.
+
+        Returns:
+            The parameter value, or ``default`` (``None`` unless overridden).
+        """
         return self._params.get(key, default)
 
     def __getitem__(self, key: str) -> str:
+        """Return the value of ``key``; raise ``KeyError`` if it is absent."""
         return self._params[key]
 
     def __contains__(self, key: str) -> bool:
+        """Whether the query string has a parameter named exactly ``key``."""
         return key in self._params
 
     def items(self) -> ItemsView[str, str]:
+        """Return a view of the ``(name, value)`` pairs of every query parameter.
+
+        Returns:
+            The underlying dict's ``items()`` view — a live view, not a copy.
+        """
         return self._params.items()
 
     def keys(self) -> KeysView[str]:
+        """Return a view of the query parameter names, in insertion order.
+
+        Returns:
+            The underlying dict's ``keys()`` view — a live view, not a copy.
+        """
         return self._params.keys()
 
     def values(self) -> ValuesView[str]:
+        """Return a view of the query parameter values.
+
+        Returns:
+            The underlying dict's ``values()`` view — a live view, not a copy.
+        """
         return self._params.values()
 
 
@@ -46,6 +75,7 @@ class MockHeaders:
     """Mock FastAPI Headers (case-insensitive dict-like)"""
 
     def __init__(self, headers: dict[str, str] | None = None):
+        """Wrap ``headers``, lowercasing the names for case-insensitive lookup."""
         # Store headers with lowercase keys for case-insensitive lookup
         self._headers = {}
         if headers:
@@ -53,21 +83,60 @@ class MockHeaders:
                 self._headers[k.lower()] = v
 
     def get(self, key: str, default: str | None = None) -> str | None:
+        """Return the header value for ``key``, or ``default`` if absent.
+
+        The lookup is case-INSENSITIVE: ``key`` is lowercased before matching,
+        so ``get("Content-Type")`` and ``get("content-type")`` are equivalent.
+        This mirrors FastAPI/Starlette header semantics.
+
+        Args:
+            key: Header name in any casing.
+            default: Value returned when the header was not supplied.
+
+        Returns:
+            The header value, or ``default`` (``None`` unless overridden).
+        """
         return self._headers.get(key.lower(), default)
 
     def __getitem__(self, key: str) -> str:
+        """Return header ``key`` in any casing; raise ``KeyError`` if absent."""
         return self._headers[key.lower()]
 
     def __contains__(self, key: str) -> bool:
+        """Whether a header named ``key``, in any casing, is present."""
         return key.lower() in self._headers
 
     def items(self) -> ItemsView[str, str]:
+        """Return a view of the ``(name, value)`` pairs of every header.
+
+        Names are yielded LOWERCASED — they were normalized on construction, so
+        the original casing the caller supplied is not preserved.
+
+        Returns:
+            The underlying dict's ``items()`` view — a live view, not a copy.
+        """
         return self._headers.items()
 
     def keys(self) -> KeysView[str]:
+        """Return a view of the header names, lowercased.
+
+        As with :meth:`items`, the names reflect the normalized (lowercase)
+        storage rather than the casing originally passed in.
+
+        Returns:
+            The underlying dict's ``keys()`` view — a live view, not a copy.
+        """
         return self._headers.keys()
 
     def values(self) -> ValuesView[str]:
+        """Return a view of the header values, unmodified.
+
+        Only header NAMES are normalized on construction; values are stored
+        exactly as supplied.
+
+        Returns:
+            The underlying dict's ``values()`` view — a live view, not a copy.
+        """
         return self._headers.values()
 
 
@@ -75,6 +144,7 @@ class MockURL:
     """Mock FastAPI URL object"""
 
     def __init__(self, url: str = "http://localhost:8080/swml"):
+        """Split ``url`` into ``scheme``, ``netloc``, ``path`` and ``query``."""
         self._url = url
         # Parse basic components
         if "?" in url:
@@ -96,6 +166,7 @@ class MockURL:
             self.netloc = "localhost:8080"
 
     def __str__(self) -> str:
+        """Return the URL as given."""
         return self._url
 
 
@@ -110,6 +181,7 @@ class MockRequest:
         query_params: dict[str, str] | None = None,
         json_body: dict[str, Any] | None = None,
     ):
+        """Build a request with the given method, URL, headers, query and JSON body."""
         self.method = method
         self.url = MockURL(url)
         self.headers = MockHeaders(headers)
@@ -183,6 +255,10 @@ class ServerlessSimulator:
     }
 
     def __init__(self, platform: str, overrides: dict[str, str] | None = None):
+        """Prepare to simulate ``platform``; nothing changes until ``activate()``.
+
+        ``overrides`` are environment variables set on top of the platform's presets.
+        """
         self.platform = platform
         self.original_env = dict(os.environ)
         self.preset_env = self.PLATFORM_PRESETS.get(platform, {}).copy()

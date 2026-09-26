@@ -4,21 +4,16 @@ from __future__ import annotations
 
 import asyncio
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
-import pytest_asyncio
 
-from signalwire.relay.client import RelayClient, RelayError, _active_clients
+from signalwire.relay.client import RelayClient, _active_clients
 from signalwire.relay.event import RelayEvent
 from signalwire.relay.message import Message
 from signalwire.relay.constants import (
     EVENT_MESSAGING_RECEIVE,
     EVENT_MESSAGING_STATE,
-    MESSAGE_STATE_DELIVERED,
-    MESSAGE_STATE_FAILED,
-    MESSAGE_STATE_QUEUED,
-    MESSAGE_STATE_SENT,
 )
 
 from .conftest import (
@@ -32,6 +27,7 @@ from .conftest import (
 # ---------------------------------------------------------------------------
 # Message class unit tests
 # ---------------------------------------------------------------------------
+
 
 class TestMessage:
     """Tests for the Message data class and state tracking."""
@@ -56,20 +52,24 @@ class TestMessage:
     @pytest.mark.asyncio
     async def test_dispatch_event_updates_state(self) -> None:
         msg = Message(message_id="msg-1", state="queued")
-        await msg._dispatch_event({
-            "event_type": EVENT_MESSAGING_STATE,
-            "params": {"message_id": "msg-1", "message_state": "sent"},
-        })
+        await msg._dispatch_event(
+            {
+                "event_type": EVENT_MESSAGING_STATE,
+                "params": {"message_id": "msg-1", "message_state": "sent"},
+            }
+        )
         assert msg.state == "sent"
         assert not msg.is_done
 
     @pytest.mark.asyncio
     async def test_dispatch_terminal_state_resolves(self) -> None:
         msg = Message(message_id="msg-1", state="queued")
-        await msg._dispatch_event({
-            "event_type": EVENT_MESSAGING_STATE,
-            "params": {"message_id": "msg-1", "message_state": "delivered"},
-        })
+        await msg._dispatch_event(
+            {
+                "event_type": EVENT_MESSAGING_STATE,
+                "params": {"message_id": "msg-1", "message_state": "delivered"},
+            }
+        )
         assert msg.state == "delivered"
         assert msg.is_done
         assert msg.result is not None
@@ -77,14 +77,16 @@ class TestMessage:
     @pytest.mark.asyncio
     async def test_dispatch_failed_state(self) -> None:
         msg = Message(message_id="msg-1", state="queued")
-        await msg._dispatch_event({
-            "event_type": EVENT_MESSAGING_STATE,
-            "params": {
-                "message_id": "msg-1",
-                "message_state": "failed",
-                "reason": "spam",
-            },
-        })
+        await msg._dispatch_event(
+            {
+                "event_type": EVENT_MESSAGING_STATE,
+                "params": {
+                    "message_id": "msg-1",
+                    "message_state": "failed",
+                    "reason": "spam",
+                },
+            }
+        )
         assert msg.state == "failed"
         assert msg.reason == "spam"
         assert msg.is_done
@@ -95,13 +97,18 @@ class TestMessage:
 
         async def deliver() -> None:
             await asyncio.sleep(0.01)
-            await msg._dispatch_event({
-                "event_type": EVENT_MESSAGING_STATE,
-                "params": {"message_id": "msg-1", "message_state": "delivered"},
-            })
+            await msg._dispatch_event(
+                {
+                    "event_type": EVENT_MESSAGING_STATE,
+                    "params": {"message_id": "msg-1", "message_state": "delivered"},
+                }
+            )
 
-        asyncio.ensure_future(deliver())
+        # Hold the reference: an un-referenced task can be garbage-collected
+        # mid-flight, and awaiting it surfaces any exception it raised.
+        deliver_task = asyncio.ensure_future(deliver())
         event = await msg.wait(timeout=2.0)
+        await deliver_task
         assert event.params["message_state"] == "delivered"
 
     @pytest.mark.asyncio
@@ -116,10 +123,12 @@ class TestMessage:
         msg = Message(message_id="msg-1", state="queued")
         msg._on_completed = lambda event: results.append(event)
 
-        await msg._dispatch_event({
-            "event_type": EVENT_MESSAGING_STATE,
-            "params": {"message_id": "msg-1", "message_state": "delivered"},
-        })
+        await msg._dispatch_event(
+            {
+                "event_type": EVENT_MESSAGING_STATE,
+                "params": {"message_id": "msg-1", "message_state": "delivered"},
+            }
+        )
         assert len(results) == 1
         assert results[0].params["message_state"] == "delivered"
 
@@ -133,10 +142,12 @@ class TestMessage:
 
         msg._on_completed = on_done
 
-        await msg._dispatch_event({
-            "event_type": EVENT_MESSAGING_STATE,
-            "params": {"message_id": "msg-1", "message_state": "delivered"},
-        })
+        await msg._dispatch_event(
+            {
+                "event_type": EVENT_MESSAGING_STATE,
+                "params": {"message_id": "msg-1", "message_state": "delivered"},
+            }
+        )
         await asyncio.sleep(0.01)  # let the ensure_future run
         assert len(results) == 1
 
@@ -146,10 +157,12 @@ class TestMessage:
         msg._on_completed = lambda event: 1 / 0  # raises ZeroDivisionError
 
         # Should not raise
-        await msg._dispatch_event({
-            "event_type": EVENT_MESSAGING_STATE,
-            "params": {"message_id": "msg-1", "message_state": "delivered"},
-        })
+        await msg._dispatch_event(
+            {
+                "event_type": EVENT_MESSAGING_STATE,
+                "params": {"message_id": "msg-1", "message_state": "delivered"},
+            }
+        )
         assert msg.is_done
 
     @pytest.mark.asyncio
@@ -158,10 +171,12 @@ class TestMessage:
         msg = Message(message_id="msg-1", state="queued")
         msg.on(lambda event: events.append(event))
 
-        await msg._dispatch_event({
-            "event_type": EVENT_MESSAGING_STATE,
-            "params": {"message_id": "msg-1", "message_state": "sent"},
-        })
+        await msg._dispatch_event(
+            {
+                "event_type": EVENT_MESSAGING_STATE,
+                "params": {"message_id": "msg-1", "message_state": "sent"},
+            }
+        )
         assert len(events) == 1
 
     @pytest.mark.asyncio
@@ -170,10 +185,12 @@ class TestMessage:
         msg.on(lambda event: 1 / 0)
 
         # Should not raise
-        await msg._dispatch_event({
-            "event_type": EVENT_MESSAGING_STATE,
-            "params": {"message_id": "msg-1", "message_state": "sent"},
-        })
+        await msg._dispatch_event(
+            {
+                "event_type": EVENT_MESSAGING_STATE,
+                "params": {"message_id": "msg-1", "message_state": "sent"},
+            }
+        )
         assert msg.state == "sent"
 
     @pytest.mark.asyncio
@@ -194,6 +211,7 @@ class TestMessage:
 # Client send_message tests
 # ---------------------------------------------------------------------------
 
+
 class TestSendMessage:
     """Tests for RelayClient.send_message()."""
 
@@ -202,28 +220,39 @@ class TestSendMessage:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
-        with patch("signalwire.relay.client.websockets.connect",
-                   new_callable=AsyncMock, return_value=ws):
+        with patch(
+            "signalwire.relay.client.websockets.connect",
+            new_callable=AsyncMock,
+            return_value=ws,
+        ):
             client = RelayClient(project="test-project", token="test-token")
             await client.connect()
 
             # Override auto_reply to include message_id
-            original_send = ws.send
-
             async def custom_send(raw: str) -> None:
                 await MockWebSocket.send(ws, raw)
                 msg = json.loads(raw)
                 if msg.get("method") == "messaging.send":
-                    ws.feed_message(make_jsonrpc_response(msg["id"], {
-                        "code": "200",
-                        "message": "Message accepted",
-                        "message_id": "msg-abc123",
-                    }))
+                    ws.feed_message(
+                        make_jsonrpc_response(
+                            msg["id"],
+                            {
+                                "code": "200",
+                                "message": "Message accepted",
+                                "message_id": "msg-abc123",
+                            },
+                        )
+                    )
                 elif msg.get("method") == "signalwire.connect":
-                    ws.feed_message(make_jsonrpc_response(msg["id"], {
-                        "protocol": "test-protocol",
-                        "identity": "test-identity",
-                    }))
+                    ws.feed_message(
+                        make_jsonrpc_response(
+                            msg["id"],
+                            {
+                                "protocol": "test-protocol",
+                                "identity": "test-identity",
+                            },
+                        )
+                    )
 
             # Simpler approach: just use auto_reply_all which returns code 200
             message = await client.send_message(
@@ -240,7 +269,9 @@ class TestSendMessage:
             assert message.state == "queued"
 
             # Verify the RPC was sent correctly
-            send_msgs = [m for m in ws.sent_messages if m.get("method") == "messaging.send"]
+            send_msgs = [
+                m for m in ws.sent_messages if m.get("method") == "messaging.send"
+            ]
             assert len(send_msgs) == 1
             params = send_msgs[0]["params"]
             assert params["to_number"] == "+15552222222"
@@ -255,8 +286,11 @@ class TestSendMessage:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
-        with patch("signalwire.relay.client.websockets.connect",
-                   new_callable=AsyncMock, return_value=ws):
+        with patch(
+            "signalwire.relay.client.websockets.connect",
+            new_callable=AsyncMock,
+            return_value=ws,
+        ):
             client = RelayClient(project="test-project", token="test-token")
             await client.connect()
 
@@ -268,7 +302,9 @@ class TestSendMessage:
 
             assert message.media == ["https://example.com/image.jpg"]
 
-            send_msgs = [m for m in ws.sent_messages if m.get("method") == "messaging.send"]
+            send_msgs = [
+                m for m in ws.sent_messages if m.get("method") == "messaging.send"
+            ]
             assert send_msgs[0]["params"]["media"] == ["https://example.com/image.jpg"]
             assert "body" not in send_msgs[0]["params"]
 
@@ -280,8 +316,11 @@ class TestSendMessage:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
-        with patch("signalwire.relay.client.websockets.connect",
-                   new_callable=AsyncMock, return_value=ws):
+        with patch(
+            "signalwire.relay.client.websockets.connect",
+            new_callable=AsyncMock,
+            return_value=ws,
+        ):
             client = RelayClient(project="test-project", token="test-token")
             await client.connect()
 
@@ -298,7 +337,9 @@ class TestSendMessage:
             assert message.tags == ["vip", "support"]
             assert message.context == "my_context"
 
-            send_msgs = [m for m in ws.sent_messages if m.get("method") == "messaging.send"]
+            send_msgs = [
+                m for m in ws.sent_messages if m.get("method") == "messaging.send"
+            ]
             params = send_msgs[0]["params"]
             assert params["tags"] == ["vip", "support"]
             assert params["region"] == "us"
@@ -312,8 +353,11 @@ class TestSendMessage:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
-        with patch("signalwire.relay.client.websockets.connect",
-                   new_callable=AsyncMock, return_value=ws):
+        with patch(
+            "signalwire.relay.client.websockets.connect",
+            new_callable=AsyncMock,
+            return_value=ws,
+        ):
             client = RelayClient(project="test-project", token="test-token")
             await client.connect()
 
@@ -331,8 +375,11 @@ class TestSendMessage:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
-        with patch("signalwire.relay.client.websockets.connect",
-                   new_callable=AsyncMock, return_value=ws):
+        with patch(
+            "signalwire.relay.client.websockets.connect",
+            new_callable=AsyncMock,
+            return_value=ws,
+        ):
             client = RelayClient(project="test-project", token="test-token")
             await client.connect()
 
@@ -354,6 +401,7 @@ class TestSendMessage:
 # Client event routing tests
 # ---------------------------------------------------------------------------
 
+
 class TestMessagingEventRouting:
     """Tests for messaging event dispatch in RelayClient."""
 
@@ -362,8 +410,11 @@ class TestMessagingEventRouting:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
-        with patch("signalwire.relay.client.websockets.connect",
-                   new_callable=AsyncMock, return_value=ws):
+        with patch(
+            "signalwire.relay.client.websockets.connect",
+            new_callable=AsyncMock,
+            return_value=ws,
+        ):
             client = RelayClient(project="test-project", token="test-token")
 
             received_messages = []
@@ -375,17 +426,22 @@ class TestMessagingEventRouting:
             await client.connect()
 
             # Inject an inbound message event
-            ws.feed_message(make_event(EVENT_MESSAGING_RECEIVE, {
-                "message_id": "msg-inbound-1",
-                "context": "default",
-                "direction": "inbound",
-                "from_number": "+15553333333",
-                "to_number": "+15551111111",
-                "body": "Hi there",
-                "media": [],
-                "segments": 1,
-                "message_state": "received",
-            }))
+            ws.feed_message(
+                make_event(
+                    EVENT_MESSAGING_RECEIVE,
+                    {
+                        "message_id": "msg-inbound-1",
+                        "context": "default",
+                        "direction": "inbound",
+                        "from_number": "+15553333333",
+                        "to_number": "+15551111111",
+                        "body": "Hi there",
+                        "media": [],
+                        "segments": 1,
+                        "message_state": "received",
+                    },
+                )
+            )
 
             # Give the event loop time to process
             await asyncio.sleep(0.05)
@@ -408,19 +464,27 @@ class TestMessagingEventRouting:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
-        with patch("signalwire.relay.client.websockets.connect",
-                   new_callable=AsyncMock, return_value=ws):
+        with patch(
+            "signalwire.relay.client.websockets.connect",
+            new_callable=AsyncMock,
+            return_value=ws,
+        ):
             client = RelayClient(project="test-project", token="test-token")
             await client.connect()
 
             # No handler registered — should not crash
-            ws.feed_message(make_event(EVENT_MESSAGING_RECEIVE, {
-                "message_id": "msg-inbound-2",
-                "from_number": "+15553333333",
-                "to_number": "+15551111111",
-                "body": "Hello",
-                "message_state": "received",
-            }))
+            ws.feed_message(
+                make_event(
+                    EVENT_MESSAGING_RECEIVE,
+                    {
+                        "message_id": "msg-inbound-2",
+                        "from_number": "+15553333333",
+                        "to_number": "+15551111111",
+                        "body": "Hello",
+                        "message_state": "received",
+                    },
+                )
+            )
 
             await asyncio.sleep(0.05)
             # No crash is the assertion
@@ -434,8 +498,11 @@ class TestMessagingEventRouting:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
-        with patch("signalwire.relay.client.websockets.connect",
-                   new_callable=AsyncMock, return_value=ws):
+        with patch(
+            "signalwire.relay.client.websockets.connect",
+            new_callable=AsyncMock,
+            return_value=ws,
+        ):
             client = RelayClient(project="test-project", token="test-token")
             await client.connect()
 
@@ -450,18 +517,28 @@ class TestMessagingEventRouting:
             client._messages["msg-out-1"] = message
 
             # Send state updates
-            ws.feed_message(make_event(EVENT_MESSAGING_STATE, {
-                "message_id": "msg-out-1",
-                "message_state": "sent",
-            }))
+            ws.feed_message(
+                make_event(
+                    EVENT_MESSAGING_STATE,
+                    {
+                        "message_id": "msg-out-1",
+                        "message_state": "sent",
+                    },
+                )
+            )
             await asyncio.sleep(0.05)
             assert message.state == "sent"
             assert not message.is_done
 
-            ws.feed_message(make_event(EVENT_MESSAGING_STATE, {
-                "message_id": "msg-out-1",
-                "message_state": "delivered",
-            }))
+            ws.feed_message(
+                make_event(
+                    EVENT_MESSAGING_STATE,
+                    {
+                        "message_id": "msg-out-1",
+                        "message_state": "delivered",
+                    },
+                )
+            )
             await asyncio.sleep(0.05)
             assert message.state == "delivered"
             assert message.is_done
@@ -478,15 +555,23 @@ class TestMessagingEventRouting:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
-        with patch("signalwire.relay.client.websockets.connect",
-                   new_callable=AsyncMock, return_value=ws):
+        with patch(
+            "signalwire.relay.client.websockets.connect",
+            new_callable=AsyncMock,
+            return_value=ws,
+        ):
             client = RelayClient(project="test-project", token="test-token")
             await client.connect()
 
-            ws.feed_message(make_event(EVENT_MESSAGING_STATE, {
-                "message_id": "msg-unknown",
-                "message_state": "delivered",
-            }))
+            ws.feed_message(
+                make_event(
+                    EVENT_MESSAGING_STATE,
+                    {
+                        "message_id": "msg-unknown",
+                        "message_state": "delivered",
+                    },
+                )
+            )
             await asyncio.sleep(0.05)
             # No crash is the assertion
 
@@ -499,8 +584,11 @@ class TestMessagingEventRouting:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
-        with patch("signalwire.relay.client.websockets.connect",
-                   new_callable=AsyncMock, return_value=ws):
+        with patch(
+            "signalwire.relay.client.websockets.connect",
+            new_callable=AsyncMock,
+            return_value=ws,
+        ):
             client = RelayClient(project="test-project", token="test-token")
 
             @client.on_message
@@ -509,13 +597,18 @@ class TestMessagingEventRouting:
 
             await client.connect()
 
-            ws.feed_message(make_event(EVENT_MESSAGING_RECEIVE, {
-                "message_id": "msg-err",
-                "from_number": "+15553333333",
-                "to_number": "+15551111111",
-                "body": "Hello",
-                "message_state": "received",
-            }))
+            ws.feed_message(
+                make_event(
+                    EVENT_MESSAGING_RECEIVE,
+                    {
+                        "message_id": "msg-err",
+                        "from_number": "+15553333333",
+                        "to_number": "+15551111111",
+                        "body": "Hello",
+                        "message_state": "received",
+                    },
+                )
+            )
 
             await asyncio.sleep(0.05)
             # No crash — handler error was caught
@@ -529,8 +622,11 @@ class TestMessagingEventRouting:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
-        with patch("signalwire.relay.client.websockets.connect",
-                   new_callable=AsyncMock, return_value=ws):
+        with patch(
+            "signalwire.relay.client.websockets.connect",
+            new_callable=AsyncMock,
+            return_value=ws,
+        ):
             client = RelayClient(project="test-project", token="test-token")
 
             received = []
@@ -541,22 +637,33 @@ class TestMessagingEventRouting:
 
             await client.connect()
 
-            ws.feed_message(make_event(EVENT_MESSAGING_RECEIVE, {
-                "message_id": "msg-mms",
-                "context": "support",
-                "direction": "inbound",
-                "from_number": "+15553333333",
-                "to_number": "+15551111111",
-                "body": "Check this out",
-                "media": ["https://example.com/photo.jpg", "https://example.com/doc.pdf"],
-                "segments": 2,
-                "message_state": "received",
-                "tags": ["vip"],
-            }))
+            ws.feed_message(
+                make_event(
+                    EVENT_MESSAGING_RECEIVE,
+                    {
+                        "message_id": "msg-mms",
+                        "context": "support",
+                        "direction": "inbound",
+                        "from_number": "+15553333333",
+                        "to_number": "+15551111111",
+                        "body": "Check this out",
+                        "media": [
+                            "https://example.com/photo.jpg",
+                            "https://example.com/doc.pdf",
+                        ],
+                        "segments": 2,
+                        "message_state": "received",
+                        "tags": ["vip"],
+                    },
+                )
+            )
 
             await asyncio.sleep(0.05)
             msg = received[0]
-            assert msg.media == ["https://example.com/photo.jpg", "https://example.com/doc.pdf"]
+            assert msg.media == [
+                "https://example.com/photo.jpg",
+                "https://example.com/doc.pdf",
+            ]
             assert msg.segments == 2
             assert msg.tags == ["vip"]
             assert msg.context == "support"
@@ -570,6 +677,7 @@ class TestMessagingEventRouting:
 # coverage audit binds receivers correctly (tests above shadow `msg` via
 # `msg = json.loads(raw)` inside an inner function).
 # ---------------------------------------------------------------------------
+
 
 class TestMessageProperties:
     """Direct property access on a uniquely-named Message variable."""
@@ -585,10 +693,12 @@ class TestMessageProperties:
     @pytest.mark.asyncio
     async def test_message_is_done_after_terminal(self) -> None:
         outbound_msg = Message(message_id="m-prop-2", state="queued")
-        await outbound_msg._dispatch_event({
-            "event_type": EVENT_MESSAGING_STATE,
-            "params": {"message_id": "m-prop-2", "message_state": "delivered"},
-        })
+        await outbound_msg._dispatch_event(
+            {
+                "event_type": EVENT_MESSAGING_STATE,
+                "params": {"message_id": "m-prop-2", "message_state": "delivered"},
+            }
+        )
         assert outbound_msg.is_done is True
 
     @pytest.mark.asyncio
@@ -600,10 +710,12 @@ class TestMessageProperties:
     @pytest.mark.asyncio
     async def test_message_result_after_terminal(self) -> None:
         outbound_msg = Message(message_id="m-prop-4", state="queued")
-        await outbound_msg._dispatch_event({
-            "event_type": EVENT_MESSAGING_STATE,
-            "params": {"message_id": "m-prop-4", "message_state": "delivered"},
-        })
+        await outbound_msg._dispatch_event(
+            {
+                "event_type": EVENT_MESSAGING_STATE,
+                "params": {"message_id": "m-prop-4", "message_state": "delivered"},
+            }
+        )
         # The result should be the terminal RelayEvent
         terminal_event = outbound_msg.result
         assert terminal_event is not None
@@ -618,10 +730,12 @@ class TestMessageOn:
         outbound_msg = Message(message_id="m-on-1", state="queued")
         events_seen: list[RelayEvent] = []
         outbound_msg.on(lambda event: events_seen.append(event))
-        await outbound_msg._dispatch_event({
-            "event_type": EVENT_MESSAGING_STATE,
-            "params": {"message_id": "m-on-1", "message_state": "sent"},
-        })
+        await outbound_msg._dispatch_event(
+            {
+                "event_type": EVENT_MESSAGING_STATE,
+                "params": {"message_id": "m-on-1", "message_state": "sent"},
+            }
+        )
         assert len(events_seen) == 1
         assert events_seen[0].params["message_state"] == "sent"
 
@@ -632,10 +746,12 @@ class TestMessageOn:
         events_b: list[RelayEvent] = []
         outbound_msg.on(lambda event: events_a.append(event))
         outbound_msg.on(lambda event: events_b.append(event))
-        await outbound_msg._dispatch_event({
-            "event_type": EVENT_MESSAGING_STATE,
-            "params": {"message_id": "m-on-2", "message_state": "sent"},
-        })
+        await outbound_msg._dispatch_event(
+            {
+                "event_type": EVENT_MESSAGING_STATE,
+                "params": {"message_id": "m-on-2", "message_state": "sent"},
+            }
+        )
         assert len(events_a) == 1
         assert len(events_b) == 1
 
@@ -649,16 +765,21 @@ class TestMessageWait:
 
         async def deliver_later() -> None:
             await asyncio.sleep(0.01)
-            await outbound_msg._dispatch_event({
-                "event_type": EVENT_MESSAGING_STATE,
-                "params": {
-                    "message_id": "m-wait-1",
-                    "message_state": "delivered",
-                },
-            })
+            await outbound_msg._dispatch_event(
+                {
+                    "event_type": EVENT_MESSAGING_STATE,
+                    "params": {
+                        "message_id": "m-wait-1",
+                        "message_state": "delivered",
+                    },
+                }
+            )
 
-        asyncio.ensure_future(deliver_later())
+        # Hold the reference: an un-referenced task can be garbage-collected
+        # mid-flight, and awaiting it surfaces any exception it raised.
+        deliver_task = asyncio.ensure_future(deliver_later())
         terminal_event = await outbound_msg.wait(timeout=2.0)
+        await deliver_task
         assert terminal_event.params["message_state"] == "delivered"
 
     @pytest.mark.asyncio
@@ -671,13 +792,15 @@ class TestMessageWait:
     async def test_message_wait_no_timeout(self) -> None:
         """wait() without timeout returns immediately if already done."""
         outbound_msg = Message(message_id="m-wait-3", state="queued")
-        await outbound_msg._dispatch_event({
-            "event_type": EVENT_MESSAGING_STATE,
-            "params": {
-                "message_id": "m-wait-3",
-                "message_state": "delivered",
-            },
-        })
+        await outbound_msg._dispatch_event(
+            {
+                "event_type": EVENT_MESSAGING_STATE,
+                "params": {
+                    "message_id": "m-wait-3",
+                    "message_state": "delivered",
+                },
+            }
+        )
         terminal_event = await outbound_msg.wait()
         assert terminal_event.params["message_state"] == "delivered"
 
