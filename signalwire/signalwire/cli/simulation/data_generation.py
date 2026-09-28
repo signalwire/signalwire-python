@@ -26,8 +26,8 @@ def generate_fake_node_id() -> str:
     return f"test-node-{uuid.uuid4().hex[:8]}"
 
 
-#: The ``call.type`` device variants the engine writes (``webhook_request`` in
-#: porting-sdk combined-specs/swml.yaml): each carries a different key set.
+#: The ``call.type`` device variants the engine writes in a SWML webhook request:
+#: each carries a different key set.
 CALL_TYPES = ("phone", "sip", "webrtc")
 
 
@@ -66,8 +66,7 @@ def adapt_for_call_type(call_data: dict[str, Any], call_type: str) -> dict[str, 
     Add the device-variant keys the engine writes for ``call_type``.
 
     The engine's ``call`` object is closed and its key set depends on the device
-    type (``webhook_request.properties.call.variants`` in porting-sdk
-    combined-specs/swml.yaml):
+    type (the per-device-type variants of the engine's SWML webhook request):
 
     - ``phone``: ``type``, ``from``, ``to``, ``from_number``, ``to_number`` (``from``
       and ``to`` repeat the numbers), optional ``headers``;
@@ -121,9 +120,8 @@ def generate_fake_swml_post_data(
     """
     Generate a fake SWML webhook request body in the engine's shape
 
-    The shape is the engine-derived ``webhook_request`` section of porting-sdk
-    combined-specs/swml.yaml (what mod_infrastructure POSTs to a SWML webhook):
-    a closed ``call`` object carrying ``call_id``, ``node_id``, ``call_state`` and
+    The shape is the body the SignalWire engine POSTs to a SWML webhook (the
+    same contract ``SwmlRequestData`` types): a closed ``call`` object carrying ``call_id``, ``node_id``, ``call_state`` and
     ``direction`` plus its device variant's keys, the ``vars`` bag (always
     present) and ``envs``.
 

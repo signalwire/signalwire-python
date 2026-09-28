@@ -151,7 +151,7 @@ def apply_convenience_mappings(
             data["call"] = {**data["call"], "call_id": args.call_id}
 
     # The call.* keys below belong to the SWML webhook request's ``call`` object
-    # (engine shape: porting-sdk combined-specs/swml.yaml ``webhook_request``). They
+    # (the engine's shape, typed by ``SwmlRequestData``). They
     # are applied only to a body that HAS one — never fabricated into a body (e.g. a
     # SWAIG function request) whose contract carries no ``call`` object.
     if "call" in data:
