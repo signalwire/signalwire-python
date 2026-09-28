@@ -116,7 +116,9 @@ class TestSWMLBuilder:
         builder = SWMLBuilder(mock_service)
 
         result = builder.ai(
-            prompt_text="You are helpful", temperature=0.7, max_tokens=150
+            prompt_text="You are helpful",
+            params={"end_of_speech_timeout": 700},
+            voice="en-US-Neural2-F",
         )
 
         assert result is builder
@@ -124,8 +126,8 @@ class TestSWMLBuilder:
             "ai",
             {
                 "prompt": {"text": "You are helpful"},
-                "temperature": 0.7,
-                "max_tokens": 150,
+                "params": {"end_of_speech_timeout": 700},
+                "voice": "en-US-Neural2-F",
             },
         )
 
@@ -376,8 +378,8 @@ class TestSWMLBuilderIntegration:
             post_prompt="Summarize the weather information provided",
             post_prompt_url="https://example.com/summary",
             swaig=swaig_config,
-            temperature=0.7,
-            max_tokens=150,
+            params={"end_of_speech_timeout": 700},
+            voice="en-US-Neural2-F",
         )
 
         assert result is builder
@@ -388,8 +390,8 @@ class TestSWMLBuilderIntegration:
                 "post_prompt": {"text": "Summarize the weather information provided"},
                 "post_prompt_url": "https://example.com/summary",
                 "SWAIG": swaig_config,
-                "temperature": 0.7,
-                "max_tokens": 150,
+                "params": {"end_of_speech_timeout": 700},
+                "voice": "en-US-Neural2-F",
             },
         )
 

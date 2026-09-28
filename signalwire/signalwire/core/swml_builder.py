@@ -33,7 +33,9 @@ if TYPE_CHECKING:
     # from schema.json). Inheriting the generated _SwmlVerbs Protocol gives the type
     # checker the static signatures for those verbs (answer/play/ai/record/...). Generated
     # from schema.json — see swml_verbs_generated.py. TYPE_CHECKING-only: no runtime base.
-    from signalwire.core.swml_verbs_generated import _SwmlVerbs
+    from typing_extensions import Unpack  # typing.Unpack is 3.11+; the floor is 3.10
+
+    from signalwire.core.swml_verbs_generated import _AiConfigKwargs, _SwmlVerbs
 
     _VerbsBase = _SwmlVerbs
 else:
@@ -126,7 +128,7 @@ class SWMLBuilder(_VerbsBase):
         post_prompt: str | None = None,
         post_prompt_url: str | None = None,
         swaig: dict[str, Any] | None = None,
-        **kwargs: Any,
+        **kwargs: "Unpack[_AiConfigKwargs]",
     ) -> Self:
         """
         Add an 'ai' verb to the main section
@@ -137,7 +139,8 @@ class SWMLBuilder(_VerbsBase):
             post_prompt: Optional post-prompt text
             post_prompt_url: Optional URL for post-prompt processing
             swaig: Optional SWAIG configuration
-            **kwargs: Additional AI parameters
+            **kwargs: Any other ``ai`` verb config key (``params``, ``languages``,
+                ``hints``, ``SWAIG``, ...), typed by the generated ``_AiConfigKwargs``
 
         Returns:
             Self for method chaining

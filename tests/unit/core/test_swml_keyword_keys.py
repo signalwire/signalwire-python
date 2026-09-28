@@ -99,11 +99,15 @@ class TestFunctionalFormAtRuntime:
 
 
 class TestCompatibility:
-    """Calls that type-checked before still type-check: plain dicts and the old kwargs."""
+    """Old-style calls: plain dicts and arbitrary kwargs.
+
+    Under the strict entry-point typing these calls are REJECTED (each ignore below is
+    used), which is what makes that typing a breaking change. They still run
+    unchanged."""
 
     def test_ai_accepts_the_old_style_kwargs(self) -> None:
         builder = _builder()
-        builder.ai(prompt_text="x", temperature=0.7, max_tokens=150)
+        builder.ai(prompt_text="x", temperature=0.7, max_tokens=150)  # type: ignore[call-arg]  # BREAKING: rejected by _AiConfigKwargs
         assert _main(builder) == [
             {"ai": {"prompt": {"text": "x"}, "temperature": 0.7, "max_tokens": 150}}
         ]
@@ -115,8 +119,8 @@ class TestCompatibility:
                 name="keyword_keys", schema_validation=False, use_pom=False
             )
         params: dict[str, Any] = {"end_of_speech_timeout": 700, "custom_key": "v"}
-        agent.set_params(params)
-        agent.set_param("any_key", 1)
+        agent.set_params(params)  # type: ignore[arg-type]  # BREAKING: dict[str, Any] is not AiParams
+        agent.set_param("any_key", 1)  # type: ignore[call-overload]  # BREAKING: not an AiParams key
         assert agent._params == {
             "end_of_speech_timeout": 700,
             "custom_key": "v",

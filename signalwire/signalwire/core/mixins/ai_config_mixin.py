@@ -8,10 +8,27 @@ See LICENSE file in the project root for full license information.
 """
 
 import threading
-from typing import TYPE_CHECKING, Any
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, TypeVar
 
 if TYPE_CHECKING:
     from signalwire.core.agent_base import AgentBase  # type: ignore[attr-defined]  # cycle: agent_base imports the mixins; the name resolves at type-check time but mypy flags the back-reference
+    from signalwire.core.swml_verbs_generated import AiParams, _AiParamsSetters
+
+    _F = TypeVar("_F", bound=Callable[..., Any])
+
+    def _signature_of(sig: _F) -> Callable[[Callable[..., Any]], _F]:
+        """Decorator factory: give the decorated method the static type of ``sig``."""
+        ...
+
+    # set_param's static signature: one overload per AiParams key, typing the value by
+    # the key, generated from schema.json (swml_verbs_generated._AiParamsSetters).
+    # TYPE_CHECKING-only; at runtime the decorator is the identity.
+    _set_param_signature = _signature_of(_AiParamsSetters.set_param)
+else:
+
+    def _set_param_signature(fn: Callable[..., Any]) -> Callable[..., Any]:
+        return fn
 
 
 from signalwire.core.mixins._mixin_host import _HostTyped
@@ -282,12 +299,16 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
             self._pronounce = pronunciations
         return self
 
+    # Statically typed by the generated per-key overloads (see _set_param_signature):
+    # a key AiParams does not declare, or a value of the wrong type for its key, is a
+    # type error. Runtime behaviour is this body.
+    @_set_param_signature
     def set_param(self, key: str, value: Any) -> "AgentBase":
         """
         Set a single AI parameter
 
         Args:
-            key: Parameter name
+            key: Parameter name (an ``AiParams`` key)
             value: Parameter value
 
         Returns:
@@ -297,12 +318,13 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
             self._params[key] = value
         return self
 
-    def set_params(self, params: dict[str, Any]) -> "AgentBase":
+    def set_params(self, params: "AiParams") -> "AgentBase":
         """
         Set multiple AI parameters at once
 
         Args:
-            params: Dictionary of parameter name/value pairs
+            params: Dictionary of parameter name/value pairs (``AiParams``, generated
+                from schema.json)
 
         Returns:
             Self for method chaining

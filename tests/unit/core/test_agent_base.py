@@ -16,9 +16,12 @@ import json
 import uuid
 import os
 from unittest.mock import Mock, patch
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from signalwire.core.agent_base import AgentBase
+
+if TYPE_CHECKING:
+    from signalwire.core.swml_verbs_generated import AiParams
 from signalwire.core.swaig_function import SWAIGFunction
 
 
@@ -198,14 +201,14 @@ class TestAgentBaseConfigurationMethods:
 
     def test_set_param(self) -> None:
         """Test setting parameters"""
-        result = self.agent.set_param("temperature", 0.7)
+        result = self.agent.set_param("end_of_speech_timeout", 700)
 
         assert result is self.agent
-        assert self.agent._params["temperature"] == 0.7
+        assert self.agent._params["end_of_speech_timeout"] == 700
 
     def test_set_params(self) -> None:
         """Test setting multiple parameters"""
-        params = {"temperature": 0.7, "max_tokens": 100}
+        params: AiParams = {"end_of_speech_timeout": 700, "attention_timeout": 10000}
         result = self.agent.set_params(params)
 
         assert result is self.agent
@@ -729,13 +732,13 @@ class TestRenderSwml:
 
     def test_render_swml_with_params(self) -> None:
         agent = self._make()
-        agent.set_params({"temperature": 0.5})
+        agent.set_params({"end_of_speech_timeout": 500})
         doc = json.loads(agent._render_swml())
         ai_verb = next(
             v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v
         )
         assert "params" in ai_verb["ai"]
-        assert ai_verb["ai"]["params"]["temperature"] == 0.5
+        assert ai_verb["ai"]["params"]["end_of_speech_timeout"] == 500
 
     def test_render_swml_with_global_data(self) -> None:
         agent = self._make()
@@ -826,10 +829,10 @@ class TestEphemeralCopy:
 
     def test_ephemeral_params_independent(self) -> None:
         agent = self._make()
-        agent.set_params({"temperature": 0.5})
+        agent.set_params({"end_of_speech_timeout": 500})
         copy = agent._create_ephemeral_copy()
-        copy._params["temperature"] = 0.9
-        assert agent._params["temperature"] == 0.5
+        copy._params["end_of_speech_timeout"] = 900
+        assert agent._params["end_of_speech_timeout"] == 500
 
     def test_ephemeral_hints_independent(self) -> None:
         agent = self._make()
