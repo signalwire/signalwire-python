@@ -36,6 +36,25 @@ AUTH = ("user", "pass")
 WAIT = 5.0  # seconds a blocked callback waits before giving up
 
 
+def _dump_stacks(label: str) -> str:
+    """Every thread's stack and every task's awaits, for a timeout's report."""
+    import sys
+    import traceback
+
+    lines = [f"===== {label}: threads"]
+    names = {t.ident: t.name for t in threading.enumerate()}
+    for ident, frame in sys._current_frames().items():
+        lines.append(f"--- thread {names.get(ident, '?')} ({ident})")
+        lines.append("".join(traceback.format_stack(frame)).rstrip())
+    lines.append(f"===== {label}: tasks")
+    for task in asyncio.all_tasks():
+        lines.append(f"--- {task.get_name()}")
+        for frame in task.get_stack():
+            code = frame.f_code
+            lines.append(f"    {code.co_filename}:{frame.f_lineno} {code.co_name}")
+    return "\n".join(lines)
+
+
 class Gate:
     """Something user code blocks on until the test lets it go."""
 
@@ -292,9 +311,13 @@ class TestPerRequestConfiguration:
             slow = asyncio.create_task(client.get("/agent", params={"tenant": "slow"}))
             try:
                 await gate.wait_entered()
-                fast = await asyncio.wait_for(
-                    client.get("/agent", params={"tenant": "fast"}), timeout=WAIT
-                )
+                try:
+                    fast = await asyncio.wait_for(
+                        client.get("/agent", params={"tenant": "fast"}), timeout=WAIT
+                    )
+                except TimeoutError:
+                    # Say where the fast request is waiting (seen once on CI)
+                    pytest.fail(_dump_stacks("fast request timed out"))
                 assert _ai(fast.text)["global_data"] == {"tenant": "fast"}
                 assert not slow.done()
             finally:
