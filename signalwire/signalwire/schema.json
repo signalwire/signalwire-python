@@ -569,12 +569,13 @@
                           "type": "array",
                           "items": {
                             "type": "string",
-                            "enum": [
+                            "x-known-values": [
                               "adjust_response_latency",
                               "check_time",
                               "wait_for_user",
                               "wait_seconds"
-                            ]
+                            ],
+                            "x-unlisted-values": "ignored"
                           }
                         }
                       }
@@ -655,9 +656,11 @@
                   "description": "An array of JSON objects defining supported languages in the conversation.",
                   "type": "array",
                   "items": {
+                    "description": "Without one of `code` / `listen_language`, `name` and `voice`, the element has no effect: it is accepted and ignored, not rejected.",
                     "type": "object",
                     "properties": {
                       "auto_emotion": {
+                        "default": false,
                         "anyOf": [
                           {
                             "type": "boolean"
@@ -668,6 +671,7 @@
                         ]
                       },
                       "auto_speed": {
+                        "default": false,
                         "anyOf": [
                           {
                             "type": "boolean"
@@ -732,6 +736,7 @@
                             ]
                           },
                           "similarity": {
+                            "default": 0.75,
                             "anyOf": [
                               {
                                 "type": "number"
@@ -762,6 +767,7 @@
                             ]
                           },
                           "stability": {
+                            "default": 0.5,
                             "anyOf": [
                               {
                                 "type": "number"
@@ -815,7 +821,19 @@
                       "voice": {
                         "type": "string"
                       }
-                    }
+                    },
+                    "x-effect-requires": [
+                      [
+                        "code",
+                        "listen_language"
+                      ],
+                      [
+                        "name"
+                      ],
+                      [
+                        "voice"
+                      ]
+                    ]
                   }
                 },
                 "multilingual": {
@@ -1463,11 +1481,11 @@
                     },
                     "direction": {
                       "type": "string",
-                      "pattern": "^(?:[Ii][Nn][Bb][Oo][Uu][Nn][Dd]|[Oo][Uu][Tt][Bb][Oo][Uu][Nn][Dd])$",
-                      "x-enum-case-insensitive": [
+                      "x-known-values": [
                         "inbound",
                         "outbound"
-                      ]
+                      ],
+                      "x-unlisted-values": "ignored"
                     },
                     "double_turn_filler_every_n": {
                       "anyOf": [
@@ -1537,7 +1555,8 @@
                     },
                     "eleven_labs_model": {
                       "type": "string",
-                      "enum": [
+                      "default": "eleven_flash_v2_5",
+                      "x-known-values": [
                         "eleven_english_v2",
                         "eleven_flash_v2_5",
                         "eleven_multilingual_v1",
@@ -1547,7 +1566,7 @@
                         "eleven_v3",
                         "multilingual"
                       ],
-                      "default": "eleven_flash_v2_5"
+                      "x-unlisted-values": "ignored"
                     },
                     "eleven_labs_similarity": {
                       "minimum": 0.0,
@@ -1605,6 +1624,7 @@
                       ]
                     },
                     "enable_barge": {
+                      "default": "complete,partial",
                       "anyOf": [
                         {
                           "type": "string",
@@ -1687,9 +1707,8 @@
                     },
                     "enable_text_normalization": {
                       "type": "string",
-                      "pattern": "^(?:[Bb][Oo][Tt][Hh]|[Ff][Aa][Ll][Ss][Ee]|[Hh][Ee][Aa][Rr][Dd]|[Nn][Oo][Nn][Ee]|[Oo][Ff][Ff]|[Oo][Nn]|[Ss][Pp][Oo][Kk][Ee][Nn]|[Tt][Rr][Uu][Ee])$",
                       "default": "both",
-                      "x-enum-case-insensitive": [
+                      "x-known-values": [
                         "both",
                         "false",
                         "heard",
@@ -1698,7 +1717,8 @@
                         "on",
                         "spoken",
                         "true"
-                      ]
+                      ],
+                      "x-unlisted-values": "ignored"
                     },
                     "enable_thinking": {
                       "default": false,
@@ -1734,8 +1754,7 @@
                         },
                         {
                           "type": "string",
-                          "pattern": "^(?:0|1|[Aa][Cc][Oo][Uu][Ss][Tt][Ii][Cc]_[Oo][Nn][Ll][Yy]|[Bb][Oo][Tt][Hh]|[Ff][Aa][Ll][Ss][Ee]|[Oo][Ff][Ff]|[Pp][Uu][Nn][Cc][Tt]_[Oo][Nn][Ll][Yy]|[Pp][Uu][Nn][Cc][Tt][Uu][Aa][Tt][Ii][Oo][Nn]_[Oo][Nn][Ll][Yy]|[Tt][Rr][Uu][Ee])$",
-                          "x-enum-case-insensitive": [
+                          "x-known-values": [
                             "0",
                             "1",
                             "acoustic_only",
@@ -1745,7 +1764,8 @@
                             "punct_only",
                             "punctuation_only",
                             "true"
-                          ]
+                          ],
+                          "x-unlisted-values": "ignored"
                         }
                       ]
                     },
@@ -2043,7 +2063,13 @@
                       "type": "string"
                     },
                     "inner_dialog_prompt": {
-                      "type": "string"
+                      "description": "The default applies only when `enable_inner_dialog` / `inner_dialog_scorecard` enables it; otherwise the value stays unset.",
+                      "type": "string",
+                      "default": "The assistant is intelligent and straightforward, does its job well and is not excessively polite.",
+                      "x-default-when-set-by": [
+                        "enable_inner_dialog",
+                        "inner_dialog_scorecard"
+                      ]
                     },
                     "inner_dialog_scorecard": {
                       "anyOf": [
@@ -2129,7 +2155,12 @@
                       "type": "string"
                     },
                     "language": {
-                      "type": "string"
+                      "type": "string",
+                      "x-special-values": [
+                        "auto",
+                        "multi",
+                        "multilingual"
+                      ]
                     },
                     "languages_enabled": {
                       "deprecated": true,
@@ -2284,7 +2315,19 @@
                       "type": "string"
                     },
                     "openai_asr_engine": {
-                      "type": "string"
+                      "type": "string",
+                      "default": "gcloud_speech_v2_async",
+                      "x-default-from-channel-variables": [
+                        "openai_asr_engine",
+                        "openai_gcloud_version"
+                      ],
+                      "x-default-from-env": [
+                        "OPENAI_GCLOUD_VERSION",
+                        "OPENAI_ASR_ENGINE"
+                      ],
+                      "x-overridden-by-channel-variables": [
+                        "openai_gcloud_version_override"
+                      ]
                     },
                     "openai_azure": {
                       "anyOf": [
@@ -2316,7 +2359,19 @@
                       ]
                     },
                     "openai_gcloud_version": {
-                      "type": "string"
+                      "type": "string",
+                      "default": "gcloud_speech_v2_async",
+                      "x-default-from-channel-variables": [
+                        "openai_asr_engine",
+                        "openai_gcloud_version"
+                      ],
+                      "x-default-from-env": [
+                        "OPENAI_GCLOUD_VERSION",
+                        "OPENAI_ASR_ENGINE"
+                      ],
+                      "x-overridden-by-channel-variables": [
+                        "openai_gcloud_version_override"
+                      ]
                     },
                     "openai_stream_first": {
                       "anyOf": [
@@ -2421,11 +2476,11 @@
                     },
                     "pom_format": {
                       "type": "string",
-                      "pattern": "^(?:[Mm][Aa][Rr][Kk][Dd][Oo][Ww][Nn]|[Xx][Mm][Ll])$",
-                      "x-enum-case-insensitive": [
+                      "x-known-values": [
                         "markdown",
                         "xml"
-                      ]
+                      ],
+                      "x-unlisted-values": "ignored"
                     },
                     "provider": {
                       "type": "string"
@@ -2879,6 +2934,7 @@
                       ]
                     },
                     "start_paused": {
+                      "default": false,
                       "anyOf": [
                         {
                           "type": "boolean"
@@ -3001,11 +3057,11 @@
                     },
                     "summary_mode": {
                       "type": "string",
-                      "pattern": "^(?:[Oo][Rr][Ii][Gg][Ii][Nn][Aa][Ll]|[Ss][Tt][Rr][Ii][Nn][Gg])$",
-                      "x-enum-case-insensitive": [
+                      "x-known-values": [
                         "original",
                         "string"
-                      ]
+                      ],
+                      "x-unlisted-values": "ignored"
                     },
                     "swaig_allow_settings": {
                       "default": true,
@@ -3214,6 +3270,7 @@
                       ]
                     },
                     "transfer_summary": {
+                      "default": false,
                       "anyOf": [
                         {
                           "type": "boolean"
@@ -3289,15 +3346,15 @@
                     },
                     "tts_number_format": {
                       "type": "string",
-                      "pattern": "^(?:[Ee]\\.164|[Ee]164|[Gg][Ee][Nn][Ee][Rr][Ii][Cc]|[Ii][Nn][Tt][Ee][Rr][Nn][Aa][Tt][Ii][Oo][Nn][Aa][Ll]|[Nn][Aa][Tt][Ii][Oo][Nn][Aa][Ll])$",
                       "default": "e164",
-                      "x-enum-case-insensitive": [
+                      "x-known-values": [
                         "e.164",
                         "e164",
                         "generic",
                         "international",
                         "national"
-                      ]
+                      ],
+                      "x-unlisted-values": "ignored"
                     },
                     "turn_detection": {
                       "anyOf": [
@@ -3306,8 +3363,7 @@
                         },
                         {
                           "type": "string",
-                          "pattern": "^(?:0|1|[Aa][Cc][Oo][Uu][Ss][Tt][Ii][Cc]_[Oo][Nn][Ll][Yy]|[Bb][Oo][Tt][Hh]|[Ff][Aa][Ll][Ss][Ee]|[Oo][Ff][Ff]|[Pp][Uu][Nn][Cc][Tt]_[Oo][Nn][Ll][Yy]|[Pp][Uu][Nn][Cc][Tt][Uu][Aa][Tt][Ii][Oo][Nn]_[Oo][Nn][Ll][Yy]|[Tt][Rr][Uu][Ee])$",
-                          "x-enum-case-insensitive": [
+                          "x-known-values": [
                             "0",
                             "1",
                             "acoustic_only",
@@ -3317,7 +3373,8 @@
                             "punct_only",
                             "punctuation_only",
                             "true"
-                          ]
+                          ],
+                          "x-unlisted-values": "ignored"
                         }
                       ]
                     },
@@ -3406,13 +3463,13 @@
                     },
                     "video_scale": {
                       "type": "string",
-                      "pattern": "^(?:1080[Pp]|480[Pp]|720[Pp]|[Nn][Aa][Tt][Ii][Vv][Ee])$",
-                      "x-enum-case-insensitive": [
+                      "x-known-values": [
                         "1080p",
                         "480p",
                         "720p",
                         "native"
-                      ]
+                      ],
+                      "x-unlisted-values": "ignored"
                     },
                     "video_talking_file": {
                       "type": "string",
@@ -3485,6 +3542,7 @@
                     "pom": {
                       "type": "array",
                       "items": {
+                        "description": "Without one of `body` / `bullets` / `subsections`, the element has no effect: it is accepted and ignored, not rejected.",
                         "type": "object",
                         "properties": {
                           "title": {
@@ -3505,7 +3563,14 @@
                           "subsections": {
                             "type": "array"
                           }
-                        }
+                        },
+                        "x-effect-requires": [
+                          [
+                            "body",
+                            "bullets",
+                            "subsections"
+                          ]
+                        ]
                       }
                     },
                     "presence_penalty": {},
@@ -3584,6 +3649,7 @@
                     "pom": {
                       "type": "array",
                       "items": {
+                        "description": "Without one of `body` / `bullets` / `subsections`, the element has no effect: it is accepted and ignored, not rejected.",
                         "type": "object",
                         "properties": {
                           "title": {
@@ -3604,7 +3670,14 @@
                           "subsections": {
                             "type": "array"
                           }
-                        }
+                        },
+                        "x-effect-requires": [
+                          [
+                            "body",
+                            "bullets",
+                            "subsections"
+                          ]
+                        ]
                       }
                     },
                     "presence_penalty": {},
@@ -3614,66 +3687,7 @@
                     "steps": {
                       "type": "array",
                       "items": {
-                        "type": "object",
-                        "properties": {
-                          "end": {
-                            "anyOf": [
-                              {
-                                "type": "boolean"
-                              },
-                              {
-                                "type": "string"
-                              }
-                            ]
-                          },
-                          "gather_info": {
-                            "type": "object"
-                          },
-                          "instructions": {
-                            "type": "string"
-                          },
-                          "name": {
-                            "type": "string"
-                          },
-                          "pom": {
-                            "type": "array"
-                          },
-                          "reset": {
-                            "type": "object"
-                          },
-                          "skip_to_next_step": {
-                            "anyOf": [
-                              {
-                                "type": "boolean"
-                              },
-                              {
-                                "type": "string"
-                              }
-                            ]
-                          },
-                          "skip_user_turn": {
-                            "anyOf": [
-                              {
-                                "type": "boolean"
-                              },
-                              {
-                                "type": "string"
-                              }
-                            ]
-                          },
-                          "step_criteria": {
-                            "type": "string"
-                          },
-                          "text": {
-                            "type": "string"
-                          },
-                          "valid_contexts": {
-                            "type": "array"
-                          },
-                          "valid_steps": {
-                            "type": "array"
-                          }
-                        }
+                        "$ref": "#/$defs/Step"
                       }
                     },
                     "temperature": {
@@ -3694,6 +3708,7 @@
                   "description": "An array of JSON objects to clarify the AI's pronunciation of words or expressions.",
                   "type": "array",
                   "items": {
+                    "description": "Without `replace` and `with`, the element has no effect: it is accepted and ignored, not rejected.",
                     "type": "object",
                     "properties": {
                       "ignore_case": {
@@ -3715,7 +3730,15 @@
                       "with": {
                         "type": "string"
                       }
-                    }
+                    },
+                    "x-effect-requires": [
+                      [
+                        "replace"
+                      ],
+                      [
+                        "with"
+                      ]
+                    ]
                   }
                 },
                 "voice": {
@@ -3735,7 +3758,10 @@
               },
               "unevaluatedProperties": {
                 "not": {}
-              }
+              },
+              "x-outcome-variables": [
+                "ai_result"
+              ]
             },
             {
               "title": "ai (positional array form)",
@@ -3796,7 +3822,7 @@
           "anyOf": [
             {
               "title": "ai_sidecar Method",
-              "description": "Start ai_sidecar mode — live_transcribe with an LLM/SWAIG/MCP loop on top.",
+              "description": "Start ai_sidecar mode — live_transcribe with an LLM/SWAIG/MCP loop on top.\nWithout `lang`, the operation has no effect: it is accepted and ignored, not rejected.",
               "type": "object",
               "properties": {
                 "SWAIG": {
@@ -3865,6 +3891,7 @@
                               "items": {
                                 "anyOf": [
                                   {
+                                    "description": "Without `function`, the element has no effect: it is accepted and ignored, not rejected.",
                                     "type": "object",
                                     "properties": {
                                       "description": {
@@ -3947,7 +3974,12 @@
                                           }
                                         ]
                                       }
-                                    }
+                                    },
+                                    "x-effect-requires": [
+                                      [
+                                        "function"
+                                      ]
+                                    ]
                                   },
                                   {
                                     "$ref": "#/$defs/SWMLVar"
@@ -3997,10 +4029,11 @@
                   "anyOf": [
                     {
                       "type": "string",
-                      "enum": [
+                      "x-known-values": [
                         "remote-caller",
                         "local-caller"
-                      ]
+                      ],
+                      "x-unlisted-values": "ignored"
                     },
                     {
                       "$ref": "#/$defs/SWMLVar"
@@ -4019,10 +4052,11 @@
                         "anyOf": [
                           {
                             "type": "string",
-                            "enum": [
+                            "x-known-values": [
                               "remote-caller",
                               "local-caller"
-                            ]
+                            ],
+                            "x-unlisted-values": "ignored"
                           },
                           {
                             "$ref": "#/$defs/SWMLVar"
@@ -4262,11 +4296,12 @@
                           "anyOf": [
                             {
                               "type": "string",
-                              "enum": [
+                              "default": "deepgram",
+                              "x-known-values": [
                                 "deepgram",
                                 "google"
                               ],
-                              "default": "deepgram"
+                              "x-unlisted-values": "ignored"
                             },
                             {
                               "$ref": "#/$defs/SWMLVar"
@@ -4444,12 +4479,14 @@
                   ]
                 }
               },
-              "required": [
-                "lang"
-              ],
               "unevaluatedProperties": {
                 "not": {}
-              }
+              },
+              "x-effect-requires": [
+                [
+                  "lang"
+                ]
+              ]
             },
             {
               "type": "array"
@@ -4498,6 +4535,7 @@
                     "functions": {
                       "type": "array",
                       "items": {
+                        "description": "Without `description` and `function`, `SWAIG` (checked only where amazon_bedrock discards the result) has no effect: it is accepted and ignored, not rejected.",
                         "type": "object",
                         "properties": {
                           "description": {
@@ -4522,9 +4560,13 @@
                             "type": "string"
                           }
                         },
-                        "required": [
-                          "description",
-                          "function"
+                        "x-effect-requires": [
+                          [
+                            "description"
+                          ],
+                          [
+                            "function"
+                          ]
                         ]
                       }
                     }
@@ -4560,19 +4602,25 @@
                     }
                   },
                   "if": {
-                    "required": [
-                      "role",
-                      "text"
+                    "description": "Without `role` and `text`, `greeting_prompt` (checked only where amazon_bedrock discards the result) has no effect: it is accepted and ignored, not rejected.",
+                    "x-effect-requires": [
+                      [
+                        "role"
+                      ],
+                      [
+                        "text"
+                      ]
                     ]
                   },
                   "then": {
                     "properties": {
                       "role": {
                         "type": "string",
-                        "enum": [
+                        "x-known-values": [
                           "USER",
                           "SYSTEM"
-                        ]
+                        ],
+                        "x-unlisted-values": "ignored"
                       }
                     }
                   }
@@ -4606,7 +4654,12 @@
                       "type": "string"
                     },
                     "hard_stop_prompt": {
-                      "type": "string"
+                      "description": "The default applies only when `hard_stop_time` enables it; otherwise the value stays unset.",
+                      "type": "string",
+                      "default": "The time limit for this call has been reached. Please wrap up the conversation.",
+                      "x-default-when-set-by": [
+                        "hard_stop_time"
+                      ]
                     },
                     "hard_stop_time": {
                       "type": "string"
@@ -4647,6 +4700,7 @@
                     "pom": {
                       "type": "array",
                       "items": {
+                        "description": "Without one of `body` / `bullets` / `subsections`, the element has no effect: it is accepted and ignored, not rejected.",
                         "type": "object",
                         "properties": {
                           "title": {
@@ -4667,7 +4721,14 @@
                           "subsections": {
                             "type": "array"
                           }
-                        }
+                        },
+                        "x-effect-requires": [
+                          [
+                            "body",
+                            "bullets",
+                            "subsections"
+                          ]
+                        ]
                       }
                     },
                     "text": {
@@ -4690,6 +4751,7 @@
                     "pom": {
                       "type": "array",
                       "items": {
+                        "description": "Without one of `body` / `bullets` / `subsections`, the element has no effect: it is accepted and ignored, not rejected.",
                         "type": "object",
                         "properties": {
                           "title": {
@@ -4710,7 +4772,14 @@
                           "subsections": {
                             "type": "array"
                           }
-                        }
+                        },
+                        "x-effect-requires": [
+                          [
+                            "body",
+                            "bullets",
+                            "subsections"
+                          ]
+                        ]
                       }
                     },
                     "temperature": {
@@ -4751,15 +4820,15 @@
                     },
                     "voice_id": {
                       "type": "string",
-                      "pattern": "^(?:[Tt][Ii][Ff][Ff][Aa][Nn][Yy]|[Mm][Aa][Tt][Tt][Hh][Ee][Ww]|[Aa][Mm][Yy]|[Ll][Uu][Pp][Ee]|[Cc][Aa][Rr][Ll][Oo][Ss])$",
                       "default": "matthew",
-                      "x-enum-case-insensitive": [
+                      "x-known-values": [
                         "tiffany",
                         "matthew",
                         "amy",
                         "lupe",
                         "carlos"
-                      ]
+                      ],
+                      "x-unlisted-values": "ignored"
                     }
                   }
                 },
@@ -4865,6 +4934,9 @@
                     {
                       "$ref": "#/$defs/SWMLVar"
                     }
+                  ],
+                  "x-default-from-env": [
+                    "FREESWITCH_RELAY_MAX_CALL_DURATION"
                   ]
                 },
                 "password": {
@@ -4919,6 +4991,9 @@
                     {
                       "$ref": "#/$defs/SWMLVar"
                     }
+                  ],
+                  "x-default-from-env": [
+                    "FREESWITCH_RELAY_MAX_CALL_DURATION"
                   ]
                 }
               ]
@@ -4940,6 +5015,9 @@
                     {
                       "$ref": "#/$defs/SWMLVar"
                     }
+                  ],
+                  "x-default-from-env": [
+                    "FREESWITCH_RELAY_MAX_CALL_DURATION"
                   ]
                 }
               ]
@@ -4961,6 +5039,9 @@
                     {
                       "$ref": "#/$defs/SWMLVar"
                     }
+                  ],
+                  "x-default-from-env": [
+                    "FREESWITCH_RELAY_MAX_CALL_DURATION"
                   ]
                 }
               ]
@@ -5672,6 +5753,9 @@
                 {
                   "$ref": "#/$defs/SWMLVar"
                 }
+              ],
+              "x-default-from-env": [
+                "FREESWITCH_RELAY_MAX_CALL_DURATION"
               ]
             },
             "name": {
@@ -7033,6 +7117,9 @@
                 {
                   "$ref": "#/$defs/SWMLVar"
                 }
+              ],
+              "x-default-from-env": [
+                "FREESWITCH_RELAY_MAX_CALL_DURATION"
               ]
             },
             "parallel": {
@@ -7201,6 +7288,12 @@
                 }
               ]
             }
+          ],
+          "x-outcome-variables": [
+            "dial_result_code",
+            "dial_result_message",
+            "dial_id",
+            "dial_result"
           ]
         }
       },
@@ -7805,7 +7898,13 @@
               ],
               "unevaluatedProperties": {
                 "not": {}
-              }
+              },
+              "x-outcome-variables": [
+                "last_rpc_method",
+                "last_rpc_exec_time_ms",
+                "last_api_code",
+                "last_api_message"
+              ]
             },
             {
               "type": "array"
@@ -9565,11 +9664,12 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "enum": [
+                          "x-known-values": [
                             "start",
                             "stop",
                             "summarize"
-                          ]
+                          ],
+                          "x-unlisted-values": "ignored"
                         },
                         {
                           "type": "object",
@@ -9577,6 +9677,7 @@
                             "start": {
                               "anyOf": [
                                 {
+                                  "description": "Without `direction` and `lang`, `action` (checked only where live_transcribe discards the result) has no effect: it is accepted and ignored, not rejected.",
                                   "type": "object",
                                   "properties": {
                                     "ai_summary": {
@@ -9638,10 +9739,11 @@
                                             "anyOf": [
                                               {
                                                 "type": "string",
-                                                "enum": [
+                                                "x-known-values": [
                                                   "local-caller",
                                                   "remote-caller"
-                                                ]
+                                                ],
+                                                "x-unlisted-values": "ignored"
                                               },
                                               {
                                                 "$ref": "#/$defs/SWMLVar"
@@ -9698,12 +9800,12 @@
                                       "anyOf": [
                                         {
                                           "type": "string",
-                                          "pattern": "^(?:[Dd][Ee][Ee][Pp][Gg][Rr][Aa][Mm]|[Gg][Oo][Oo][Gg][Ll][Ee])$",
                                           "default": "deepgram",
-                                          "x-enum-case-insensitive": [
+                                          "x-known-values": [
                                             "deepgram",
                                             "google"
-                                          ]
+                                          ],
+                                          "x-unlisted-values": "ignored"
                                         },
                                         {
                                           "$ref": "#/$defs/SWMLVar"
@@ -9769,9 +9871,13 @@
                                       ]
                                     }
                                   },
-                                  "required": [
-                                    "direction",
-                                    "lang"
+                                  "x-effect-requires": [
+                                    [
+                                      "direction"
+                                    ],
+                                    [
+                                      "lang"
+                                    ]
                                   ]
                                 },
                                 {
@@ -9833,9 +9939,7 @@
                               ]
                             }
                           },
-                          "unevaluatedProperties": {
-                            "not": {}
-                          }
+                          "x-unlisted-keys": "ignored"
                         }
                       ]
                     },
@@ -9972,12 +10076,13 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "enum": [
+                          "x-known-values": [
                             "inject",
                             "start",
                             "stop",
                             "summarize"
-                          ]
+                          ],
+                          "x-unlisted-values": "ignored"
                         },
                         {
                           "type": "object",
@@ -9985,16 +10090,18 @@
                             "inject": {
                               "anyOf": [
                                 {
+                                  "description": "Without `direction` and `message`, `action` (checked only where live_translate discards the result) has no effect: it is accepted and ignored, not rejected.",
                                   "type": "object",
                                   "properties": {
                                     "direction": {
                                       "anyOf": [
                                         {
                                           "type": "string",
-                                          "enum": [
+                                          "x-known-values": [
                                             "local-caller",
                                             "remote-caller"
-                                          ]
+                                          ],
+                                          "x-unlisted-values": "ignored"
                                         },
                                         {
                                           "$ref": "#/$defs/SWMLVar"
@@ -10012,9 +10119,13 @@
                                       ]
                                     }
                                   },
-                                  "required": [
-                                    "direction",
-                                    "message"
+                                  "x-effect-requires": [
+                                    [
+                                      "direction"
+                                    ],
+                                    [
+                                      "message"
+                                    ]
                                   ]
                                 },
                                 {
@@ -10025,6 +10136,7 @@
                             "start": {
                               "anyOf": [
                                 {
+                                  "description": "Without `direction`, `from_lang` and `to_lang`, `action` (checked only where live_translate discards the result) has no effect: it is accepted and ignored, not rejected.",
                                   "type": "object",
                                   "properties": {
                                     "ai_summary": {
@@ -10086,10 +10198,11 @@
                                             "anyOf": [
                                               {
                                                 "type": "string",
-                                                "enum": [
+                                                "x-known-values": [
                                                   "local-caller",
                                                   "remote-caller"
-                                                ]
+                                                ],
+                                                "x-unlisted-values": "ignored"
                                               },
                                               {
                                                 "$ref": "#/$defs/SWMLVar"
@@ -10176,12 +10289,12 @@
                                       "anyOf": [
                                         {
                                           "type": "string",
-                                          "pattern": "^(?:[Dd][Ee][Ee][Pp][Gg][Rr][Aa][Mm]|[Gg][Oo][Oo][Gg][Ll][Ee])$",
                                           "default": "deepgram",
-                                          "x-enum-case-insensitive": [
+                                          "x-known-values": [
                                             "deepgram",
                                             "google"
-                                          ]
+                                          ],
+                                          "x-unlisted-values": "ignored"
                                         },
                                         {
                                           "$ref": "#/$defs/SWMLVar"
@@ -10287,10 +10400,16 @@
                                       ]
                                     }
                                   },
-                                  "required": [
-                                    "direction",
-                                    "from_lang",
-                                    "to_lang"
+                                  "x-effect-requires": [
+                                    [
+                                      "direction"
+                                    ],
+                                    [
+                                      "from_lang"
+                                    ],
+                                    [
+                                      "to_lang"
+                                    ]
                                   ]
                                 },
                                 {
@@ -10342,9 +10461,7 @@
                               ]
                             }
                           },
-                          "unevaluatedProperties": {
-                            "not": {}
-                          }
+                          "x-unlisted-keys": "ignored"
                         }
                       ]
                     },
@@ -10947,6 +11064,7 @@
                   "description": "Volume level for the audio file.\nDefault is `0`.\nValid range is -40 to 40.",
                   "minimum": -40,
                   "maximum": 40,
+                  "default": 0.0,
                   "examples": [
                     "10"
                   ],
@@ -11583,6 +11701,9 @@
                     {
                       "$ref": "#/$defs/SWMLVar"
                     }
+                  ],
+                  "x-default-from-env": [
+                    "FREESWITCH_SWML_RECORD_END_SILENCE_TIMEOUT"
                   ]
                 },
                 "initial_timeout": {
@@ -11599,6 +11720,9 @@
                     {
                       "$ref": "#/$defs/SWMLVar"
                     }
+                  ],
+                  "x-default-from-env": [
+                    "FREESWITCH_RELAY_NO_INPUT_TIMEOUT"
                   ]
                 },
                 "input_sensitivity": {
@@ -13305,10 +13429,16 @@
           "type": "string"
         },
         "valid_contexts": {
-          "type": "array"
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
         "valid_steps": {
-          "type": "array"
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -13330,7 +13460,10 @@
               "properties": {},
               "unevaluatedProperties": {
                 "not": {}
-              }
+              },
+              "x-outcome-variables": [
+                "denoise_result"
+              ]
             },
             {
               "type": "array"
@@ -14101,6 +14234,7 @@
         "toggle_functions": {
           "type": "array",
           "items": {
+            "description": "Without `function`, the object has no effect: it is accepted and ignored, not rejected.",
             "type": "object",
             "properties": {
               "active": {
@@ -14117,7 +14251,12 @@
             "propertyNames": {
               "type": "string"
             },
-            "additionalProperties": true
+            "additionalProperties": true,
+            "x-effect-requires": [
+              [
+                "function"
+              ]
+            ]
           }
         },
         "transfer": {

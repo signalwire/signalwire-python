@@ -21,6 +21,18 @@
   `AttributeError`. The bundle is now the current SWML schema.
 
 ### Changed
+- The bundled SWML `schema.json` follows the engine end to end for values the platform
+  accepts and then ignores. Where the verb's handler discards the platform's reply
+  (`live_transcribe`, `live_translate`, `ai_sidecar`, `amazon_bedrock`, `user_event`), a
+  value only that platform check refuses is now accepted, and the listed values are an
+  annotation (`x-known-values`, `x-effect-requires`). An example is an
+  `amazon_bedrock.prompt.voice_id` outside the five Bedrock voices. Vocabularies whose
+  unlisted values are ignored are open too: `SWAIG.native_functions`, the
+  case-insensitive `ai.params` choices, and `speech_engine`. `hangup.reason` and
+  `stream.status_url_method` are closed, because the platform rejects any other value
+  and the handler raises that rejection. `valid_steps` / `valid_contexts` elements must
+  be strings. New defaults are published: `play.volume` 0, and ElevenLabs `stability` .5
+  and `similarity` .75. Conditional and environment-derived defaults are annotated.
 - The bundled SWML `schema.json` validates values the way the engine does:
   `connect.ringback` / `dial.ringback` / `prompt.play` accept `{url}` and
   `["https://..."]` and reject `{play: {...}}`; `cond` elements must be

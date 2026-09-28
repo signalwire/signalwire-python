@@ -564,8 +564,8 @@ class Step(TypedDict, total=False):
     skip_user_turn: bool | str
     step_criteria: str
     text: str
-    valid_contexts: list[Any]
-    valid_steps: list[Any]
+    valid_contexts: list[str]
+    valid_steps: list[str]
 
 
 class StopDenoise(TypedDict, total=False):
@@ -733,11 +733,7 @@ class AiSWAIG(TypedDict, total=False):
     includes: list[AiSWAIGIncludesItem]
     internal_fillers: AiSWAIGInternalFillers
     mcp_servers: list[AiSWAIGMcpServersItem]
-    native_functions: list[
-        Literal[
-            "adjust_response_latency", "check_time", "wait_for_user", "wait_seconds"
-        ]
-    ]
+    native_functions: list[str]
 
 
 class AiSWAIGDefaults(TypedDict, total=False):
@@ -929,7 +925,11 @@ class AiHintsItem(TypedDict, total=False):
 
 
 class AiLanguagesItem(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """Without one of `code` / `listen_language`, `name` and `voice`, the element has no effect: it is accepted and ignored, not rejected.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     auto_emotion: bool | str
     auto_speed: bool | str
@@ -1056,16 +1056,7 @@ class AiParams(TypedDict, total=False):
     double_turn_wait_ms: float | str
     double_turns: bool | str
     eleven_labs_key: str
-    eleven_labs_model: Literal[
-        "eleven_english_v2",
-        "eleven_flash_v2_5",
-        "eleven_multilingual_v1",
-        "eleven_multilingual_v2",
-        "eleven_turbo_v2",
-        "eleven_turbo_v2_5",
-        "eleven_v3",
-        "multilingual",
-    ]
+    eleven_labs_model: str
     eleven_labs_similarity: float | str
     eleven_labs_stability: float | str
     eleven_labs_stream_first: bool | float | str
@@ -1288,7 +1279,11 @@ class AiPostPrompt(TypedDict, total=False):
 
 
 class AiPostPromptPomItem(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """Without one of `body` / `bullets` / `subsections`, the element has no effect: it is accepted and ignored, not rejected.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     title: str
     body: str
@@ -1313,7 +1308,7 @@ class AiPrompt(TypedDict, total=False):
     pom: list[AiPromptPomItem]
     presence_penalty: Any
     reasoning_effort: str
-    steps: list[AiPromptStepsItem]
+    steps: list[Step]
     temperature: float
     text: str
     top_p: float
@@ -1321,7 +1316,11 @@ class AiPrompt(TypedDict, total=False):
 
 
 class AiPromptPomItem(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """Without one of `body` / `bullets` / `subsections`, the element has no effect: it is accepted and ignored, not rejected.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     title: str
     body: str
@@ -1331,25 +1330,12 @@ class AiPromptPomItem(TypedDict, total=False):
     subsections: list[Any]
 
 
-class AiPromptStepsItem(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
-
-    end: bool | str
-    gather_info: dict[str, Any]
-    instructions: str
-    name: str
-    pom: list[Any]
-    reset: dict[str, Any]
-    skip_to_next_step: bool | str
-    skip_user_turn: bool | str
-    step_criteria: str
-    text: str
-    valid_contexts: list[Any]
-    valid_steps: list[Any]
-
-
 class AiPronounceItem(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """Without `replace` and `with`, the element has no effect: it is accepted and ignored, not rejected.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     ignore_case: bool | float | str
     replace: str
@@ -1365,8 +1351,8 @@ class AiSidecarConfig(TypedDict, total=False):
 
     SWAIG: AiSidecarSWAIG | SWMLVar
     action: dict[str, Any] | SWMLVar
-    customer_role: Literal["remote-caller", "local-caller"] | SWMLVar
-    direction: list[Literal["remote-caller", "local-caller"] | SWMLVar] | SWMLVar
+    customer_role: str | SWMLVar
+    direction: list[str | SWMLVar] | SWMLVar
     global_data: dict[str, Any] | SWMLVar
     hints: list[str | SWMLVar] | SWMLVar
     lang: str | SWMLVar
@@ -1395,7 +1381,11 @@ class AiSidecarSWAIGDefaults(TypedDict, total=False):
 
 
 class AiSidecarSWAIGFunctionsItem(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """Without `function`, the element has no effect: it is accepted and ignored, not rejected.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     description: str | SWMLVar
     function: str | SWMLVar
@@ -1423,7 +1413,7 @@ class AiSidecarParams(TypedDict, total=False):
     max_history_tokens: int | SWMLVar
     max_iters_per_tick: int | SWMLVar
     min_interval_ms: int | SWMLVar
-    speech_engine: Literal["deepgram", "google"] | SWMLVar
+    speech_engine: str | SWMLVar
     speech_timeout: int | SWMLVar
     summary_model: str | SWMLVar
     transcribe_prompt: str | SWMLVar
@@ -1485,7 +1475,11 @@ class AmazonBedrockSWAIGDefaults(TypedDict, total=False):
 
 
 class AmazonBedrockSWAIGFunctionsItem(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """Without `description` and `function`, `SWAIG` (checked only where amazon_bedrock discards the result) has no effect: it is accepted and ignored, not rejected.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     description: str
     data_map: DataMap
@@ -1533,7 +1527,11 @@ class AmazonBedrockPostPrompt(TypedDict, total=False):
 
 
 class AmazonBedrockPostPromptPomItem(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """Without one of `body` / `bullets` / `subsections`, the element has no effect: it is accepted and ignored, not rejected.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     title: str
     body: str
@@ -1558,7 +1556,11 @@ class AmazonBedrockPrompt(TypedDict, total=False):
 
 
 class AmazonBedrockPromptPomItem(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """Without one of `body` / `bullets` / `subsections`, the element has no effect: it is accepted and ignored, not rejected.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     title: str
     body: str
@@ -1914,7 +1916,7 @@ class LiveTranscribeConfig(TypedDict, total=False):
     not validated at runtime (a TypedDict is a plain ``dict``).
     """
 
-    action: Literal["start", "stop", "summarize"] | LiveTranscribeAction | SWMLVar
+    action: str | LiveTranscribeAction | SWMLVar
     hints: list[LiveTranscribeHintsItem | str | SWMLVar] | SWMLVar
 
 
@@ -1927,14 +1929,18 @@ class LiveTranscribeAction(TypedDict, total=False):
 
 
 class LiveTranscribeActionStart(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """Without `direction` and `lang`, `action` (checked only where live_transcribe discards the result) has no effect: it is accepted and ignored, not rejected.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     ai_summary: bool | SWMLVar
     ai_summary_prompt: str | SWMLVar
     debug_level: int | SWMLVar
     deepgram_key_override: str | SWMLVar
     deepgram_url_override: str | SWMLVar
-    direction: list[Literal["local-caller", "remote-caller"] | SWMLVar] | SWMLVar
+    direction: list[str | SWMLVar] | SWMLVar
     hints: list[str | SWMLVar] | SWMLVar
     lang: str | SWMLVar
     live_events: bool | SWMLVar
@@ -1971,9 +1977,7 @@ class LiveTranslateConfig(TypedDict, total=False):
     not validated at runtime (a TypedDict is a plain ``dict``).
     """
 
-    action: (
-        Literal["inject", "start", "stop", "summarize"] | LiveTranslateAction | SWMLVar
-    )
+    action: str | LiveTranslateAction | SWMLVar
 
 
 class LiveTranslateAction(TypedDict, total=False):
@@ -1986,21 +1990,29 @@ class LiveTranslateAction(TypedDict, total=False):
 
 
 class LiveTranslateActionInject(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """Without `direction` and `message`, `action` (checked only where live_translate discards the result) has no effect: it is accepted and ignored, not rejected.
 
-    direction: Literal["local-caller", "remote-caller"] | SWMLVar
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
+
+    direction: str | SWMLVar
     message: str | SWMLVar
 
 
 class LiveTranslateActionStart(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """Without `direction`, `from_lang` and `to_lang`, `action` (checked only where live_translate discards the result) has no effect: it is accepted and ignored, not rejected.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     ai_summary: bool | SWMLVar
     ai_summary_prompt: str | SWMLVar
     debug_level: int | SWMLVar
     deepgram_key_override: str | SWMLVar
     deepgram_url_override: str | SWMLVar
-    direction: list[Literal["local-caller", "remote-caller"] | SWMLVar] | SWMLVar
+    direction: list[str | SWMLVar] | SWMLVar
     filter_from: str | SWMLVar
     filter_to: str | SWMLVar
     from_lang: str | SWMLVar
