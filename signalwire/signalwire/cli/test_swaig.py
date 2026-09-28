@@ -858,8 +858,17 @@ def main() -> int:
                     custom_data = (
                         json.loads(args.custom_data) if args.custom_data else None
                     )
+                    # The engine sends the function's description and its parameter
+                    # JSON Schema (argument_desc) on every call.
+                    ensure_params = getattr(func, "_ensure_parameter_structure", None)
                     post_data = generate_comprehensive_post_data(
-                        args.tool_name, function_args, custom_data
+                        args.tool_name,
+                        function_args,
+                        custom_data,
+                        description=str(getattr(func, "description", "") or ""),
+                        argument_desc=ensure_params()
+                        if callable(ensure_params)
+                        else None,
                     )
                 else:
                     # Default behavior - minimal data

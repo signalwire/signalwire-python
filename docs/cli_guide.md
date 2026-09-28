@@ -1278,14 +1278,16 @@ swaig-test my_agent.py --exec my_function
 swaig-test my_agent.py --fake-full-data --exec my_function
 ```
 
-**Includes complete post_data with all SignalWire keys:**
-- **Core identification**: `function`, `argument`, `call_id`, `call_session_id`, `node_id`
-- **Metadata**: `meta_data_token`, `meta_data` (function-level shared data)
-- **Global data**: `global_data` (agent configuration and state)
-- **Conversation context**: `call_log`, `raw_call_log` (OpenAI conversation format)
-- **SWML variables**: `prompt_vars` (includes SWML vars + global_data keys)
-- **Permissions**: `swaig_allow_swml`, `swaig_post_conversation`, `swaig_post_swml_vars`
-- **HTTP context**: `http_method`, `webhook_url`, `user_agent`, `request_headers`
+**Produces the body the SignalWire engine POSTs to a SWAIG function** (the engine's
+own field set, nothing invented):
+- **Always sent**: `function`, `argument` (`parsed`, `raw`), `argument_desc` (the function's
+  parameter schema), `description`, `call_id`, `ai_session_id`, `app_name`, `version`,
+  `content_type`, `content_disposition`, `channel_active`, `channel_offhook`, `channel_ready`
+- **Conditional, included as a fully-configured call carries them**: `caller_id_name`,
+  `caller_id_num`, `project_id`, `space_id`, `global_data`, `meta_data_token` + `meta_data`,
+  `call_log` + `raw_call_log` (sent when `swaig_post_conversation` is set)
+- **Not fabricated**: `args` / `input` (data_map path only) and `fatal_error` /
+  `error_reason` (error invocations only)
 
 #### 3. Custom Data Mode
 
@@ -1301,55 +1303,51 @@ swaig-test my_agent.py --custom-data '{"call_id":"test-123","global_data":{"envi
 
 ```json
 {
-  "function": "search_knowledge",
-  "argument": {"query": "SignalWire"},
+  "ai_session_id": "0f8e...",
+  "app_name": "swaig-test",
+  "argument": {
+    "parsed": [{"query": "SignalWire"}],
+    "raw": "{\"query\": \"SignalWire\"}"
+  },
+  "argument_desc": {
+    "type": "object",
+    "properties": {"query": {"type": "string"}}
+  },
   "call_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "call_session_id": "session-uuid",
-  "node_id": "test-node-001",
-  "meta_data_token": "func_hash_token",
-  "meta_data": {
-    "test_mode": true,
-    "function_name": "search_knowledge"
-  },
-  "global_data": {
-    "app_name": "test_application",
-    "environment": "test",
-    "user_preferences": {"language": "en"}
-  },
+  "channel_active": true,
+  "channel_offhook": true,
+  "channel_ready": true,
+  "content_disposition": "SWAIG Function",
+  "content_type": "text/swaig",
+  "description": "Search the knowledge base",
+  "function": "search_knowledge",
+  "version": "2.0",
+  "caller_id_name": "Test Caller",
+  "caller_id_num": "+15559876543",
+  "project_id": "550e8400-e29b-41d4-a716-446655440003",
+  "space_id": "550e8400-e29b-41d4-a716-446655440004",
+  "global_data": {},
+  "meta_data_token": "token-1a2b3c4d",
+  "meta_data": {},
   "call_log": [
-    {
-      "role": "system",
-      "content": "You are a helpful AI assistant..."
-    },
-    {
-      "role": "user",
-      "content": "Please call the search_knowledge function"
-    },
+    {"role": "system", "content": "You are a helpful AI assistant..."},
+    {"role": "user", "content": "Please call the search_knowledge function"},
     {
       "role": "assistant",
       "content": "I'll call the search_knowledge function for you.",
       "tool_calls": [
         {
-          "id": "call_12345678",
+          "id": "call_a1b2c3d4",
           "type": "function",
           "function": {
             "name": "search_knowledge",
-            "arguments": "{\"query\":\"SignalWire\"}"
+            "arguments": "{\"query\": \"SignalWire\"}"
           }
         }
       ]
     }
   ],
-  "raw_call_log": "... complete conversation history ...",
-  "prompt_vars": {
-    "ai_instructions": "You are a helpful assistant",
-    "temperature": 0.7,
-    "app_name": "test_application",
-    "current_timestamp": "2024-01-15T10:30:00Z"
-  },
-  "swaig_allow_swml": true,
-  "swaig_post_conversation": true,
-  "swaig_post_swml_vars": true
+  "raw_call_log": ["... the same conversation, unredacted ..."]
 }
 ```
 
