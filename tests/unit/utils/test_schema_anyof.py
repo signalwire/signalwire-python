@@ -56,7 +56,7 @@ UNION_SHAPED_VERBS: list[tuple[str, str, dict[str, Any], int]] = [
         {"to_number": "+15551110000", "from_number": "+15552220000", "body": "hi"},
         7,
     ),
-    ("connect", "to", {"to": "sip:alice@example.test"}, 32),
+    ("connect", "to", {"to": "sip:alice@example.test"}, 31),
     # label: string shorthand | {label}. The object branch is closed.
     ("label", "label", {"label": "top"}, 1),
 ]

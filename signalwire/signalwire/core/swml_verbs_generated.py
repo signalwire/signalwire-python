@@ -122,7 +122,6 @@ ConnectDevice = TypedDict(
         "encryption": "Literal['mandatory', 'optional', 'forbidden'] | SWMLVar",
         "from": "str | SWMLVar",
         "from_name": "str | SWMLVar",
-        "fsvars": "dict[str, str] | SWMLVar",
         "headers": "list[ConnectSipHeader]",
         "name": "str | SWMLVar",
         "password": "str | SWMLVar",
@@ -1604,7 +1603,6 @@ class AnswerConfig(TypedDict, total=False):
         | list[Literal["PCMU", "PCMA", "OPUS", "G722", "G729", "AMR-WB", "VP8", "H264"]]
         | SWMLVar
     )
-    fsvars: dict[str, str] | SWMLVar
     max_duration: float | SWMLVar
     password: str | SWMLVar
     username: str | SWMLVar
@@ -1664,7 +1662,6 @@ ConnectConfig = TypedDict(
         "execute_after_queue": "str | SWMLVar",
         "from": "str | SWMLVar",
         "from_name": "str | SWMLVar",
-        "fsvars": "dict[str, str] | SWMLVar",
         "headers": "list[ConnectSipHeader]",
         "max_duration": "float | SWMLVar",
         "name": "str | SWMLVar",

@@ -4908,19 +4908,6 @@
                     }
                   ]
                 },
-                "fsvars": {
-                  "anyOf": [
-                    {
-                      "type": "object",
-                      "additionalProperties": {
-                        "type": "string"
-                      }
-                    },
-                    {
-                      "$ref": "#/$defs/SWMLVar"
-                    }
-                  ]
-                },
                 "max_duration": {
                   "description": "Maximum duration in seconds for the call. Defaults to `14400` seconds (4 hours).",
                   "minimum": 0.0,
@@ -5722,19 +5709,6 @@
                 }
               ]
             },
-            "fsvars": {
-              "anyOf": [
-                {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "string"
-                  }
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
             "headers": {
               "description": "Custom SIP headers to add to INVITE. It Has no effect on calls to phone numbers.",
               "type": "array",
@@ -6323,19 +6297,6 @@
           "anyOf": [
             {
               "type": "string"
-            },
-            {
-              "$ref": "#/$defs/SWMLVar"
-            }
-          ]
-        },
-        "fsvars": {
-          "anyOf": [
-            {
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              }
             },
             {
               "$ref": "#/$defs/SWMLVar"
@@ -7087,19 +7048,6 @@
               "anyOf": [
                 {
                   "type": "string"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "fsvars": {
-              "anyOf": [
-                {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "string"
-                  }
                 },
                 {
                   "$ref": "#/$defs/SWMLVar"
