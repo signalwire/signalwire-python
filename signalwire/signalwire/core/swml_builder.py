@@ -72,7 +72,6 @@ class SWMLBuilder(_VerbsBase):
         self,
         max_duration: int | None = None,
         codecs: str | list[str] | None = None,
-        fsvars: dict[str, str] | None = None,
         username: str | None = None,
         password: str | None = None,
     ) -> Self:
@@ -83,7 +82,6 @@ class SWMLBuilder(_VerbsBase):
             max_duration: Maximum duration in seconds
             codecs: Codecs to offer — a comma-separated string or a list
                 (PCMU, PCMA, G722, G729, AMR-WB, OPUS, VP8, H264)
-            fsvars: Channel variables to set on answer (name -> string value)
             username: Username to use for SIP authentication
             password: Password to use for SIP authentication
 
@@ -95,8 +93,6 @@ class SWMLBuilder(_VerbsBase):
             config["max_duration"] = max_duration
         if codecs is not None:
             config["codecs"] = codecs
-        if fsvars is not None:
-            config["fsvars"] = fsvars
         if username is not None:
             config["username"] = username
         if password is not None:

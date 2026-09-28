@@ -11,7 +11,7 @@ publishes for their verb.
 
 ``answer``/``hangup``/``play`` are written by hand (richer ergonomics) instead of being
 installed from schema.json, so nothing kept their parameter lists current with the
-spec: ``answer`` lacked ``fsvars``/``username``/``password`` and ``play`` lacked
+spec: ``answer`` lacked ``username``/``password`` and ``play`` lacked
 ``loop``/``status_url`` — all published in schema.json (the ARS output of the engine's
 swml_schema.c allowlist). The completeness test reads the parameter set FROM the
 bundled schema, so a parameter the spec gains later fails here until it is added.
@@ -60,12 +60,11 @@ def test_hand_written_verb_accepts_every_public_spec_param(method: str) -> None:
     assert not missing, f"SWMLBuilder.{method} lacks spec params {missing}"
 
 
-def test_answer_emits_sip_auth_and_fsvars() -> None:
+def test_answer_emits_sip_auth() -> None:
     builder = SWMLBuilder(_strict())
     builder.answer(
         max_duration=3600,
         codecs="PCMU,OPUS",
-        fsvars={"sip_h_X-Tenant": "acme"},
         username="user123",
         password="securepassword",
     )
@@ -74,7 +73,6 @@ def test_answer_emits_sip_auth_and_fsvars() -> None:
             "answer": {
                 "max_duration": 3600,
                 "codecs": "PCMU,OPUS",
-                "fsvars": {"sip_h_X-Tenant": "acme"},
                 "username": "user123",
                 "password": "securepassword",
             }
