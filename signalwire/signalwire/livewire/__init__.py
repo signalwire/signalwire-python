@@ -686,7 +686,10 @@ class AgentSession:
         if agent_allow is not NOT_GIVEN:
             allow = agent_allow
         if not allow:
-            sw.set_param("barge_confidence", 1.0)
+            # enable_barge=false turns barge-in off (mod_openai session.c reads it from
+            # params). barge_confidence was set here before, but it is not an ai
+            # param: the engine never reads it from params, so interruptions stayed on.
+            sw.set_param("enable_barge", False)
 
         # Endpointing delays
         min_ep: Any = self._min_endpointing_delay

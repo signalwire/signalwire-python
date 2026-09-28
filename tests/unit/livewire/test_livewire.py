@@ -703,6 +703,37 @@ class TestBuildSwAgent:
         assert "ping" in tool_names
 
     @pytest.mark.asyncio
+    async def test_build_without_interruptions_disables_barge(self) -> None:
+        """allow_interruptions=False reaches the wire as the enable_barge param the
+        engine reads (mod_openai session.c), not barge_confidence, which the engine
+        never reads from params."""
+        import json
+
+        session = AgentSession(allow_interruptions=False)
+        await session.start(Agent(instructions="test"))
+
+        with patch("signalwire.core.agent_base.uvicorn", Mock()):
+            sw = session._build_sw_agent()
+
+        doc = json.loads(sw._render_swml())
+        ai_verb = next(
+            v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v
+        )
+        params = ai_verb["ai"]["params"]
+        assert params["enable_barge"] is False
+        assert "barge_confidence" not in params
+
+    @pytest.mark.asyncio
+    async def test_build_with_interruptions_leaves_barge_default(self) -> None:
+        session = AgentSession()
+        await session.start(Agent(instructions="test"))
+
+        with patch("signalwire.core.agent_base.uvicorn", Mock()):
+            sw = session._build_sw_agent()
+
+        assert "enable_barge" not in sw._params
+
+    @pytest.mark.asyncio
     async def test_build_raises_without_start(self) -> None:
         session = AgentSession()
         with pytest.raises(RuntimeError, match="No Agent bound"):
