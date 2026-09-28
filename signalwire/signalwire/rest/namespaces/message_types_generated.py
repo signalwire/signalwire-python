@@ -35,56 +35,55 @@ class LogPaginationResponse(TypedDict, total=False):
     prev: str
 
 
-class LogRetrieveResponse(TypedDict, total=False):
-    """Response model for message log retrieve endpoint
+LogRetrieveResponse = TypedDict(
+    "LogRetrieveResponse",
+    {
+        "id": "uuid",
+        "from": "str",
+        "to": "str",
+        "status": "Literal['queued', 'initiated', 'delivered', 'sent', 'received', 'undelivered', 'failed']",
+        "direction": "Literal['inbound', 'outbound', 'outbound-api', 'outbound-call', 'outbound-reply']",
+        "kind": "Literal['sms', 'mms']",
+        "source": "Literal['realtime_api', 'laml']",
+        "type": "Literal['relay_message', 'laml_message']",
+        "url": "str | None",
+        "number_of_segments": "int",
+        "charge": "float",
+        "charge_details": "list[ChargeDetail]",
+        "created_at": "str",
+    },
+    total=False,
+)
+LogRetrieveResponse.__doc__ = """Response model for message log retrieve endpoint
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
-    id: uuid
-    # non-identifier field 'from': str
-    to: str
-    status: Literal[
-        "queued", "initiated", "delivered", "sent", "received", "undelivered", "failed"
-    ]
-    direction: Literal[
-        "inbound", "outbound", "outbound-api", "outbound-call", "outbound-reply"
-    ]
-    kind: Literal["sms", "mms"]
-    source: Literal["realtime_api", "laml"]
-    type: Literal["relay_message", "laml_message"]
-    url: str | None
-    number_of_segments: int
-    charge: float
-    charge_details: list[ChargeDetail]
-    created_at: str
+MessageLog = TypedDict(
+    "MessageLog",
+    {
+        "id": "uuid",
+        "from": "str",
+        "to": "str",
+        "status": "Literal['queued', 'initiated', 'delivered', 'sent', 'received', 'undelivered', 'failed']",
+        "direction": "Literal['inbound', 'outbound', 'outbound-api', 'outbound-call', 'outbound-reply']",
+        "kind": "Literal['sms', 'mms']",
+        "source": "Literal['realtime_api', 'laml']",
+        "type": "Literal['relay_message', 'laml_message']",
+        "url": "str | None",
+        "number_of_segments": "int",
+        "charge": "float",
+        "charge_details": "list[ChargeDetail]",
+        "created_at": "str",
+    },
+    total=False,
+)
+MessageLog.__doc__ = """Message log entry with all activity details
 
-
-class MessageLog(TypedDict, total=False):
-    """Message log entry with all activity details
-
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    id: uuid
-    # non-identifier field 'from': str
-    to: str
-    status: Literal[
-        "queued", "initiated", "delivered", "sent", "received", "undelivered", "failed"
-    ]
-    direction: Literal[
-        "inbound", "outbound", "outbound-api", "outbound-call", "outbound-reply"
-    ]
-    kind: Literal["sms", "mms"]
-    source: Literal["realtime_api", "laml"]
-    type: Literal["relay_message", "laml_message"]
-    url: str | None
-    number_of_segments: int
-    charge: float
-    charge_details: list[ChargeDetail]
-    created_at: str
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
 
 class MessageLogShowStatusCode422(TypedDict, total=False):

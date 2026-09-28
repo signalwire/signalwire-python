@@ -8,70 +8,82 @@
 from __future__ import annotations
 from typing import Any, TypeAlias, TypedDict
 
+CallingAiHoldParams = TypedDict(
+    "CallingAiHoldParams",
+    {
+        "async": "bool | None",
+        "call_id": "str",
+        "node_id": "str",
+        "prompt": "str",
+        "swml": "bool | None",
+        "timeout": "str",
+    },
+    total=False,
+)
+CallingAiHoldParams.__doc__ = """Wire schema for the JSON payload of `calling.ai_hold` (params). Extracted from switchblade `PublicCallAiHoldParams.cs`.
 
-class CallingAiHoldParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.ai_hold` (params). Extracted from switchblade `PublicCallAiHoldParams.cs`.
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
+CallingAiMessageParams = TypedDict(
+    "CallingAiMessageParams",
+    {
+        "async": "bool | None",
+        "call_id": "str",
+        "global_data": "Any",
+        "message_text": "str",
+        "node_id": "str",
+        "reset": "Any",
+        "role": "str",
+        "swml": "bool | None",
+    },
+    total=False,
+)
+CallingAiMessageParams.__doc__ = """Wire schema for the JSON payload of `calling.ai_message` (params). Extracted from switchblade `PublicCallAiMessageParams.cs`.
 
-    # non-identifier field 'async': bool | None
-    call_id: str
-    node_id: str
-    prompt: str
-    swml: bool | None
-    timeout: str
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
+CallingAiUnholdParams = TypedDict(
+    "CallingAiUnholdParams",
+    {
+        "async": "bool | None",
+        "call_id": "str",
+        "node_id": "str",
+        "prompt": "str",
+        "swml": "bool | None",
+    },
+    total=False,
+)
+CallingAiUnholdParams.__doc__ = """Wire schema for the JSON payload of `calling.ai_unhold` (params). Extracted from switchblade `PublicCallAiUnholdParams.cs`.
 
-class CallingAiMessageParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.ai_message` (params). Extracted from switchblade `PublicCallAiMessageParams.cs`.
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
+CallingAmazonBedrockParams = TypedDict(
+    "CallingAmazonBedrockParams",
+    {
+        "SWAIG": "Any",
+        "async": "bool | None",
+        "call_id": "str",
+        "global_data": "Any",
+        "node_id": "str",
+        "params": "Any",
+        "post_prompt": "Any",
+        "post_prompt_url": "str",
+        "prompt": "Any",
+        "swml": "bool | None",
+    },
+    total=False,
+)
+CallingAmazonBedrockParams.__doc__ = """Wire schema for the JSON payload of `calling.amazon_bedrock` (params). Extracted from switchblade `PublicCallAmazonBedrockParams.cs`.
 
-    # non-identifier field 'async': bool | None
-    call_id: str
-    global_data: Any
-    message_text: str
-    node_id: str
-    reset: Any
-    role: str
-    swml: bool | None
-
-
-class CallingAiUnholdParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.ai_unhold` (params). Extracted from switchblade `PublicCallAiUnholdParams.cs`.
-
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    # non-identifier field 'async': bool | None
-    call_id: str
-    node_id: str
-    prompt: str
-    swml: bool | None
-
-
-class CallingAmazonBedrockParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.amazon_bedrock` (params). Extracted from switchblade `PublicCallAmazonBedrockParams.cs`.
-
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    SWAIG: Any
-    # non-identifier field 'async': bool | None
-    call_id: str
-    global_data: Any
-    node_id: str
-    params: Any
-    post_prompt: Any
-    post_prompt_url: str
-    prompt: Any
-    swml: bool | None
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
 
 class CallingAnswerParams(TypedDict, total=False):
@@ -133,24 +145,28 @@ class CallingClearDigitBindingsParams(TypedDict, total=False):
     swml: bool | None
 
 
-class CallingCollectParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.collect` (params). Extracted from switchblade `PublicCallCollectParams.cs`.
+CallingCollectParams = TypedDict(
+    "CallingCollectParams",
+    {
+        "call_id": "str",
+        "continue": "bool | None",
+        "continuous": "bool | None",
+        "control_id": "str",
+        "digits": "dict[str, Any]",
+        "initial_timeout": "float | None",
+        "node_id": "str",
+        "partial_results": "bool | None",
+        "send_start_of_input": "bool | None",
+        "speech": "dict[str, Any]",
+        "start_input_timers": "bool | None",
+    },
+    total=False,
+)
+CallingCollectParams.__doc__ = """Wire schema for the JSON payload of `calling.collect` (params). Extracted from switchblade `PublicCallCollectParams.cs`.
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    call_id: str
-    # non-identifier field 'continue': bool | None
-    continuous: bool | None
-    control_id: str
-    digits: dict[str, Any]
-    initial_timeout: float | None
-    node_id: str
-    partial_results: bool | None
-    send_start_of_input: bool | None
-    speech: dict[str, Any]
-    start_input_timers: bool | None
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
 
 class CallingCollectStartInputTimersParams(TypedDict, total=False):
@@ -344,58 +360,71 @@ class CallingJoinRoomParams(TypedDict, total=False):
     swml: bool | None
 
 
-class CallingLeaveConferenceParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.leave_conference` (params). Extracted from switchblade `PublicCallLeaveConferenceParams.cs`.
+CallingLeaveConferenceParams = TypedDict(
+    "CallingLeaveConferenceParams",
+    {
+        "async": "bool | None",
+        "call_id": "str",
+        "conference_id": "str",
+        "node_id": "str",
+    },
+    total=False,
+)
+CallingLeaveConferenceParams.__doc__ = """Wire schema for the JSON payload of `calling.leave_conference` (params). Extracted from switchblade `PublicCallLeaveConferenceParams.cs`.
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
-    # non-identifier field 'async': bool | None
-    call_id: str
-    conference_id: str
-    node_id: str
+CallingLeaveRoomParams = TypedDict(
+    "CallingLeaveRoomParams",
+    {
+        "async": "bool | None",
+        "call_id": "str",
+        "node_id": "str",
+    },
+    total=False,
+)
+CallingLeaveRoomParams.__doc__ = """Wire schema for the JSON payload of `calling.leave_room` (params). Extracted from switchblade `PublicCallLeaveRoomParams.cs`.
 
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
-class CallingLeaveRoomParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.leave_room` (params). Extracted from switchblade `PublicCallLeaveRoomParams.cs`.
+CallingLiveTranscribeParams = TypedDict(
+    "CallingLiveTranscribeParams",
+    {
+        "action": "Any",
+        "async": "bool | None",
+        "call_id": "str",
+        "node_id": "str",
+        "swml": "bool | None",
+    },
+    total=False,
+)
+CallingLiveTranscribeParams.__doc__ = """Wire schema for the JSON payload of `calling.live_transcribe` (params). Extracted from switchblade `PublicCallLiveTranscribeParams.cs`.
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
-    # non-identifier field 'async': bool | None
-    call_id: str
-    node_id: str
+CallingLiveTranslateParams = TypedDict(
+    "CallingLiveTranslateParams",
+    {
+        "action": "Any",
+        "async": "bool | None",
+        "call_id": "str",
+        "node_id": "str",
+        "status_url": "str",
+        "swml": "bool | None",
+    },
+    total=False,
+)
+CallingLiveTranslateParams.__doc__ = """Wire schema for the JSON payload of `calling.live_translate` (params). Extracted from switchblade `PublicCallLiveTranslateParams.cs`.
 
-
-class CallingLiveTranscribeParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.live_transcribe` (params). Extracted from switchblade `PublicCallLiveTranscribeParams.cs`.
-
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    action: Any
-    # non-identifier field 'async': bool | None
-    call_id: str
-    node_id: str
-    swml: bool | None
-
-
-class CallingLiveTranslateParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.live_translate` (params). Extracted from switchblade `PublicCallLiveTranslateParams.cs`.
-
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    action: Any
-    # non-identifier field 'async': bool | None
-    call_id: str
-    node_id: str
-    status_url: str
-    swml: bool | None
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
 
 class CallingPassParams(TypedDict, total=False):
@@ -722,40 +751,47 @@ class CallingSendFaxStopParams(TypedDict, total=False):
     node_id: str
 
 
-class CallingStreamParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.stream` (params). Extracted from switchblade `PublicCallStreamParams.cs`.
+CallingStreamParams = TypedDict(
+    "CallingStreamParams",
+    {
+        "async": "bool | None",
+        "authorization_bearer_token": "str",
+        "call_id": "str",
+        "codec": "str",
+        "control_id": "str",
+        "custom_parameters": "Any",
+        "name": "str",
+        "node_id": "str",
+        "status_url": "str",
+        "status_url_method": "str",
+        "swml": "bool | None",
+        "track": "str",
+        "url": "str",
+    },
+    total=False,
+)
+CallingStreamParams.__doc__ = """Wire schema for the JSON payload of `calling.stream` (params). Extracted from switchblade `PublicCallStreamParams.cs`.
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
-    # non-identifier field 'async': bool | None
-    authorization_bearer_token: str
-    call_id: str
-    codec: str
-    control_id: str
-    custom_parameters: Any
-    name: str
-    node_id: str
-    status_url: str
-    status_url_method: str
-    swml: bool | None
-    track: str
-    url: str
+CallingStreamStopParams = TypedDict(
+    "CallingStreamStopParams",
+    {
+        "async": "bool | None",
+        "call_id": "str",
+        "control_id": "str",
+        "node_id": "str",
+        "swml": "bool | None",
+    },
+    total=False,
+)
+CallingStreamStopParams.__doc__ = """Wire schema for the JSON payload of `calling.stream.stop` (params). Extracted from switchblade `PublicCallStreamStopParams.cs`.
 
-
-class CallingStreamStopParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.stream.stop` (params). Extracted from switchblade `PublicCallStreamStopParams.cs`.
-
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    # non-identifier field 'async': bool | None
-    call_id: str
-    control_id: str
-    node_id: str
-    swml: bool | None
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
 
 class CallingTapParams(TypedDict, total=False):
@@ -796,18 +832,22 @@ class CallingTransferParams(TypedDict, total=False):
     node_id: str
 
 
-class CallingUserEventParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.user_event` (params). Extracted from switchblade `PublicCallUserEventParams.cs`.
+CallingUserEventParams = TypedDict(
+    "CallingUserEventParams",
+    {
+        "async": "bool | None",
+        "call_id": "str",
+        "event": "Any",
+        "node_id": "str",
+        "swml": "bool | None",
+    },
+    total=False,
+)
+CallingUserEventParams.__doc__ = """Wire schema for the JSON payload of `calling.user_event` (params). Extracted from switchblade `PublicCallUserEventParams.cs`.
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    # non-identifier field 'async': bool | None
-    call_id: str
-    event: Any
-    node_id: str
-    swml: bool | None
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
 
 class MessagingSendParams(TypedDict, total=False):

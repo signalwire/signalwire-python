@@ -59,45 +59,39 @@ class SwmlRequestCallPeer(TypedDict, total=False):
     node_id: Required[str]
 
 
-class SwmlRequestCallPhone(TypedDict, total=False):
-    """The `call` object of a SWML webhook request, `phone` device variant (engine: call -> device . type == RELAY_DEVICE_PHONE).
+SwmlRequestCallPhone = TypedDict(
+    "SwmlRequestCallPhone",
+    {
+        "project_id": "str",
+        "space_id": "str",
+        "call_id": "Required[str]",
+        "node_id": "Required[str]",
+        "segment_id": "str",
+        "tag": "str",
+        "call_state": "Required[Literal['answered', 'created', 'ended', 'ending', 'ringing']]",
+        "parent": "SwmlRequestCallParent",
+        "peer": "SwmlRequestCallPeer",
+        "direction": "Required[Literal['inbound', 'outbound']]",
+        "end_reason": "Literal['abandoned', 'busy', 'cancel', 'decline', 'error', 'hangup', 'maxDuration', 'noAnswer', 'notFound']",
+        "end_source": "Literal['inbound', 'none', 'outbound']",
+        "dial_winner": "Literal['true']",
+        "address_id": "str",
+        "subscriber_id": "str",
+        "subscriber_name": "str",
+        "type": "Required[Literal['phone']]",
+        "from": "Required[str]",
+        "to": "Required[str]",
+        "from_number": "Required[str]",
+        "to_number": "Required[str]",
+        "headers": "list[SwmlRequestCallPhoneHeadersItem]",
+    },
+    total=False,
+)
+SwmlRequestCallPhone.__doc__ = """The `call` object of a SWML webhook request, `phone` device variant (engine: call -> device . type == RELAY_DEVICE_PHONE).
 
-    Closed shape: the engine writes no other keys. Not validated at runtime
-    (a TypedDict is a plain ``dict``).
-    """
-
-    project_id: str
-    space_id: str
-    call_id: Required[str]
-    node_id: Required[str]
-    segment_id: str
-    tag: str
-    call_state: Required[Literal["answered", "created", "ended", "ending", "ringing"]]
-    parent: SwmlRequestCallParent
-    peer: SwmlRequestCallPeer
-    direction: Required[Literal["inbound", "outbound"]]
-    end_reason: Literal[
-        "abandoned",
-        "busy",
-        "cancel",
-        "decline",
-        "error",
-        "hangup",
-        "maxDuration",
-        "noAnswer",
-        "notFound",
-    ]
-    end_source: Literal["inbound", "none", "outbound"]
-    dial_winner: Literal["true"]
-    address_id: str
-    subscriber_id: str
-    subscriber_name: str
-    type: Required[Literal["phone"]]
-    # non-identifier field 'from': Required[str]
-    to: Required[str]
-    from_number: Required[str]
-    to_number: Required[str]
-    headers: list[SwmlRequestCallPhoneHeadersItem]
+Closed shape: the engine writes no other keys. Not validated at runtime
+(a TypedDict is a plain ``dict``).
+"""
 
 
 class SwmlRequestCallPhoneHeadersItem(TypedDict, total=False):
@@ -111,44 +105,38 @@ class SwmlRequestCallPhoneHeadersItem(TypedDict, total=False):
     value: Required[str]
 
 
-class SwmlRequestCallSip(TypedDict, total=False):
-    """The `call` object of a SWML webhook request, `sip` device variant (engine: call -> device . type == RELAY_DEVICE_SIP).
+SwmlRequestCallSip = TypedDict(
+    "SwmlRequestCallSip",
+    {
+        "project_id": "str",
+        "space_id": "str",
+        "call_id": "Required[str]",
+        "node_id": "Required[str]",
+        "segment_id": "str",
+        "tag": "str",
+        "call_state": "Required[Literal['answered', 'created', 'ended', 'ending', 'ringing']]",
+        "parent": "SwmlRequestCallParent",
+        "peer": "SwmlRequestCallPeer",
+        "direction": "Required[Literal['inbound', 'outbound']]",
+        "end_reason": "Literal['abandoned', 'busy', 'cancel', 'decline', 'error', 'hangup', 'maxDuration', 'noAnswer', 'notFound']",
+        "end_source": "Literal['inbound', 'none', 'outbound']",
+        "dial_winner": "Literal['true']",
+        "address_id": "str",
+        "subscriber_id": "str",
+        "subscriber_name": "str",
+        "type": "Required[Literal['sip']]",
+        "from": "Required[str]",
+        "to": "Required[str]",
+        "headers": "list[SwmlRequestCallSipHeadersItem]",
+        "sip_data": "SwmlRequestCallSipSipData",
+    },
+    total=False,
+)
+SwmlRequestCallSip.__doc__ = """The `call` object of a SWML webhook request, `sip` device variant (engine: call -> device . type == RELAY_DEVICE_SIP).
 
-    Closed shape: the engine writes no other keys. Not validated at runtime
-    (a TypedDict is a plain ``dict``).
-    """
-
-    project_id: str
-    space_id: str
-    call_id: Required[str]
-    node_id: Required[str]
-    segment_id: str
-    tag: str
-    call_state: Required[Literal["answered", "created", "ended", "ending", "ringing"]]
-    parent: SwmlRequestCallParent
-    peer: SwmlRequestCallPeer
-    direction: Required[Literal["inbound", "outbound"]]
-    end_reason: Literal[
-        "abandoned",
-        "busy",
-        "cancel",
-        "decline",
-        "error",
-        "hangup",
-        "maxDuration",
-        "noAnswer",
-        "notFound",
-    ]
-    end_source: Literal["inbound", "none", "outbound"]
-    dial_winner: Literal["true"]
-    address_id: str
-    subscriber_id: str
-    subscriber_name: str
-    type: Required[Literal["sip"]]
-    # non-identifier field 'from': Required[str]
-    to: Required[str]
-    headers: list[SwmlRequestCallSipHeadersItem]
-    sip_data: SwmlRequestCallSipSipData
+Closed shape: the engine writes no other keys. Not validated at runtime
+(a TypedDict is a plain ``dict``).
+"""
 
 
 class SwmlRequestCallSipHeadersItem(TypedDict, total=False):
@@ -189,42 +177,36 @@ class SwmlRequestCallSipSipData(TypedDict, total=False):
     sip_p_asserted_identity: str
 
 
-class SwmlRequestCallWebrtc(TypedDict, total=False):
-    """The `call` object of a SWML webhook request, `webrtc` device variant (engine: call -> device . type == RELAY_DEVICE_WEBRTC).
+SwmlRequestCallWebrtc = TypedDict(
+    "SwmlRequestCallWebrtc",
+    {
+        "project_id": "str",
+        "space_id": "str",
+        "call_id": "Required[str]",
+        "node_id": "Required[str]",
+        "segment_id": "str",
+        "tag": "str",
+        "call_state": "Required[Literal['answered', 'created', 'ended', 'ending', 'ringing']]",
+        "parent": "SwmlRequestCallParent",
+        "peer": "SwmlRequestCallPeer",
+        "direction": "Required[Literal['inbound', 'outbound']]",
+        "end_reason": "Literal['abandoned', 'busy', 'cancel', 'decline', 'error', 'hangup', 'maxDuration', 'noAnswer', 'notFound']",
+        "end_source": "Literal['inbound', 'none', 'outbound']",
+        "dial_winner": "Literal['true']",
+        "address_id": "str",
+        "subscriber_id": "str",
+        "subscriber_name": "str",
+        "type": "Required[Literal['webrtc']]",
+        "from": "Required[str]",
+        "to": "Required[str]",
+    },
+    total=False,
+)
+SwmlRequestCallWebrtc.__doc__ = """The `call` object of a SWML webhook request, `webrtc` device variant (engine: call -> device . type == RELAY_DEVICE_WEBRTC).
 
-    Closed shape: the engine writes no other keys. Not validated at runtime
-    (a TypedDict is a plain ``dict``).
-    """
-
-    project_id: str
-    space_id: str
-    call_id: Required[str]
-    node_id: Required[str]
-    segment_id: str
-    tag: str
-    call_state: Required[Literal["answered", "created", "ended", "ending", "ringing"]]
-    parent: SwmlRequestCallParent
-    peer: SwmlRequestCallPeer
-    direction: Required[Literal["inbound", "outbound"]]
-    end_reason: Literal[
-        "abandoned",
-        "busy",
-        "cancel",
-        "decline",
-        "error",
-        "hangup",
-        "maxDuration",
-        "noAnswer",
-        "notFound",
-    ]
-    end_source: Literal["inbound", "none", "outbound"]
-    dial_winner: Literal["true"]
-    address_id: str
-    subscriber_id: str
-    subscriber_name: str
-    type: Required[Literal["webrtc"]]
-    # non-identifier field 'from': Required[str]
-    to: Required[str]
+Closed shape: the engine writes no other keys. Not validated at runtime
+(a TypedDict is a plain ``dict``).
+"""
 
 
 class SwmlRequestCallOther(TypedDict, total=False):

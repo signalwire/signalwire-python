@@ -65,16 +65,22 @@ class CallPayParameters(TypedDict, total=False):
     value: str | SWMLVar
 
 
-class CallPayPrompts(TypedDict, total=False):
+CallPayPrompts = TypedDict(
+    "CallPayPrompts",
+    {
+        "actions": "list[CallPayPromptsActions | SWMLVar] | SWMLVar",
+        "attempt": "str | SWMLVar",
+        "card_type": "str | SWMLVar",
+        "error_type": "str | SWMLVar",
+        "for": "Literal['payment-card-number', 'expiration-date', 'security-code', 'postal-code', 'bank-routing-number', 'bank-account-number', 'payment-processing', 'payment-completed', 'payment-failed', 'payment-canceled'] | SWMLVar",
+        "play": "list[RingbackConfig | SWMLVar] | SWMLVar",
+        "require_matching_inputs": "str | SWMLVar",
+    },
+    total=False,
+)
+CallPayPrompts.__doc__ = (
     """Open shape: extra server keys permitted; not validated at runtime."""
-
-    actions: list[CallPayPromptsActions | SWMLVar] | SWMLVar
-    attempt: str | SWMLVar
-    card_type: str | SWMLVar
-    error_type: str | SWMLVar
-    # non-identifier field 'for': Literal['payment-card-number', 'expiration-date', 'security-code', 'postal-code', 'bank-routing-number', 'bank-account-number', 'payment-processing', 'payment-completed', 'payment-failed', 'payment-canceled'] | SWMLVar
-    play: list[RingbackConfig | SWMLVar] | SWMLVar
-    require_matching_inputs: str | SWMLVar
+)
 
 
 class CallPayPromptsActions(TypedDict, total=False):
@@ -102,36 +108,40 @@ class Connect(TypedDict, total=False):
     connect: ConnectConfig
 
 
-class ConnectDevice(TypedDict, total=False):
-    """Body shape enforced by CHECK_swml_connect_device, swml_schema.c.
+ConnectDevice = TypedDict(
+    "ConnectDevice",
+    {
+        "authorization_bearer_token": "str | SWMLVar",
+        "call_state_events": "list[str] | SWMLVar",
+        "call_state_url": "str | SWMLVar",
+        "codec": "str | SWMLVar",
+        "codecs": "str | list[Any]",
+        "confirm": "str | list[SWMLMethod] | ConnectDeviceConfirm | SWMLVar",
+        "confirm_timeout": "int | SWMLVar",
+        "custom_parameters": "dict[str, str] | SWMLVar",
+        "encryption": "Literal['mandatory', 'optional', 'forbidden'] | SWMLVar",
+        "from": "str | SWMLVar",
+        "from_name": "str | SWMLVar",
+        "fsvars": "dict[str, str] | SWMLVar",
+        "headers": "list[ConnectSipHeader]",
+        "name": "str | SWMLVar",
+        "password": "str | SWMLVar",
+        "realtime": "bool | SWMLVar",
+        "session_timeout": "int | SWMLVar",
+        "status_url": "str | SWMLVar",
+        "status_url_method": "Literal['GET', 'POST'] | SWMLVar",
+        "timeout": "int | SWMLVar",
+        "to": "str | SWMLVar",
+        "username": "str | SWMLVar",
+        "webrtc_media": "bool | SWMLVar",
+    },
+    total=False,
+)
+ConnectDevice.__doc__ = """Body shape enforced by CHECK_swml_connect_device, swml_schema.c.
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    authorization_bearer_token: str | SWMLVar
-    call_state_events: list[str] | SWMLVar
-    call_state_url: str | SWMLVar
-    codec: str | SWMLVar
-    codecs: str | list[Any]
-    confirm: str | list[SWMLMethod] | ConnectDeviceConfirm | SWMLVar
-    confirm_timeout: int | SWMLVar
-    custom_parameters: dict[str, str] | SWMLVar
-    encryption: Literal["mandatory", "optional", "forbidden"] | SWMLVar
-    # non-identifier field 'from': str | SWMLVar
-    from_name: str | SWMLVar
-    fsvars: dict[str, str] | SWMLVar
-    headers: list[ConnectSipHeader]
-    name: str | SWMLVar
-    password: str | SWMLVar
-    realtime: bool | SWMLVar
-    session_timeout: int | SWMLVar
-    status_url: str | SWMLVar
-    status_url_method: Literal["GET", "POST"] | SWMLVar
-    timeout: int | SWMLVar
-    to: str | SWMLVar
-    username: str | SWMLVar
-    webrtc_media: bool | SWMLVar
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
 
 ConnectSerialParallel: TypeAlias = "list[ConnectDevice]"
@@ -210,18 +220,22 @@ class ExecuteRpc(TypedDict, total=False):
     execute_rpc: ExecuteRpcConfig | list[Any] | float | str
 
 
-class Expression(TypedDict, total=False):
-    """Without one of `expr` / `string` and `output`, a Expression has no effect: it is accepted and ignored, not rejected.
+Expression = TypedDict(
+    "Expression",
+    {
+        "pattern": "str",
+        "expr": "str",
+        "nomatch-output": "SwaigResponse",
+        "output": "SwaigResponse",
+        "string": "str",
+    },
+    total=False,
+)
+Expression.__doc__ = """Without one of `expr` / `string` and `output`, a Expression has no effect: it is accepted and ignored, not rejected.
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    pattern: str
-    expr: str
-    # non-identifier field 'nomatch-output': SwaigResponse
-    output: SwaigResponse
-    string: str
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
 
 class Foreach(TypedDict, total=False):
@@ -270,125 +284,123 @@ class JoinRoom(TypedDict, total=False):
     join_room: JoinRoomConfig | list[str | SWMLVar] | float | str | SWMLVar
 
 
-class JsonSchema(TypedDict, total=False):
-    """A JSON Schema (draft 2020-12). The value is forwarded verbatim to the receiving model API, which owns this contract; the engine does not inspect it.
+JsonSchema = TypedDict(
+    "JsonSchema",
+    {
+        "title": "str",
+        "description": "str",
+        "type": "Literal['array', 'boolean', 'integer', 'null', 'number', 'object', 'string'] | list[Literal['array', 'boolean', 'integer', 'null', 'number', 'object', 'string']]",
+        "const": "Any",
+        "enum": "list[Any]",
+        "format": "str",
+        "pattern": "str",
+        "minimum": "float",
+        "maximum": "float",
+        "exclusiveMinimum": "float",
+        "exclusiveMaximum": "float",
+        "minLength": "int",
+        "maxLength": "int",
+        "minItems": "int",
+        "maxItems": "int",
+        "minProperties": "int",
+        "maxProperties": "int",
+        "default": "Any",
+        "examples": "list[Any]",
+        "deprecated": "bool",
+        "properties": "dict[str, JsonSchema | bool]",
+        "required": "list[str]",
+        "prefixItems": "list[JsonSchema | bool]",
+        "items": "JsonSchema | bool",
+        "propertyNames": "JsonSchema | bool",
+        "additionalProperties": "JsonSchema | bool",
+        "unevaluatedProperties": "JsonSchema | bool",
+        "oneOf": "list[JsonSchema | bool]",
+        "anyOf": "list[JsonSchema | bool]",
+        "allOf": "list[JsonSchema | bool]",
+        "not": "JsonSchema | bool",
+        "contains": "JsonSchema | bool",
+        "dependentRequired": "dict[str, list[str]]",
+        "dependentSchemas": "dict[str, JsonSchema | bool]",
+        "else": "JsonSchema | bool",
+        "if": "JsonSchema | bool",
+        "maxContains": "int",
+        "minContains": "int",
+        "multipleOf": "float",
+        "patternProperties": "dict[str, JsonSchema | bool]",
+        "readOnly": "bool",
+        "then": "JsonSchema | bool",
+        "unevaluatedItems": "JsonSchema | bool",
+        "uniqueItems": "bool",
+        "writeOnly": "bool",
+    },
+    total=False,
+)
+JsonSchema.__doc__ = """A JSON Schema (draft 2020-12). The value is forwarded verbatim to the receiving model API, which owns this contract; the engine does not inspect it.
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    title: str
-    description: str
-    type: (
-        Literal["array", "boolean", "integer", "null", "number", "object", "string"]
-        | list[
-            Literal["array", "boolean", "integer", "null", "number", "object", "string"]
-        ]
-    )
-    const: Any
-    enum: list[Any]
-    format: str
-    pattern: str
-    minimum: float
-    maximum: float
-    exclusiveMinimum: float
-    exclusiveMaximum: float
-    minLength: int
-    maxLength: int
-    minItems: int
-    maxItems: int
-    minProperties: int
-    maxProperties: int
-    default: Any
-    examples: list[Any]
-    deprecated: bool
-    properties: dict[str, JsonSchema | bool]
-    required: list[str]
-    prefixItems: list[JsonSchema | bool]
-    items: JsonSchema | bool
-    propertyNames: JsonSchema | bool
-    additionalProperties: JsonSchema | bool
-    unevaluatedProperties: JsonSchema | bool
-    oneOf: list[JsonSchema | bool]
-    anyOf: list[JsonSchema | bool]
-    allOf: list[JsonSchema | bool]
-    # non-identifier field 'not': JsonSchema | bool
-    contains: JsonSchema | bool
-    dependentRequired: dict[str, list[str]]
-    dependentSchemas: dict[str, JsonSchema | bool]
-    # non-identifier field 'else': JsonSchema | bool
-    # non-identifier field 'if': JsonSchema | bool
-    maxContains: int
-    minContains: int
-    multipleOf: float
-    patternProperties: dict[str, JsonSchema | bool]
-    readOnly: bool
-    then: JsonSchema | bool
-    unevaluatedItems: JsonSchema | bool
-    uniqueItems: bool
-    writeOnly: bool
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
 
-class JsonSchemaUnion(TypedDict, total=False):
-    """A JSON Schema (draft 2020-12) that may also carry `example`, `nullable`, `propertyOrdering`: the value is forwarded verbatim to whichever model API the session resolves to, and those receivers do not accept one vocabulary, so a schema here must be able to express their UNION (vocabulary_union). The engine does not inspect it.
+JsonSchemaUnion = TypedDict(
+    "JsonSchemaUnion",
+    {
+        "title": "str",
+        "description": "str",
+        "type": "Literal['array', 'boolean', 'integer', 'null', 'number', 'object', 'string'] | list[Literal['array', 'boolean', 'integer', 'null', 'number', 'object', 'string']]",
+        "const": "Any",
+        "enum": "list[Any]",
+        "format": "str",
+        "pattern": "str",
+        "minimum": "float",
+        "maximum": "float",
+        "exclusiveMinimum": "float",
+        "exclusiveMaximum": "float",
+        "minLength": "int",
+        "maxLength": "int",
+        "minItems": "int",
+        "maxItems": "int",
+        "minProperties": "int",
+        "maxProperties": "int",
+        "default": "Any",
+        "examples": "list[Any]",
+        "deprecated": "bool",
+        "nullable": "bool",
+        "properties": "dict[str, JsonSchemaUnion | bool]",
+        "required": "list[str]",
+        "prefixItems": "list[JsonSchemaUnion | bool]",
+        "items": "JsonSchemaUnion | bool",
+        "propertyNames": "JsonSchemaUnion | bool",
+        "additionalProperties": "JsonSchemaUnion | bool",
+        "unevaluatedProperties": "JsonSchemaUnion | bool",
+        "oneOf": "list[JsonSchemaUnion | bool]",
+        "anyOf": "list[JsonSchemaUnion | bool]",
+        "allOf": "list[JsonSchemaUnion | bool]",
+        "not": "JsonSchemaUnion | bool",
+        "contains": "JsonSchemaUnion | bool",
+        "dependentRequired": "dict[str, list[str]]",
+        "dependentSchemas": "dict[str, JsonSchemaUnion | bool]",
+        "else": "JsonSchemaUnion | bool",
+        "example": "Any",
+        "if": "JsonSchemaUnion | bool",
+        "maxContains": "int",
+        "minContains": "int",
+        "multipleOf": "float",
+        "patternProperties": "dict[str, JsonSchemaUnion | bool]",
+        "propertyOrdering": "list[str]",
+        "readOnly": "bool",
+        "then": "JsonSchemaUnion | bool",
+        "unevaluatedItems": "JsonSchemaUnion | bool",
+        "uniqueItems": "bool",
+        "writeOnly": "bool",
+    },
+    total=False,
+)
+JsonSchemaUnion.__doc__ = """A JSON Schema (draft 2020-12) that may also carry `example`, `nullable`, `propertyOrdering`: the value is forwarded verbatim to whichever model API the session resolves to, and those receivers do not accept one vocabulary, so a schema here must be able to express their UNION (vocabulary_union). The engine does not inspect it.
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    title: str
-    description: str
-    type: (
-        Literal["array", "boolean", "integer", "null", "number", "object", "string"]
-        | list[
-            Literal["array", "boolean", "integer", "null", "number", "object", "string"]
-        ]
-    )
-    const: Any
-    enum: list[Any]
-    format: str
-    pattern: str
-    minimum: float
-    maximum: float
-    exclusiveMinimum: float
-    exclusiveMaximum: float
-    minLength: int
-    maxLength: int
-    minItems: int
-    maxItems: int
-    minProperties: int
-    maxProperties: int
-    default: Any
-    examples: list[Any]
-    deprecated: bool
-    nullable: bool
-    properties: dict[str, JsonSchemaUnion | bool]
-    required: list[str]
-    prefixItems: list[JsonSchemaUnion | bool]
-    items: JsonSchemaUnion | bool
-    propertyNames: JsonSchemaUnion | bool
-    additionalProperties: JsonSchemaUnion | bool
-    unevaluatedProperties: JsonSchemaUnion | bool
-    oneOf: list[JsonSchemaUnion | bool]
-    anyOf: list[JsonSchemaUnion | bool]
-    allOf: list[JsonSchemaUnion | bool]
-    # non-identifier field 'not': JsonSchemaUnion | bool
-    contains: JsonSchemaUnion | bool
-    dependentRequired: dict[str, list[str]]
-    dependentSchemas: dict[str, JsonSchemaUnion | bool]
-    # non-identifier field 'else': JsonSchemaUnion | bool
-    example: Any
-    # non-identifier field 'if': JsonSchemaUnion | bool
-    maxContains: int
-    minContains: int
-    multipleOf: float
-    patternProperties: dict[str, JsonSchemaUnion | bool]
-    propertyOrdering: list[str]
-    readOnly: bool
-    then: JsonSchemaUnion | bool
-    unevaluatedItems: JsonSchemaUnion | bool
-    uniqueItems: bool
-    writeOnly: bool
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
 
 class Label(TypedDict, total=False):
@@ -466,10 +478,16 @@ class Request(TypedDict, total=False):
     request: RequestConfig | list[Any] | float | str
 
 
-class Return(TypedDict, total=False):
+Return = TypedDict(
+    "Return",
+    {
+        "return": "dict[str, Any] | list[Any] | bool | None | float | str",
+    },
+    total=False,
+)
+Return.__doc__ = (
     """Open shape: extra server keys permitted; not validated at runtime."""
-
-    # non-identifier field 'return': dict[str, Any] | list[Any] | bool | None | float | str
+)
 
 
 class Ring(TypedDict, total=False):
@@ -1330,16 +1348,20 @@ class AiPromptPomItem(TypedDict, total=False):
     subsections: list[Any]
 
 
-class AiPronounceItem(TypedDict, total=False):
-    """Without `replace` and `with`, the element has no effect: it is accepted and ignored, not rejected.
+AiPronounceItem = TypedDict(
+    "AiPronounceItem",
+    {
+        "ignore_case": "bool | float | str",
+        "replace": "str",
+        "with": "str",
+    },
+    total=False,
+)
+AiPronounceItem.__doc__ = """Without `replace` and `with`, the element has no effect: it is accepted and ignored, not rejected.
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    ignore_case: bool | float | str
-    replace: str
-    # non-identifier field 'with': str
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
 
 class AiSidecarConfig(TypedDict, total=False):
@@ -1612,53 +1634,63 @@ class ClearDigitBindingsConfig(TypedDict, total=False):
     realm: str
 
 
-class CondItem(TypedDict, total=False):
+CondItem = TypedDict(
+    "CondItem",
+    {
+        "else": "list[SWMLMethod]",
+        "then": "list[SWMLMethod]",
+        "when": "str",
+    },
+    total=False,
+)
+CondItem.__doc__ = (
     """Open shape: extra server keys permitted; not validated at runtime."""
-
-    # non-identifier field 'else': list[SWMLMethod]
-    then: list[SWMLMethod]
-    when: str
+)
 
 
-class ConnectConfig(TypedDict, total=False):
-    """Dial a SIP URI or phone number.
+ConnectConfig = TypedDict(
+    "ConnectConfig",
+    {
+        "answer_on_bridge": "bool | str | SWMLVar",
+        "authorization_bearer_token": "str | SWMLVar",
+        "call_state_events": "list[str] | SWMLVar",
+        "call_state_url": "str | SWMLVar",
+        "codec": "str | SWMLVar",
+        "codecs": "str | list[Any] | SWMLVar",
+        "confirm": "str | list[SWMLMethod] | ConnectConfirm | SWMLVar",
+        "confirm_timeout": "int | SWMLVar",
+        "custom_parameters": "dict[str, str] | SWMLVar",
+        "encryption": "Literal['mandatory', 'optional', 'forbidden'] | SWMLVar",
+        "execute_after_queue": "str | SWMLVar",
+        "from": "str | SWMLVar",
+        "from_name": "str | SWMLVar",
+        "fsvars": "dict[str, str] | SWMLVar",
+        "headers": "list[ConnectSipHeader]",
+        "max_duration": "float | SWMLVar",
+        "name": "str | SWMLVar",
+        "parallel": "list[ConnectDevice]",
+        "password": "str | SWMLVar",
+        "realtime": "bool | SWMLVar",
+        "result": "list[ConnectResultItem] | ConnectResult",
+        "ringback": "bool | str | list[str] | RingbackConfig",
+        "serial": "list[ConnectDevice]",
+        "serial_parallel": "list[ConnectSerialParallel]",
+        "session_timeout": "int | SWMLVar",
+        "status_url": "str | SWMLVar",
+        "status_url_method": "Literal['GET', 'POST'] | SWMLVar",
+        "stop_all_on_reject": "list[Any] | bool | str | SWMLVar",
+        "timeout": "int | SWMLVar",
+        "to": "str | SWMLVar",
+        "username": "str | SWMLVar",
+        "webrtc_media": "bool | SWMLVar",
+    },
+    total=False,
+)
+ConnectConfig.__doc__ = """Dial a SIP URI or phone number.
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    answer_on_bridge: bool | str | SWMLVar
-    authorization_bearer_token: str | SWMLVar
-    call_state_events: list[str] | SWMLVar
-    call_state_url: str | SWMLVar
-    codec: str | SWMLVar
-    codecs: str | list[Any] | SWMLVar
-    confirm: str | list[SWMLMethod] | ConnectConfirm | SWMLVar
-    confirm_timeout: int | SWMLVar
-    custom_parameters: dict[str, str] | SWMLVar
-    encryption: Literal["mandatory", "optional", "forbidden"] | SWMLVar
-    execute_after_queue: str | SWMLVar
-    # non-identifier field 'from': str | SWMLVar
-    from_name: str | SWMLVar
-    fsvars: dict[str, str] | SWMLVar
-    headers: list[ConnectSipHeader]
-    max_duration: float | SWMLVar
-    name: str | SWMLVar
-    parallel: list[ConnectDevice]
-    password: str | SWMLVar
-    realtime: bool | SWMLVar
-    result: list[ConnectResultItem] | ConnectResult
-    ringback: bool | str | list[str] | RingbackConfig
-    serial: list[ConnectDevice]
-    serial_parallel: list[ConnectSerialParallel]
-    session_timeout: int | SWMLVar
-    status_url: str | SWMLVar
-    status_url_method: Literal["GET", "POST"] | SWMLVar
-    stop_all_on_reject: list[Any] | bool | str | SWMLVar
-    timeout: int | SWMLVar
-    to: str | SWMLVar
-    username: str | SWMLVar
-    webrtc_media: bool | SWMLVar
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
 
 class ConnectConfirm(TypedDict, total=False):
@@ -1668,12 +1700,18 @@ class ConnectConfirm(TypedDict, total=False):
     meta: Any
 
 
-class ConnectResultItem(TypedDict, total=False):
+ConnectResultItem = TypedDict(
+    "ConnectResultItem",
+    {
+        "else": "list[SWMLMethod]",
+        "then": "list[SWMLMethod]",
+        "when": "str",
+    },
+    total=False,
+)
+ConnectResultItem.__doc__ = (
     """Open shape: extra server keys permitted; not validated at runtime."""
-
-    # non-identifier field 'else': list[SWMLMethod]
-    then: list[SWMLMethod]
-    when: str
+)
 
 
 class ConnectResult(TypedDict, total=False):
@@ -1775,12 +1813,18 @@ class ExecuteOnReturn(TypedDict, total=False):
     meta: Any
 
 
-class ExecuteResultItem(TypedDict, total=False):
+ExecuteResultItem = TypedDict(
+    "ExecuteResultItem",
+    {
+        "else": "list[SWMLMethod]",
+        "then": "list[SWMLMethod]",
+        "when": "str",
+    },
+    total=False,
+)
+ExecuteResultItem.__doc__ = (
     """Open shape: extra server keys permitted; not validated at runtime."""
-
-    # non-identifier field 'else': list[SWMLMethod]
-    then: list[SWMLMethod]
-    when: str
+)
 
 
 class ExecuteResult(TypedDict, total=False):

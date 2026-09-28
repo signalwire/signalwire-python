@@ -19,24 +19,28 @@ class ChargeDetail(TypedDict, total=False):
     charge: float
 
 
-class DialogflowVoiceLog(TypedDict, total=False):
-    """Voice log for Dialogflow call types. Returned when `type` is `dialogflow_call`.
+DialogflowVoiceLog = TypedDict(
+    "DialogflowVoiceLog",
+    {
+        "id": "uuid",
+        "from": "str",
+        "to": "str",
+        "source": "VoiceSources",
+        "charge": "float",
+        "charge_details": "list[ChargeDetail]",
+        "created_at": "str",
+        "type": "Literal['dialogflow_call']",
+        "url": "None",
+        "status": "VoiceLogStatus",
+        "duration": "int | None",
+    },
+    total=False,
+)
+DialogflowVoiceLog.__doc__ = """Voice log for Dialogflow call types. Returned when `type` is `dialogflow_call`.
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    id: uuid
-    # non-identifier field 'from': str
-    to: str
-    source: VoiceSources
-    charge: float
-    charge_details: list[ChargeDetail]
-    created_at: str
-    type: Literal["dialogflow_call"]
-    url: None
-    status: VoiceLogStatus
-    duration: int | None
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
 
 class DiscardedVoiceLog(TypedDict, total=False):
@@ -51,24 +55,28 @@ class DiscardedVoiceLog(TypedDict, total=False):
     created_at: str
 
 
-class FabricVoiceLog(TypedDict, total=False):
-    """Voice log for Fabric Subscriber Device call types. Returned when `type` is `fabric_subscriber_device_leg`.
+FabricVoiceLog = TypedDict(
+    "FabricVoiceLog",
+    {
+        "id": "uuid",
+        "from": "str",
+        "to": "str",
+        "source": "VoiceSources",
+        "charge": "float",
+        "charge_details": "list[ChargeDetail]",
+        "created_at": "str",
+        "type": "Literal['fabric_subscriber_device_leg']",
+        "url": "None",
+        "direction": "VoiceDirection",
+        "status": "VoiceLogStatus | None",
+    },
+    total=False,
+)
+FabricVoiceLog.__doc__ = """Voice log for Fabric Subscriber Device call types. Returned when `type` is `fabric_subscriber_device_leg`.
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    id: uuid
-    # non-identifier field 'from': str
-    to: str
-    source: VoiceSources
-    charge: float
-    charge_details: list[ChargeDetail]
-    created_at: str
-    type: Literal["fabric_subscriber_device_leg"]
-    url: None
-    direction: VoiceDirection
-    status: VoiceLogStatus | None
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
 
 class LogEvent(TypedDict, total=False):
@@ -120,29 +128,32 @@ class LogPaginationResponse(TypedDict, total=False):
     prev: str
 
 
-class RelayVoiceLog(TypedDict, total=False):
-    """Voice log for Compatibility and Relay call types. Returned when `type` is `laml_call`, `relay_pstn_call`, `relay_sip_call`, or `relay_webrtc_call`.
+RelayVoiceLog = TypedDict(
+    "RelayVoiceLog",
+    {
+        "id": "uuid",
+        "from": "str",
+        "to": "str",
+        "source": "VoiceSources",
+        "charge": "float",
+        "charge_details": "list[ChargeDetail]",
+        "created_at": "str",
+        "type": "RelayVoiceType",
+        "url": "str | None",
+        "direction": "VoiceDirection",
+        "status": "VoiceLogStatus",
+        "duration": "int | None",
+        "duration_ms": "int | None",
+        "billing_ms": "int | None",
+        "parent_id": "str | None",
+    },
+    total=False,
+)
+RelayVoiceLog.__doc__ = """Voice log for Compatibility and Relay call types. Returned when `type` is `laml_call`, `relay_pstn_call`, `relay_sip_call`, or `relay_webrtc_call`.
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    id: uuid
-    # non-identifier field 'from': str
-    to: str
-    source: VoiceSources
-    charge: float
-    charge_details: list[ChargeDetail]
-    created_at: str
-    type: RelayVoiceType
-    url: str | None
-    direction: VoiceDirection
-    status: VoiceLogStatus
-    duration: int | None
-    duration_ms: int | None
-    billing_ms: int | None
-    parent_id: str | None
-
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
 RelayVoiceType: TypeAlias = (
     "Literal['laml_call', 'relay_pstn_call', 'relay_sip_call', 'relay_webrtc_call']"
@@ -213,27 +224,30 @@ class Types_StatusCodes_StatusCode500(TypedDict, total=False):
     error: Literal["Internal Server Error"]
 
 
-class VideoRoomVoiceLog(TypedDict, total=False):
-    """Voice log for audio legs in a Video Room. Returned when `type` is `video_room_pstn_leg` or `video_room_sip_leg`.
+VideoRoomVoiceLog = TypedDict(
+    "VideoRoomVoiceLog",
+    {
+        "id": "uuid",
+        "from": "str",
+        "to": "str",
+        "source": "VoiceSources",
+        "charge": "float",
+        "charge_details": "list[ChargeDetail]",
+        "created_at": "str",
+        "type": "VideoRoomVoiceType",
+        "url": "None",
+        "direction": "VoiceDirection",
+        "status": "VoiceLogStatus",
+        "duration": "int | None",
+        "duration_ms": "int | None",
+    },
+    total=False,
+)
+VideoRoomVoiceLog.__doc__ = """Voice log for audio legs in a Video Room. Returned when `type` is `video_room_pstn_leg` or `video_room_sip_leg`.
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    id: uuid
-    # non-identifier field 'from': str
-    to: str
-    source: VoiceSources
-    charge: float
-    charge_details: list[ChargeDetail]
-    created_at: str
-    type: VideoRoomVoiceType
-    url: None
-    direction: VoiceDirection
-    status: VoiceLogStatus
-    duration: int | None
-    duration_ms: int | None
-
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
 VideoRoomVoiceType: TypeAlias = "Literal['video_room_pstn_leg', 'video_room_sip_leg']"
 

@@ -680,20 +680,24 @@ class MembershipPhoneNumber(TypedDict, total=False):
     capabilities: list[str]
 
 
-class MfaRequest(TypedDict, total=False):
-    """MFA request model.
+MfaRequest = TypedDict(
+    "MfaRequest",
+    {
+        "to": "str",
+        "from": "str",
+        "message": "str",
+        "token_length": "int",
+        "valid_for": "int",
+        "max_attempts": "int",
+        "allow_alphas": "bool",
+    },
+    total=False,
+)
+MfaRequest.__doc__ = """MFA request model.
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    to: str
-    # non-identifier field 'from': str
-    message: str
-    token_length: int
-    valid_for: int
-    max_attempts: int
-    allow_alphas: bool
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
 
 class MfaResponse(TypedDict, total=False):

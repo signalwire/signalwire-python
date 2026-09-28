@@ -7,21 +7,24 @@
 from __future__ import annotations
 from typing import Literal, TypeAlias, TypedDict
 
+CreateMessageRequest = TypedDict(
+    "CreateMessageRequest",
+    {
+        "to": "str",
+        "from": "str",
+        "body": "str",
+        "media": "list[str]",
+        "send_as_mms": "bool",
+        "status_callback": "str",
+        "custom_variables": "dict[str, str]",
+    },
+    total=False,
+)
+CreateMessageRequest.__doc__ = """Request body for sending a new SMS or MMS message.
 
-class CreateMessageRequest(TypedDict, total=False):
-    """Request body for sending a new SMS or MMS message.
-
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    to: str
-    # non-identifier field 'from': str
-    body: str
-    media: list[str]
-    send_as_mms: bool
-    status_callback: str
-    custom_variables: dict[str, str]
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
 
 class UpdateMessageRequest(TypedDict, total=False):
@@ -34,29 +37,32 @@ class UpdateMessageRequest(TypedDict, total=False):
     body: str
 
 
-class Message(TypedDict, total=False):
-    """A message record. Returned by the create and update endpoints.
+Message = TypedDict(
+    "Message",
+    {
+        "id": "uuid",
+        "from": "str",
+        "to": "str",
+        "body": "str",
+        "status": "MessageStatus",
+        "direction": "MessageDirection",
+        "kind": "MessageKind",
+        "media": "list[str]",
+        "number_of_segments": "int",
+        "error_code": "str | None",
+        "error_message": "str | None",
+        "created_at": "str",
+        "project_id": "uuid",
+        "status_callback_url": "str | None",
+        "message_uri": "str",
+    },
+    total=False,
+)
+Message.__doc__ = """A message record. Returned by the create and update endpoints.
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    id: uuid
-    # non-identifier field 'from': str
-    to: str
-    body: str
-    status: MessageStatus
-    direction: MessageDirection
-    kind: MessageKind
-    media: list[str]
-    number_of_segments: int
-    error_code: str | None
-    error_message: str | None
-    created_at: str
-    project_id: uuid
-    status_callback_url: str | None
-    message_uri: str
-
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
 MessageStatus: TypeAlias = "Literal['queued', 'initiated', 'sent', 'delivered', 'undelivered', 'failed', 'read']"
 

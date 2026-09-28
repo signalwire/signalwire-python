@@ -304,35 +304,42 @@ class CallCreate422Error(TypedDict, total=False):
     errors: list[Types_StatusCodes_RestApiErrorItem]
 
 
-class CallCreateParamsSWML(TypedDict, total=False):
+CallCreateParamsSWML = TypedDict(
+    "CallCreateParamsSWML",
+    {
+        "from": "str",
+        "to": "str",
+        "caller_id": "str",
+        "fallback_url": "str",
+        "status_url": "str",
+        "status_events": "list[Literal['answered', 'queued', 'initiated', 'ringing', 'ending', 'ended']]",
+        "url_method": "str",
+        "codecs": "list[str] | str",
+        "swml": "SWMLObject",
+    },
+    total=False,
+)
+CallCreateParamsSWML.__doc__ = (
     """Open shape: extra server keys permitted; not validated at runtime."""
+)
 
-    # non-identifier field 'from': str
-    to: str
-    caller_id: str
-    fallback_url: str
-    status_url: str
-    status_events: list[
-        Literal["answered", "queued", "initiated", "ringing", "ending", "ended"]
-    ]
-    url_method: str
-    codecs: list[str] | str
-    swml: SWMLObject
-
-
-class CallCreateParamsURL(TypedDict, total=False):
+CallCreateParamsURL = TypedDict(
+    "CallCreateParamsURL",
+    {
+        "from": "str",
+        "to": "str",
+        "caller_id": "str",
+        "fallback_url": "str",
+        "status_url": "str",
+        "status_events": "list[Literal['answered', 'queued', 'initiated', 'ringing', 'ending', 'ended']]",
+        "url_method": "str",
+        "url": "str",
+    },
+    total=False,
+)
+CallCreateParamsURL.__doc__ = (
     """Open shape: extra server keys permitted; not validated at runtime."""
-
-    # non-identifier field 'from': str
-    to: str
-    caller_id: str
-    fallback_url: str
-    status_url: str
-    status_events: list[
-        Literal["answered", "queued", "initiated", "ringing", "ending", "ended"]
-    ]
-    url_method: str
-    url: str
+)
 
 
 class CallCreateRequest(TypedDict, total=False):
@@ -361,32 +368,32 @@ class CallHoldRequest(TypedDict, total=False):
     params: dict[str, Any]
 
 
-class CallLeg(TypedDict, total=False):
-    """A Call leg (PSTN, SIP, or WebRTC).
+CallLeg = TypedDict(
+    "CallLeg",
+    {
+        "id": "uuid",
+        "from": "str",
+        "to": "str",
+        "direction": "CallDirection",
+        "source": "Literal['realtime_api']",
+        "url": "str | None",
+        "charge": "float",
+        "created_at": "str",
+        "charge_details": "list[ChargeDetails]",
+        "status": "CallResponseStatus | None",
+        "duration": "int | None",
+        "duration_ms": "int | None",
+        "billing_ms": "int | None",
+        "type": "Literal['relay_pstn_call'] | Literal['relay_sip_call'] | Literal['relay_webrtc_call']",
+        "parent_id": "uuid | None",
+    },
+    total=False,
+)
+CallLeg.__doc__ = """A Call leg (PSTN, SIP, or WebRTC).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    id: uuid
-    # non-identifier field 'from': str
-    to: str
-    direction: CallDirection
-    source: Literal["realtime_api"]
-    url: str | None
-    charge: float
-    created_at: str
-    charge_details: list[ChargeDetails]
-    status: CallResponseStatus | None
-    duration: int | None
-    duration_ms: int | None
-    billing_ms: int | None
-    type: (
-        Literal["relay_pstn_call"]
-        | Literal["relay_sip_call"]
-        | Literal["relay_webrtc_call"]
-    )
-    parent_id: uuid | None
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
 
 class CallLiveTranscribeRequest(TypedDict, total=False):
@@ -707,21 +714,31 @@ class Cond(TypedDict, total=False):
     cond: list[CondParams]
 
 
-class CondElse(TypedDict, total=False):
+CondElse = TypedDict(
+    "CondElse",
+    {
+        "else": "list[SWMLMethod]",
+    },
+    total=False,
+)
+CondElse.__doc__ = (
     """Open shape: extra server keys permitted; not validated at runtime."""
-
-    # non-identifier field 'else': list[SWMLMethod]
-
+)
 
 CondParams: TypeAlias = "CondReg | CondElse"
 
-
-class CondReg(TypedDict, total=False):
+CondReg = TypedDict(
+    "CondReg",
+    {
+        "when": "str",
+        "then": "list[SWMLMethod]",
+        "else": "list[SWMLMethod]",
+    },
+    total=False,
+)
+CondReg.__doc__ = (
     """Open shape: extra server keys permitted; not validated at runtime."""
-
-    when: str
-    then: list[SWMLMethod]
-    # non-identifier field 'else': list[SWMLMethod]
+)
 
 
 class Connect(TypedDict, total=False):
@@ -735,110 +752,131 @@ class Connect(TypedDict, total=False):
     )
 
 
-class ConnectDeviceParallel(TypedDict, total=False):
+ConnectDeviceParallel = TypedDict(
+    "ConnectDeviceParallel",
+    {
+        "from": "str",
+        "headers": "list[ConnectHeaders]",
+        "codecs": "str",
+        "webrtc_media": "bool | SWMLVar",
+        "session_timeout": "int | SWMLVar",
+        "ringback": "list[str]",
+        "result": "ConnectSwitch | list[CondParams]",
+        "timeout": "int | SWMLVar",
+        "max_duration": "int | SWMLVar",
+        "answer_on_bridge": "bool | SWMLVar",
+        "confirm": "str | list[ValidConfirmMethods]",
+        "confirm_timeout": "int | SWMLVar",
+        "username": "str",
+        "password": "str",
+        "encryption": "Literal['mandatory', 'optional', 'forbidden']",
+        "call_state_url": "str",
+        "transfer_after_bridge": "str | SWMLVar",
+        "call_state_events": "list[CallStatus]",
+        "status_url": "str",
+        "parallel": "list[ConnectDeviceSingle]",
+    },
+    total=False,
+)
+ConnectDeviceParallel.__doc__ = (
     """Open shape: extra server keys permitted; not validated at runtime."""
+)
 
-    # non-identifier field 'from': str
-    headers: list[ConnectHeaders]
-    codecs: str
-    webrtc_media: bool | SWMLVar
-    session_timeout: int | SWMLVar
-    ringback: list[str]
-    result: ConnectSwitch | list[CondParams]
-    timeout: int | SWMLVar
-    max_duration: int | SWMLVar
-    answer_on_bridge: bool | SWMLVar
-    confirm: str | list[ValidConfirmMethods]
-    confirm_timeout: int | SWMLVar
-    username: str
-    password: str
-    encryption: Literal["mandatory", "optional", "forbidden"]
-    call_state_url: str
-    transfer_after_bridge: str | SWMLVar
-    call_state_events: list[CallStatus]
-    status_url: str
-    parallel: list[ConnectDeviceSingle]
-
-
-class ConnectDeviceSerial(TypedDict, total=False):
+ConnectDeviceSerial = TypedDict(
+    "ConnectDeviceSerial",
+    {
+        "from": "str",
+        "headers": "list[ConnectHeaders]",
+        "codecs": "str",
+        "webrtc_media": "bool | SWMLVar",
+        "session_timeout": "int | SWMLVar",
+        "ringback": "list[str]",
+        "result": "ConnectSwitch | list[CondParams]",
+        "timeout": "int | SWMLVar",
+        "max_duration": "int | SWMLVar",
+        "answer_on_bridge": "bool | SWMLVar",
+        "confirm": "str | list[ValidConfirmMethods]",
+        "confirm_timeout": "int | SWMLVar",
+        "username": "str",
+        "password": "str",
+        "encryption": "Literal['mandatory', 'optional', 'forbidden']",
+        "call_state_url": "str",
+        "transfer_after_bridge": "str | SWMLVar",
+        "call_state_events": "list[CallStatus]",
+        "status_url": "str",
+        "serial": "list[ConnectDeviceSingle]",
+    },
+    total=False,
+)
+ConnectDeviceSerial.__doc__ = (
     """Open shape: extra server keys permitted; not validated at runtime."""
+)
 
-    # non-identifier field 'from': str
-    headers: list[ConnectHeaders]
-    codecs: str
-    webrtc_media: bool | SWMLVar
-    session_timeout: int | SWMLVar
-    ringback: list[str]
-    result: ConnectSwitch | list[CondParams]
-    timeout: int | SWMLVar
-    max_duration: int | SWMLVar
-    answer_on_bridge: bool | SWMLVar
-    confirm: str | list[ValidConfirmMethods]
-    confirm_timeout: int | SWMLVar
-    username: str
-    password: str
-    encryption: Literal["mandatory", "optional", "forbidden"]
-    call_state_url: str
-    transfer_after_bridge: str | SWMLVar
-    call_state_events: list[CallStatus]
-    status_url: str
-    serial: list[ConnectDeviceSingle]
-
-
-class ConnectDeviceSerialParallel(TypedDict, total=False):
+ConnectDeviceSerialParallel = TypedDict(
+    "ConnectDeviceSerialParallel",
+    {
+        "from": "str",
+        "headers": "list[ConnectHeaders]",
+        "codecs": "str",
+        "webrtc_media": "bool | SWMLVar",
+        "session_timeout": "int | SWMLVar",
+        "ringback": "list[str]",
+        "result": "ConnectSwitch | list[CondParams]",
+        "timeout": "int | SWMLVar",
+        "max_duration": "int | SWMLVar",
+        "answer_on_bridge": "bool | SWMLVar",
+        "confirm": "str | list[ValidConfirmMethods]",
+        "confirm_timeout": "int | SWMLVar",
+        "username": "str",
+        "password": "str",
+        "encryption": "Literal['mandatory', 'optional', 'forbidden']",
+        "call_state_url": "str",
+        "transfer_after_bridge": "str | SWMLVar",
+        "call_state_events": "list[CallStatus]",
+        "status_url": "str",
+        "serial_parallel": "list[list[ConnectDeviceSingle]]",
+    },
+    total=False,
+)
+ConnectDeviceSerialParallel.__doc__ = (
     """Open shape: extra server keys permitted; not validated at runtime."""
+)
 
-    # non-identifier field 'from': str
-    headers: list[ConnectHeaders]
-    codecs: str
-    webrtc_media: bool | SWMLVar
-    session_timeout: int | SWMLVar
-    ringback: list[str]
-    result: ConnectSwitch | list[CondParams]
-    timeout: int | SWMLVar
-    max_duration: int | SWMLVar
-    answer_on_bridge: bool | SWMLVar
-    confirm: str | list[ValidConfirmMethods]
-    confirm_timeout: int | SWMLVar
-    username: str
-    password: str
-    encryption: Literal["mandatory", "optional", "forbidden"]
-    call_state_url: str
-    transfer_after_bridge: str | SWMLVar
-    call_state_events: list[CallStatus]
-    status_url: str
-    serial_parallel: list[list[ConnectDeviceSingle]]
-
-
-class ConnectDeviceSingle(TypedDict, total=False):
+ConnectDeviceSingle = TypedDict(
+    "ConnectDeviceSingle",
+    {
+        "from": "str",
+        "headers": "list[ConnectHeaders]",
+        "codecs": "str",
+        "webrtc_media": "bool | SWMLVar",
+        "session_timeout": "int | SWMLVar",
+        "ringback": "list[str]",
+        "result": "ConnectSwitch | list[CondParams]",
+        "timeout": "int | SWMLVar",
+        "max_duration": "int | SWMLVar",
+        "answer_on_bridge": "bool | SWMLVar",
+        "confirm": "str | list[ValidConfirmMethods]",
+        "confirm_timeout": "int | SWMLVar",
+        "username": "str",
+        "password": "str",
+        "encryption": "Literal['mandatory', 'optional', 'forbidden']",
+        "call_state_url": "str",
+        "transfer_after_bridge": "str | SWMLVar",
+        "call_state_events": "list[CallStatus]",
+        "status_url": "str",
+        "to": "str",
+        "name": "str",
+        "codec": "str",
+        "realtime": "bool | SWMLVar",
+        "status_url_method": "Literal['GET', 'POST']",
+        "authorization_bearer_token": "str",
+        "custom_parameters": "dict[str, Any]",
+    },
+    total=False,
+)
+ConnectDeviceSingle.__doc__ = (
     """Open shape: extra server keys permitted; not validated at runtime."""
-
-    # non-identifier field 'from': str
-    headers: list[ConnectHeaders]
-    codecs: str
-    webrtc_media: bool | SWMLVar
-    session_timeout: int | SWMLVar
-    ringback: list[str]
-    result: ConnectSwitch | list[CondParams]
-    timeout: int | SWMLVar
-    max_duration: int | SWMLVar
-    answer_on_bridge: bool | SWMLVar
-    confirm: str | list[ValidConfirmMethods]
-    confirm_timeout: int | SWMLVar
-    username: str
-    password: str
-    encryption: Literal["mandatory", "optional", "forbidden"]
-    call_state_url: str
-    transfer_after_bridge: str | SWMLVar
-    call_state_events: list[CallStatus]
-    status_url: str
-    to: str
-    name: str
-    codec: str
-    realtime: bool | SWMLVar
-    status_url_method: Literal["GET", "POST"]
-    authorization_bearer_token: str
-    custom_parameters: dict[str, Any]
+)
 
 
 class ConnectHeaders(TypedDict, total=False):
@@ -1004,25 +1042,28 @@ class Expression(TypedDict, total=False):
     output: Output
 
 
-class FabricDeviceLeg(TypedDict, total=False):
-    """A Fabric subscriber device leg.
+FabricDeviceLeg = TypedDict(
+    "FabricDeviceLeg",
+    {
+        "id": "uuid",
+        "from": "str",
+        "to": "str",
+        "direction": "CallDirection",
+        "source": "Literal['realtime_api']",
+        "url": "str | None",
+        "charge": "float",
+        "created_at": "str",
+        "charge_details": "list[ChargeDetails]",
+        "status": "None",
+        "type": "Literal['fabric_subscriber_device_leg']",
+    },
+    total=False,
+)
+FabricDeviceLeg.__doc__ = """A Fabric subscriber device leg.
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    id: uuid
-    # non-identifier field 'from': str
-    to: str
-    direction: CallDirection
-    source: Literal["realtime_api"]
-    url: str | None
-    charge: float
-    created_at: str
-    charge_details: list[ChargeDetails]
-    status: None
-    type: Literal["fabric_subscriber_device_leg"]
-
+Open shape: extra server keys are permitted and partial payloads are valid;
+not validated at runtime (a TypedDict is a plain ``dict``).
+"""
 
 FunctionFillers: TypeAlias = "dict[str, Any]"
 
@@ -1333,14 +1374,20 @@ class PayPromptSayAction(TypedDict, total=False):
     phrase: str
 
 
-class PayPrompts(TypedDict, total=False):
+PayPrompts = TypedDict(
+    "PayPrompts",
+    {
+        "actions": "list[PayPromptAction]",
+        "for": "str",
+        "attempts": "str",
+        "card_type": "str",
+        "error_type": "str",
+    },
+    total=False,
+)
+PayPrompts.__doc__ = (
     """Open shape: extra server keys permitted; not validated at runtime."""
-
-    actions: list[PayPromptAction]
-    # non-identifier field 'for': str
-    attempts: str
-    card_type: str
-    error_type: str
+)
 
 
 class Play(TypedDict, total=False):
@@ -1419,12 +1466,18 @@ class Prompt(TypedDict, total=False):
     prompt: dict[str, Any]
 
 
-class Pronounce(TypedDict, total=False):
+Pronounce = TypedDict(
+    "Pronounce",
+    {
+        "replace": "str",
+        "with": "str",
+        "ignore_case": "bool | SWMLVar",
+    },
+    total=False,
+)
+Pronounce.__doc__ = (
     """Open shape: extra server keys permitted; not validated at runtime."""
-
-    replace: str
-    # non-identifier field 'with': str
-    ignore_case: bool | SWMLVar
+)
 
 
 class ReceiveFax(TypedDict, total=False):
@@ -1451,10 +1504,16 @@ class Request(TypedDict, total=False):
     request: dict[str, Any]
 
 
-class Return(TypedDict, total=False):
+Return = TypedDict(
+    "Return",
+    {
+        "return": "dict[str, Any]",
+    },
+    total=False,
+)
+Return.__doc__ = (
     """Open shape: extra server keys permitted; not validated at runtime."""
-
-    # non-identifier field 'return': dict[str, Any]
+)
 
 
 class SIPRefer(TypedDict, total=False):

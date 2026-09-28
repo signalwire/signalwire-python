@@ -15,35 +15,31 @@ class ChargeDetail(TypedDict, total=False):
     charge: float
 
 
-class FaxLog(TypedDict, total=False):
+FaxLog = TypedDict(
+    "FaxLog",
+    {
+        "id": "uuid",
+        "from": "str | None",
+        "to": "str | None",
+        "status": "Literal['queued', 'initiated', 'ringing', 'in-progress', 'busy', 'failed', 'no-answer', 'canceled', 'completed']",
+        "direction": "Literal['inbound', 'outbound-api', 'outbound-dial'] | None",
+        "source": "Literal['laml']",
+        "type": "Literal['laml_call']",
+        "url": "str",
+        "remote_station": "str | None",
+        "charge": "float",
+        "number_of_pages": "int | None",
+        "quality": "Literal['fine', 'standard', 'superfine'] | None",
+        "charge_details": "list[ChargeDetail]",
+        "created_at": "str",
+        "error_code": "str | None",
+        "error_message": "str | None",
+    },
+    total=False,
+)
+FaxLog.__doc__ = (
     """Open shape: extra server keys permitted; not validated at runtime."""
-
-    id: uuid
-    # non-identifier field 'from': str | None
-    to: str | None
-    status: Literal[
-        "queued",
-        "initiated",
-        "ringing",
-        "in-progress",
-        "busy",
-        "failed",
-        "no-answer",
-        "canceled",
-        "completed",
-    ]
-    direction: Literal["inbound", "outbound-api", "outbound-dial"] | None
-    source: Literal["laml"]
-    type: Literal["laml_call"]
-    url: str
-    remote_station: str | None
-    charge: float
-    number_of_pages: int | None
-    quality: Literal["fine", "standard", "superfine"] | None
-    charge_details: list[ChargeDetail]
-    created_at: str
-    error_code: str | None
-    error_message: str | None
+)
 
 
 class FaxLogShowStatusCode422(TypedDict, total=False):
@@ -82,35 +78,31 @@ class LogPaginationResponse(TypedDict, total=False):
     prev: str
 
 
-class LogResponse(TypedDict, total=False):
+LogResponse = TypedDict(
+    "LogResponse",
+    {
+        "id": "uuid",
+        "from": "str | None",
+        "to": "str | None",
+        "status": "Literal['queued', 'initiated', 'ringing', 'in-progress', 'busy', 'failed', 'no-answer', 'canceled', 'completed']",
+        "direction": "Literal['inbound', 'outbound-api', 'outbound-dial'] | None",
+        "source": "Literal['laml']",
+        "type": "Literal['laml_call']",
+        "url": "str",
+        "remote_station": "str | None",
+        "charge": "float",
+        "number_of_pages": "int | None",
+        "quality": "Literal['fine', 'standard', 'superfine'] | None",
+        "charge_details": "list[ChargeDetail]",
+        "created_at": "str",
+        "error_code": "str | None",
+        "error_message": "str | None",
+    },
+    total=False,
+)
+LogResponse.__doc__ = (
     """Open shape: extra server keys permitted; not validated at runtime."""
-
-    id: uuid
-    # non-identifier field 'from': str | None
-    to: str | None
-    status: Literal[
-        "queued",
-        "initiated",
-        "ringing",
-        "in-progress",
-        "busy",
-        "failed",
-        "no-answer",
-        "canceled",
-        "completed",
-    ]
-    direction: Literal["inbound", "outbound-api", "outbound-dial"] | None
-    source: Literal["laml"]
-    type: Literal["laml_call"]
-    url: str
-    remote_station: str | None
-    charge: float
-    number_of_pages: int | None
-    quality: Literal["fine", "standard", "superfine"] | None
-    charge_details: list[ChargeDetail]
-    created_at: str
-    error_code: str | None
-    error_message: str | None
+)
 
 
 class Types_StatusCodes_RestApiErrorItem(TypedDict, total=False):
