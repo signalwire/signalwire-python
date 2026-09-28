@@ -68,14 +68,23 @@ class SWMLBuilder(_VerbsBase):
         self._create_verb_methods()
 
     def answer(
-        self, max_duration: int | None = None, codecs: str | None = None
+        self,
+        max_duration: int | None = None,
+        codecs: str | list[str] | None = None,
+        fsvars: dict[str, str] | None = None,
+        username: str | None = None,
+        password: str | None = None,
     ) -> Self:
         """
         Add an 'answer' verb to the main section
 
         Args:
             max_duration: Maximum duration in seconds
-            codecs: Comma-separated list of codecs
+            codecs: Codecs to offer — a comma-separated string or a list
+                (PCMU, PCMA, G722, G729, AMR-WB, OPUS, VP8, H264)
+            fsvars: Channel variables to set on answer (name -> string value)
+            username: Username to use for SIP authentication
+            password: Password to use for SIP authentication
 
         Returns:
             Self for method chaining
@@ -85,6 +94,12 @@ class SWMLBuilder(_VerbsBase):
             config["max_duration"] = max_duration
         if codecs is not None:
             config["codecs"] = codecs
+        if fsvars is not None:
+            config["fsvars"] = fsvars
+        if username is not None:
+            config["username"] = username
+        if password is not None:
+            config["password"] = password
         self.service.add_verb("answer", config)
         return self
 
@@ -161,6 +176,8 @@ class SWMLBuilder(_VerbsBase):
         say_language: str | None = None,
         say_gender: str | None = None,
         auto_answer: bool | None = None,
+        loop: int | None = None,
+        status_url: str | None = None,
     ) -> Self:
         """
         Add a 'play' verb to the main section
@@ -173,6 +190,8 @@ class SWMLBuilder(_VerbsBase):
             say_language: Language for text-to-speech
             say_gender: Gender for text-to-speech
             auto_answer: Whether to auto-answer the call
+            loop: How many times to play (0 = until the call ends)
+            status_url: http(s) URL to deliver play status events
 
         Returns:
             Self for method chaining
@@ -199,6 +218,10 @@ class SWMLBuilder(_VerbsBase):
             config["say_gender"] = say_gender
         if auto_answer is not None:
             config["auto_answer"] = auto_answer
+        if loop is not None:
+            config["loop"] = loop
+        if status_url is not None:
+            config["status_url"] = status_url
 
         # Add the verb
         self.service.add_verb("play", config)
