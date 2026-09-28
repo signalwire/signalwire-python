@@ -1,8 +1,9 @@
-# AUTO-GENERATED from porting-sdk/relay-protocol/*.{params,result}.json — DO NOT EDIT.
+# AUTO-GENERATED from porting-sdk/combined-specs/relay.yaml — DO NOT EDIT.
 # Regenerate: python3 porting-sdk/scripts/generate_python_rest_types.py
 #
 # One TypedDict per RELAY method's params (<Method>Params) and ack result
-# (<Method>Result), from the canonical switchblade wire schemas. STATIC-ONLY:
+# (<Method>Result), read through porting-sdk/scripts/relay_protocol_shapes.py
+# (the one RELAY reader every port generator uses). STATIC-ONLY:
 # at runtime each is a plain dict; the wire layer stays untyped and tolerant.
 from __future__ import annotations
 from typing import Any, TypeAlias, TypedDict
@@ -810,7 +811,7 @@ class CallingUserEventParams(TypedDict, total=False):
 
 
 class MessagingSendParams(TypedDict, total=False):
-    """Permissive schema for the messaging.send RPC params. Switchblade forwards the JObject as-is to the messaging gateway, so the schema is derived from the Python relay client (``signalwire/relay/client.py:send_message``). At least one of `body` or `media` is required.
+    """Wire schema for the JSON payload of `messaging.send` (params). Extracted from messaging-python `client.py`.
 
     Open shape: extra server keys are permitted and partial payloads are valid;
     not validated at runtime (a TypedDict is a plain ``dict``).
@@ -826,7 +827,7 @@ class MessagingSendParams(TypedDict, total=False):
 
 
 class SignalwireConnectParams(TypedDict, total=False):
-    """Wire schema for the Blade envelope `signalwire.connect` (params). Extracted from switchblade `Messages/ConnectParams.cs`.
+    """Wire schema for the JSON payload of `signalwire.connect` (params). Extracted from blade `ConnectParams.cs`.
 
     Open shape: extra server keys are permitted and partial payloads are valid;
     not validated at runtime (a TypedDict is a plain ``dict``).
@@ -842,7 +843,7 @@ class SignalwireConnectParams(TypedDict, total=False):
 
 
 class SignalwireDisconnectParams(TypedDict, total=False):
-    """Wire schema for the Blade envelope `signalwire.disconnect` (params). Extracted from switchblade `Messages/DisconnectParams.cs`.
+    """Wire schema for the JSON payload of `signalwire.disconnect` (params). Extracted from blade `DisconnectParams.cs`.
 
     Open shape: extra server keys are permitted and partial payloads are valid;
     not validated at runtime (a TypedDict is a plain ``dict``).
@@ -852,7 +853,7 @@ class SignalwireDisconnectParams(TypedDict, total=False):
 
 
 class SignalwireExecuteParams(TypedDict, total=False):
-    """Wire schema for the Blade envelope `signalwire.execute` (params). Extracted from switchblade `Messages/ExecuteParams.cs`.
+    """Wire schema for the JSON payload of `signalwire.execute` (params). Extracted from blade `ExecuteParams.cs`.
 
     Open shape: extra server keys are permitted and partial payloads are valid;
     not validated at runtime (a TypedDict is a plain ``dict``).
@@ -869,7 +870,7 @@ class SignalwireExecuteParams(TypedDict, total=False):
 
 
 class SignalwirePingParams(TypedDict, total=False):
-    """Wire schema for the Blade envelope `signalwire.ping` (params). Extracted from switchblade `Messages/PingParams.cs`.
+    """Wire schema for the JSON payload of `signalwire.ping` (params). Extracted from blade `PingParams.cs`.
 
     Open shape: extra server keys are permitted and partial payloads are valid;
     not validated at runtime (a TypedDict is a plain ``dict``).
@@ -880,7 +881,7 @@ class SignalwirePingParams(TypedDict, total=False):
 
 
 class SignalwireReauthenticateParams(TypedDict, total=False):
-    """Wire schema for the Blade envelope `signalwire.reauthenticate` (params). Extracted from switchblade `Messages/ReauthenticateParams.cs`.
+    """Wire schema for the JSON payload of `signalwire.reauthenticate` (params). Extracted from blade `ReauthenticateParams.cs`.
 
     Open shape: extra server keys are permitted and partial payloads are valid;
     not validated at runtime (a TypedDict is a plain ``dict``).
@@ -1280,8 +1281,8 @@ class CallingPayStopResult(TypedDict, total=False):
     message: str
 
 
-class CallingPlayPauseResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.play.pause` (result). Extracted from switchblade `PublicCallPlayPauseResult.cs`.
+class CallingPlayResult(TypedDict, total=False):
+    """Wire schema for the JSON payload of `calling.play` (result). Extracted from switchblade `PublicCallPlayResult.cs`.
 
     Open shape: extra server keys are permitted and partial payloads are valid;
     not validated at runtime (a TypedDict is a plain ``dict``).
@@ -1294,8 +1295,8 @@ class CallingPlayPauseResult(TypedDict, total=False):
     message: str
 
 
-class CallingPlayResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.play` (result). Extracted from switchblade `PublicCallPlayResult.cs`.
+class CallingPlayPauseResult(TypedDict, total=False):
+    """Wire schema for the JSON payload of `calling.play.pause` (result). Extracted from switchblade `PublicCallPlayPauseResult.cs`.
 
     Open shape: extra server keys are permitted and partial payloads are valid;
     not validated at runtime (a TypedDict is a plain ``dict``).
@@ -1459,20 +1460,6 @@ class CallingReceiveFaxStopResult(TypedDict, total=False):
     message: str
 
 
-class CallingRecordPauseResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.record.pause` (result). Extracted from switchblade `PublicCallRecordPauseResult.cs`.
-
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    call_id: str
-    code: str
-    control_id: str
-    data: Any
-    message: str
-
-
 class CallingRecordResult(TypedDict, total=False):
     """Wire schema for the JSON payload of `calling.record` (result). Extracted from switchblade `PublicCallRecordResult.cs`.
 
@@ -1486,6 +1473,20 @@ class CallingRecordResult(TypedDict, total=False):
     data: Any
     message: str
     url: str
+
+
+class CallingRecordPauseResult(TypedDict, total=False):
+    """Wire schema for the JSON payload of `calling.record.pause` (result). Extracted from switchblade `PublicCallRecordPauseResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
+
+    call_id: str
+    code: str
+    control_id: str
+    data: Any
+    message: str
 
 
 class CallingRecordResumeResult(TypedDict, total=False):
@@ -1654,7 +1655,7 @@ class CallingUserEventResult(TypedDict, total=False):
 
 
 class MessagingSendResult(TypedDict, total=False):
-    """Permissive schema for the messaging.send RPC response. The message_id from the response is used to route subsequent messaging.state events.
+    """Wire schema for the JSON payload of `messaging.send` (result). Extracted from messaging-python `client.py`.
 
     Open shape: extra server keys are permitted and partial payloads are valid;
     not validated at runtime (a TypedDict is a plain ``dict``).
@@ -1666,7 +1667,7 @@ class MessagingSendResult(TypedDict, total=False):
 
 
 class SignalwireConnectResult(TypedDict, total=False):
-    """Wire schema for the Blade envelope `signalwire.connect` (result). Extracted from switchblade `Messages/ConnectResult.cs`.
+    """Wire schema for the JSON payload of `signalwire.connect` (result). Extracted from blade `ConnectResult.cs`.
 
     Open shape: extra server keys are permitted and partial payloads are valid;
     not validated at runtime (a TypedDict is a plain ``dict``).
@@ -1693,7 +1694,7 @@ SignalwireDisconnectResult: TypeAlias = "dict[str, Any]"
 
 
 class SignalwireExecuteResult(TypedDict, total=False):
-    """Wire schema for the Blade envelope `signalwire.execute` (result). Extracted from switchblade `Messages/ExecuteResult.cs`.
+    """Wire schema for the JSON payload of `signalwire.execute` (result). Extracted from blade `ExecuteResult.cs`.
 
     Open shape: extra server keys are permitted and partial payloads are valid;
     not validated at runtime (a TypedDict is a plain ``dict``).
@@ -1705,7 +1706,7 @@ class SignalwireExecuteResult(TypedDict, total=False):
 
 
 class SignalwirePingResult(TypedDict, total=False):
-    """Wire schema for the Blade envelope `signalwire.ping` (result). Extracted from switchblade `Messages/PingResult.cs`.
+    """Wire schema for the JSON payload of `signalwire.ping` (result). Extracted from blade `PingResult.cs`.
 
     Open shape: extra server keys are permitted and partial payloads are valid;
     not validated at runtime (a TypedDict is a plain ``dict``).
@@ -1716,7 +1717,7 @@ class SignalwirePingResult(TypedDict, total=False):
 
 
 class SignalwireReauthenticateResult(TypedDict, total=False):
-    """Wire schema for the Blade envelope `signalwire.reauthenticate` (result). Extracted from switchblade `Messages/ReauthenticateResult.cs`.
+    """Wire schema for the JSON payload of `signalwire.reauthenticate` (result). Extracted from blade `ReauthenticateResult.cs`.
 
     Open shape: extra server keys are permitted and partial payloads are valid;
     not validated at runtime (a TypedDict is a plain ``dict``).
