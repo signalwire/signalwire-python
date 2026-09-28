@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, cast
 from collections.abc import Mapping
 
-from .._base import BaseResource, FabricResource, ReadResource
+from .._base import BaseResource, CrudResource, FabricResource, ReadResource
 
 if TYPE_CHECKING:
     from .._request_options import RequestOptions
@@ -24,6 +24,10 @@ if TYPE_CHECKING:
         AIPostPromptUpdate,
         AIPrompt,
         AIPromptUpdate,
+        AliasAddress,
+        AliasAddressCreateRequest,
+        AliasAddressListResponse,
+        AliasAddressUpdateRequest,
         CXMLScriptCreateRequest,
         CXMLScriptListResponse,
         CXMLScriptResponse,
@@ -63,6 +67,10 @@ if TYPE_CHECKING:
         Hint,
         Languages,
         Layout,
+        PhoneNumberAddress,
+        PhoneNumberAddressCreateRequest,
+        PhoneNumberAddressListResponse,
+        PhoneNumberAddressUpdateRequest,
         PhoneRouteResponse,
         Pronounce,
         RelayApplicationCreateRequest,
@@ -78,6 +86,10 @@ if TYPE_CHECKING:
         SWMLWebhookListResponse,
         SWMLWebhookResponse,
         SWMLWebhookUpdateRequest,
+        SipAddress,
+        SipAddressCreateRequest,
+        SipAddressListResponse,
+        SipAddressUpdateRequest,
         SipEndpointCreateRequest,
         SipEndpointListResponse,
         SipEndpointResponse,
@@ -100,9 +112,343 @@ if TYPE_CHECKING:
         SwmlScriptResponse,
         SwmlScriptUpdateRequest,
         UsedForType,
+        WhatsappNumberAddressResponse,
         jwt,
         uuid,
     )
+
+
+class AliasAddresses(
+    CrudResource[
+        "AliasAddressListResponse",
+        "AliasAddress",
+        "AliasAddressCreateRequest",
+        "AliasAddressUpdateRequest",
+    ]
+):
+    """Typed resource for ``/addresses/alias`` (generated)."""
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/fabric/addresses/alias")
+
+    def create(  # type: ignore[override]
+        self,
+        *,
+        name: str,
+        resource_id: uuid,
+        display_name: str | None = None,
+        channels: list[Literal["audio", "messaging", "video"]] | None = None,
+        codecs: list[
+            Literal[
+                "OPUS",
+                "OPUS@48000H@20I",
+                "OPUS@24000H@20I",
+                "OPUS@16000H@20I",
+                "OPUS@8000H@20I",
+                "G722",
+                "PCMU",
+                "PCMA",
+                "G729",
+                "VP8",
+                "H264",
+            ]
+        ]
+        | None = None,
+        context: Literal["private", "public"] | None = None,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> AliasAddress:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "name": name,
+                "display_name": display_name,
+                "resource_id": resource_id,
+                "channels": channels,
+                "codecs": codecs,
+                "context": context,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "AliasAddress",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
+
+    def update(
+        self,
+        id: str,
+        /,
+        *,
+        name: str | None = None,
+        display_name: str | None = None,
+        channels: list[Literal["audio", "messaging", "video"]] | None = None,
+        codecs: list[
+            Literal[
+                "OPUS",
+                "OPUS@48000H@20I",
+                "OPUS@24000H@20I",
+                "OPUS@16000H@20I",
+                "OPUS@8000H@20I",
+                "G722",
+                "PCMU",
+                "PCMA",
+                "G729",
+                "VP8",
+                "H264",
+            ]
+        ]
+        | None = None,
+        context: Literal["private", "public"] | None = None,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> AliasAddress:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "name": name,
+                "display_name": display_name,
+                "channels": channels,
+                "codecs": codecs,
+                "context": context,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "AliasAddress",
+            self._http.patch(
+                self._path(id), body=body, request_options=request_options
+            ),
+        )
+
+
+class SipAddresses(
+    CrudResource[
+        "SipAddressListResponse",
+        "SipAddress",
+        "SipAddressCreateRequest",
+        "SipAddressUpdateRequest",
+    ]
+):
+    """Typed resource for ``/addresses/sip`` (generated)."""
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/fabric/addresses/sip")
+
+    def create(  # type: ignore[override]
+        self,
+        *,
+        name: str,
+        calling_handler_resource_id: uuid,
+        user: str | None = None,
+        context_id: uuid | None = None,
+        ip_auth_enabled: bool | None = None,
+        ip_auth: list[str] | None = None,
+        codecs: list[
+            Literal[
+                "OPUS",
+                "OPUS@48000H@20I",
+                "OPUS@24000H@20I",
+                "OPUS@16000H@20I",
+                "OPUS@8000H@20I",
+                "G722",
+                "PCMU",
+                "PCMA",
+                "G729",
+                "VP8",
+                "H264",
+            ]
+        ]
+        | None = None,
+        ciphers: list[
+            Literal[
+                "AEAD_AES_256_GCM_8",
+                "AES_256_CM_HMAC_SHA1_80",
+                "AES_CM_128_HMAC_SHA1_80",
+                "AES_256_CM_HMAC_SHA1_32",
+                "AES_CM_128_HMAC_SHA1_32",
+            ]
+        ]
+        | None = None,
+        encryption: Literal["required", "optional", "forbidden"] | None = None,
+        password: str | None = None,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> SipAddress:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "name": name,
+                "user": user,
+                "context_id": context_id,
+                "calling_handler_resource_id": calling_handler_resource_id,
+                "ip_auth_enabled": ip_auth_enabled,
+                "ip_auth": ip_auth,
+                "codecs": codecs,
+                "ciphers": ciphers,
+                "encryption": encryption,
+                "password": password,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "SipAddress",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
+
+    def update(
+        self,
+        id: str,
+        /,
+        *,
+        name: str | None = None,
+        user: str | None = None,
+        context_id: uuid | None = None,
+        ip_auth_enabled: bool | None = None,
+        ip_auth: list[str] | None = None,
+        codecs: list[
+            Literal[
+                "OPUS",
+                "OPUS@48000H@20I",
+                "OPUS@24000H@20I",
+                "OPUS@16000H@20I",
+                "OPUS@8000H@20I",
+                "G722",
+                "PCMU",
+                "PCMA",
+                "G729",
+                "VP8",
+                "H264",
+            ]
+        ]
+        | None = None,
+        ciphers: list[
+            Literal[
+                "AEAD_AES_256_GCM_8",
+                "AES_256_CM_HMAC_SHA1_80",
+                "AES_CM_128_HMAC_SHA1_80",
+                "AES_256_CM_HMAC_SHA1_32",
+                "AES_CM_128_HMAC_SHA1_32",
+            ]
+        ]
+        | None = None,
+        encryption: Literal["required", "optional", "forbidden"] | None = None,
+        password: str | None = None,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> SipAddress:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "name": name,
+                "user": user,
+                "context_id": context_id,
+                "ip_auth_enabled": ip_auth_enabled,
+                "ip_auth": ip_auth,
+                "codecs": codecs,
+                "ciphers": ciphers,
+                "encryption": encryption,
+                "password": password,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "SipAddress",
+            self._http.patch(
+                self._path(id), body=body, request_options=request_options
+            ),
+        )
+
+
+class PhoneNumberAddresses(
+    CrudResource[
+        "PhoneNumberAddressListResponse",
+        "PhoneNumberAddress",
+        "PhoneNumberAddressCreateRequest",
+        "PhoneNumberAddressUpdateRequest",
+    ]
+):
+    """Typed resource for ``/addresses/phone`` (generated)."""
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/fabric/addresses/phone")
+
+    def create(  # type: ignore[override]
+        self,
+        *,
+        resource_id: uuid,
+        handler_type: Literal["calling", "messaging"],
+        phone_number_id: uuid | None = None,
+        number: str | None = None,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> PhoneNumberAddress:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "phone_number_id": phone_number_id,
+                "number": number,
+                "resource_id": resource_id,
+                "handler_type": handler_type,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "PhoneNumberAddress",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
+
+    def update(
+        self,
+        id: str,
+        /,
+        *,
+        name: str | None = None,
+        resource_id: uuid | None = None,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> PhoneNumberAddress:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {"name": name, "resource_id": resource_id}.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "PhoneNumberAddress",
+            self._http.patch(
+                self._path(id), body=body, request_options=request_options
+            ),
+        )
 
 
 class FabricAddresses(ReadResource["FabricAddressesResponse", "FabricAddress"]):
@@ -110,6 +456,14 @@ class FabricAddresses(ReadResource["FabricAddressesResponse", "FabricAddress"]):
 
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/fabric/addresses")
+
+    def delete(
+        self, id: str, *, request_options: RequestOptions | None = None
+    ) -> dict[str, Any]:
+        return cast(
+            "dict[str, Any]",
+            self._http.delete(self._path(id), request_options=request_options),
+        )
 
 
 class GenericResources(BaseResource):
@@ -206,6 +560,62 @@ class GenericResources(BaseResource):
             "DomainApplicationResponse",
             self._http.post(
                 self._path(id, "domain_applications"),
+                body=body,
+                request_options=request_options,
+            ),
+        )
+
+    def assign_sip_endpoint(
+        self,
+        id: str,
+        *,
+        sip_endpoint_id: uuid,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> ResourceResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {"sip_endpoint_id": sip_endpoint_id}.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "ResourceResponse",
+            self._http.post(
+                self._path(id, "sip_endpoints"),
+                body=body,
+                request_options=request_options,
+            ),
+        )
+
+    def assign_whatsapp_number(
+        self,
+        id: str,
+        *,
+        whatsapp_number_id: uuid,
+        handler: UsedForType,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> WhatsappNumberAddressResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "whatsapp_number_id": whatsapp_number_id,
+                "handler": handler,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "WhatsappNumberAddressResponse",
+            self._http.post(
+                self._path(id, "whatsapp_numbers"),
                 body=body,
                 request_options=request_options,
             ),

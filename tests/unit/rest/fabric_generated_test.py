@@ -23,6 +23,22 @@ if TYPE_CHECKING:
 
 
 class TestFabricWire:
+    def test_addresses_delete(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.fabric.addresses.delete("test-id")
+        last = mock.last_request()
+        assert last.method == "DELETE"
+        assert last.matched_route == "fabric.delete_fabric_address"
+
+    def test_addresses_delete_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("fabric.delete_fabric_address", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.fabric.addresses.delete("test-id")
+        assert exc.value.status_code == 500
+
     def test_addresses_get(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
@@ -149,6 +165,86 @@ class TestFabricWire:
         mock.push_scenario("fabric.update_ai_agent", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
             signalwire_client.fabric.ai_agents.update("test-id")
+        assert exc.value.status_code == 500
+
+    def test_alias_addresses_create(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.fabric.alias_addresses.create(name="x", resource_id="x")
+        last = mock.last_request()
+        assert last.method == "POST"
+        assert last.matched_route == "fabric.create_alias_address"
+
+    def test_alias_addresses_create_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("fabric.create_alias_address", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.fabric.alias_addresses.create(name="x", resource_id="x")
+        assert exc.value.status_code == 500
+
+    def test_alias_addresses_delete(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.fabric.alias_addresses.delete("test-id")
+        last = mock.last_request()
+        assert last.method == "DELETE"
+        assert last.matched_route == "fabric.delete_alias_address"
+
+    def test_alias_addresses_delete_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("fabric.delete_alias_address", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.fabric.alias_addresses.delete("test-id")
+        assert exc.value.status_code == 500
+
+    def test_alias_addresses_get(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.fabric.alias_addresses.get("test-id")
+        last = mock.last_request()
+        assert last.method == "GET"
+        assert last.matched_route == "fabric.get_alias_address"
+
+    def test_alias_addresses_get_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("fabric.get_alias_address", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.fabric.alias_addresses.get("test-id")
+        assert exc.value.status_code == 500
+
+    def test_alias_addresses_list(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.fabric.alias_addresses.list()
+        last = mock.last_request()
+        assert last.method == "GET"
+        assert last.matched_route == "fabric.list_alias_addresses"
+
+    def test_alias_addresses_list_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("fabric.list_alias_addresses", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.fabric.alias_addresses.list()
+        assert exc.value.status_code == 500
+
+    def test_alias_addresses_update(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.fabric.alias_addresses.update("test-id")
+        last = mock.last_request()
+        assert last.method == "PATCH"
+        assert last.matched_route == "fabric.update_alias_address"
+
+    def test_alias_addresses_update_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("fabric.update_alias_address", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.fabric.alias_addresses.update("test-id")
         assert exc.value.status_code == 500
 
     def test_call_flows_create(
@@ -751,6 +847,90 @@ class TestFabricWire:
             signalwire_client.fabric.freeswitch_connectors.update("test-id")
         assert exc.value.status_code == 500
 
+    def test_phone_number_addresses_create(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.fabric.phone_number_addresses.create(
+            resource_id="x", handler_type="calling"
+        )
+        last = mock.last_request()
+        assert last.method == "POST"
+        assert last.matched_route == "fabric.create_phone_number_address"
+
+    def test_phone_number_addresses_create_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("fabric.create_phone_number_address", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.fabric.phone_number_addresses.create(
+                resource_id="x", handler_type="calling"
+            )
+        assert exc.value.status_code == 500
+
+    def test_phone_number_addresses_delete(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.fabric.phone_number_addresses.delete("test-id")
+        last = mock.last_request()
+        assert last.method == "DELETE"
+        assert last.matched_route == "fabric.delete_phone_number_address"
+
+    def test_phone_number_addresses_delete_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("fabric.delete_phone_number_address", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.fabric.phone_number_addresses.delete("test-id")
+        assert exc.value.status_code == 500
+
+    def test_phone_number_addresses_get(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.fabric.phone_number_addresses.get("test-id")
+        last = mock.last_request()
+        assert last.method == "GET"
+        assert last.matched_route == "fabric.get_phone_number_address"
+
+    def test_phone_number_addresses_get_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("fabric.get_phone_number_address", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.fabric.phone_number_addresses.get("test-id")
+        assert exc.value.status_code == 500
+
+    def test_phone_number_addresses_list(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.fabric.phone_number_addresses.list()
+        last = mock.last_request()
+        assert last.method == "GET"
+        assert last.matched_route == "fabric.list_phone_number_addresses"
+
+    def test_phone_number_addresses_list_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("fabric.list_phone_number_addresses", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.fabric.phone_number_addresses.list()
+        assert exc.value.status_code == 500
+
+    def test_phone_number_addresses_update(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.fabric.phone_number_addresses.update("test-id")
+        last = mock.last_request()
+        assert last.method == "PATCH"
+        assert last.matched_route == "fabric.update_phone_number_address"
+
+    def test_phone_number_addresses_update_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("fabric.update_phone_number_address", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.fabric.phone_number_addresses.update("test-id")
+        assert exc.value.status_code == 500
+
     def test_relay_applications_create(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
@@ -891,6 +1071,48 @@ class TestFabricWire:
             )
         assert exc.value.status_code == 500
 
+    def test_resources_assign_sip_endpoint(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.fabric.resources.assign_sip_endpoint(
+            "test-id", sip_endpoint_id="x"
+        )
+        last = mock.last_request()
+        assert last.method == "POST"
+        assert last.matched_route == "fabric.assign_resource_sip_endpoint"
+
+    def test_resources_assign_sip_endpoint_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("fabric.assign_resource_sip_endpoint", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.fabric.resources.assign_sip_endpoint(
+                "test-id", sip_endpoint_id="x"
+            )
+        assert exc.value.status_code == 500
+
+    def test_resources_assign_whatsapp_number(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.fabric.resources.assign_whatsapp_number(
+            "test-id", whatsapp_number_id="x", handler="calling"
+        )
+        last = mock.last_request()
+        assert last.method == "POST"
+        assert last.matched_route == "fabric.assign_resource_whatsapp_number"
+
+    def test_resources_assign_whatsapp_number_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario(
+            "fabric.assign_resource_whatsapp_number", 500, {"error": "x"}
+        )
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.fabric.resources.assign_whatsapp_number(
+                "test-id", whatsapp_number_id="x", handler="calling"
+            )
+        assert exc.value.status_code == 500
+
     def test_resources_delete(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
@@ -953,6 +1175,90 @@ class TestFabricWire:
         mock.push_scenario("fabric.list_resource_addresses", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
             signalwire_client.fabric.resources.list_addresses("test-id")
+        assert exc.value.status_code == 500
+
+    def test_sip_addresses_create(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.fabric.sip_addresses.create(
+            name="x", calling_handler_resource_id="x"
+        )
+        last = mock.last_request()
+        assert last.method == "POST"
+        assert last.matched_route == "fabric.create_sip_address"
+
+    def test_sip_addresses_create_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("fabric.create_sip_address", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.fabric.sip_addresses.create(
+                name="x", calling_handler_resource_id="x"
+            )
+        assert exc.value.status_code == 500
+
+    def test_sip_addresses_delete(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.fabric.sip_addresses.delete("test-id")
+        last = mock.last_request()
+        assert last.method == "DELETE"
+        assert last.matched_route == "fabric.delete_sip_address"
+
+    def test_sip_addresses_delete_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("fabric.delete_sip_address", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.fabric.sip_addresses.delete("test-id")
+        assert exc.value.status_code == 500
+
+    def test_sip_addresses_get(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.fabric.sip_addresses.get("test-id")
+        last = mock.last_request()
+        assert last.method == "GET"
+        assert last.matched_route == "fabric.get_sip_address"
+
+    def test_sip_addresses_get_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("fabric.get_sip_address", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.fabric.sip_addresses.get("test-id")
+        assert exc.value.status_code == 500
+
+    def test_sip_addresses_list(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.fabric.sip_addresses.list()
+        last = mock.last_request()
+        assert last.method == "GET"
+        assert last.matched_route == "fabric.list_sip_addresses"
+
+    def test_sip_addresses_list_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("fabric.list_sip_addresses", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.fabric.sip_addresses.list()
+        assert exc.value.status_code == 500
+
+    def test_sip_addresses_update(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.fabric.sip_addresses.update("test-id")
+        last = mock.last_request()
+        assert last.method == "PATCH"
+        assert last.matched_route == "fabric.update_sip_address"
+
+    def test_sip_addresses_update_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("fabric.update_sip_address", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.fabric.sip_addresses.update("test-id")
         assert exc.value.status_code == 500
 
     def test_sip_endpoints_create(

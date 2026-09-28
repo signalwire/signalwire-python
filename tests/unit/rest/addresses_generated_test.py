@@ -106,3 +106,19 @@ class TestAddressesWire:
         with pytest.raises(SignalWireRestError) as exc:
             signalwire_client.addresses.list()
         assert exc.value.status_code == 500
+
+    def test_addresses_update(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.addresses.update("test-id")
+        last = mock.last_request()
+        assert last.method == "PUT"
+        assert last.matched_route == "relay-rest.update_address"
+
+    def test_addresses_update_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("relay-rest.update_address", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.addresses.update("test-id")
+        assert exc.value.status_code == 500

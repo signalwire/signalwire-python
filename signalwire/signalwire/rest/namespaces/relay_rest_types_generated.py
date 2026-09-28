@@ -39,6 +39,9 @@ class Address(TypedDict, total=False):
     state: str
     postal_code: str
     zip_code: str
+    emergency_enabled: bool
+    validated: bool
+    validated_at: str | None
 
 
 class AddressListResponse(TypedDict, total=False):
@@ -72,6 +75,9 @@ class AddressResponse(TypedDict, total=False):
     state: str
     postal_code: str
     zip_code: str
+    emergency_enabled: bool
+    validated: bool
+    validated_at: str | None
 
 
 AddressType: TypeAlias = "Literal['Apartment', 'Basement', 'Building', 'Department', 'Floor', 'Office', 'Penthouse', 'Suite', 'Trailer', 'Unit']"
@@ -876,6 +882,8 @@ class PhoneNumber(TypedDict, total=False):
     capabilities: list[PhoneNumberCapability]
     number_type: PhoneNumberType
     e911_address_id: uuid | None
+    e911_status: PhoneNumberE911Status | None
+    cnam: str | None
     created_at: str
     updated_at: str
     next_billed_at: str | None
@@ -982,6 +990,8 @@ class PhoneNumberResponse(TypedDict, total=False):
     capabilities: list[PhoneNumberCapability]
     number_type: PhoneNumberType
     e911_address_id: uuid | None
+    e911_status: PhoneNumberE911Status | None
+    cnam: str | None
     created_at: str
     updated_at: str
     next_billed_at: str | None
@@ -1693,10 +1703,154 @@ class WebRtcRecording(TypedDict, total=False):
     relay_webrtc_leg_id: uuid
 
 
+class UpdateAddressRequest(TypedDict, total=False):
+    """Request body for updating an address.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
+
+    label: str
+    country: str
+    first_name: str
+    last_name: str
+    street_number: str
+    street_name: str
+    address_type: AddressType
+    address_number: str
+    city: str
+    state: str
+    postal_code: str
+    emergency_enabled: bool
+    auto_correct_address: bool
+
+
+class AddressCandidate(TypedDict, total=False):
+    """A carrier-suggested alternative to the submitted address.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
+
+    street_number: str | None
+    street_name: str | None
+    city: str | None
+    state: str | None
+    postal_code: str | None
+
+
+class AddressValidationError(TypedDict, total=False):
+    """The request failed validation. See `errors` for details. When carrier validation rejected the address
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
+
+    errors: list[Types_StatusCodes_SpaceApiErrorItem]
+    candidates: list[AddressCandidate]
+
+
+class UpdateBrandRequest(TypedDict, total=False):
+    """Request body for updating a brand. Every field is optional; a field you omit keeps its current value. Only a brand in the `unverified` state accepts changes to fields other than `signalwire_contact_emails`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
+
+    name: str
+    company_name: str
+    contact_email: str
+    contact_phone: str
+    ein_issuing_country: str
+    legal_entity_type: LegalEntityType
+    ein: str
+    company_vertical: CompanyVertical
+    company_website: str
+    company_address: str
+    csp_brand_reference: str
+    status_callback_url: str
+    signalwire_contact_emails: list[str] | str
+
+
+class Types_StatusCodes_RestApiErrorItem(TypedDict, total=False):
+    """Details about a specific error.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
+
+    type: str
+    code: str
+    message: str
+    attribute: str | None
+    url: str
+
+
+class BrandUpdateStatusCode422(TypedDict, total=False):
+    """The request contains invalid parameters. See errors for details.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
+
+    errors: list[Types_StatusCodes_RestApiErrorItem]
+
+
+class AssignE911AddressRequest(TypedDict, total=False):
+    """Request body for assigning an E911 address to a phone number.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
+
+    e911_address_id: uuid
+
+
+PhoneNumberE911Status: TypeAlias = (
+    "Literal['pending', 'active', 'failed', 'pending_removal', 'unregistered']"
+)
+
+
+class CreatePhoneNumberCnamRequest(TypedDict, total=False):
+    """Request body for requesting a caller ID name for a phone number.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
+
+    name: str
+
+
+PhoneNumberCnamStatus: TypeAlias = (
+    "Literal['pending', 'approved', 'in_review', 'rejected', 'failed', 'superseded']"
+)
+
+PhoneNumberCnamReason: TypeAlias = "Literal['offensive_language', 'impersonation', 'unverified_brand', 'implied_trusted_institution', 'scam_wording', 'deceptive', 'unsupported_personal_name', 'too_generic', 'invalid_format', 'unrelated_to_business', 'needs_documentation', 'other_compliance_concern', 'processing_failed', 'unsupported_provider']"
+
+
+class PhoneNumberCnamResponse(TypedDict, total=False):
+    """Details and review status returned for a caller ID name request.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
+
+    type: Literal["cnam"]
+    id: uuid
+    phone_number_id: uuid
+    name: str
+    status: PhoneNumberCnamStatus
+    reason: PhoneNumberCnamReason | None
+    required_action: str | None
+    created_at: str
+    updated_at: str
+
+
 uuid: TypeAlias = "str"
 
 ListAddressesResponse: TypeAlias = "AddressListResponse"
 CreateAddressResponse: TypeAlias = "AddressResponse"
+UpdateAddressResponse: TypeAlias = "AddressResponse"
 GetAddressResponse: TypeAlias = "AddressResponse"
 ListDomainApplicationsResponse: TypeAlias = "DomainApplicationListResponse"
 CreateDomainApplicationResponse: TypeAlias = "DomainApplicationResponse"
@@ -1728,6 +1882,11 @@ PurchasePhoneNumberResponse: TypeAlias = "PhoneNumberResponse"
 SearchAvailablePhoneNumbersResponse: TypeAlias = "AvailablePhoneNumbersResponse"
 RetrievePhoneNumberResponse: TypeAlias = "PhoneNumberResponse"
 UpdatePhoneNumberResponse: TypeAlias = "PhoneNumberResponse"
+AssignE911AddressResponse: TypeAlias = "PhoneNumberResponse"
+RemoveE911AddressResponse: TypeAlias = "PhoneNumberResponse"
+RetrieveCallerIdNameResponse: TypeAlias = "PhoneNumberCnamResponse"
+RequestCallerIdNameRequest: TypeAlias = "CreatePhoneNumberCnamRequest"
+RequestCallerIdNameResponse: TypeAlias = "PhoneNumberCnamResponse"
 ListQueuesResponse: TypeAlias = "QueueListResponse"
 CreateQueueResponse: TypeAlias = "QueueResponse"
 GetQueueResponse: TypeAlias = "QueueResponse"
@@ -1740,6 +1899,7 @@ GetRecordingResponse: TypeAlias = "PstnRecording | SipRecording | WebRtcRecordin
 ListBrandsResponse: TypeAlias = "BrandListResponse"
 CreateBrandRequest: TypeAlias = "CreateManagedBrandRequest | CreateCspBrandRequest"
 CreateBrandResponse: TypeAlias = "BrandResponse"
+UpdateBrandResponse: TypeAlias = "BrandResponse"
 RetrieveBrandResponse: TypeAlias = "BrandResponse"
 ListCampaignsResponse: TypeAlias = "CampaignListResponse"
 CreateCampaignRequest: TypeAlias = (

@@ -209,11 +209,20 @@ class HttpClient:
         body: Any = None,
         params: dict[str, Any] | None = None,
         request_options: RequestOptions | None = None,
+        *,
+        headers: dict[str, str] | None = None,
+        response: str = "json",
     ) -> Any:
         """Send one request, retrying per the request options; return the body.
 
-        Raises ``SignalWireRestError`` for a non-2xx response and
-        ``SignalWireRestTransportError`` when no response was received.
+        ``headers`` are sent on this request only (over the session defaults).
+        ``response`` selects how a success is read: ``"json"`` (the decoded JSON body),
+        ``"text"`` (the body as text, for a non-JSON media type such as ``text/csv``), or
+        ``"redirect"`` (redirects are NOT followed; the 3xx ``Location`` is returned — an
+        endpoint whose answer IS a redirect to a resource's URL).
+
+        Raises ``SignalWireRestError`` for a non-2xx response (a non-3xx one for
+        ``"redirect"``) and ``SignalWireRestTransportError`` when no response was received.
         """
         url = self._base_url + path
         # D1 (owner-approved 2026-07-18): error.url is the FULL URL WITH the query
@@ -233,6 +242,13 @@ class HttpClient:
                 full_url = f"{url}?{qs}"
         opts = resolve(self._request_options, request_options)
         logger.debug("REST request", method=method, path=path)
+        # Only a call that needs them passes these, so every other request is sent exactly
+        # as before (same ``Session.request`` arguments).
+        extra: dict[str, Any] = {}
+        if headers:
+            extra["headers"] = headers
+        if response == "redirect":
+            extra["allow_redirects"] = False
 
         # total attempts = retries + 1; retry on a retryable status (idempotency-
         # aware) or a transport error, honoring Retry-After then exponential
@@ -249,7 +265,7 @@ class HttpClient:
 
             try:
                 resp = self._session.request(
-                    method, url, json=body, params=params, timeout=opts.timeout
+                    method, url, json=body, params=params, timeout=opts.timeout, **extra
                 )
             except requests.RequestException as exc:
                 # Transport failure (connection refused / DNS / reset / TLS /
@@ -260,6 +276,21 @@ class HttpClient:
                     self._sleep(opts.retry_backoff * 2 ** (attempt - 1))
                     continue
                 raise SignalWireRestTransportError(str(exc), full_url, method) from exc
+
+            if response == "redirect" and not resp.ok:
+                pass  # a 4xx/5xx: the error path below
+            elif response == "redirect":
+                location = resp.headers.get("Location")
+                if resp.is_redirect and location:
+                    return location
+                # A success that is not the redirect the endpoint answers with.
+                raise SignalWireRestError(
+                    resp.status_code,
+                    resp.text,
+                    full_url,
+                    method,
+                    headers=dict(resp.headers),
+                )
 
             if not resp.ok:
                 if attempt <= opts.retries and status_is_retryable(
@@ -282,6 +313,8 @@ class HttpClient:
                     headers=dict(resp.headers),
                 )
 
+            if response == "text":
+                return resp.text
             if resp.status_code == 204 or not resp.content:
                 return {}
             try:
@@ -305,6 +338,8 @@ class HttpClient:
         path: str,
         params: dict[str, Any] | None = None,
         request_options: RequestOptions | None = None,
+        *,
+        headers: dict[str, str] | None = None,
     ) -> Any:
         """Issue a ``GET`` to ``path`` and return the decoded JSON body.
 
@@ -315,6 +350,7 @@ class HttpClient:
                 URL recorded on an error; list values expand repeated-key style.
             request_options: Per-call transport overrides (timeout / retries /
                 backoff / abort signal) shallow-merged over the client default.
+            headers: Extra request headers for this call only.
 
         Returns:
             The parsed JSON body, or ``{}`` for a ``204`` or an empty body.
@@ -327,7 +363,55 @@ class HttpClient:
                 ``abort_signal`` was set before an attempt.
         """
         return self._request(
-            "GET", path, params=params, request_options=request_options
+            "GET", path, params=params, request_options=request_options, headers=headers
+        )
+
+    def get_text(
+        self,
+        path: str,
+        params: dict[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        *,
+        headers: dict[str, str] | None = None,
+    ) -> str:
+        """Issue a ``GET`` whose success body is NOT JSON and return it as text.
+
+        For an endpoint that answers with another media type (e.g. ``text/csv``); pass
+        that type as the ``Accept`` header. Errors are raised exactly as :meth:`get`.
+        """
+        return cast(
+            str,
+            self._request(
+                "GET",
+                path,
+                params=params,
+                request_options=request_options,
+                headers=headers,
+                response="text",
+            ),
+        )
+
+    def get_redirect_location(
+        self,
+        path: str,
+        params: dict[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+    ) -> str:
+        """Issue a ``GET`` whose success IS a redirect and return its ``Location``.
+
+        The redirect is not followed: the endpoint's answer is the URL of the resource
+        (e.g. a signed download URL), which the caller fetches with any HTTP client.
+        Raises :class:`SignalWireRestError` for an error status or a non-redirect success.
+        """
+        return cast(
+            str,
+            self._request(
+                "GET",
+                path,
+                params=params,
+                request_options=request_options,
+                response="redirect",
+            ),
         )
 
     def post(
@@ -336,6 +420,8 @@ class HttpClient:
         body: Any = None,
         params: dict[str, Any] | None = None,
         request_options: RequestOptions | None = None,
+        *,
+        headers: dict[str, str] | None = None,
     ) -> Any:
         """Issue a ``POST`` to ``path`` with ``body`` JSON-encoded, returning the
         decoded JSON response.
@@ -349,6 +435,8 @@ class HttpClient:
             body: Value serialised as the JSON request body. ``None`` sends no body.
             params: Query-string parameters (some create endpoints take both).
             request_options: Per-call transport overrides.
+            headers: Extra request headers for this call only (e.g. an
+                ``Idempotency-Key``).
 
         Returns:
             The parsed JSON body, or ``{}`` for a ``204`` or an empty body.
@@ -359,7 +447,12 @@ class HttpClient:
                 was cancelled via ``abort_signal``.
         """
         return self._request(
-            "POST", path, body=body, params=params, request_options=request_options
+            "POST",
+            path,
+            body=body,
+            params=params,
+            request_options=request_options,
+            headers=headers,
         )
 
     def put(

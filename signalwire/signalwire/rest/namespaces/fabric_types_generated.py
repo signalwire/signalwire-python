@@ -3593,6 +3593,309 @@ play_url: TypeAlias = "str"
 
 uuid: TypeAlias = "str"
 
+
+class AliasAddress(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    id: uuid
+    type: Literal["alias"]
+    resource_id: uuid | None
+    name: str
+    display_name: str
+    display_type: str | None
+    channels: list[Literal["audio", "messaging", "video"]]
+    codecs: (
+        list[
+            Literal[
+                "OPUS",
+                "OPUS@48000H@20I",
+                "OPUS@24000H@20I",
+                "OPUS@16000H@20I",
+                "OPUS@8000H@20I",
+                "G722",
+                "PCMU",
+                "PCMA",
+                "G729",
+                "VP8",
+                "H264",
+            ]
+        ]
+        | None
+    )
+    context: str
+    uri: str
+    created_at: str
+    updated_at: str
+
+
+class AliasAddressCreateRequest(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    name: str
+    display_name: str
+    resource_id: uuid
+    channels: list[Literal["audio", "messaging", "video"]]
+    codecs: list[
+        Literal[
+            "OPUS",
+            "OPUS@48000H@20I",
+            "OPUS@24000H@20I",
+            "OPUS@16000H@20I",
+            "OPUS@8000H@20I",
+            "G722",
+            "PCMU",
+            "PCMA",
+            "G729",
+            "VP8",
+            "H264",
+        ]
+    ]
+    context: Literal["private", "public"]
+
+
+class AliasAddressUpdateRequest(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    name: str
+    display_name: str
+    channels: list[Literal["audio", "messaging", "video"]]
+    codecs: list[
+        Literal[
+            "OPUS",
+            "OPUS@48000H@20I",
+            "OPUS@24000H@20I",
+            "OPUS@16000H@20I",
+            "OPUS@8000H@20I",
+            "G722",
+            "PCMU",
+            "PCMA",
+            "G729",
+            "VP8",
+            "H264",
+        ]
+    ]
+    context: Literal["private", "public"]
+
+
+class SipAddress(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    id: uuid
+    type: Literal["sip"]
+    resource_id: uuid | None
+    name: str
+    display_name: str
+    context: str
+    uri: str
+    user: str | None
+    encryption: Literal["required", "optional", "forbidden", None]
+    codecs: (
+        list[
+            Literal[
+                "OPUS",
+                "OPUS@48000H@20I",
+                "OPUS@24000H@20I",
+                "OPUS@16000H@20I",
+                "OPUS@8000H@20I",
+                "G722",
+                "PCMU",
+                "PCMA",
+                "G729",
+                "VP8",
+                "H264",
+            ]
+        ]
+        | None
+    )
+    ciphers: (
+        list[
+            Literal[
+                "AEAD_AES_256_GCM_8",
+                "AES_256_CM_HMAC_SHA1_80",
+                "AES_CM_128_HMAC_SHA1_80",
+                "AES_256_CM_HMAC_SHA1_32",
+                "AES_CM_128_HMAC_SHA1_32",
+            ]
+        ]
+        | None
+    )
+    ip_auth_enabled: bool | None
+    ip_auth: list[str] | None
+    calling_handler_resource_id: uuid | None
+    created_at: str
+    updated_at: str
+
+
+class SipAddressCreateRequest(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    name: str
+    user: str
+    context_id: uuid
+    calling_handler_resource_id: uuid
+    ip_auth_enabled: bool
+    ip_auth: list[str]
+    codecs: list[
+        Literal[
+            "OPUS",
+            "OPUS@48000H@20I",
+            "OPUS@24000H@20I",
+            "OPUS@16000H@20I",
+            "OPUS@8000H@20I",
+            "G722",
+            "PCMU",
+            "PCMA",
+            "G729",
+            "VP8",
+            "H264",
+        ]
+    ]
+    ciphers: list[
+        Literal[
+            "AEAD_AES_256_GCM_8",
+            "AES_256_CM_HMAC_SHA1_80",
+            "AES_CM_128_HMAC_SHA1_80",
+            "AES_256_CM_HMAC_SHA1_32",
+            "AES_CM_128_HMAC_SHA1_32",
+        ]
+    ]
+    encryption: Literal["required", "optional", "forbidden"]
+    password: str
+
+
+class SipAddressUpdateRequest(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    name: str
+    user: str
+    context_id: uuid
+    ip_auth_enabled: bool
+    ip_auth: list[str]
+    codecs: list[
+        Literal[
+            "OPUS",
+            "OPUS@48000H@20I",
+            "OPUS@24000H@20I",
+            "OPUS@16000H@20I",
+            "OPUS@8000H@20I",
+            "G722",
+            "PCMU",
+            "PCMA",
+            "G729",
+            "VP8",
+            "H264",
+        ]
+    ]
+    ciphers: list[
+        Literal[
+            "AEAD_AES_256_GCM_8",
+            "AES_256_CM_HMAC_SHA1_80",
+            "AES_CM_128_HMAC_SHA1_80",
+            "AES_256_CM_HMAC_SHA1_32",
+            "AES_CM_128_HMAC_SHA1_32",
+        ]
+    ]
+    encryption: Literal["required", "optional", "forbidden"]
+    password: str
+
+
+class PhoneNumberAddress(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    id: uuid
+    type: Literal["phone"]
+    handler_type: Literal["calling", "messaging"]
+    resource_id: uuid | None
+    name: str
+    phone_number: str | None
+    phone_number_id: uuid
+    created_at: str
+    updated_at: str
+
+
+class PhoneNumberAddressCreateRequest(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    phone_number_id: uuid
+    number: str
+    resource_id: uuid
+    handler_type: Literal["calling", "messaging"]
+
+
+class PhoneNumberAddressUpdateRequest(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    name: str
+    resource_id: uuid
+
+
+class AliasAddressListResponse(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    links: FabricAddressPaginationResponse
+    items_count: int
+    data: list[AliasAddress]
+
+
+class SipAddressListResponse(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    links: FabricAddressPaginationResponse
+    items_count: int
+    data: list[SipAddress]
+
+
+class PhoneNumberAddressListResponse(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    links: FabricAddressPaginationResponse
+    items_count: int
+    data: list[PhoneNumberAddress]
+
+
+class WhatsappNumberAssignRequest(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    whatsapp_number_id: uuid
+    handler: UsedForType
+
+
+class WhatsappNumberAddressResponse(TypedDict, total=False):
+    """The Address created for the WhatsApp number on the Resource. Its `type` is `app` for most handlers, `room` for a Video Room, and `call` for a Resource that connects the call to a SIP endpoint or connector.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
+
+    id: uuid
+    resource_id: uuid | None
+    name: str
+    display_name: str
+    type: DisplayTypes
+    cover_url: str | None
+    preview_url: str | None
+    locked: bool
+    channels: dict[str, str]
+
+
+ListAliasAddressesResponse: TypeAlias = "AliasAddressListResponse"
+CreateAliasAddressRequest: TypeAlias = "AliasAddressCreateRequest"
+CreateAliasAddressResponse: TypeAlias = "AliasAddress"
+GetAliasAddressResponse: TypeAlias = "AliasAddress"
+UpdateAliasAddressRequest: TypeAlias = "AliasAddressUpdateRequest"
+UpdateAliasAddressResponse: TypeAlias = "AliasAddress"
+ListSipAddressesResponse: TypeAlias = "SipAddressListResponse"
+CreateSipAddressRequest: TypeAlias = "SipAddressCreateRequest"
+CreateSipAddressResponse: TypeAlias = "SipAddress"
+GetSipAddressResponse: TypeAlias = "SipAddress"
+UpdateSipAddressRequest: TypeAlias = "SipAddressUpdateRequest"
+UpdateSipAddressResponse: TypeAlias = "SipAddress"
+ListPhoneNumberAddressesResponse: TypeAlias = "PhoneNumberAddressListResponse"
+CreatePhoneNumberAddressRequest: TypeAlias = "PhoneNumberAddressCreateRequest"
+CreatePhoneNumberAddressResponse: TypeAlias = "PhoneNumberAddress"
+GetPhoneNumberAddressResponse: TypeAlias = "PhoneNumberAddress"
+UpdatePhoneNumberAddressRequest: TypeAlias = "PhoneNumberAddressUpdateRequest"
+UpdatePhoneNumberAddressResponse: TypeAlias = "PhoneNumberAddress"
 ListFabricAddressesResponse: TypeAlias = "FabricAddressesResponse"
 GetFabricAddressResponse: TypeAlias = "FabricAddress"
 CreateEmbedsTokenRequest: TypeAlias = "EmbedsTokensRequest"
@@ -3668,7 +3971,7 @@ ListSipEndpointsResponse: TypeAlias = "list[SipEndpointListResponse]"
 CreateSipEndpointRequest: TypeAlias = "SipEndpointCreateRequest"
 CreateSipEndpointResponse: TypeAlias = "SipEndpointResponse"
 AssignResourceSipEndpointRequest: TypeAlias = "ResourceSipEndpointAssignRequest"
-AssignResourceSipEndpointResponse: TypeAlias = "ResourceSipEndpointResponse"
+AssignResourceSipEndpointResponse: TypeAlias = "ResourceResponse"
 GetSipEndpointResponse: TypeAlias = "SipEndpointResponse"
 UpdateSipEndpointRequest: TypeAlias = "SipEndpointUpdateRequest"
 UpdateSipEndpointResponse: TypeAlias = "SipEndpointResponse"
@@ -3713,6 +4016,8 @@ AssignResourceDomainApplicationRequest: TypeAlias = "DomainApplicationAssignRequ
 AssignResourceDomainApplicationResponse: TypeAlias = "DomainApplicationResponse"
 AssignResourcePhoneRouteRequest: TypeAlias = "PhoneRouteAssignRequest"
 AssignResourcePhoneRouteResponse: TypeAlias = "PhoneRouteResponse"
+AssignResourceWhatsappNumberRequest: TypeAlias = "WhatsappNumberAssignRequest"
+AssignResourceWhatsappNumberResponse: TypeAlias = "WhatsappNumberAddressResponse"
 CreateSubscriberInviteTokenRequest: TypeAlias = "SubscriberInviteTokenCreateRequest"
 CreateSubscriberInviteTokenResponse: TypeAlias = "SubscriberInviteTokenCreateResponse"
 CreateSubscriberTokenRequest: TypeAlias = "SubscriberTokenRequest"

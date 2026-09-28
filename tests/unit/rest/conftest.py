@@ -172,6 +172,10 @@ _PROBE_TIMEOUT_S = 2.0
 # Project stays constant so LAML ``Accounts/test_proj/...`` paths are stable;
 # per-test isolation comes from a unique random token (below).
 _REST_PROJECT = "test_proj"
+# The specs whose root ``security`` is the Personal Access Token
+# (``SignalWirePersonalAccessToken``): the mock requires the PAT credential on their
+# routes, and the SDK sends it there (client.space).
+_PAT_SPECS = frozenset({"space"})
 
 
 def _pick_free_port() -> int:
@@ -354,6 +358,17 @@ class _MockHarness:
         # ``Authorization: Basic ...`` of this view's client (lowercased match
         # key for the journal filter).  Empty => unscoped (legacy global view).
         self.auth_header = ""
+        # The same client's Personal Access Token header (``Basic base64(":pat_...")``),
+        # which it sends on the PAT-authenticated specs (client.space). The view covers
+        # both of the client's credentials.
+        self.pat_auth_header = ""
+
+    def _session_for(self, endpoint_id: str) -> str:
+        """The auth header a request to ``endpoint_id`` carries (its spec's credential)."""
+        spec = endpoint_id.split(".", 1)[0]
+        if spec in _PAT_SPECS and self.pat_auth_header:
+            return self.pat_auth_header
+        return self.auth_header
 
     def _raw_journal(self) -> list[_JournalEntry]:
         resp = requests.get(f"{self.url}/__mock__/journal", timeout=5)
@@ -371,9 +386,8 @@ class _MockHarness:
         entries = self._raw_journal()
         if not self.auth_header:
             return entries
-        return [
-            e for e in entries if e.headers.get("authorization") == self.auth_header
-        ]
+        mine = {self.auth_header, self.pat_auth_header} - {""}
+        return [e for e in entries if e.headers.get("authorization") in mine]
 
     def last_request(self) -> _JournalEntry:
         """Most recent journal entry for THIS client.  Raises if empty."""
@@ -419,8 +433,9 @@ class _MockHarness:
         mock.patch).
         """
         url = f"{self.url}/__mock__/scenarios/{endpoint_id}"
-        if self.auth_header:
-            url = f"{url}?session_id={quote(self.auth_header, safe='')}"
+        session = self._session_for(endpoint_id)
+        if session:
+            url = f"{url}?session_id={quote(session, safe='')}"
         payload: dict[str, Any] = {"status": status, "response": response}
         if headers is not None:
             payload["headers"] = headers
@@ -469,10 +484,15 @@ def signalwire_client(
     auth_header = (
         "Basic " + base64.b64encode(f"{_REST_PROJECT}:{token}".encode()).decode()
     )
+    # A unique Personal Access Token too (HTTP Basic, EMPTY username), so client.space
+    # reaches the mock's PAT-authenticated routes with its own isolation key.
+    pat = f"pat_test_{uuid.uuid4().hex[:12]}"
+    pat_auth_header = "Basic " + base64.b64encode(f":{pat}".encode()).decode()
 
-    # Scope the harness view to this client's auth header.
+    # Scope the harness view to this client's auth headers.
     mock.project = _REST_PROJECT
     mock.auth_header = auth_header
+    mock.pat_auth_header = pat_auth_header
 
     original_init = HttpClient.__init__
 
@@ -492,4 +512,5 @@ def signalwire_client(
         project=_REST_PROJECT,
         token=token,
         host=f"127.0.0.1:{mock.port}",
+        personal_access_token=pat,
     )

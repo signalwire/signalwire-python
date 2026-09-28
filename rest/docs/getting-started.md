@@ -22,6 +22,23 @@ You need three things to connect:
 | `token` | `SIGNALWIRE_API_TOKEN` | Your SignalWire API token |
 | `host` | `SIGNALWIRE_SPACE` | Your space hostname (e.g. `example.signalwire.com`) |
 
+The Space Administration API (`client.space`: members, billing, balance, space settings)
+is the exception: it authenticates with a user's **Personal Access Token** instead of a
+project token. Pass it as `personal_access_token` (or set
+`SIGNALWIRE_PERSONAL_ACCESS_TOKEN`); a client may carry both credentials.
+
+| Parameter | Env Var | Description |
+|-----------|---------|-------------|
+| `personal_access_token` | `SIGNALWIRE_PERSONAL_ACCESS_TOKEN` | A user's Personal Access Token (`pat_...`), used only by `client.space` |
+
+<!-- snippet: no-run live REST/HTTP call to a real host (needs credentials/network) -->
+```python
+from signalwire.rest import RestClient
+
+admin = RestClient(personal_access_token="pat_...", host="example.signalwire.com")
+members = admin.space.members.list()
+```
+
 ## Minimal Example
 
 Create a client and list your AI agents:

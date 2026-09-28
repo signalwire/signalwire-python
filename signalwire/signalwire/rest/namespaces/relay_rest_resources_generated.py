@@ -6,6 +6,7 @@
 # unknown / reserved-word wire fields, bound to the resource's spec types.
 from __future__ import annotations
 
+import builtins
 from typing import TYPE_CHECKING, Any, Literal, cast
 from collections.abc import Mapping
 
@@ -24,6 +25,7 @@ if TYPE_CHECKING:
         BrandResponse,
         CampaignListResponse,
         CampaignResponse,
+        CompanyVertical,
         CreateCspBrandRequest,
         CreateManagedBrandRequest,
         CreateManagedCampaignRequest,
@@ -32,6 +34,7 @@ if TYPE_CHECKING:
         CreateQueueRequest,
         CreateVerifiedCallerIDRequest,
         HttpMethod,
+        LegalEntityType,
         MfaResponse,
         MfaVerifyResponse,
         NumberGroupListResponse,
@@ -41,6 +44,7 @@ if TYPE_CHECKING:
         OrderListResponse,
         OrderResponse,
         PhoneNumberCallHandlerRequest,
+        PhoneNumberCnamResponse,
         PhoneNumberListResponse,
         PhoneNumberLookupResponse,
         PhoneNumberMessageHandler,
@@ -134,6 +138,54 @@ class Addresses(BaseResource):
             self._http.get(
                 self._path(id), params=params or None, request_options=request_options
             ),
+        )
+
+    def update(
+        self,
+        id: str,
+        *,
+        label: str | None = None,
+        country: str | None = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        street_number: str | None = None,
+        street_name: str | None = None,
+        address_type: AddressType | None = None,
+        address_number: str | None = None,
+        city: str | None = None,
+        state: str | None = None,
+        postal_code: str | None = None,
+        emergency_enabled: bool | None = None,
+        auto_correct_address: bool | None = None,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> AddressResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "label": label,
+                "country": country,
+                "first_name": first_name,
+                "last_name": last_name,
+                "street_number": street_number,
+                "street_name": street_name,
+                "address_type": address_type,
+                "address_number": address_number,
+                "city": city,
+                "state": state,
+                "postal_code": postal_code,
+                "emergency_enabled": emergency_enabled,
+                "auto_correct_address": auto_correct_address,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "AddressResponse",
+            self._http.put(self._path(id), body=body, request_options=request_options),
         )
 
     def delete(
@@ -575,6 +627,84 @@ class PhoneNumbers(
             ),
         )
 
+    def assign_e911_address(
+        self,
+        id: str,
+        *,
+        e911_address_id: uuid,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> PhoneNumberResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {"e911_address_id": e911_address_id}.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "PhoneNumberResponse",
+            self._http.post(
+                self._path(id, "e911_address"),
+                body=body,
+                request_options=request_options,
+            ),
+        )
+
+    def remove_e911_address(
+        self, id: str, *, request_options: RequestOptions | None = None
+    ) -> PhoneNumberResponse:
+        return cast(
+            "PhoneNumberResponse",
+            self._http.delete(
+                self._path(id, "e911_address"), request_options=request_options
+            ),
+        )
+
+    def get_cnam(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> PhoneNumberCnamResponse:
+        return cast(
+            "PhoneNumberCnamResponse",
+            self._http.get(
+                self._path(id, "cnam"),
+                params=params or None,
+                request_options=request_options,
+            ),
+        )
+
+    def request_cnam(
+        self,
+        id: str,
+        *,
+        name: str,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> PhoneNumberCnamResponse:
+        body: dict[str, Any] = {
+            k: v for k, v in {"name": name}.items() if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "PhoneNumberCnamResponse",
+            self._http.post(
+                self._path(id, "cnam"), body=body, request_options=request_options
+            ),
+        )
+
+    def clear_cnam(
+        self, id: str, *, request_options: RequestOptions | None = None
+    ) -> dict[str, Any]:
+        return cast(
+            "dict[str, Any]",
+            self._http.delete(self._path(id, "cnam"), request_options=request_options),
+        )
+
     def set_swml_webhook(
         self,
         resource_id: str,
@@ -861,6 +991,54 @@ class RegistryBrands(BaseResource):
             self._http.get(
                 self._path(id), params=params or None, request_options=request_options
             ),
+        )
+
+    def update(
+        self,
+        id: str,
+        *,
+        name: str | None = None,
+        company_name: str | None = None,
+        contact_email: str | None = None,
+        contact_phone: str | None = None,
+        ein_issuing_country: str | None = None,
+        legal_entity_type: LegalEntityType | None = None,
+        ein: str | None = None,
+        company_vertical: CompanyVertical | None = None,
+        company_website: str | None = None,
+        company_address: str | None = None,
+        csp_brand_reference: str | None = None,
+        status_callback_url: str | None = None,
+        signalwire_contact_emails: builtins.list[str] | str | None = None,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> BrandResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "name": name,
+                "company_name": company_name,
+                "contact_email": contact_email,
+                "contact_phone": contact_phone,
+                "ein_issuing_country": ein_issuing_country,
+                "legal_entity_type": legal_entity_type,
+                "ein": ein,
+                "company_vertical": company_vertical,
+                "company_website": company_website,
+                "company_address": company_address,
+                "csp_brand_reference": csp_brand_reference,
+                "status_callback_url": status_callback_url,
+                "signalwire_contact_emails": signalwire_contact_emails,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "BrandResponse",
+            self._http.put(self._path(id), body=body, request_options=request_options),
         )
 
     def list_campaigns(

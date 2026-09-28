@@ -18,6 +18,7 @@ from .datasphere_resources_generated import (
 )
 from .fabric_resources_generated import (
     AiAgents,
+    AliasAddresses,
     CallFlows,
     ConferenceRooms,
     CxmlApplications,
@@ -27,7 +28,9 @@ from .fabric_resources_generated import (
     FabricTokens,
     FreeswitchConnectors,
     GenericResources,
+    PhoneNumberAddresses,
     RelayApplications,
+    SipAddresses,
     SipEndpoints,
     SipGateways,
     Subscribers,
@@ -42,6 +45,9 @@ from .logs_resources_generated import (
 )
 from .message_resources_generated import (
     MessageLogs,
+    WhatsappBusinesses,
+    WhatsappNumbers,
+    WhatsappTemplates,
 )
 from .messages_resources_generated import (
     Messages,
@@ -72,6 +78,18 @@ from .relay_rest_resources_generated import (
     SipProfile,
     VerifiedCallers,
 )
+from .space_resources_generated import (
+    SpaceBalance,
+    SpaceBillingProfile,
+    SpaceBillingStatements,
+    SpaceGeographicPermissions,
+    SpaceLowBalanceSetting,
+    SpaceMembers,
+    SpacePaymentHistory,
+    SpacePaymentMethods,
+    SpaceSettings,
+    SpaceUsage,
+)
 from .video_resources_generated import (
     VideoConferenceTokens,
     VideoConferences,
@@ -99,14 +117,17 @@ class FabricNamespace:
     def __init__(self, http: Any) -> None:
         self.addresses = FabricAddresses(http)
         self.ai_agents = AiAgents(http)
+        self.alias_addresses = AliasAddresses(http)
         self.call_flows = CallFlows(http)
         self.conference_rooms = ConferenceRooms(http)
         self.cxml_applications = CxmlApplications(http)
         self.cxml_scripts = CxmlScripts(http)
         self.cxml_webhooks = CxmlWebhooks(http)
         self.freeswitch_connectors = FreeswitchConnectors(http)
+        self.phone_number_addresses = PhoneNumberAddresses(http)
         self.relay_applications = RelayApplications(http)
         self.resources = GenericResources(http)
+        self.sip_addresses = SipAddresses(http)
         self.sip_endpoints = SipEndpoints(http)
         self.sip_gateways = SipGateways(http)
         self.subscribers = Subscribers(http)
@@ -142,6 +163,22 @@ class RegistryNamespace:
         self.orders = RegistryOrders(http)
 
 
+class SpaceNamespace:
+    """Generated ``client.space`` namespace."""
+
+    def __init__(self, http: Any) -> None:
+        self.balance = SpaceBalance(http)
+        self.billing_profile = SpaceBillingProfile(http)
+        self.billing_statements = SpaceBillingStatements(http)
+        self.geographic_permissions = SpaceGeographicPermissions(http)
+        self.low_balance_setting = SpaceLowBalanceSetting(http)
+        self.members = SpaceMembers(http)
+        self.payment_history = SpacePaymentHistory(http)
+        self.payment_methods = SpacePaymentMethods(http)
+        self.settings = SpaceSettings(http)
+        self.usage = SpaceUsage(http)
+
+
 class VideoNamespace:
     """Generated ``client.video`` namespace."""
 
@@ -155,10 +192,21 @@ class VideoNamespace:
         self.streams = VideoStreams(http)
 
 
+class WhatsappNamespace:
+    """Generated ``client.whatsapp`` namespace."""
+
+    def __init__(self, http: Any) -> None:
+        self.businesses = WhatsappBusinesses(http)
+        self.numbers = WhatsappNumbers(http)
+        self.templates = WhatsappTemplates(http)
+
+
 class _GeneratedResourceTree:
     """Generated resource wiring for ``RestClient`` (flat resources + namespaces)."""
 
-    def _wire_resources(self, http: Any) -> None:
+    def _wire_resources(self, http: Any, pat_http: Any) -> None:
+        """Wire every resource: ``http`` carries the project token, ``pat_http`` the
+        Personal Access Token (the namespaces whose spec security requires it)."""
         self.addresses = Addresses(http)
         self.calling = Calling(http)
         self.chat = Chat(http)
@@ -180,4 +228,6 @@ class _GeneratedResourceTree:
         self.logs = LogsNamespace(http)
         self.project = ProjectNamespace(http)
         self.registry = RegistryNamespace(http)
+        self.space = SpaceNamespace(pat_http)
         self.video = VideoNamespace(http)
+        self.whatsapp = WhatsappNamespace(http)

@@ -3,6 +3,27 @@
 ## [Unreleased]
 
 ### Added
+- `client.space`: the Space Administration API (`/api/space`) — space settings,
+  geographic permissions, billing profile, billing statements (JSON, CSV text via
+  `billing_statements.get_csv()`, and the PDF's signed URL via `get_pdf()`), usage,
+  payment history and methods, members (invite/list/get/update/remove and per-member
+  project access), balance and top-ups (`create_top_up(idempotency_key=...)` sends the
+  `Idempotency-Key` header), and the low-balance setting.
+- `RestClient(personal_access_token=...)` (or `SIGNALWIRE_PERSONAL_ACCESS_TOKEN`): the
+  Space Administration API authenticates with a user's Personal Access Token, not a
+  project token. A client may hold either credential or both; calling a resource whose
+  credential is missing raises `ValueError`.
+- Fabric: `client.fabric.alias_addresses`, `.sip_addresses` and `.phone_number_addresses`
+  (list/create/get/update/delete), `client.fabric.addresses.delete(id)`, and
+  `client.fabric.resources.assign_sip_endpoint(id, ...)` /
+  `.assign_whatsapp_number(id, ...)`.
+- `client.whatsapp.numbers` (list/get), `.businesses` (list) and `.templates`
+  (list/create/get/update/delete).
+- `client.addresses.update(id, ...)`, `client.registry.brands.update(id, ...)`, and on
+  `client.phone_numbers`: `assign_e911_address`, `remove_e911_address`, `get_cnam`,
+  `request_cnam` and `clear_cnam`.
+- The phone-number and address response types gain the fields the server already
+  returns: `e911_status` and `cnam`; `emergency_enabled`, `validated` and `validated_at`.
 - `FunctionResult.change_voice(voice)` emits the SWAIG `change_voice` action,
   which changes the agent's voice mid-call. `voice` is an `engine.voice:model`
   spec, the same form the SWML `languages` list uses (the `engine.` prefix and
