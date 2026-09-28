@@ -328,15 +328,21 @@ sched_gate GEN-FRESH desc="generated REST/RELAY types reproduce from specs" \
     -- python3 "$PORTING_SDK_DIR/scripts/generate_python_rest_types.py" \
         --signalwire-python "$PORT_ROOT/signalwire" --check
 
-# SCHEMA-BUNDLE: the runtime SWML verb set (installed from the BUNDLED
-# signalwire/signalwire/schema.json) must equal the static stub GEN-FRESH keeps
-# current with porting-sdk/schema.json. FRESH: the bundle is byte-identical to
-# porting-sdk's schema.json at the pinned ref (+ its schema.json.sha256 record).
-# AGREE: runtime verb methods == _SwmlVerbs methods, both directions. --selftest runs
-# the negative controls (stale bundle, missing verb, extra verb must each fail).
-# Re-bundle with scripts/sync_schema_bundle.py. Cheap static check -> per-PR wave.
-sched_gate SCHEMA-BUNDLE desc="bundled schema.json == porting-sdk's; runtime verb methods == static stub (both directions)" \
-    -- python3 "$PORT_ROOT/scripts/check_schema_bundle.py" --porting-sdk "$PORTING_SDK_DIR" --selftest
+# SCHEMA-BUNDLE — the fleet-shared round-trip gate (porting-sdk/docs/SCHEMA_ROUND_TRIP.md):
+# the bundled signalwire/signalwire/schema.json is byte-identical to porting-sdk's
+# schema.json at the pinned ref, its schema.json.sha256 record names those bytes, and
+# porting-sdk's copy is the ARS output its schema.provenance.json records. Re-bundle with
+#   python3 "$PORTING_SDK_DIR/scripts/port_schema_bundle.py" sync --port signalwire-python --port-root .
+# --selftest runs the tool's negative controls. Cheap static check -> per-PR wave.
+sched_gate SCHEMA-BUNDLE desc="bundled schema.json == porting-sdk's == ARS output (record matches)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/port_schema_bundle.py" check \
+        --port signalwire-python --port-root "$PORT_ROOT" --selftest
+
+# SWML-VERBS-AGREE: the runtime SWML verb set (installed from the bundled schema.json)
+# must equal the static _SwmlVerbs stub GEN-FRESH keeps current with porting-sdk's
+# schema.json, both directions. --selftest: missing verb / extra verb must each fail.
+sched_gate SWML-VERBS-AGREE desc="runtime SWML verb methods == static stub (both directions)" \
+    -- python3 "$PORT_ROOT/scripts/check_swml_verbs_agree.py" --selftest
 
 # ---- expansion gates (GATE_EXPANSION_PLAN) — enforcing ----------------------
 # python is the reference: GEN-TYPE-DEGENERACY + GEN-IDIOM self-skip clean;

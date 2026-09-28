@@ -22,8 +22,10 @@ stream, stop_stream, transcribe, transcribe_stop): ``builder.echo()`` type-check
 raised ``AttributeError``. These tests hold the two sets equal, pin the eight verbs'
 wire shape, and keep the deprecated verbs (dial, eval, if) out.
 
-The bundle's freshness against porting-sdk itself is checked by the SCHEMA-BUNDLE gate
-(``scripts/check_schema_bundle.py``), which has a porting-sdk checkout to compare with.
+The bundle's freshness against porting-sdk itself is checked by the fleet-shared
+SCHEMA-BUNDLE gate (``porting-sdk/scripts/port_schema_bundle.py check``), which has a
+porting-sdk checkout to compare with; runtime-vs-stub agreement by SWML-VERBS-AGREE
+(``scripts/check_swml_verbs_agree.py``).
 """
 
 import copy

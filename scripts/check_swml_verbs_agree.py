@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""check_schema_bundle.py — the SCHEMA-BUNDLE gate.
+"""check_swml_verbs_agree.py — the SWML-VERBS-AGREE gate.
 
 python's SWML verb set exists twice, and the two copies are produced by different
 machinery:
@@ -11,37 +11,32 @@ machinery:
 * **runtime** — the methods ``SWMLBuilder`` installs on each instance from the BUNDLED
   ``signalwire/signalwire/schema.json`` (``SchemaUtils.get_all_verb_names``).
 
-Nothing kept the bundle current. It fell eight verbs behind the stub (echo, execute_rpc,
-ring, set_meta, stream, stop_stream, transcribe, transcribe_stop), so a type checker
-accepted ``builder.echo()`` and the call raised ``AttributeError``. This gate closes that
-gap with two checks:
+The bundle once fell eight verbs behind the stub (echo, execute_rpc, ring, set_meta,
+stream, stop_stream, transcribe, transcribe_stop), so a type checker accepted
+``builder.echo()`` and the call raised ``AttributeError``.
 
-1. **FRESH** — the bundled ``schema.json`` is byte-identical to ``porting-sdk/schema.json``
-   at the checkout this run is pinned to, and ``schema.json.sha256`` (the port-side record
-   porting-sdk's ``scripts/fanout_schema.py`` writes beside every copy) names the bundled
-   bytes. The byte compare is what keeps the runtime and the stub on one source; the
-   record is the part a checkout without porting-sdk can still verify.
-2. **AGREE** — the verb methods the runtime installs equal the verb methods the stub
-   declares, compared in both directions.
+The bundle's FRESHNESS (bundled bytes == porting-sdk's schema.json == ARS output, plus the
+``schema.json.sha256`` record) is the fleet-shared SCHEMA-BUNDLE gate,
+``porting-sdk/scripts/port_schema_bundle.py check`` (contract:
+``porting-sdk/docs/SCHEMA_ROUND_TRIP.md``). This gate is the python-specific half:
+**AGREE** — the verb methods the runtime installs equal the verb methods the stub declares,
+compared in both directions.
 
-``--selftest`` proves both checks can fail: a bundle with one byte changed must fail
-FRESH, a bundle with a verb removed must fail AGREE (runtime short of the stub), and a
-bundle with an extra verb must fail AGREE (runtime ahead of the stub). Scratch copies go
-under ``<repo>/.sw-tmp/``, which is gitignored.
+``--selftest`` proves AGREE can fail: a bundle with a verb removed must fail (runtime short
+of the stub), and a bundle with an extra verb must fail (runtime ahead of the stub).
+Scratch copies go under ``<repo>/.sw-tmp/``, which is gitignored.
 
-The verdict is the ``==> SCHEMA-BUNDLE PASS|FAIL`` line; the exit code matches it.
+The verdict is the ``==> SWML-VERBS-AGREE PASS|FAIL`` line; the exit code matches it.
 
 Usage::
 
-    python3 scripts/check_schema_bundle.py --porting-sdk ../porting-sdk
-    python3 scripts/check_schema_bundle.py --porting-sdk ../porting-sdk --selftest
+    python3 scripts/check_swml_verbs_agree.py [--selftest]
 """
 
 from __future__ import annotations
 
 import argparse
 import copy
-import hashlib
 import json
 import keyword
 import shutil
@@ -52,43 +47,9 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_DIR = REPO_ROOT / "signalwire" / "signalwire"
 BUNDLE = PACKAGE_DIR / "schema.json"
-RECORD = PACKAGE_DIR / "schema.json.sha256"
-SCRATCH = REPO_ROOT / ".sw-tmp" / "schema-bundle-selftest"
+SCRATCH = REPO_ROOT / ".sw-tmp" / "swml-verbs-agree-selftest"
 
-_TAG = "[schema-bundle]"
-
-
-def sha256_bytes(data: bytes) -> str:
-    """Hex sha256 of ``data``."""
-    return hashlib.sha256(data).hexdigest()
-
-
-def check_fresh(bundle: Path, record: Path, source: Path) -> list[str]:
-    """Problems with the bundle's freshness; empty when it is current."""
-    problems: list[str] = []
-    if not source.is_file():
-        return [f"missing source: {source}"]
-    if not bundle.is_file():
-        return [f"missing bundle: {bundle}"]
-    got = bundle.read_bytes()
-    want = source.read_bytes()
-    if got != want:
-        problems.append(
-            f"{bundle.name} is stale: sha256 {sha256_bytes(got)[:12]} ({len(got)} B) != "
-            f"porting-sdk {sha256_bytes(want)[:12]} ({len(want)} B); "
-            f"re-bundle with scripts/sync_schema_bundle.py"
-        )
-    if not record.is_file():
-        problems.append(f"missing record: {record}")
-    else:
-        fields = record.read_text(encoding="utf-8").split()
-        recorded = fields[0] if fields else ""
-        if recorded != sha256_bytes(got):
-            problems.append(
-                f"{record.name} records {recorded[:12] or '<empty>'} but {bundle.name} "
-                f"hashes to {sha256_bytes(got)[:12]}"
-            )
-    return problems
+_TAG = "[swml-verbs-agree]"
 
 
 def stub_verb_methods() -> set[str]:
@@ -168,45 +129,24 @@ def check_agree(schema_path: Path) -> list[str]:
     return problems
 
 
-def run(porting_sdk: Path) -> list[str]:
-    """Both checks against the committed tree."""
-    source = porting_sdk / "schema.json"
-    print(f"{_TAG} source: {source}")
-    problems = [f"FRESH: {p}" for p in check_fresh(BUNDLE, RECORD, source)]
-    if not problems:
-        print(
-            f"{_TAG} FRESH ok: {BUNDLE.name} sha256 {sha256_bytes(BUNDLE.read_bytes())[:12]} == porting-sdk, record matches"
-        )
+def run() -> list[str]:
+    """AGREE against the committed tree."""
     agree = [f"AGREE: {p}" for p in check_agree(BUNDLE)]
     if not agree:
         print(
             f"{_TAG} AGREE ok: runtime == stub ({len(stub_verb_methods())} verb methods)"
         )
-    return problems + agree
+    return agree
 
 
-def selftest(porting_sdk: Path) -> list[str]:
-    """Negative controls: each broken input must make its check fail."""
-    source = porting_sdk / "schema.json"
+def selftest() -> list[str]:
+    """Negative controls: each broken input must make AGREE fail."""
     failures: list[str] = []
     if SCRATCH.exists():
         shutil.rmtree(SCRATCH)
     SCRATCH.mkdir(parents=True)
     try:
         data = BUNDLE.read_bytes()
-        record = SCRATCH / "schema.json.sha256"
-        record.write_text(f"{sha256_bytes(data)}  schema.json\n", encoding="utf-8")
-
-        # 1. A stale bundle (one byte differs) must fail FRESH.
-        stale = SCRATCH / "stale.json"
-        stale.write_bytes(data.replace(b'"', b"'", 1))
-        got = check_fresh(stale, record, source)
-        print(f"{_TAG} control stale-bundle -> {'FAIL (expected)' if got else 'PASS'}")
-        if not got:
-            failures.append(
-                "control stale-bundle: FRESH passed a bundle that differs from porting-sdk"
-            )
-
         schema = json.loads(data)
         methods = schema["$defs"]["SWMLMethod"]["anyOf"]
 
@@ -258,23 +198,20 @@ def main(argv: list[str] | None = None) -> int:
     """CLI entry point; prints the verdict line and returns its exit code."""
     ap = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     ap.add_argument(
-        "--porting-sdk", type=Path, required=True, help="porting-sdk checkout"
-    )
-    ap.add_argument(
         "--selftest", action="store_true", help="also run the negative controls"
     )
     args = ap.parse_args(argv)
 
     sys.path.insert(0, str(REPO_ROOT / "signalwire"))
-    problems = run(args.porting_sdk.resolve())
+    problems = run()
     if args.selftest:
-        problems += [f"SELFTEST: {p}" for p in selftest(args.porting_sdk.resolve())]
+        problems += [f"SELFTEST: {p}" for p in selftest()]
     for p in problems:
         print(f"{_TAG} {p}")
     if problems:
-        print("==> SCHEMA-BUNDLE FAIL")
+        print("==> SWML-VERBS-AGREE FAIL")
         return 1
-    print("==> SCHEMA-BUNDLE PASS")
+    print("==> SWML-VERBS-AGREE PASS")
     return 0
 
 
