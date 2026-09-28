@@ -96,6 +96,32 @@ def _verb_body(verb_name: str, config: Any, kwargs: dict[str, Any]) -> Any:
     return config
 
 
+def _reject_unaccepted_body(verb_name: str, config: Any, added: bool) -> None:
+    """
+    Raise when a generated verb method's positional non-object body was not added.
+
+    ``add_verb`` takes an object body, plus ``sleep``'s integer form. A
+    non-mapping ``config`` it rejects would otherwise be dropped with only a
+    log line, so ``builder.label("x")`` produced no verb and no error. This
+    raises the ``TypeError`` a positional call raised before verb methods took
+    a positional body.
+
+    Args:
+        verb_name: The verb the method adds.
+        config: The positional body the caller passed.
+        added: What ``add_verb`` returned.
+
+    Raises:
+        TypeError: If ``config`` is a non-mapping body ``add_verb`` did not add.
+    """
+    if not added and config is not None and not isinstance(config, Mapping):
+        msg = (
+            f"{verb_name}() takes an object body or keyword arguments, "
+            f"not {type(config).__name__}"
+        )
+        raise TypeError(msg)
+
+
 def _verb_is_deprecated(verb_def: dict[str, Any], verb_name: str) -> bool:
     """
     Whether a SWML verb wrapper is marked deprecated in the schema.

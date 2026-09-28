@@ -23,6 +23,7 @@ except ImportError:
 
 from signalwire.core.swml_service import SWMLService
 from signalwire.utils.schema_utils import (
+    _reject_unaccepted_body,
     _verb_body,
     _verb_method_name,
     _verb_name_for_attribute,
@@ -394,9 +395,10 @@ class SWMLBuilder(_VerbsBase):
                     """
                     Dynamically generated method for SWML verb - returns self for chaining
                     """
-                    self_instance.service.add_verb(
+                    added = self_instance.service.add_verb(
                         name, _verb_body(name, config, kwargs)
                     )
+                    _reject_unaccepted_body(name, config, added)
                     return self_instance
 
                 # Add docstring to the method
@@ -496,7 +498,10 @@ class SWMLBuilder(_VerbsBase):
                 """
                 Dynamically generated method for SWML verb - returns self for chaining
                 """
-                self_instance.service.add_verb(name, _verb_body(name, config, kwargs))
+                added = self_instance.service.add_verb(
+                    name, _verb_body(name, config, kwargs)
+                )
+                _reject_unaccepted_body(name, config, added)
                 return self_instance
 
             # Add docstring to the method

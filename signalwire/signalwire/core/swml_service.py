@@ -58,6 +58,7 @@ except ImportError:
 from signalwire.utils.schema_utils import (  # noqa: E402
     SchemaUtils,
     SchemaValidationError,
+    _reject_unaccepted_body,
     _verb_body,
     _verb_method_name,
     _verb_name_for_attribute,
@@ -353,9 +354,11 @@ class SWMLService(ToolMixin):
                     self.log.debug(
                         "executing_verb_method", verb=name, kwargs_count=len(kwargs)
                     )
-                    return self_instance.add_verb(
+                    added = self_instance.add_verb(
                         name, _verb_body(name, config, kwargs)
                     )
+                    _reject_unaccepted_body(name, config, added)
+                    return added
 
                 # Add docstring to the method
                 verb_properties = self.schema_utils.get_verb_properties(name)
@@ -503,7 +506,9 @@ class SWMLService(ToolMixin):
                 self.log.debug(
                     "executing_dynamic_verb", verb=name, kwargs_count=len(kwargs)
                 )
-                return self_instance.add_verb(name, _verb_body(name, config, kwargs))
+                added = self_instance.add_verb(name, _verb_body(name, config, kwargs))
+                _reject_unaccepted_body(name, config, added)
+                return added
 
             # Add docstring to the method
             verb_properties = self.schema_utils.get_verb_properties(name)
