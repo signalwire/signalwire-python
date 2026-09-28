@@ -2400,13 +2400,13 @@ class _SwmlVerbs:
         raise NotImplementedError  # installed dynamically at runtime
 
     def bind_digit(self: _Self, config: BindDigitConfig | None = None) -> _Self:
-        """Bind DTMF digit actions."""
+        """Bind DTMF digit actions. (api_state: experimental)"""
         raise NotImplementedError  # installed dynamically at runtime
 
     def clear_digit_bindings(
         self: _Self, config: ClearDigitBindingsConfig | None = None
     ) -> _Self:
-        """Clear all digit bindings."""
+        """Clear all digit bindings. (api_state: experimental)"""
         raise NotImplementedError  # installed dynamically at runtime
 
     def cond(self: _Self, config: Mapping[str, Any] | None = None) -> _Self:
@@ -2418,7 +2418,7 @@ class _SwmlVerbs:
         raise NotImplementedError  # installed dynamically at runtime
 
     def denoise(self: _Self, config: Mapping[str, Any] | None = None) -> _Self:
-        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911. (api_state: experimental)"""
         raise NotImplementedError  # installed dynamically at runtime
 
     def detect_machine(self: _Self, config: DetectMachineConfig | None = None) -> _Self:
@@ -2438,7 +2438,7 @@ class _SwmlVerbs:
         raise NotImplementedError  # installed dynamically at runtime
 
     def execute_rpc(self: _Self, config: ExecuteRpcConfig | None = None) -> _Self:
-        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911. (api_state: experimental)"""
         raise NotImplementedError  # installed dynamically at runtime
 
     def goto(self: _Self, config: GotoConfig | None = None) -> _Self:
@@ -2524,11 +2524,11 @@ class _SwmlVerbs:
     def set_capabilities(
         self: _Self, config: SetCapabilitiesConfig | None = None
     ) -> _Self:
-        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911. (api_state: experimental)"""
         raise NotImplementedError  # installed dynamically at runtime
 
     def set_meta(self: _Self, config: SetMetaConfig | None = None) -> _Self:
-        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911. (api_state: experimental)"""
         raise NotImplementedError  # installed dynamically at runtime
 
     def sleep(self: _Self, config: SleepConfig | None = None) -> _Self:
@@ -2536,7 +2536,7 @@ class _SwmlVerbs:
         raise NotImplementedError  # installed dynamically at runtime
 
     def stop_denoise(self: _Self, config: Mapping[str, Any] | None = None) -> _Self:
-        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911. (api_state: experimental)"""
         raise NotImplementedError  # installed dynamically at runtime
 
     def stop_record_call(
@@ -2582,5 +2582,5 @@ class _SwmlVerbs:
         raise NotImplementedError  # installed dynamically at runtime
 
     def user_event(self: _Self, config: UserEventConfig | None = None) -> _Self:
-        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911. (api_state: experimental)"""
         raise NotImplementedError  # installed dynamically at runtime

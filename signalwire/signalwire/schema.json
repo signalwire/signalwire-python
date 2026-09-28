@@ -2190,7 +2190,8 @@
                             "false"
                           ]
                         }
-                      ]
+                      ],
+                      "x-api-state": "deprecated"
                     },
                     "lipsync_debug": {
                       "anyOf": [
@@ -5094,7 +5095,8 @@
           ],
           "unevaluatedProperties": {
             "not": {}
-          }
+          },
+          "x-api-state": "experimental"
         }
       },
       "required": [
@@ -5390,7 +5392,8 @@
           },
           "unevaluatedProperties": {
             "not": {}
-          }
+          },
+          "x-api-state": "experimental"
         }
       },
       "required": [
@@ -6675,7 +6678,8 @@
               "properties": {},
               "unevaluatedProperties": {
                 "not": {}
-              }
+              },
+              "x-api-state": "experimental"
             },
             {
               "type": "array"
@@ -6686,7 +6690,8 @@
             {
               "type": "string"
             }
-          ]
+          ],
+          "x-api-state": "experimental"
         }
       },
       "required": [
@@ -7289,6 +7294,7 @@
               ]
             }
           ],
+          "x-api-state": "deprecated",
           "x-outcome-variables": [
             "dial_result_code",
             "dial_result_message",
@@ -7536,7 +7542,8 @@
           "description": "Evaluate expressions and assign to variables (deprecated).",
           "type": "object",
           "deprecated": true,
-          "properties": {}
+          "properties": {},
+          "x-api-state": "deprecated"
         }
       },
       "required": [
@@ -7899,6 +7906,7 @@
               "unevaluatedProperties": {
                 "not": {}
               },
+              "x-api-state": "experimental",
               "x-outcome-variables": [
                 "last_rpc_method",
                 "last_rpc_exec_time_ms",
@@ -7915,7 +7923,8 @@
             {
               "type": "string"
             }
-          ]
+          ],
+          "x-api-state": "experimental"
         }
       },
       "required": [
@@ -8306,7 +8315,8 @@
               ],
               "unevaluatedProperties": {
                 "not": {}
-              }
+              },
+              "x-api-state": "deprecated"
             },
             {
               "type": "array"
@@ -8317,7 +8327,8 @@
             {
               "type": "string"
             }
-          ]
+          ],
+          "x-api-state": "deprecated"
         }
       },
       "required": [
@@ -13126,7 +13137,8 @@
               ],
               "unevaluatedProperties": {
                 "not": {}
-              }
+              },
+              "x-api-state": "experimental"
             },
             {
               "type": "array"
@@ -13137,7 +13149,8 @@
             {
               "type": "string"
             }
-          ]
+          ],
+          "x-api-state": "experimental"
         }
       },
       "required": [
@@ -13183,7 +13196,8 @@
               },
               "unevaluatedProperties": {
                 "not": {}
-              }
+              },
+              "x-api-state": "experimental"
             },
             {
               "type": "array"
@@ -13194,7 +13208,8 @@
             {
               "type": "string"
             }
-          ]
+          ],
+          "x-api-state": "experimental"
         }
       },
       "required": [
@@ -13461,6 +13476,7 @@
               "unevaluatedProperties": {
                 "not": {}
               },
+              "x-api-state": "experimental",
               "x-outcome-variables": [
                 "denoise_result"
               ]
@@ -13474,7 +13490,8 @@
             {
               "type": "string"
             }
-          ]
+          ],
+          "x-api-state": "experimental"
         }
       },
       "required": [
@@ -14940,6 +14957,7 @@
               "unevaluatedProperties": {
                 "not": {}
               },
+              "x-api-state": "experimental",
               "x-effect-requires": [
                 [
                   "event"
@@ -14955,7 +14973,8 @@
             {
               "type": "string"
             }
-          ]
+          ],
+          "x-api-state": "experimental"
         }
       },
       "required": [
