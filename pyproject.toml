@@ -298,3 +298,13 @@ show_error_codes = true
 module = "numpy.*"
 follow_imports = "skip"
 follow_imports_for_stubs = true
+
+# `deprecated` (a transitive runtime dep via `limits`; nothing here imports it) is the
+# same class as numpy above: Deprecated 3.0.0 ships sphinx.py using the 3.12+ `type`
+# statement, so mypy's 3.10 grammar errors on the 3.12/3.13 CI runners ("Type
+# statement is only supported in Python 3.12 and greater", run 36362773711). We don't
+# check its types; skip following into it.
+[[tool.mypy.overrides]]
+module = "deprecated.*"
+follow_imports = "skip"
+follow_imports_for_stubs = true
