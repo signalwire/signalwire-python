@@ -26,54 +26,88 @@ def generate_fake_node_id() -> str:
     return f"test-node-{uuid.uuid4().hex[:8]}"
 
 
+#: The ``call.type`` device variants the engine writes (``webhook_request`` in
+#: porting-sdk combined-specs/swml.yaml): each carries a different key set.
+CALL_TYPES = ("phone", "sip", "webrtc")
+
+
+def _fake_e164(prefix: str) -> str:
+    return f"{prefix}{uuid.uuid4().int % 10**7:07d}"
+
+
 def generate_fake_sip_from(call_type: str) -> str:
-    """Generate a fake 'from' address based on call type"""
+    """Generate a fake ``call.from`` address for a device type."""
+    if call_type == "phone":
+        return _fake_e164("+1555")
     if call_type == "sip":
-        return f"+1555{uuid.uuid4().hex[:7]}"  # Fake phone number
+        return f"sip:caller-{uuid.uuid4().hex[:8]}@test.sip.domain"
     # webrtc
     return f"user-{uuid.uuid4().hex[:8]}@test.domain"
 
 
 def generate_fake_sip_to(call_type: str) -> str:
-    """Generate a fake 'to' address based on call type"""
+    """Generate a fake ``call.to`` address for a device type."""
+    if call_type == "phone":
+        return _fake_e164("+1444")
     if call_type == "sip":
-        return f"+1444{uuid.uuid4().hex[:7]}"  # Fake phone number
+        return f"sip:agent-{uuid.uuid4().hex[:8]}@test.sip.domain"
     # webrtc
     return f"agent-{uuid.uuid4().hex[:8]}@test.domain"
 
 
+def _sip_uri_parts(address: str) -> tuple[str, str]:
+    """(user, host) of a ``sip:user@host`` address."""
+    user, _, host = address.removeprefix("sip:").partition("@")
+    return user, host
+
+
 def adapt_for_call_type(call_data: dict[str, Any], call_type: str) -> dict[str, Any]:
     """
-    Adapt call data structure based on call type (sip vs webrtc)
+    Add the device-variant keys the engine writes for ``call_type``.
+
+    The engine's ``call`` object is closed and its key set depends on the device
+    type (``webhook_request.properties.call.variants`` in porting-sdk
+    combined-specs/swml.yaml):
+
+    - ``phone``: ``type``, ``from``, ``to``, ``from_number``, ``to_number`` (``from``
+      and ``to`` repeat the numbers), optional ``headers``;
+    - ``sip``: ``type``, ``from``, ``to``, optional ``headers`` (an array of
+      ``{name, value}``) and ``sip_data``;
+    - ``webrtc``: ``type``, ``from``, ``to``.
 
     Args:
-        call_data: Base call data structure
-        call_type: "sip" or "webrtc"
+        call_data: Base call data structure (the keys common to every device type)
+        call_type: "phone", "sip" or "webrtc"
 
     Returns:
-        Adapted call data with appropriate addresses and metadata
+        A copy of ``call_data`` with that variant's keys added
     """
+    if call_type not in CALL_TYPES:
+        raise ValueError(f"call_type must be one of {CALL_TYPES}, got {call_type!r}")
     call_data = call_data.copy()
-
-    # Update addresses based on call type
+    call_data["type"] = call_type
     call_data["from"] = generate_fake_sip_from(call_type)
     call_data["to"] = generate_fake_sip_to(call_type)
 
-    # Add call type specific metadata
-    if call_type == "sip":
-        call_data["type"] = "phone"
-        call_data["headers"] = {
-            "User-Agent": "Test-SIP-Client/1.0.0",
-            "From": f"<sip:{call_data['from']}@test.sip.provider>",
-            "To": f"<sip:{call_data['to']}@test.sip.provider>",
-            "Call-ID": call_data["call_id"],
-        }
-    else:  # webrtc
-        call_data["type"] = "webrtc"
-        call_data["headers"] = {
-            "User-Agent": "Test-WebRTC-Client/1.0.0",
-            "Origin": "https://test.webrtc.app",
-            "Sec-WebSocket-Protocol": "sip",
+    if call_type == "phone":
+        call_data["from_number"] = call_data["from"]
+        call_data["to_number"] = call_data["to"]
+    elif call_type == "sip":
+        call_data["headers"] = [
+            {"name": "X-Test-Client", "value": "swaig-test"},
+        ]
+        from_user, from_host = _sip_uri_parts(call_data["from"])
+        to_user, to_host = _sip_uri_parts(call_data["to"])
+        call_data["sip_data"] = {
+            "sip_req_user": to_user,
+            "sip_req_host": to_host,
+            "sip_req_uri": f"{to_user}@{to_host}",
+            "sip_from_user": from_user,
+            "sip_from_host": from_host,
+            "sip_from_uri": f"{from_user}@{from_host}",
+            "sip_to_user": to_user,
+            "sip_to_host": to_host,
+            "sip_to_uri": f"{to_user}@{to_host}",
         }
 
     return call_data
@@ -85,51 +119,34 @@ def generate_fake_swml_post_data(
     call_state: str = "created",
 ) -> dict[str, Any]:
     """
-    Generate fake SWML post_data that matches real SignalWire structure
+    Generate a fake SWML webhook request body in the engine's shape
+
+    The shape is the engine-derived ``webhook_request`` section of porting-sdk
+    combined-specs/swml.yaml (what mod_infrastructure POSTs to a SWML webhook):
+    a closed ``call`` object carrying ``call_id``, ``node_id``, ``call_state`` and
+    ``direction`` plus its device variant's keys, the ``vars`` bag (always
+    present) and ``envs``.
 
     Args:
-        call_type: "sip" or "webrtc" (default: webrtc)
+        call_type: "phone", "sip" or "webrtc" (default: webrtc)
         call_direction: "inbound" or "outbound" (default: inbound)
         call_state: Call state (default: created)
 
     Returns:
-        Fake post_data dict with call, vars, and envs structure
+        Fake request body with call, vars, and envs
     """
-    call_id = generate_fake_uuid()
-    project_id = generate_fake_uuid()
-    space_id = generate_fake_uuid()
-    current_time = datetime.now().isoformat()
-
-    # Base call structure
-    call_data = {
-        "call_id": call_id,
+    call_data: dict[str, Any] = {
+        "project_id": generate_fake_uuid(),
+        "space_id": generate_fake_uuid(),
+        "call_id": generate_fake_uuid(),
         "node_id": generate_fake_node_id(),
         "segment_id": generate_fake_uuid(),
-        "call_session_id": generate_fake_uuid(),
-        "tag": call_id,
-        "state": call_state,
+        "call_state": call_state,
         "direction": call_direction,
-        "type": call_type,
-        "from": generate_fake_sip_from(call_type),
-        "to": generate_fake_sip_to(call_type),
-        "timeout": 30,
-        "max_duration": 14400,
-        "answer_on_bridge": False,
-        "hangup_after_bridge": True,
-        "ringback": [],
-        "record": {},
-        "project_id": project_id,
-        "space_id": space_id,
-        "created_at": current_time,
-        "updated_at": current_time,
     }
 
-    # Adapt for specific call type
-    call_data = adapt_for_call_type(call_data, call_type)
-
-    # Complete post_data structure
     return {
-        "call": call_data,
+        "call": adapt_for_call_type(call_data, call_type),
         "vars": {
             "userVariables": {}  # Empty by default, can be filled via overrides
         },
