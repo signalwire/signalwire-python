@@ -48,40 +48,40 @@ class BindDigit(TypedDict, total=False):
 class CallDeviceStream(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    authorization_bearer_token: str
-    codec: str
+    authorization_bearer_token: str | SWMLVar
+    codec: str | SWMLVar
     custom_parameters: Any
-    name: str
-    realtime: bool
-    status_url: str
-    status_url_method: Literal["GET", "POST"]
-    url: str
+    name: str | SWMLVar
+    realtime: bool | SWMLVar
+    status_url: str | SWMLVar
+    status_url_method: Literal["GET", "POST"] | SWMLVar
+    url: str | SWMLVar
 
 
 class CallPayParameters(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    name: str
-    value: str
+    name: str | SWMLVar
+    value: str | SWMLVar
 
 
 class CallPayPrompts(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    actions: list[CallPayPromptsActions]
-    attempt: str
-    card_type: str
-    error_type: str
-    # non-identifier field 'for': Literal['payment-card-number', 'expiration-date', 'security-code', 'postal-code', 'bank-routing-number', 'bank-account-number', 'payment-processing', 'payment-completed', 'payment-failed', 'payment-canceled']
-    play: list[RingbackConfig]
-    require_matching_inputs: str
+    actions: list[CallPayPromptsActions | SWMLVar] | SWMLVar
+    attempt: str | SWMLVar
+    card_type: str | SWMLVar
+    error_type: str | SWMLVar
+    # non-identifier field 'for': Literal['payment-card-number', 'expiration-date', 'security-code', 'postal-code', 'bank-routing-number', 'bank-account-number', 'payment-processing', 'payment-completed', 'payment-failed', 'payment-canceled'] | SWMLVar
+    play: list[RingbackConfig | SWMLVar] | SWMLVar
+    require_matching_inputs: str | SWMLVar
 
 
 class CallPayPromptsActions(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    type: Literal["Say", "Play"]
-    phrase: str
+    type: Literal["Say", "Play"] | SWMLVar
+    phrase: str | SWMLVar
 
 
 class ClearDigitBindings(TypedDict, total=False):
@@ -154,11 +154,11 @@ class Context(TypedDict, total=False):
     history: str
     initial_step: str
     isolated: bool | str
-    pom: list[Any]
+    pom: list[PromptPomSection]
     post_prompt: dict[str, Any]
     prompt: str
     reset: list[Any] | bool | None | float | dict[str, Any] | str
-    steps: list[Any]
+    steps: list[Step]
     system_prompt: str
     user_prompt: str
     valid_contexts: list[Any]
@@ -211,7 +211,11 @@ class ExecuteRpc(TypedDict, total=False):
 
 
 class Expression(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """Without one of `expr` / `string` and `output`, a Expression has no effect: it is accepted and ignored, not rejected.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     pattern: str
     expr: str
@@ -221,7 +225,11 @@ class Expression(TypedDict, total=False):
 
 
 class Foreach(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """Without `append`, `input_key` and `output_key`, a Foreach has no effect: it is accepted and ignored, not rejected.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     append: str
     input_key: str
@@ -420,7 +428,11 @@ class Prompt(TypedDict, total=False):
 
 
 class PromptPomSection(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """Without one of `body` / `bullets` / `subsections`, the object has no effect: it is accepted and ignored, not rejected.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     title: str
     body: str
@@ -546,7 +558,7 @@ class Step(TypedDict, total=False):
     gather_info: dict[str, Any]
     history: str
     name: str
-    pom: list[Any]
+    pom: list[PromptPomSection]
     reset: dict[str, Any]
     skip_to_next_step: bool | str
     skip_user_turn: bool | str
@@ -635,7 +647,11 @@ class UserEvent(TypedDict, total=False):
 
 
 class Webhook(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """Without one of `expressions` / `output` and `url`, a Webhook has no effect: it is accepted and ignored, not rejected.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     error_keys: list[Any] | str
     expressions: list[Expression] | Expression
@@ -675,13 +691,17 @@ class AiConfig(TypedDict, total=False):
 
 
 class AiSWAIGItem(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """Without one of `data_map` / `web_hook_url`, one of `description` / `purpose` and `function`, the element has no effect: it is accepted and ignored, not rejected.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     description: str
     active: bool | float | str
     argument: JsonSchemaUnion
     data_map: DataMap
-    fillers: dict[str, Any]
+    fillers: AiSWAIGItemFillers
     function: str
     meta_data: dict[str, Any]
     meta_data_token: str
@@ -695,28 +715,54 @@ class AiSWAIGItem(TypedDict, total=False):
     web_hook_auth_password: str
     web_hook_auth_user: str
     web_hook_url: str
+
+
+class AiSWAIGItemFillers(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    default: Any
+    auto: Any
 
 
 class AiSWAIG(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    defaults: dict[str, Any]
+    defaults: AiSWAIGDefaults
     functions: list[AiSWAIGFunctionsItem]
     hooks: list[AiSWAIGHooksItem]
     includes: list[AiSWAIGIncludesItem]
-    internal_fillers: dict[str, Any]
+    internal_fillers: AiSWAIGInternalFillers
     mcp_servers: list[AiSWAIGMcpServersItem]
-    native_functions: list[Any]
+    native_functions: list[
+        Literal[
+            "adjust_response_latency", "check_time", "wait_for_user", "wait_seconds"
+        ]
+    ]
+
+
+class AiSWAIGDefaults(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    meta_data: Any
+    meta_data_token: str
+    web_hook_auth_pass: str
+    web_hook_auth_password: str
+    web_hook_auth_user: str
+    web_hook_url: str
 
 
 class AiSWAIGFunctionsItem(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """Without one of `data_map` / `web_hook_url`, one of `description` / `purpose` and `function`, the element has no effect: it is accepted and ignored, not rejected.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     description: str
     active: bool | float | str
     argument: JsonSchemaUnion
     data_map: DataMap
-    fillers: dict[str, Any]
+    fillers: AiSWAIGFunctionsItemFillers
     function: str
     meta_data: dict[str, Any]
     meta_data_token: str
@@ -730,16 +776,27 @@ class AiSWAIGFunctionsItem(TypedDict, total=False):
     web_hook_auth_password: str
     web_hook_auth_user: str
     web_hook_url: str
+
+
+class AiSWAIGFunctionsItemFillers(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    default: Any
+    auto: Any
 
 
 class AiSWAIGHooksItem(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """Without one of `data_map` / `web_hook_url`, one of `description` / `purpose` and `function`, the element has no effect: it is accepted and ignored, not rejected.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     description: str
     active: bool | float | str
     argument: JsonSchemaUnion
     data_map: DataMap
-    fillers: dict[str, Any]
+    fillers: AiSWAIGHooksItemFillers
     function: str
     meta_data: dict[str, Any]
     meta_data_token: str
@@ -755,14 +812,102 @@ class AiSWAIGHooksItem(TypedDict, total=False):
     web_hook_url: str
 
 
-class AiSWAIGIncludesItem(TypedDict, total=False):
+class AiSWAIGHooksItemFillers(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
+
+    default: Any
+    auto: Any
+
+
+class AiSWAIGIncludesItem(TypedDict, total=False):
+    """Without `functions` and `url`, the element has no effect: it is accepted and ignored, not rejected.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     auth_password: str
     auth_user: str
     functions: list[Any]
     meta_data: dict[str, Any]
     url: str
+
+
+class AiSWAIGInternalFillers(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    adjust_response_latency: AiSWAIGInternalFillersAdjustResponseLatency
+    change_context: AiSWAIGInternalFillersChangeContext
+    check_time: AiSWAIGInternalFillersCheckTime
+    get_ideal_strategy: AiSWAIGInternalFillersGetIdealStrategy
+    get_visual_input: AiSWAIGInternalFillersGetVisualInput
+    next_step: AiSWAIGInternalFillersNextStep
+    pause_conversation: AiSWAIGInternalFillersPauseConversation
+    wait_for_user: AiSWAIGInternalFillersWaitForUser
+    wait_seconds: AiSWAIGInternalFillersWaitSeconds
+
+
+class AiSWAIGInternalFillersAdjustResponseLatency(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    default: Any
+    auto: Any
+
+
+class AiSWAIGInternalFillersChangeContext(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    default: Any
+    auto: Any
+
+
+class AiSWAIGInternalFillersCheckTime(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    default: Any
+    auto: Any
+
+
+class AiSWAIGInternalFillersGetIdealStrategy(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    default: Any
+    auto: Any
+
+
+class AiSWAIGInternalFillersGetVisualInput(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    default: Any
+    auto: Any
+
+
+class AiSWAIGInternalFillersNextStep(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    default: Any
+    auto: Any
+
+
+class AiSWAIGInternalFillersPauseConversation(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    default: Any
+    auto: Any
+
+
+class AiSWAIGInternalFillersWaitForUser(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    default: Any
+    auto: Any
+
+
+class AiSWAIGInternalFillersWaitSeconds(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    default: Any
+    auto: Any
 
 
 class AiSWAIGMcpServersItem(TypedDict, total=False):
@@ -822,14 +967,34 @@ class AiMultilingual(TypedDict, total=False):
 
     allowed: list[Any]
     engine: str
-    fillers: list[Any] | dict[str, Any]
-    function_fillers: list[Any] | dict[str, Any]
+    fillers: list[Any] | AiMultilingualFillers
+    function_fillers: list[Any] | AiMultilingualFunctionFillers
     languages: list[Any]
     min_switch_words: float
     model: str
     provider: str
     start_language: str
-    turn_fillers: list[Any] | dict[str, Any]
+    turn_fillers: list[Any] | AiMultilingualTurnFillers
+
+
+class AiMultilingualFillers(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    default: Any
+    auto: Any
+
+
+class AiMultilingualFunctionFillers(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    default: Any
+    auto: Any
+
+
+class AiMultilingualTurnFillers(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    default: Any
 
 
 class AiParams(TypedDict, total=False):
@@ -839,128 +1004,57 @@ class AiParams(TypedDict, total=False):
     not validated at runtime (a TypedDict is a plain ``dict``).
     """
 
-    acknowledge_interruptions: (
-        int
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-        | bool
-    )
+    acknowledge_interruptions: int | str | bool
     acoustic_eot_gate_prob: float | str
     acoustic_eot_trust_prob: float | str
     ai_model: str
     ai_name: str
     ai_volume: int | str
     app_name: str
-    asr_diarize: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
+    asr_diarize: bool | float | str
     asr_params: dict[str, Any]
-    asr_smart_format: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
-    asr_speaker_affinity: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
+    asr_smart_format: bool | float | str
+    asr_speaker_affinity: bool | float | str
     attention_escalate_prompt: str
     attention_timeout: int | str
     attention_timeout_prompt: str
     auth_token: str
-    auto_correct: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
-    azure_stream_first: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
+    auto_correct: bool | float | str
+    azure_stream_first: bool | float | str
     azure_tts_key: str
     background_file: str
     background_file_loops: int | str
     background_file_volume: int | str
-    barge_functions: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
+    barge_functions: bool | float | str
     barge_match_string: str
     barge_min_words: int | str
-    bill_all_tts: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
-    cache: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
+    bill_all_tts: bool | float | str
+    cache: bool | float | str
     call_uuid: str
     cartesia_key: str
     cartesia_model: str
-    cartesia_stream_first: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
+    cartesia_stream_first: bool | float | str
     confidence: float | str
-    conscience: Literal["false", "true"]
+    conscience: str
     conversation_id: str
     conversation_sliding_window: int | str
     convo: list[AiParamsConvoItem]
     debug_webhook_level: int | str
     debug_webhook_url: str
     deepgram_key_override: str
-    deepgram_stream_first: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
+    deepgram_stream_first: bool | float | str
     deepgram_tts_key: str
     deepgram_url_override: str
     developer_prompt: str
     digit_terminators: str
     digit_timeout: int | str
-    direction: Literal["inbound", "outbound"]
+    direction: str
     double_turn_filler_every_n: float | str
     double_turn_filler_min_ms: float | str
     double_turn_model: str
     double_turn_prompt: str
     double_turn_wait_ms: float | str
-    double_turns: (
-        bool
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
+    double_turns: bool | str
     eleven_labs_key: str
     eleven_labs_model: Literal[
         "eleven_english_v2",
@@ -974,70 +1068,14 @@ class AiParams(TypedDict, total=False):
     ]
     eleven_labs_similarity: float | str
     eleven_labs_stability: float | str
-    eleven_labs_stream_first: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
-    enable_barge: (
-        Literal[
-            "0",
-            "1",
-            "active",
-            "all",
-            "allow",
-            "enabled",
-            "false",
-            "on",
-            "t",
-            "true",
-            "yes",
-        ]
-        | bool
-    )
-    enable_inner_dialog: (
-        bool
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
-    enable_pause: (
-        bool
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
-    enable_text_normalization: Literal[
-        "both", "false", "heard", "none", "off", "on", "spoken", "true"
-    ]
-    enable_thinking: (
-        bool
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
-    enable_turn_detection: (
-        bool
-        | Literal[
-            "0",
-            "1",
-            "acoustic_only",
-            "both",
-            "false",
-            "off",
-            "punct_only",
-            "punctuation_only",
-            "true",
-        ]
-    )
-    enable_vision: (
-        bool
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
+    eleven_labs_stream_first: bool | float | str
+    enable_barge: str | bool
+    enable_inner_dialog: bool | str
+    enable_pause: bool | str
+    enable_text_normalization: str
+    enable_thinking: bool | str
+    enable_turn_detection: bool | str
+    enable_vision: bool | str
     end_of_speech_timeout: int | str
     energy_level: float | str
     escalate_after_ms: int | str
@@ -1048,32 +1086,14 @@ class AiParams(TypedDict, total=False):
     fish_key: str
     fish_model: str
     function_filler_sequence_gap_ms: float | str
-    function_wait_for_talking: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
-    functions_on_no_response: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
+    function_wait_for_talking: bool | float | str
+    functions_on_no_response: bool | float | str
     grok_key: str
     groq_tts_key: str
     hard_stop_prompt: str
     hard_stop_time: str
     hold_music: str
-    hold_on_process: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
+    hold_on_process: bool | float | str
     inactivity_timeout: int | str
     initial_sleep_ms: int | str
     inner_dialog: AiParamsInnerDialog
@@ -1081,39 +1101,15 @@ class AiParams(TypedDict, total=False):
     inner_dialog_prompt: str
     inner_dialog_scorecard: bool | AiParamsInnerDialogScorecard
     input_poll_freq: int | str
-    interrupt_on_noise: (
-        int
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-        | bool
-    )
+    interrupt_on_noise: int | str | bool
     interrupt_prompt: str
     inworld_apikey: str
     inworld_key: str
     inworld_model: str
     language: str
-    languages_enabled: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
-    lipsync_debug: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
-    llm_diarize_aware: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
+    languages_enabled: bool | float | str
+    lipsync_debug: bool | float | str
+    llm_diarize_aware: bool | float | str
     local_tz: str
     max_emotion: int | str
     max_response_tokens: float | str
@@ -1124,200 +1120,64 @@ class AiParams(TypedDict, total=False):
     mistral_model: str
     model: str
     openai_asr_engine: str
-    openai_azure: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
+    openai_azure: bool | float | str
     openai_gcloud_version: str
-    openai_stream_first: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
+    openai_stream_first: bool | float | str
     openai_tts_key: str
     openai_tts_url: str
     outbound_attention_timeout: int | str
     pcm_channels: int | str
     pcm_rate: int | str
-    persist_global_data: (
-        bool
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
-    pom_format: Literal["markdown", "xml"]
+    persist_global_data: bool | str
+    pom_format: str
     provider: str
     pvt_params: str
-    realtime: dict[str, Any]
+    realtime: AiParamsRealtime
     redact_prompt: str
     rime_apikey: str
     rime_key: str
     rime_model: str
-    rime_stream_first: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
+    rime_stream_first: bool | float | str
     sample_rate: int | str
-    save_conversation: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
-    send_single_llm_response: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
+    save_conversation: bool | float | str
+    send_single_llm_response: bool | float | str
     similarity: float | str
     smallest_key: str
     smallest_model: str
-    speak_when_spoken_to: (
-        bool
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
+    speak_when_spoken_to: bool | str
     speaker: str
     speech_event_timeout: int | str
     speech_gen_quick_stops: int | str
     speech_timeout: int | str
     speechify_key: str
-    speechify_loudness_normalization: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
+    speechify_loudness_normalization: bool | float | str
     speechify_model: str
     speechify_output_format: str
-    speechify_stream_first: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
-    speechify_text_normalization: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
+    speechify_stream_first: bool | float | str
+    speechify_text_normalization: bool | float | str
     speed: float | str
     stability: float | str
-    start_paused: (
-        bool
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
+    start_paused: bool | str
     static_greeting: str
-    static_greeting_no_barge: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
-    stream_first: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
-    streaming: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
+    static_greeting_no_barge: bool | float | str
+    stream_first: bool | float | str
+    streaming: bool | float | str
     strict_mode: str
-    summary_mode: Literal["original", "string"]
-    swaig_allow_settings: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
-    swaig_allow_swml: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
-    swaig_post_conversation: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
-    swaig_post_swml_vars: (
-        list[str]
-        | bool
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
-    swaig_set_global_data: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
+    summary_mode: str
+    swaig_allow_settings: bool | float | str
+    swaig_allow_swml: bool | float | str
+    swaig_post_conversation: bool | float | str
+    swaig_post_swml_vars: list[str] | bool | str
+    swaig_set_global_data: bool | float | str
     target_first_segment_ms: int | str
     text_normalization_far_dir: str
     thinking_model: str
-    tool_result_distill: bool | dict[str, Any]
-    transfer_summary: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
-    transparent_barge: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
+    tool_result_distill: bool | AiParamsToolResultDistill
+    transfer_summary: bool | float | str
+    transparent_barge: bool | float | str
     transparent_barge_max_time: int | str
-    tts_number_format: Literal["e.164", "e164", "generic", "international", "national"]
-    turn_detection: (
-        bool
-        | Literal[
-            "0",
-            "1",
-            "acoustic_only",
-            "both",
-            "false",
-            "off",
-            "punct_only",
-            "punctuation_only",
-            "true",
-        ]
-    )
+    tts_number_format: str
+    turn_detection: bool | str
     turn_detection_min_length: int | str
     turn_detection_timeout: int | str
     turn_filler_every_n: float | str
@@ -1329,18 +1189,12 @@ class AiParams(TypedDict, total=False):
     video_fps: int | str
     video_idle_file: str
     video_listening_file: str
-    video_scale: Literal["1080p", "480p", "720p", "native"]
+    video_scale: str
     video_talking_file: str
     vision_model: str
     voice_name: str
     vol: int | str
-    wait_for_user: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
+    wait_for_user: bool | float | str
     wake_prefix: str
 
 
@@ -1357,7 +1211,23 @@ class AiParamsConvoItem(TypedDict, total=False):
 class AiParamsInnerDialog(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    SWAIG: dict[str, Any]
+    SWAIG: AiParamsInnerDialogSWAIG
+
+
+class AiParamsInnerDialogSWAIG(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    defaults: AiParamsInnerDialogSWAIGDefaults
+    functions: list[Any]
+
+
+class AiParamsInnerDialogSWAIGDefaults(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    web_hook_auth_pass: str
+    web_hook_auth_password: str
+    web_hook_auth_user: str
+    web_hook_url: str
 
 
 class AiParamsInnerDialogScorecard(TypedDict, total=False):
@@ -1365,6 +1235,36 @@ class AiParamsInnerDialogScorecard(TypedDict, total=False):
 
     dials: list[Any]
     replace: bool | str
+
+
+class AiParamsRealtime(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    input_transcription: str
+    local_vad: bool | str
+    local_vad_frame_ms: float | str
+    local_vad_threshold: float | str
+    noise_reduction: str
+    packets_per_send: float | str
+    reasoning_effort: str
+    speed: float | str
+    temperature: float | str
+    tool_model: str
+    vad_eagerness: str
+    vad_prefix_padding_ms: float | str
+    vad_silence_duration_ms: float | str
+    vad_threshold: float | str
+    vad_type: str
+    voice: str
+
+
+class AiParamsToolResultDistill(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    enabled: bool | str
+    min_chars: float
+    model: str
+    prompt: str
 
 
 class AiPostPrompt(TypedDict, total=False):
@@ -1466,9 +1366,9 @@ class AiSidecarConfig(TypedDict, total=False):
     SWAIG: AiSidecarSWAIG | SWMLVar
     action: dict[str, Any] | SWMLVar
     customer_role: Literal["remote-caller", "local-caller"] | SWMLVar
-    direction: list[Literal["remote-caller", "local-caller"]] | SWMLVar
+    direction: list[Literal["remote-caller", "local-caller"] | SWMLVar] | SWMLVar
     global_data: dict[str, Any] | SWMLVar
-    hints: list[str] | SWMLVar
+    hints: list[str | SWMLVar] | SWMLVar
     lang: str | SWMLVar
     model: str | SWMLVar
     params: AiSidecarParams | SWMLVar
@@ -1480,61 +1380,70 @@ class AiSidecarConfig(TypedDict, total=False):
 class AiSidecarSWAIG(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    defaults: dict[str, Any]
-    functions: list[AiSidecarSWAIGFunctionsItem]
-    mcp_servers: list[Any]
+    defaults: AiSidecarSWAIGDefaults | SWMLVar
+    functions: list[AiSidecarSWAIGFunctionsItem | SWMLVar] | SWMLVar
+    mcp_servers: list[Any] | SWMLVar
+
+
+class AiSidecarSWAIGDefaults(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    web_hook_auth_pass: str | SWMLVar
+    web_hook_auth_password: str | SWMLVar
+    web_hook_auth_user: str | SWMLVar
+    web_hook_url: str | SWMLVar
 
 
 class AiSidecarSWAIGFunctionsItem(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    description: str
-    function: str
-    parameters: JsonSchemaUnion
-    purpose: str
-    web_hook_auth_pass: str
-    web_hook_auth_password: str
-    web_hook_auth_user: str
-    web_hook_url: str
+    description: str | SWMLVar
+    function: str | SWMLVar
+    parameters: JsonSchemaUnion | SWMLVar
+    purpose: str | SWMLVar
+    web_hook_auth_pass: str | SWMLVar
+    web_hook_auth_password: str | SWMLVar
+    web_hook_auth_user: str | SWMLVar
+    web_hook_url: str | SWMLVar
 
 
 class AiSidecarParams(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    act_on_channel: bool
-    ai_summary: bool
-    ai_summary_prompt: str
-    debug: bool
-    debug_level: int
-    deepgram_key_override: str
-    deepgram_url_override: str
-    final_summary: bool
-    idle_timeout_ms: int
-    live_events: bool
-    max_history_tokens: int
-    max_iters_per_tick: int
-    min_interval_ms: int
-    speech_engine: Literal["deepgram", "google"]
-    speech_timeout: int
-    summary_model: str
-    transcribe_prompt: str
-    vad_silence_ms: int
-    vad_thresh: int
-    verbose_utterances: bool
+    act_on_channel: bool | SWMLVar
+    ai_summary: bool | SWMLVar
+    ai_summary_prompt: str | SWMLVar
+    debug: bool | SWMLVar
+    debug_level: int | SWMLVar
+    deepgram_key_override: str | SWMLVar
+    deepgram_url_override: str | SWMLVar
+    final_summary: bool | SWMLVar
+    idle_timeout_ms: int | SWMLVar
+    live_events: bool | SWMLVar
+    max_history_tokens: int | SWMLVar
+    max_iters_per_tick: int | SWMLVar
+    min_interval_ms: int | SWMLVar
+    speech_engine: Literal["deepgram", "google"] | SWMLVar
+    speech_timeout: int | SWMLVar
+    summary_model: str | SWMLVar
+    transcribe_prompt: str | SWMLVar
+    vad_silence_ms: int | SWMLVar
+    vad_thresh: int | SWMLVar
+    verbose_utterances: bool | SWMLVar
 
 
 class AiSidecarPermissions(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    swaig_allow_settings: bool
-    swaig_allow_swml: bool
-    swaig_set_global_data: bool
+    swaig_allow_settings: bool | SWMLVar
+    swaig_allow_swml: bool | SWMLVar
+    swaig_set_global_data: bool | SWMLVar
 
 
 class AiSidecarPrompt(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    file: str
+    file: str | SWMLVar
 
 
 class AmazonBedrockConfig(TypedDict, total=False):
@@ -1565,8 +1474,14 @@ class AmazonBedrockSWAIG(TypedDict, total=False):
     not validated at runtime (a TypedDict is a plain ``dict``).
     """
 
-    defaults: dict[str, Any]
+    defaults: AmazonBedrockSWAIGDefaults
     functions: list[AmazonBedrockSWAIGFunctionsItem]
+
+
+class AmazonBedrockSWAIGDefaults(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    web_hook_url: str
 
 
 class AmazonBedrockSWAIGFunctionsItem(TypedDict, total=False):
@@ -1698,8 +1613,8 @@ class ClearDigitBindingsConfig(TypedDict, total=False):
 class CondItem(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    # non-identifier field 'else': list[Any]
-    then: list[Any]
+    # non-identifier field 'else': list[SWMLMethod]
+    then: list[SWMLMethod]
     when: str
 
 
@@ -1731,7 +1646,7 @@ class ConnectConfig(TypedDict, total=False):
     password: str | SWMLVar
     realtime: bool | SWMLVar
     result: list[ConnectResultItem] | ConnectResult
-    ringback: bool | str | list[RingbackConfig] | Play
+    ringback: bool | str | list[str] | RingbackConfig
     serial: list[ConnectDevice]
     serial_parallel: list[ConnectSerialParallel]
     session_timeout: int | SWMLVar
@@ -1747,15 +1662,15 @@ class ConnectConfig(TypedDict, total=False):
 class ConnectConfirm(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    code: Any
+    code: dict[str, Any]
     meta: Any
 
 
 class ConnectResultItem(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    # non-identifier field 'else': list[Any]
-    then: list[Any]
+    # non-identifier field 'else': list[SWMLMethod]
+    then: list[SWMLMethod]
     when: str
 
 
@@ -1767,21 +1682,28 @@ class ConnectResult(TypedDict, total=False):
     """
 
     default: list[SWMLMethod] | ConnectResultDefault
-    case: dict[str, Any]
+    case: dict[str, list[SWMLMethod] | ConnectResultCaseValue]
     variable: str | SWMLVar
 
 
 class ConnectResultDefault(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    code: Any
+    code: dict[str, Any]
+    meta: Any
+
+
+class ConnectResultCaseValue(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    code: dict[str, Any]
     meta: Any
 
 
 class ConnectDeviceConfirm(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    code: Any
+    code: dict[str, Any]
     meta: Any
 
 
@@ -1792,7 +1714,6 @@ class DetectMachineConfig(TypedDict, total=False):
     not validated at runtime (a TypedDict is a plain ``dict``).
     """
 
-    detect_interruptions: bool | SWMLVar
     detect_message_end: bool | SWMLVar
     detectors: str | SWMLVar
     end_silence_timeout: float | SWMLVar
@@ -1848,15 +1769,15 @@ class ExecuteConfig(TypedDict, total=False):
 class ExecuteOnReturn(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    code: Any
+    code: dict[str, Any]
     meta: Any
 
 
 class ExecuteResultItem(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    # non-identifier field 'else': list[Any]
-    then: list[Any]
+    # non-identifier field 'else': list[SWMLMethod]
+    then: list[SWMLMethod]
     when: str
 
 
@@ -1868,14 +1789,21 @@ class ExecuteResult(TypedDict, total=False):
     """
 
     default: list[SWMLMethod] | ExecuteResultDefault
-    case: dict[str, Any]
+    case: dict[str, list[SWMLMethod] | ExecuteResultCaseValue]
     variable: str | SWMLVar
 
 
 class ExecuteResultDefault(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    code: Any
+    code: dict[str, Any]
+    meta: Any
+
+
+class ExecuteResultCaseValue(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    code: dict[str, Any]
     meta: Any
 
 
@@ -1987,53 +1915,53 @@ class LiveTranscribeConfig(TypedDict, total=False):
     """
 
     action: Literal["start", "stop", "summarize"] | LiveTranscribeAction | SWMLVar
-    hints: list[LiveTranscribeHintsItem | str] | SWMLVar
+    hints: list[LiveTranscribeHintsItem | str | SWMLVar] | SWMLVar
 
 
 class LiveTranscribeAction(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    start: LiveTranscribeActionStart
+    start: LiveTranscribeActionStart | SWMLVar
     stop: Any
-    summarize: LiveTranscribeActionSummarize
+    summarize: LiveTranscribeActionSummarize | SWMLVar
 
 
 class LiveTranscribeActionStart(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    ai_summary: bool
-    ai_summary_prompt: str
-    debug_level: int
-    deepgram_key_override: str
-    deepgram_url_override: str
-    direction: list[str]
-    hints: list[str]
-    lang: str
-    live_events: bool
-    speech_engine: Literal["deepgram", "google"]
-    speech_timeout: int
-    vad_silence_ms: int
-    vad_thresh: int
-    verbose_utterances: bool
-    webhook: str
+    ai_summary: bool | SWMLVar
+    ai_summary_prompt: str | SWMLVar
+    debug_level: int | SWMLVar
+    deepgram_key_override: str | SWMLVar
+    deepgram_url_override: str | SWMLVar
+    direction: list[Literal["local-caller", "remote-caller"] | SWMLVar] | SWMLVar
+    hints: list[str | SWMLVar] | SWMLVar
+    lang: str | SWMLVar
+    live_events: bool | SWMLVar
+    speech_engine: str | SWMLVar
+    speech_timeout: int | SWMLVar
+    vad_silence_ms: int | SWMLVar
+    vad_thresh: int | SWMLVar
+    verbose_utterances: bool | SWMLVar
+    webhook: str | SWMLVar
 
 
 class LiveTranscribeActionSummarize(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    ai_model: str
-    prompt: str
-    summary_prompt: str
-    webhook: str
+    ai_model: str | SWMLVar
+    prompt: str | SWMLVar
+    summary_prompt: str | SWMLVar
+    webhook: str | SWMLVar
 
 
 class LiveTranscribeHintsItem(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    pattern: str
-    hint: str
-    ignore_case: bool | str
-    replace: str
+    pattern: str | SWMLVar
+    hint: str | SWMLVar
+    ignore_case: bool | str | SWMLVar
+    replace: str | SWMLVar
 
 
 class LiveTranslateConfig(TypedDict, total=False):
@@ -2051,53 +1979,53 @@ class LiveTranslateConfig(TypedDict, total=False):
 class LiveTranslateAction(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    inject: LiveTranslateActionInject
-    start: LiveTranslateActionStart
+    inject: LiveTranslateActionInject | SWMLVar
+    start: LiveTranslateActionStart | SWMLVar
     stop: Any
-    summarize: LiveTranslateActionSummarize
+    summarize: LiveTranslateActionSummarize | SWMLVar
 
 
 class LiveTranslateActionInject(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    direction: str
-    message: str
+    direction: Literal["local-caller", "remote-caller"] | SWMLVar
+    message: str | SWMLVar
 
 
 class LiveTranslateActionStart(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    ai_summary: bool
-    ai_summary_prompt: str
-    debug_level: int
-    deepgram_key_override: str
-    deepgram_url_override: str
-    direction: list[str]
-    filter_from: str
-    filter_to: str
-    from_lang: str
-    from_voice: str
-    from_voice_params: dict[str, Any]
-    live_events: bool
-    mode: str
-    speech_engine: Literal["deepgram", "google"]
-    speech_timeout: int
-    to_lang: str
-    to_voice: str
-    to_voice_params: dict[str, Any]
-    translation_model: str
-    translation_model_params: dict[str, Any]
-    vad_silence_ms: int
-    vad_thresh: int
-    webhook: str
+    ai_summary: bool | SWMLVar
+    ai_summary_prompt: str | SWMLVar
+    debug_level: int | SWMLVar
+    deepgram_key_override: str | SWMLVar
+    deepgram_url_override: str | SWMLVar
+    direction: list[Literal["local-caller", "remote-caller"] | SWMLVar] | SWMLVar
+    filter_from: str | SWMLVar
+    filter_to: str | SWMLVar
+    from_lang: str | SWMLVar
+    from_voice: str | SWMLVar
+    from_voice_params: dict[str, Any] | SWMLVar
+    live_events: bool | SWMLVar
+    mode: str | SWMLVar
+    speech_engine: str | SWMLVar
+    speech_timeout: int | SWMLVar
+    to_lang: str | SWMLVar
+    to_voice: str | SWMLVar
+    to_voice_params: dict[str, Any] | SWMLVar
+    translation_model: str | SWMLVar
+    translation_model_params: dict[str, Any] | SWMLVar
+    vad_silence_ms: int | SWMLVar
+    vad_thresh: int | SWMLVar
+    webhook: str | SWMLVar
 
 
 class LiveTranslateActionSummarize(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    prompt: str
-    summary_prompt: str
-    webhook: str
+    prompt: str | SWMLVar
+    summary_prompt: str | SWMLVar
+    webhook: str | SWMLVar
 
 
 class PayConfig(TypedDict, total=False):
@@ -2118,23 +2046,13 @@ class PayConfig(TypedDict, total=False):
     language: str | SWMLVar
     max_attempts: str | SWMLVar
     min_postal_code_length: str | SWMLVar
-    parameters: list[CallPayParameters] | SWMLVar
+    parameters: list[CallPayParameters | SWMLVar] | SWMLVar
     payment_connector_url: str | SWMLVar
     payment_method: Literal["credit-card", "ach-debit"] | SWMLVar
-    postal_code: (
-        Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-        | SWMLVar
-    )
-    prompts: list[CallPayPrompts] | SWMLVar
+    postal_code: str | SWMLVar
+    prompts: list[CallPayPrompts | SWMLVar] | SWMLVar
     say_voice: str | SWMLVar
-    security_code: (
-        Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-        | SWMLVar
-    )
+    security_code: str | SWMLVar
     status_url: str | SWMLVar
     timeout: str | SWMLVar
     token_type: Literal["one-time", "reusable"] | SWMLVar
@@ -2170,7 +2088,7 @@ class PromptConfig(TypedDict, total=False):
     digit_timeout: float | SWMLVar
     initial_timeout: float | SWMLVar
     max_digits: int | SWMLVar
-    play: Play | list[RingbackConfig] | str
+    play: RingbackConfig | list[str] | str
     say_gender: Literal["male", "female"] | SWMLVar
     say_language: str | SWMLVar
     say_voice: str | SWMLVar
@@ -2313,7 +2231,7 @@ class SetCapabilitiesConfig(TypedDict, total=False):
     not validated at runtime (a TypedDict is a plain ``dict``).
     """
 
-    capabilities: list[str] | SWMLVar
+    capabilities: list[str | SWMLVar] | SWMLVar
 
 
 class SetMetaConfig(TypedDict, total=False):
@@ -2323,8 +2241,8 @@ class SetMetaConfig(TypedDict, total=False):
     not validated at runtime (a TypedDict is a plain ``dict``).
     """
 
-    private: dict[str, Any]
-    public: dict[str, Any]
+    private: dict[str, Any] | SWMLVar
+    public: dict[str, Any] | SWMLVar
 
 
 class SleepConfig(TypedDict, total=False):
@@ -2393,14 +2311,21 @@ class SwitchConfig(TypedDict, total=False):
     """
 
     default: list[SWMLMethod] | SwitchDefault
-    case: dict[str, Any]
+    case: dict[str, list[SWMLMethod] | SwitchCaseValue]
     variable: str | SWMLVar
 
 
 class SwitchDefault(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    code: Any
+    code: dict[str, Any]
+    meta: Any
+
+
+class SwitchCaseValue(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    code: dict[str, Any]
     meta: Any
 
 

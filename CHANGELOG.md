@@ -21,6 +21,18 @@
   `AttributeError`. The bundle is now the current SWML schema.
 
 ### Changed
+- The bundled SWML `schema.json` validates values the way the engine does:
+  `connect.ringback` / `dial.ringback` / `prompt.play` accept `{url}` and
+  `["https://..."]` and reject `{play: {...}}`; `cond` elements must be
+  `{when, then}` or `{else}` with sections typed; `switch` case values must be
+  SWML sections; play/status URLs are checked against their accepted prefixes;
+  boolean-valued strings (for example `acknowledge_interruptions: "5"`,
+  `pay.postal_code: "94107"`) are no longer limited to a closed spelling list;
+  clamped or ignored ranges (`request.timeout`, the `ai.params` timeouts) are
+  annotations rather than hard maxima; `pay` / `enter_queue` / `detect_machine`
+  reject unknown keys; `live_transcribe` / `live_translate` / `user_event`
+  no longer require `action` / `event`. The typed `AiParams` fields for those
+  strings are `str` instead of `Literal[...]`.
 - The bundled SWML `schema.json` is the current engine-derived schema: SWAIG
   function `parameters` / `argument` are typed as JSON Schema (plus the
   `nullable` / `example` / `propertyOrdering` keywords some model APIs accept),

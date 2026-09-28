@@ -67,18 +67,19 @@ UNION_SHAPED_VERBS: list[tuple[str, str, dict[str, Any], int]] = [
 #            properties): a free-form variable bag by design.
 #   unset -- a union with no object branch (string | array of string).
 #   cond / return / eval -- array / untyped, not closed objects.
-#   detect_machine / enter_queue / pay / transcribe_stop -- objects the schema
-#            leaves open (no `unevaluatedProperties: {not: {}}`), so there is no
-#            closed key set to enforce.
+#   transcribe_stop -- an object the schema leaves open (no
+#            `unevaluatedProperties: {not: {}}`), so there is no closed key set.
+#
+# detect_machine / enter_queue / pay USED to be listed here. They are closed now: the
+# SWML door is open, but the relay check each forwards to is closed and its rejection
+# surfaces as SWML_METHOD_EXECUTE_FAILED, so the key set is closed END TO END
+# (mod_infrastructure `closed_end_to_end_keys`; owner ruling 2026-09-27).
 NON_ENUMERABLE_VERBS = [
     "set",
     "unset",
     "cond",
     "return",
     "eval",
-    "detect_machine",
-    "enter_queue",
-    "pay",
     "transcribe_stop",
 ]
 
@@ -228,9 +229,10 @@ class TestRefFollowingStillWorks:
 
 
 class TestEngagedVerbCount:
-    """The aggregate: 44 engaged verbs in the shipped schema (41 + the three
+    """The aggregate: 47 engaged verbs in the shipped schema (41 + the three
     experimental verbs the bundle now publishes -- bind_digit,
-    clear_digit_bindings, set_capabilities -- each with a closed key set), with the
+    clear_digit_bindings, set_capabilities -- each with a closed key set, + the three
+    closed END TO END -- detect_machine, enter_queue, pay), with the
     union-shaped ones named. An aggregate-only assertion would let a resolver
     that engaged the WRONG four pass, so both are pinned."""
 
@@ -242,8 +244,8 @@ class TestEngagedVerbCount:
         }
         disengaged = set(schema_utils.verbs) - engaged
 
-        assert len(engaged) == 44, (
-            f"expected 44 engaged verbs, got {len(engaged)}; "
+        assert len(engaged) == 47, (
+            f"expected 47 engaged verbs, got {len(engaged)}; "
             f"disengaged = {sorted(disengaged)}"
         )
         # The union-shaped verbs with object branches, which the pre-fix
@@ -257,6 +259,9 @@ class TestEngagedVerbCount:
             "bind_digit",
             "clear_digit_bindings",
             "set_capabilities",
+            "detect_machine",
+            "enter_queue",
+            "pay",
         ]:
             assert verb in engaged, f"{verb} must be engaged after the fix"
         # Nothing may be weakened: these have no closed key-set.
