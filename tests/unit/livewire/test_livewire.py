@@ -298,7 +298,7 @@ class TestAgentSession:
     def test_generate_reply(self) -> None:
         session = AgentSession()
         session.generate_reply(instructions="Greet the user")
-        assert "Greet the user" in session._say_queue
+        assert session._reply_instructions == ["Greet the user"]
 
     def test_interrupt_noop(self) -> None:
         session = AgentSession()
@@ -681,6 +681,54 @@ class TestBuildSwAgent:
         session = AgentSession()
         with pytest.raises(RuntimeError, match="No Agent bound"):
             session._build_sw_agent()
+
+
+class TestGreeting:
+    """say() and generate_reply() reach the SWML.
+
+    Both were added as a POM section to an agent whose prompt is text, and a
+    text prompt leaves out POM sections, so neither reached the prompt.
+    """
+
+    @pytest.mark.asyncio
+    async def test_generate_reply_instructions_are_in_the_prompt(self) -> None:
+        session = AgentSession()
+        await session.start(Agent(instructions="You are a weather assistant."))
+        session.generate_reply(instructions="Greet the user and ask for their city.")
+        prompt = _ai_verb(session._build_sw_agent())["prompt"]["text"]
+        assert prompt.startswith("You are a weather assistant.")
+        assert "Greet the user and ask for their city." in prompt
+
+    @pytest.mark.asyncio
+    async def test_say_is_the_static_greeting(self) -> None:
+        session = AgentSession()
+        await session.start(Agent(instructions="You are a weather assistant."))
+        session.say("Hi, this is the weather line.")
+        session.say("Which city?")
+        ai = _ai_verb(session._build_sw_agent())
+        assert ai["params"]["static_greeting"] == "Hi, this is the weather line. Which city?"
+        assert ai["prompt"]["text"] == "You are a weather assistant."
+
+    @pytest.mark.asyncio
+    async def test_without_either_the_prompt_is_the_instructions(self) -> None:
+        session = AgentSession()
+        await session.start(Agent(instructions="You are a weather assistant."))
+        session.generate_reply()
+        ai = _ai_verb(session._build_sw_agent())
+        assert ai["prompt"]["text"] == "You are a weather assistant."
+        assert "static_greeting" not in ai.get("params", {})
+
+    @pytest.mark.asyncio
+    async def test_calls_after_the_build_are_ignored_with_a_log(self) -> None:
+        session = AgentSession()
+        await session.start(Agent(instructions="test"))
+        session._build_sw_agent()
+        session.say("late")
+        session.generate_reply(instructions="late")
+        assert session._say_queue == []
+        assert session._reply_instructions == []
+        assert session._noop.was_logged("say_after_build")
+        assert session._noop.was_logged("generate_reply_after_build")
 
 
 # ---------------------------------------------------------------------------

@@ -63,7 +63,11 @@ and `join_conference()`.
 - LiveWire: `run_app()` serves the agent a session starts; it logged "no agent
   was started". The model is the plugin's `.model`, not its repr, and
   `allow_interruptions=False` sets `enable_barge`, which the platform reads,
-  instead of `barge_confidence`.
+  instead of `barge_confidence`. `session.generate_reply(instructions=...)`
+  adds its instructions to the prompt, and `session.say(text)` sets the AI's
+  `static_greeting`, which the platform speaks word for word when the call
+  starts. Both were added as a POM section that a text prompt leaves out, so
+  neither reached the agent.
 - WebService: removing a directory stops serving it, adding one doesn't
   register every mount again, and a `/` mount works.
 - swaig-test's serverless simulation follows `--aws-function-name`,

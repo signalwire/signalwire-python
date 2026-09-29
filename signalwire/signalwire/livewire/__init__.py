@@ -517,6 +517,7 @@ class AgentSession:
         self._agent: Agent | None = None
         self._sw_agent: Any = None  # Will hold the real AgentBase
         self._say_queue: list[str] = []
+        self._reply_instructions: list[str] = []
         self._history: list[dict[str, str]] = []
         self._noop = _NoopTracker()
         self._started = False
@@ -560,14 +561,39 @@ class AgentSession:
             job._session = self
 
     def say(self, text: str) -> None:
-        """Queue text to be spoken by the agent."""
+        """Have the agent open the call with ``text``, word for word.
+
+        The text becomes the AI's ``static_greeting``, which the platform
+        speaks as the agent's first words; several calls are joined. Once the
+        agent is built, SignalWire can't add speech from here, so a later
+        call is ignored with a log message.
+        """
+        if self._sw_agent is not None:
+            self._noop.once(
+                "say_after_build",
+                "AgentSession.say() after the agent was built: SignalWire "
+                "can't add speech mid-call from the session, so it's ignored",
+            )
+            return
         self._say_queue.append(text)
 
     def generate_reply(self, *, instructions: str | None = None) -> None:
-        """Trigger the agent to generate a reply.  On SignalWire the prompt
-        handles this; if *instructions* is provided they are noted."""
-        if instructions:
-            self._say_queue.append(instructions)
+        """Guide the agent's first reply.
+
+        ``instructions`` is added to the prompt, under "Initial Greeting".
+        Without instructions there's nothing to add: the agent replies on its
+        own. Once the agent is built, a call is ignored with a log message.
+        """
+        if not instructions:
+            return
+        if self._sw_agent is not None:
+            self._noop.once(
+                "generate_reply_after_build",
+                "AgentSession.generate_reply() after the agent was built: "
+                "the prompt is already set, so it's ignored",
+            )
+            return
+        self._reply_instructions.append(instructions)
 
     def interrupt(self) -> None:
         """Noop -- SignalWire handles barge-in automatically."""
@@ -600,8 +626,18 @@ class AgentSession:
             schema_validation=False,
         )
 
-        # Prompt
-        sw.set_prompt_text(agent.instructions)
+        # Prompt: the agent's instructions, then what generate_reply() asked
+        # for. The prompt is text, which leaves out any POM section, so the
+        # reply instructions are part of the text.
+        prompt = agent.instructions
+        if self._reply_instructions:
+            greeting = "\n\n".join(self._reply_instructions)
+            prompt = f"{prompt}\n\n## Initial Greeting\n\n{greeting}".lstrip()
+        sw.set_prompt_text(prompt)
+
+        # say(): the platform speaks static_greeting as the agent's first words
+        if self._say_queue:
+            sw.set_param("static_greeting", " ".join(self._say_queue))
 
         # LLM model: a model name, or a plugin object's model
         model_str = _model_name(self._llm or getattr(agent, "_llm_hint", NOT_GIVEN))
@@ -635,10 +671,6 @@ class AgentSession:
             max_ep = agent_max
         if max_ep and max_ep > 0:
             sw.set_param("attention_timeout", int(max_ep * 1000))
-
-        # Initial greeting (say queue)
-        for text in self._say_queue:
-            sw.prompt_add_section("Initial Greeting", text)
 
         # Register tools
         all_tools = list(self._tools) + list(agent._tools)

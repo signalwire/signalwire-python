@@ -54,7 +54,8 @@ if __name__ == "__main__":
 | `AgentSession(stt=...)` | No-op: SignalWire handles STT |
 | `AgentSession(tts=...)` | No-op: SignalWire handles TTS |
 | `AgentSession(vad=...)` | No-op: SignalWire handles VAD |
-| `session.say(text)` | Queued as initial greeting section |
+| `session.say(text)` | Becomes the AI's `static_greeting`, which the agent speaks word for word when the call starts. Ignored once the agent is built |
+| `session.generate_reply(instructions=...)` | Added to the prompt as an "Initial Greeting" section, to guide the first reply. Ignored once the agent is built |
 | `session.interrupt()` | No-op: SignalWire handles barge-in |
 | `ctx.connect()` | No-op: SignalWire auto-connects |
 | Plugin classes (`DeepgramSTT`, etc.) | Constructable stubs, no-op |
