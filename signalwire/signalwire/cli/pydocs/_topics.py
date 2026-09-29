@@ -760,9 +760,12 @@ _BEDROCK = Topic(
     summary="Agents that use Amazon Bedrock's speech-to-speech model",
     body="""\
 `BedrockAgent` is an `AgentBase` that renders an Amazon Bedrock prompt
-instead of the standard AI verb. Prompts, tools, skills and contexts work the
-same way. `set_inference_params()` sets `temperature`, `top_p` and
-`max_tokens`, and `set_voice()` takes one of the voices Bedrock offers.
+instead of the standard AI verb. Prompts, tools and skills work the same way.
+Speech hints, languages, pronunciation rules, multilingual settings and
+contexts aren't part of the Bedrock verb, so they're left out of the SWML
+with a warning. `set_inference_params()` sets `temperature`, `top_p` and
+`max_tokens`, which must be numbers, and `set_voice()` takes one of the
+voices Bedrock offers.
 """,
     docs=(("docs/bedrock_agent.md", "BedrockAgent's options and differences"),),
     examples=(
