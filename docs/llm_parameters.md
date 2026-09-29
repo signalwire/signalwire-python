@@ -54,7 +54,7 @@ Nucleus sampling parameter that controls the cumulative probability of token sel
 
 ### Interruption
 
-How easily the caller can interrupt the AI isn't an LLM parameter. `barge_confidence` isn't in the SWML schema's `prompt` object, so a document that sets it fails validation, and the platform doesn't apply it. Tune interruption with these AI params, through `set_param()`:
+How easily the caller can interrupt the AI isn't an LLM parameter. The platform accepts `barge_confidence` in the prompt but never applies it: the confidence a caller's speech needs to interrupt is fixed. Tune interruption with these AI params, through `set_param()`:
 - **`barge_min_words`** (1-99): how many words the caller must say before the AI stops speaking. Higher values make the AI harder to interrupt.
 - **`enable_barge`**: which barge modes are on: `"complete"`, `"partial"`, `"all"`, or a boolean.
 - **`barge_match_string`**: a string or regular expression that interrupts the AI when the caller says it.

@@ -144,7 +144,7 @@ await runner.run(task)
 | **Inner Dialog** | Built-in `enable_inner_dialog` (internal monologue before responding) | No equivalent | SW advantage |
 | **VAD** | Platform-managed with `energy_level` tuning (0-100 sensitivity), configurable timeouts | Silero, Krisp, AIC (configurable) | Both configurable; Pipecat: more VAD options |
 | **Turn Detection** | Platform-managed with configurable `end_of_speech_timeout`, `turn_detection_timeout`, `first_word_timeout`, `speech_event_timeout` | Smart turn analysis, Krisp VIVA | Both configurable |
-| **Barge-In/Interruption** | Highly configurable: `enable_barge` (all/complete/partial), `barge_confidence`, `barge_min_words`, `barge_match_string` (regex), `barge_functions`, interrupt_prompt | Configurable strategies per processor | Both highly configurable |
+| **Barge-In/Interruption** | Highly configurable: `enable_barge` (all/complete/partial), `barge_min_words`, `barge_match_string` (regex), `barge_functions`, interrupt_prompt | Configurable strategies per processor | Both highly configurable |
 | **Noise Reduction** | Built-in `denoise`/`stop_denoise` SWML verbs | Krisp, Koala, AIC, RNNoise, NoiseReduce | Both have denoise; Pipecat: more options |
 | **Background Audio** | Built-in `background_file` with `loops` and `volume` params; `playback_bg` action | SoundFile mixer | Both capable |
 | **Audio Volume** | `ai_volume` (-50 to 50 dB) | Per-processor configuration | Both have volume control |
@@ -326,7 +326,7 @@ SignalWire's SWAIG provides 20+ actions that tools can return to control call be
 
 19. **No-Code Agent Builder:** The open-source Agent Builder UI enables non-developers to create agents. Pipecat is code-only.
 
-20. **Highly Configurable Interruption Control:** Five barge-in modes (`all`, `complete`, `partial`, `true`, `false`), `barge_confidence`, `barge_min_words`, `barge_match_string` (regex matching), `barge_functions` (during function execution), `interrupt_on_noise`, and `interrupt_prompt`. Far more nuanced than "allow interruptions: true/false."
+20. **Highly Configurable Interruption Control:** Five barge-in modes (`all`, `complete`, `partial`, `true`, `false`), `barge_min_words`, `barge_match_string` (regex matching), `barge_functions` (during function execution), `interrupt_on_noise`, and `interrupt_prompt`. Far more nuanced than "allow interruptions: true/false."
 
 21. **Runtime Settings Modification:** The `settings` action allows tools to dynamically adjust LLM parameters (temperature, max_tokens, etc.) mid-conversation with automatic model-specific validation, type coercion, and range checking.
 

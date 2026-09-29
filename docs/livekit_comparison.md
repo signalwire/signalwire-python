@@ -158,7 +158,7 @@ if __name__ == "__main__":
 | **Inner Dialog** | Built-in `enable_inner_dialog` (internal monologue before responding) | No equivalent | SW advantage |
 | **VAD** | Platform-managed with `energy_level` tuning (0-100 sensitivity), configurable timeouts | Silero (default), WebRTC, or NVIDIA, configurable per session | LK: more VAD options |
 | **Turn Detection** | Platform-managed with configurable `end_of_speech_timeout`, `turn_detection_timeout`, `first_word_timeout`, `speech_event_timeout` | 4 modes: VAD, STT endpointing, transformer model (multilingual), manual. Configurable `min_endpointing_delay`/`max_endpointing_delay` | LK advantage: transformer-based semantic turn detection |
-| **Barge-In/Interruption** | Highly configurable: `enable_barge` (all/complete/partial), `barge_confidence`, `barge_min_words`, `barge_match_string` (regex), `barge_functions`, interrupt_prompt | `allow_interruptions`, `min_interruption_duration`, `min_interruption_words`, `resume_false_interruption`, `discard_audio_if_uninterruptible` | SW advantage: more granular (regex match, per-function, confidence); LK: false interruption recovery |
+| **Barge-In/Interruption** | Highly configurable: `enable_barge` (all/complete/partial), `barge_min_words`, `barge_match_string` (regex), `barge_functions`, interrupt_prompt | `allow_interruptions`, `min_interruption_duration`, `min_interruption_words`, `resume_false_interruption`, `discard_audio_if_uninterruptible` | SW advantage: more granular (regex match, per-function); LK: false interruption recovery |
 | **Noise Reduction** | Built-in `denoise`/`stop_denoise` SWML verbs | Krisp BVC plugin | Both have denoise |
 | **Background Audio** | Built-in `background_file` with `loops` and `volume` params; `playback_bg` action | No equivalent | SW advantage |
 | **Audio Volume** | `ai_volume` (-50 to 50 dB) | No per-agent volume control | SW advantage |
@@ -349,7 +349,7 @@ LiveKit tools return data to the LLM but cannot directly control call behavior, 
 
 19. **No-Code Agent Builder:** Open-source Agent Builder UI.
 
-20. **Highly Configurable Interruption Control:** Five barge-in modes (`all`, `complete`, `partial`, `true`, `false`), `barge_confidence`, `barge_min_words`, `barge_match_string` (regex matching), `barge_functions`, and `interrupt_prompt`. LiveKit has `allow_interruptions`, `min_interruption_words`, `min_interruption_duration`, and false interruption recovery, capable but less granular.
+20. **Highly Configurable Interruption Control:** Five barge-in modes (`all`, `complete`, `partial`, `true`, `false`), `barge_min_words`, `barge_match_string` (regex matching), `barge_functions`, and `interrupt_prompt`. LiveKit has `allow_interruptions`, `min_interruption_words`, `min_interruption_duration`, and false interruption recovery, capable but less granular.
 
 21. **Runtime Settings Modification:** The `settings` action allows tools to dynamically adjust LLM parameters mid-conversation with automatic model-specific validation.
 

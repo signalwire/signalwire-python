@@ -401,7 +401,7 @@ Everything the platform supports, the SDK exposes as methods:
 
 ```python
 # LLM tuning
-agent.set_prompt_llm_params(temperature=0.3, top_p=0.9, barge_confidence=0.7)
+agent.set_prompt_llm_params(temperature=0.3, top_p=0.9)
 
 # Multi-language
 agent.add_language("Spanish", "es", "google.es-ES-Neural2-A",
@@ -418,8 +418,7 @@ agent.set_params({"enable_thinking": True, "thinking_model": "o4-mini"})
 # Interruption control
 agent.set_params({
     "barge_match_string": "^(stop|cancel|nevermind)$",
-    "barge_min_words": 2,
-    "barge_confidence": 0.8
+    "barge_min_words": 2
 })
 
 # Native functions with custom fillers

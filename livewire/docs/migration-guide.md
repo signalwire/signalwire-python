@@ -108,7 +108,7 @@ LiveWire keeps the LiveKit API surface, but maps or no-ops each piece differentl
 
 - **Barge-in / interruptions**: `session.interrupt()` is a no-op because
   SignalWire handles barge-in automatically.  `allow_interruptions=False`
-  maps to `barge_confidence=1.0`.
+  sets the `enable_barge` AI parameter to false.
 
 - **Endpointing delays**: `min_endpointing_delay` maps to
   `end_of_speech_timeout`; `max_endpointing_delay` maps to
