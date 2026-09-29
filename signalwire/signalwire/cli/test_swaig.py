@@ -870,9 +870,15 @@ def main() -> int:
                     print("Function type: DataMap (serverless)")
                     print("-" * 60)
 
-                # Execute DataMap function (is_datamap implies func is a dict)
+                # Execute DataMap function (is_datamap implies func is a dict).
+                # --custom-data supplies the call data the platform would add,
+                # such as global_data.
+                call_data = json.loads(args.custom_data) if args.custom_data else None
                 result = execute_datamap_function(
-                    cast(dict[str, Any], func), function_args, args.verbose
+                    cast(dict[str, Any], func),
+                    function_args,
+                    args.verbose,
+                    call_data=call_data,
                 )
                 print("RESULT:")
                 print(format_result(result))
