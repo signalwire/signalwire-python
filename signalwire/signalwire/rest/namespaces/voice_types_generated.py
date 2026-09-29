@@ -149,7 +149,7 @@ RelayVoiceLog = TypedDict(
     },
     total=False,
 )
-RelayVoiceLog.__doc__ = """Voice log for Compatibility and Relay call types. Returned when `type` is `laml_call`, `relay_pstn_call`, `relay_sip_call`, or `relay_webrtc_call`.
+RelayVoiceLog.__doc__ = """Voice log for cXML and Relay call types. Returned when `type` is `laml_call`, `relay_pstn_call`, `relay_sip_call`, or `relay_webrtc_call`.
 
 Open shape: extra server keys are permitted and partial payloads are valid;
 not validated at runtime (a TypedDict is a plain ``dict``).
