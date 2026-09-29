@@ -132,3 +132,33 @@ def test_credentials_stay_with_their_host() -> None:
     assert result == {"response": "Answer: moved"}
     assert adapter.sent[0].headers["Authorization"] == "Bearer secret-key"
     assert "Authorization" not in adapter.sent[1].headers
+
+
+def test_credentials_arent_sent_over_a_redirect_to_plain_http() -> None:
+    routes = {
+        "https://api.example.com/w": (302, {"Location": "http://api.example.com/final"}, ""),
+        "http://api.example.com/final": (200, {}, json.dumps({"answer": "downgraded"})),
+    }
+    webhook = {"url": "https://user:pass@api.example.com/w", "method": "GET",
+               "headers": {"Authorization": "Bearer secret-key", "Cookie": "session=1"},
+               "output": {"response": "Answer: ${answer}"}}
+    with _scripted(routes) as adapter:
+        result = execute_datamap_function(_function(webhook), {})
+    assert result == {"response": "Answer: downgraded"}
+    assert "Authorization" not in adapter.sent[1].headers
+    assert "Cookie" not in adapter.sent[1].headers
+
+
+def test_the_same_origin_written_differently_keeps_its_credentials() -> None:
+    routes = {
+        "https://api.example.com/w": (302, {"Location": "https://API.example.com:443/final"}, ""),
+        "https://api.example.com:443/final": (200, {}, json.dumps({"answer": "same"})),
+        "https://api.example.com/final": (200, {}, json.dumps({"answer": "same"})),
+    }
+    webhook = {"url": "https://api.example.com/w", "method": "GET",
+               "headers": {"Authorization": "Bearer secret-key"},
+               "output": {"response": "Answer: ${answer}"}}
+    with _scripted(routes) as adapter:
+        result = execute_datamap_function(_function(webhook), {})
+    assert result == {"response": "Answer: same"}
+    assert adapter.sent[1].headers["Authorization"] == "Bearer secret-key"

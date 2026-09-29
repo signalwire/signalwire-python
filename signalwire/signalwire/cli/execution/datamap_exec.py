@@ -571,6 +571,19 @@ def _curl_error_code(error: Exception) -> int:
 # The platform follows this many redirects (CURLOPT_MAXREDIRS)
 _MAX_REDIRECTS = 15
 
+_DEFAULT_PORTS = {"http": 80, "https": 443}
+
+
+def _origin(url: str) -> tuple[str, str, int | None]:
+    """The URL's scheme, host (lowercased) and port, the default filled in."""
+    parts = urlsplit(url)
+    scheme = parts.scheme.lower()
+    return (
+        scheme,
+        (parts.hostname or "").lower(),
+        parts.port or _DEFAULT_PORTS.get(scheme),
+    )
+
 
 def _send(
     run: _Run,
@@ -587,16 +600,17 @@ def _send(
     request it signs, which this doesn't simulate. Every request, redirects
     included, goes through the session that refuses private and internal
     addresses, as the SDK's other fetches of user-supplied URLs do. Like
-    curl, it sends credentials only to the host they were given for.
+    curl, it sends credentials only to the origin they were given for (the
+    same scheme, host and port), so never over a redirect to plain HTTP.
     """
     from signalwire.utils.url_validator import _PublicSession
 
     timeout = (_CONNECT_TIMEOUT, _TOTAL_TIMEOUT)
     method = "POST" if post else "GET"
-    origin = urlsplit(url).netloc
+    origin = _origin(url)
     with _PublicSession() as session:
         for _ in range(_MAX_REDIRECTS + 1):
-            same_host = urlsplit(url).netloc == origin
+            same_host = _origin(url) == origin
             send_headers = (
                 headers
                 if same_host
