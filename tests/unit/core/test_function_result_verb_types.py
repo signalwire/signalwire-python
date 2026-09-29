@@ -38,12 +38,13 @@ class TestPayTypes:
         assert _verb(result, "pay")["postal_code"] == "90210"
 
     def test_numeric_strings_are_converted(self) -> None:
-        result = FunctionResult().pay(
-            "https://pay.example.com/c",
-            timeout="7",  # type: ignore[arg-type]
-            max_attempts="2",  # type: ignore[arg-type]
-            security_code="False",  # type: ignore[arg-type]
-        )
+        # Strings aren't in the annotated types, so they're passed as Any
+        strings: dict[str, Any] = {
+            "timeout": "7",
+            "max_attempts": "2",
+            "security_code": "False",
+        }
+        result = FunctionResult().pay("https://pay.example.com/c", **strings)
         pay = _verb(result, "pay")
         assert (pay["timeout"], pay["max_attempts"], pay["security_code"]) == (
             7,
@@ -52,11 +53,11 @@ class TestPayTypes:
         )
 
     def test_swml_variables_pass_through(self) -> None:
-        result = FunctionResult().pay(
-            "https://pay.example.com/c",
-            timeout="${pay_timeout}",  # type: ignore[arg-type]
-            security_code="%{needs_cvv}",  # type: ignore[arg-type]
-        )
+        variables: dict[str, Any] = {
+            "timeout": "${pay_timeout}",
+            "security_code": "%{needs_cvv}",
+        }
+        result = FunctionResult().pay("https://pay.example.com/c", **variables)
         pay = _verb(result, "pay")
         assert pay["timeout"] == "${pay_timeout}"
         assert pay["security_code"] == "%{needs_cvv}"
@@ -101,10 +102,8 @@ class TestJoinConferenceMaxParticipants:
         assert swml["sections"]["main"] == [{"join_conference": "room"}]
 
     def test_swml_variable_passes_through(self) -> None:
-        result = FunctionResult().join_conference(
-            "room",
-            max_participants="${room_size}",  # type: ignore[arg-type]
-        )
+        room_size: Any = "${room_size}"
+        result = FunctionResult().join_conference("room", max_participants=room_size)
         assert _verb(result, "join_conference")["max_participants"] == "${room_size}"
 
     @pytest.mark.parametrize("value", [1, 100001, "many", 2.5])

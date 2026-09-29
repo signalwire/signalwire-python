@@ -134,9 +134,9 @@ def test_no_warning_without_dropped_features(agent: BedrockAgent) -> None:
 
 
 def test_numeric_strings_are_converted() -> None:
-    agent = BedrockAgent(
-        name="bedrock", route="/bedrock", temperature="0.5", top_p=" 0.8 ", max_tokens="2048"
-    )
+    # Strings aren't in the annotated types, so they're passed as Any
+    settings: dict[str, Any] = {"temperature": "0.5", "top_p": " 0.8 ", "max_tokens": "2048"}
+    agent = BedrockAgent(name="bedrock", route="/bedrock", **settings)
     agent.set_prompt_text("You are a helpful assistant.")
     prompt = _bedrock_verb(_render(agent))["prompt"]
     assert prompt["temperature"] == 0.5
@@ -148,7 +148,8 @@ def test_numeric_strings_are_converted() -> None:
 def test_swml_variable_passes_through_for_temperature_and_top_p() -> None:
     agent = BedrockAgent(name="bedrock", route="/bedrock")
     agent.set_prompt_text("You are a helpful assistant.")
-    agent.set_inference_params(temperature="${temp}", top_p="%{tp}")
+    variables: dict[str, Any] = {"temperature": "${temp}", "top_p": "%{tp}"}
+    agent.set_inference_params(**variables)
     prompt = _bedrock_verb(_render(agent))["prompt"]
     assert prompt["temperature"] == "${temp}"
     assert prompt["top_p"] == "%{tp}"
@@ -176,7 +177,8 @@ def test_non_numeric_values_are_refused(kwargs: dict[str, Any], message: str) ->
 
 def test_refused_value_changes_nothing(agent: BedrockAgent) -> None:
     with pytest.raises(ValueError, match="max_tokens must be an integer"):
-        agent.set_inference_params(temperature=0.1, max_tokens="many")
+        refused: dict[str, Any] = {"temperature": 0.1, "max_tokens": "many"}
+        agent.set_inference_params(**refused)
     prompt = _bedrock_verb(_render(agent))["prompt"]
     assert prompt["temperature"] == 0.7
     assert prompt["max_tokens"] == 512
@@ -191,7 +193,8 @@ def test_set_prompt_llm_params_validates_inference_settings(agent: BedrockAgent)
 
 def test_set_llm_temperature_validates(agent: BedrockAgent) -> None:
     with pytest.raises(ValueError, match="temperature must be a number"):
-        agent.set_llm_temperature("warm")  # type: ignore[arg-type]
+        warm: Any = "warm"
+        agent.set_llm_temperature(warm)
 
 
 # -- Warning wording --------------------------------------------------------
