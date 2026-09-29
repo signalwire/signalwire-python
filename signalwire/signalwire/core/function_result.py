@@ -61,6 +61,13 @@ def _swml_int(
     return number
 
 
+def _swml_text(value: Any) -> str:
+    """A checked int or bool as the string a SWML verb reads: "true", "30"."""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)
+
+
 def _swml_bool(name: str, value: Any) -> Any:
     """Return ``value`` as a bool for a SWML verb, or raise ValueError.
 
@@ -1067,10 +1074,11 @@ class FunctionResult:
             parameters: Array of name/value pairs for payment connector
             prompts: Array of custom prompt configurations
 
-        timeout, max_attempts and min_postal_code_length are sent as integers
-        and security_code as a boolean: the platform reads them only as JSON
-        numbers and booleans, and treats a string as unset or false. Each
-        also accepts a SWML variable reference such as ``${timeout}``.
+        timeout, max_attempts and min_postal_code_length must be integers,
+        and security_code a boolean; each also accepts a SWML variable
+        reference such as ``${timeout}``. They're sent as strings, as is a
+        boolean postal_code: the platform's pay verb requires security_code
+        and postal_code to be strings, and reads all five as strings.
 
         Returns:
             self for method chaining
@@ -1079,18 +1087,19 @@ class FunctionResult:
             ValueError: If timeout, max_attempts or min_postal_code_length
                 isn't an integer, or security_code isn't a boolean
         """
-        # Build the pay parameters. The platform reads timeout, max_attempts and
-        # min_postal_code_length only as JSON numbers, and security_code only as
-        # a JSON boolean.
+        # Build the pay parameters. The platform reads timeout, max_attempts,
+        # min_postal_code_length, security_code and postal_code as strings, and
+        # its SWML validation refuses a security_code or postal_code that isn't
+        # one, so each is checked, then sent as a string.
         pay_params: dict[str, Any] = {
             "payment_connector_url": payment_connector_url,
             "input": input_method,
             "payment_method": payment_method,
-            "timeout": _swml_int("timeout", timeout),
-            "max_attempts": _swml_int("max_attempts", max_attempts),
-            "security_code": _swml_bool("security_code", security_code),
-            "min_postal_code_length": _swml_int(
-                "min_postal_code_length", min_postal_code_length
+            "timeout": _swml_text(_swml_int("timeout", timeout)),
+            "max_attempts": _swml_text(_swml_int("max_attempts", max_attempts)),
+            "security_code": _swml_text(_swml_bool("security_code", security_code)),
+            "min_postal_code_length": _swml_text(
+                _swml_int("min_postal_code_length", min_postal_code_length)
             ),
             "token_type": token_type,
             "currency": currency,
@@ -1100,8 +1109,10 @@ class FunctionResult:
         }
 
         # postal_code is a boolean (whether to ask for it) or the postal code
-        # itself, as a string
-        pay_params["postal_code"] = postal_code
+        # itself; either way it's sent as a string
+        pay_params["postal_code"] = (
+            _swml_text(postal_code) if isinstance(postal_code, bool) else postal_code
+        )
 
         # Add optional parameters
         if status_url:

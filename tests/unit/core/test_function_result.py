@@ -798,11 +798,11 @@ class TestPay:
         assert pay_params["input"] == "dtmf"
         assert pay_params["payment_method"] == "credit-card"
         # Integers and booleans, as the SWML schema types them
-        assert pay_params["timeout"] == 5
-        assert pay_params["max_attempts"] == 1
-        assert pay_params["security_code"] is True
-        assert pay_params["postal_code"] is True
-        assert pay_params["min_postal_code_length"] == 0
+        assert pay_params["timeout"] == "5"
+        assert pay_params["max_attempts"] == "1"
+        assert pay_params["security_code"] == "true"
+        assert pay_params["postal_code"] == "true"
+        assert pay_params["min_postal_code_length"] == "0"
         assert pay_params["token_type"] == "reusable"
         assert pay_params["currency"] == "usd"
         assert pay_params["language"] == "en-US"
@@ -834,11 +834,11 @@ class TestPay:
         pay_params = result.action[0]["SWML"]["sections"]["main"][1]["pay"]
         assert pay_params["input"] == "voice"
         assert pay_params["status_url"] == "https://status.example.com"
-        assert pay_params["timeout"] == 10
-        assert pay_params["max_attempts"] == 3
-        assert pay_params["security_code"] is False
+        assert pay_params["timeout"] == "10"
+        assert pay_params["max_attempts"] == "3"
+        assert pay_params["security_code"] == "false"
         assert pay_params["postal_code"] == "90210"
-        assert pay_params["min_postal_code_length"] == 5
+        assert pay_params["min_postal_code_length"] == "5"
         assert pay_params["token_type"] == "one-time"
         assert pay_params["charge_amount"] == "49.99"
         assert pay_params["currency"] == "eur"
@@ -871,7 +871,7 @@ class TestPay:
             postal_code=False
         )
         pay_params = result.action[0]["SWML"]["sections"]["main"][1]["pay"]
-        assert pay_params["postal_code"] is False
+        assert pay_params["postal_code"] == "false"
 
     def test_pay_chaining(self) -> None:
         """Test pay returns self for chaining"""

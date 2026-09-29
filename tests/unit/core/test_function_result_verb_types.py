@@ -1,12 +1,16 @@
 """
-pay() and join_conference() send the types and ranges the SWML schema defines.
+pay() and join_conference() send the types and ranges the platform reads.
 
-pay() sent timeout, max_attempts, min_postal_code_length and security_code
-(and a boolean postal_code) as strings, which the schema's integer and
-boolean types reject, and which the platform reads as unset or false.
+pay() sends timeout, max_attempts, min_postal_code_length, security_code and
+a boolean postal_code as strings: the platform's SWML validation refuses a
+security_code or postal_code that isn't a string, and its pay request reads
+all five as strings. The bundled schema's integer and boolean types for them
+are wrong, so these documents aren't checked against it. pay() checks each
+value's type before sending it.
 join_conference() defaulted max_participants to 250, left out an explicit
 250 so the platform's default applied, and refused values above 250, which
-the platform accepts: it requires 2 or more and sets no upper limit.
+the platform accepts: it requires 2 or more and sets no upper limit, and
+reads it as a number.
 """
 
 from typing import Any
@@ -24,19 +28,28 @@ def _verb(result: FunctionResult, name: str) -> Any:
     return next(v[name] for v in swml["sections"]["main"] if name in v)
 
 
+def _pay(result: FunctionResult) -> Any:
+    main = result.action[0]["SWML"]["sections"]["main"]
+    return next(v["pay"] for v in main if "pay" in v)
+
+
 class TestPayTypes:
-    def test_defaults_are_native_and_valid(self) -> None:
-        pay = _verb(FunctionResult().pay("https://pay.example.com/c"), "pay")
-        assert pay["timeout"] == 5 and type(pay["timeout"]) is int
-        assert pay["max_attempts"] == 1 and type(pay["max_attempts"]) is int
-        assert pay["min_postal_code_length"] == 0
-        assert type(pay["min_postal_code_length"]) is int
-        assert pay["security_code"] is True
-        assert pay["postal_code"] is True
+    """The forms the platform's SWML validation and pay request accept."""
+
+    def test_defaults_are_strings(self) -> None:
+        pay = _pay(FunctionResult().pay("https://pay.example.com/c"))
+        assert (
+            pay["timeout"], pay["max_attempts"], pay["min_postal_code_length"],
+            pay["security_code"], pay["postal_code"],
+        ) == ("5", "1", "0", "true", "true")
 
     def test_postal_code_string_is_the_code(self) -> None:
         result = FunctionResult().pay("https://pay.example.com/c", postal_code="90210")
-        assert _verb(result, "pay")["postal_code"] == "90210"
+        assert _pay(result)["postal_code"] == "90210"
+
+    def test_postal_code_false_is_the_string_false(self) -> None:
+        result = FunctionResult().pay("https://pay.example.com/c", postal_code=False)
+        assert _pay(result)["postal_code"] == "false"
 
     def test_numeric_strings_are_converted(self) -> None:
         # Strings aren't in the annotated types, so they're passed as Any
@@ -46,11 +59,11 @@ class TestPayTypes:
             "security_code": "False",
         }
         result = FunctionResult().pay("https://pay.example.com/c", **strings)
-        pay = _verb(result, "pay")
+        pay = _pay(result)
         assert (pay["timeout"], pay["max_attempts"], pay["security_code"]) == (
-            7,
-            2,
-            False,
+            "7",
+            "2",
+            "false",
         )
 
     def test_swml_variables_pass_through(self) -> None:
@@ -59,7 +72,7 @@ class TestPayTypes:
             "security_code": "%{needs_cvv}",
         }
         result = FunctionResult().pay("https://pay.example.com/c", **variables)
-        pay = _verb(result, "pay")
+        pay = _pay(result)
         assert pay["timeout"] == "${pay_timeout}"
         assert pay["security_code"] == "%{needs_cvv}"
 

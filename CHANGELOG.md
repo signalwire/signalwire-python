@@ -91,9 +91,11 @@ and `join_conference()`.
   `presence_penalty` and `frequency_penalty` with a warning, as the platform's
   Bedrock session does; it reads only `temperature` and `top_p`, and uses
   1024 for `max_tokens`.
-- `pay()` sends integers and booleans. The platform reads `timeout`,
-  `max_attempts`, `min_postal_code_length` and `security_code` only as JSON
-  numbers and booleans, so the strings it sent were ignored or read as false.
+- `pay()` raises `ValueError` when `timeout`, `max_attempts` or
+  `min_postal_code_length` isn't an integer, or `security_code` isn't a
+  boolean. It still sends them, and a boolean `postal_code`, as strings: the
+  platform's pay verb refuses a `security_code` or `postal_code` that isn't a
+  string, and reads all five as strings, whatever the bundled schema says.
   `join_conference()`'s `max_participants` defaults to None, is sent whenever
   given, and accepts any integer of at least 2, as the platform does; it
   refused anything over 250.
