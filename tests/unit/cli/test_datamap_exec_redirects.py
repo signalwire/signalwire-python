@@ -32,7 +32,15 @@ class Scripted(BaseAdapter):
         self.routes = routes
         self.sent: list[requests.PreparedRequest] = []
 
-    def send(self, request: requests.PreparedRequest, **kwargs: Any) -> requests.Response:
+    def send(
+        self,
+        request: requests.PreparedRequest,
+        stream: bool = False,
+        timeout: float | tuple[float | None, float | None] | None = None,
+        verify: bool | str = True,
+        cert: str | tuple[str, str] | None = None,
+        proxies: dict[str, str] | None = None,
+    ) -> requests.Response:
         self.sent.append(request)
         status, headers, body = self.routes[request.url or ""]
         response = requests.Response()
@@ -93,7 +101,9 @@ def test_a_post_is_sent_again_with_its_body_after_a_redirect() -> None:
         result = execute_datamap_function(_function(webhook), {"q": "hours"})
     assert result == {"response": "Answer: yes"}
     assert [request.method for request in adapter.sent] == ["POST", "POST"]
-    assert json.loads(adapter.sent[1].body or "") == {"q": "hours"}
+    body = adapter.sent[1].body
+    assert isinstance(body, (str, bytes))
+    assert json.loads(body) == {"q": "hours"}
 
 
 def test_a_redirect_to_a_private_address_is_refused() -> None:
