@@ -329,6 +329,7 @@ swaig-test examples/my_agent.py --simulate-serverless cloud_function \
 ```
 
 **Cloud Function Environment Variables Set:**
+- `FUNCTION_TARGET` (what marks a Cloud Function; `main`)
 - `GOOGLE_CLOUD_PROJECT`
 - `FUNCTION_URL` (if provided)
 - `GOOGLE_CLOUD_REGION`

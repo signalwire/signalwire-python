@@ -14,10 +14,11 @@ SignalWire AI Agents now support deployment to major cloud function platforms:
 
 ### Environment Detection
 
-The agent automatically detects Google Cloud Functions environment using these variables:
-- `FUNCTION_TARGET` - The function entry point
+The agent detects a Google Cloud Functions environment from `FUNCTION_TARGET`, the function entry point, which the Functions Framework sets. It then reads these variables to build webhook URLs:
 - `K_SERVICE` - Knative service name (Cloud Run/Functions)
 - `GOOGLE_CLOUD_PROJECT` - Google Cloud project ID
+
+`K_SERVICE` or `GOOGLE_CLOUD_PROJECT` without `FUNCTION_TARGET` doesn't mean a function. Cloud Run sets `K_SERVICE` for every service, so on Cloud Run `run()` starts the HTTP server, as it does on any other host.
 
 ### Deployment Steps
 

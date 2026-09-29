@@ -170,6 +170,7 @@ class ServerlessSimulator:
             "SERVER_NAME": "example.com",
         },
         "cloud_function": {
+            "FUNCTION_TARGET": "main",
             "GOOGLE_CLOUD_PROJECT": "test-project",
             "FUNCTION_URL": "https://my-function-abc123.cloudfunctions.net",
             "GOOGLE_CLOUD_REGION": "us-central1",
@@ -229,6 +230,7 @@ class ServerlessSimulator:
                 print(f"  SCRIPT_NAME: {os.environ.get('SCRIPT_NAME')}")
                 print(f"  SIGNALWIRE_LOG_MODE: {os.environ.get('SIGNALWIRE_LOG_MODE')}")
             elif self.platform == "cloud_function":
+                print(f"  FUNCTION_TARGET: {os.environ.get('FUNCTION_TARGET')}")
                 print(
                     f"  GOOGLE_CLOUD_PROJECT: {os.environ.get('GOOGLE_CLOUD_PROJECT')}"
                 )

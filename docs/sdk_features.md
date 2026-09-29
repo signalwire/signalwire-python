@@ -285,7 +285,7 @@ That single call auto-detects the environment and does the right thing:
 |-------------|-----------|--------------|
 | **Standalone** | Default | Starts uvicorn HTTP server with FastAPI |
 | **AWS Lambda** | `AWS_LAMBDA_FUNCTION_NAME` or `LAMBDA_TASK_ROOT` env var | Returns Lambda-formatted response |
-| **Google Cloud Functions** | GCF environment markers | Returns Flask-compatible response |
+| **Google Cloud Functions** | `FUNCTION_TARGET` env var (Cloud Run, with only `K_SERVICE`, is standalone) | Returns Flask-compatible response |
 | **Azure Functions** | Azure Functions env vars | Returns Azure HttpResponse |
 | **CGI** | CGI environment variables | Reads stdin, writes stdout |
 

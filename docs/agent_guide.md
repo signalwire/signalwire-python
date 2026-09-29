@@ -165,7 +165,7 @@ The SDK automatically detects the execution environment:
 | **HTTP Server** | Default when no serverless environment detected | Starts FastAPI server on specified host/port |
 | **CGI** | `GATEWAY_INTERFACE` environment variable present | Processes single CGI request and exits |
 | **AWS Lambda** | `AWS_LAMBDA_FUNCTION_NAME` environment variable | Handles Lambda event/context |
-| **Google Cloud** | `FUNCTION_TARGET`, `K_SERVICE`, or `GOOGLE_CLOUD_PROJECT` variable | Processes Cloud Function request |
+| **Google Cloud Functions** | `FUNCTION_TARGET` environment variable. `K_SERVICE` alone is Cloud Run, which runs as an HTTP server | Processes Cloud Function request |
 | **Azure Functions** | `AZURE_FUNCTIONS_ENVIRONMENT`, `FUNCTIONS_WORKER_RUNTIME`, or `AzureWebJobsStorage` variable | Handles Azure Function request |
 
 ### Logging Configuration
