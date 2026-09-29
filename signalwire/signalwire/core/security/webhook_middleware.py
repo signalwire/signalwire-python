@@ -19,9 +19,8 @@ Why a custom dependency rather than a vanilla ``Depends`` on ``request.body()``?
   ``X-Forwarded-Proto`` / ``X-Forwarded-Host`` when ``trust_proxy=True``,
   plus the ``SWML_PROXY_URL_BASE`` env var, with ``request.url`` as last
   resort.
-- The legacy cXML/Compatibility scheme used the ``X-Twilio-Signature``
-  header. We accept it as an alias of ``X-SignalWire-Signature`` so users
-  migrating from the legacy SDK can keep their callers unchanged.
+- cXML requests may carry the ``X-Twilio-Signature`` header. We accept it
+  as an alias of ``X-SignalWire-Signature``.
 
 Usage::
 

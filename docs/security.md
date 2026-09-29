@@ -301,7 +301,7 @@ SignalWire signs every outbound webhook (SWML callbacks, SWAIG dispatch, post-pr
 
 The SDK validates these schemes for you, with a constant-time comparison. You need the details only to validate requests yourself, or to work out why one was refused.
 
-**Headers.** `X-SignalWire-Signature` carries a SHA-1 signature. Newer platform builds also send `X-SignalWire-Sha256-Signature`, and the agent checks it first when it's present. For cXML compatibility, `X-Twilio-Signature` is accepted in place of `X-SignalWire-Signature`.
+**Headers.** `X-SignalWire-Signature` carries a SHA-1 signature. Newer platform builds also send `X-SignalWire-Sha256-Signature`, and the agent checks it first when it's present. On cXML requests, `X-Twilio-Signature` is accepted in place of `X-SignalWire-Signature`.
 
 **Scheme A: JSON requests** (SWML, SWAIG, post-prompt summaries, RELAY events). The signature is the lowercase hex HMAC of the full URL SignalWire POSTed to, followed by the raw request body:
 
@@ -312,7 +312,7 @@ sha256 signature = hex(HMAC-SHA256(signing_key, url + raw_body))
 
 `url` is exactly what the platform called: scheme, host, any non-standard port, path and query string. `raw_body` is the body as sent, before JSON parsing. Parsing and re-serializing it changes the bytes and breaks the signature.
 
-**Scheme B: form-encoded requests** (cXML and other compatibility endpoints). The form parameters are sorted by name, and each name and value is appended to the URL; a repeated name keeps its values in their original order. The signature is the standard base64 HMAC-SHA1 of that string. The platform signs some requests with the default port in the URL (`:443` or `:80`) and some without, so the validator tries both. When JSON is posted to a compatibility endpoint, the URL carries a `bodySHA256` query parameter: the signature covers that URL with no form parameters, and the body's SHA-256 hex digest must equal the parameter.
+**Scheme B: form-encoded requests** (cXML webhooks). The form parameters are sorted by name, and each name and value is appended to the URL; a repeated name keeps its values in their original order. The signature is the standard base64 HMAC-SHA1 of that string. The platform signs some requests with the default port in the URL (`:443` or `:80`) and some without, so the validator tries both. When JSON is posted to a cXML webhook, the URL carries a `bodySHA256` query parameter: the signature covers that URL with no form parameters, and the body's SHA-256 hex digest must equal the parameter.
 
 **Test vectors.** `validate_webhook_signature()` accepts the first and third rows, and `validate_request()` accepts the second, with its form parameters passed as a dict:
 
@@ -340,7 +340,7 @@ agent = AgentBase(
 agent.serve()
 ```
 
-When `signing_key` is set, signature validation is auto-mounted on `POST /`, `POST /swaig`, `POST /post_prompt`. Requests without a valid `X-SignalWire-Signature` header are rejected with HTTP 403, and the handler is never invoked. The `X-Twilio-Signature` header is accepted as an alias for cXML compatibility.
+When `signing_key` is set, signature validation is auto-mounted on `POST /`, `POST /swaig`, `POST /post_prompt`. Requests without a valid `X-SignalWire-Signature` header are rejected with HTTP 403, and the handler is never invoked. The `X-Twilio-Signature` header is accepted as an alias on cXML requests.
 
 The check applies however the agent is served: `serve()`, `get_app()`, `mount()`, `AgentServer`, or a serverless platform. It applies on every path that reaches those handlers. That includes the agent's route without a trailing slash, and any routing-callback path, which renders SWML like the root. On a serverless platform every POST is checked, whatever its path. On a serverless platform the URL is rebuilt the same way. It uses `SWML_PROXY_URL_BASE` if set, then the forwarded headers if you opted in with `trust_proxy_for_signature`, then the URL the platform reports. If signed requests are refused, set `SWML_PROXY_URL_BASE` to the public URL.
 
@@ -372,7 +372,7 @@ if not ok:
     abort(403)
 ```
 
-A legacy alias `validate_request(signing_key, signature, url, params_or_raw_body)` is provided for users migrating from the old `@signalwire/compatibility-api` shape. Pass a string raw body for the combined validator, or a pre-parsed dict for direct Scheme B (form-encoded).
+A legacy alias `validate_request(signing_key, signature, url, params_or_raw_body)` is also provided. Pass a string raw body for the combined validator, or a pre-parsed dict for direct Scheme B (form-encoded).
 
 ### URL reconstruction behind proxies
 

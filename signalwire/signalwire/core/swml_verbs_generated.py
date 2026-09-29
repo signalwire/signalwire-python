@@ -1888,7 +1888,7 @@ class HangupConfig(TypedDict, total=False):
 
 
 class JoinConferenceConfig(TypedDict, total=False):
-    """Join an ad-hoc audio conference started on either the SignalWire or Compatibility API.
+    """Join an ad-hoc audio conference.
 
     Open shape: extra server keys are permitted and partial payloads are valid;
     not validated at runtime (a TypedDict is a plain ``dict``).

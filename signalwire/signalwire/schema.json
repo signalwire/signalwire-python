@@ -8296,7 +8296,7 @@
           "anyOf": [
             {
               "title": "join_conference Method",
-              "description": "Join an ad-hoc audio conference started on either the SignalWire or Compatibility API.\nThis method allows you to connect the current call to a named conference where multiple participants can communicate simultaneously.",
+              "description": "Join an ad-hoc audio conference.\nThis method allows you to connect the current call to a named conference where multiple participants can communicate simultaneously.",
               "type": "object",
               "properties": {
                 "beep": {
