@@ -74,6 +74,9 @@ class InfoGathererSkill(SkillBase):
                 },
             }
         )
+        # Instances are told apart by prefix, not tool_name, so the base
+        # schema's tool_name entry doesn't apply
+        schema.pop("tool_name", None)
         return schema
 
     # ------------------------------------------------------------------ #

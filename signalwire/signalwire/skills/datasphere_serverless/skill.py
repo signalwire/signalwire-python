@@ -110,6 +110,14 @@ class DataSphereServerlessSkill(SkillBase):
                 },
             }
         )
+        # The base schema's tool_name default is the skill name, but the tool
+        # is named search_knowledge when tool_name isn't set
+        schema["tool_name"] = {
+            "type": "string",
+            "description": "Custom name for the search tool (enables multiple instances)",
+            "default": "search_knowledge",
+            "required": False,
+        }
         return schema
 
     def get_instance_key(self) -> str:

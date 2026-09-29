@@ -244,4 +244,12 @@ class ApiNinjasTriviaSkill(SkillBase):
             }
         )
 
+        # The base schema's tool_name default is the skill name, but the tool
+        # is named get_trivia when tool_name isn't set
+        schema["tool_name"] = {
+            "type": "string",
+            "description": "Custom name for the trivia function (enables multiple instances)",
+            "default": "get_trivia",
+            "required": False,
+        }
         return schema

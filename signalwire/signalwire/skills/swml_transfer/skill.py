@@ -116,6 +116,14 @@ class SWMLTransferSkill(SkillBase):
                 },
             }
         )
+        # The base schema's tool_name default is the skill name, but the tool
+        # is named transfer_call when tool_name isn't set
+        schema["tool_name"] = {
+            "type": "string",
+            "description": "Name of the transfer function (enables multiple instances)",
+            "default": "transfer_call",
+            "required": False,
+        }
         return schema
 
     def get_instance_key(self) -> str:

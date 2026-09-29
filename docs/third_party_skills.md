@@ -296,7 +296,7 @@ Follow these four rules when you design the parameter schema:
 - Always implement `get_parameter_schema()` for GUI compatibility
 - Mark sensitive parameters as `hidden`
 - Provide sensible defaults
-- Use `env_var` for parameters that can come from environment
+- Use `env_var` to name the environment variable a configuration tool can read a parameter from (the SDK doesn't read it)
 
 ### 3. Error Handling
 
