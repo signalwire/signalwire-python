@@ -1533,6 +1533,16 @@ class TestHiddenAndBlockedPaths:
         assert resp.status_code == 200
         assert resp.text == "public"
 
+    def test_well_known_is_served(self, tmp_path: Path) -> None:
+        # The standard public location for ACME challenges and security.txt
+        repo = self._repo(tmp_path)
+        (repo / ".well-known" / "acme-challenge").mkdir(parents=True)
+        (repo / ".well-known" / "acme-challenge" / "token").write_text("proof")
+        _, client = _client({"/files": str(repo)})
+        resp = client.get("/files/.well-known/acme-challenge/token", auth=AUTH)
+        assert resp.status_code == 200
+        assert resp.text == "proof"
+
     def test_a_hidden_directory_is_not_listed(self, tmp_path: Path) -> None:
         _, client = _client(
             {"/files": str(self._repo(tmp_path))}, enable_directory_browsing=True

@@ -265,12 +265,17 @@ class WebService:
 
         A component that starts with a dot is refused wherever it appears, so
         nothing under ``.git`` or ``.ssh`` is served and neither is a file
-        such as ``.env.production``. Directory listings hide the same
-        entries. A component equal to a blocked entry is refused too, so a
-        blocked name covers a directory as well as a file.
+        such as ``.env.production``. The exception is ``.well-known``, the
+        standard public location for ACME challenges and ``security.txt``.
+        Directory listings hide dot entries. A component equal to a blocked
+        entry is refused too, so a blocked name covers a directory as well as
+        a file.
         """
         blocked = set(self.blocked_extensions)
-        return not any(part.startswith(".") or part in blocked for part in parts)
+        return not any(
+            (part.startswith(".") and part != ".well-known") or part in blocked
+            for part in parts
+        )
 
     def _match_mount(self, path: str) -> tuple[str, str, str] | None:
         """The mounted directory that serves ``path``, or None.
