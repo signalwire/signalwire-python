@@ -41,6 +41,7 @@ class AIAgent(TypedDict, total=False):
     SWAIG: SWAIG
     agent_id: uuid
     name: str
+    multilingual: dict[str, Any]
 
 
 class AIAgentAddressListResponse(TypedDict, total=False):
@@ -64,6 +65,9 @@ class AIAgentCreateRequest(TypedDict, total=False):
     SWAIG: SWAIG
     agent_id: uuid
     name: str
+    post_prompt_auth_user: str
+    post_prompt_auth_password: str
+    multilingual: dict[str, Any]
 
 
 class AIAgentCreateStatusCode422(TypedDict, total=False):
@@ -118,6 +122,9 @@ class AIAgentUpdateRequest(TypedDict, total=False):
     SWAIG: SWAIGUpdate
     agent_id: uuid
     name: str
+    post_prompt_auth_user: str
+    post_prompt_auth_password: str
+    multilingual: dict[str, Any]
 
 
 class AIAgentUpdateStatusCode422(TypedDict, total=False):
@@ -460,7 +467,7 @@ class CXMLScript(TypedDict, total=False):
     request_count: int
     last_accessed_at: str | None
     request_url: str
-    script_type: Literal["calling", "messaging"]
+    script_type: Literal["calling", "faxing", "messaging"]
     display_name: str
     status_callback_url: str | None
     status_callback_method: Literal["GET"] | Literal["POST"]
@@ -489,6 +496,8 @@ class CXMLScriptCreateRequest(TypedDict, total=False):
     contents: str
     status_callback_url: str
     status_callback_method: Literal["GET"] | Literal["POST"]
+    name: str
+    script_type: Literal["calling", "faxing", "messaging"]
 
 
 class CXMLScriptCreateStatusCode422(TypedDict, total=False):
@@ -527,6 +536,8 @@ class CXMLScriptUpdateRequest(TypedDict, total=False):
     contents: str
     status_callback_url: str
     status_callback_method: Literal["GET"] | Literal["POST"]
+    name: str
+    script_type: Literal["calling", "faxing", "messaging"]
 
 
 class CXMLScriptUpdateStatusCode422(TypedDict, total=False):
@@ -673,6 +684,8 @@ class CallFlowCreateRequest(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
     title: str
+    flow_data: dict[str, Any] | str
+    relayml: dict[str, Any] | str
 
 
 class CallFlowCreateStatusCode422(TypedDict, total=False):
@@ -709,6 +722,8 @@ class CallFlowUpdateRequest(TypedDict, total=False):
 
     title: str
     document_version: int
+    flow_data: dict[str, Any] | str
+    relayml: dict[str, Any] | str
 
 
 class CallFlowUpdateStatusCode422(TypedDict, total=False):
@@ -1243,6 +1258,9 @@ class CxmlApplication(TypedDict, total=False):
     sms_fallback_method: Literal["GET"] | Literal["POST"]
     sms_status_callback: str | None
     sms_status_callback_method: Literal["GET"] | Literal["POST"]
+    message_status_callback: str | None
+    api_version: str
+    uri: str
 
 
 class CxmlApplicationAddressListResponse(TypedDict, total=False):
@@ -1306,6 +1324,19 @@ class CxmlApplicationUpdateRequest(TypedDict, total=False):
     sms_fallback_method: Literal["GET"] | Literal["POST"]
     sms_status_callback: str
     sms_status_callback_method: Literal["GET"] | Literal["POST"]
+    name: str
+    call_request_url: str
+    call_request_method: Literal["GET", "POST"]
+    call_fallback_url: str
+    call_fallback_method: Literal["GET", "POST"]
+    call_status_url: str
+    call_status_method: Literal["GET", "POST"]
+    message_request_url: str
+    message_request_method: Literal["GET", "POST"]
+    message_fallback_url: str
+    message_fallback_method: Literal["GET", "POST"]
+    message_status_url: str
+    message_status_method: Literal["GET", "POST"]
 
 
 class CxmlApplicationUpdateStatusCode422(TypedDict, total=False):
@@ -1446,6 +1477,7 @@ class DomainApplicationResponse(TypedDict, total=False):
     channels: AddressChannel
     created_at: str
     type: Literal["app"]
+    resource_id: str
 
 
 class EmbedTokenCreateStatusCode422(TypedDict, total=False):
@@ -2029,6 +2061,7 @@ class PhoneRouteResponse(TypedDict, total=False):
     channels: AddressChannel
     created_at: str
     type: Literal["app"]
+    resource_id: str
 
 
 class Play(TypedDict, total=False):
@@ -2634,7 +2667,7 @@ class SWMLWebhook(TypedDict, total=False):
 
     id: uuid
     name: str
-    used_for: Literal["calling"]
+    used_for: Literal["calling", "messaging"]
     primary_request_url: str
     primary_request_method: Literal["GET"] | Literal["POST"]
     fallback_request_url: str | None
@@ -2663,7 +2696,7 @@ class SWMLWebhookCreateRequest(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
     name: str
-    used_for: Literal["calling"]
+    used_for: Literal["calling", "messaging"]
     primary_request_url: str
     primary_request_method: Literal["GET"] | Literal["POST"]
     fallback_request_url: str
@@ -2704,7 +2737,7 @@ class SWMLWebhookUpdateRequest(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
     name: str
-    used_for: Literal["calling"]
+    used_for: Literal["calling", "messaging"]
     primary_request_url: str
     primary_request_method: Literal["GET"] | Literal["POST"]
     fallback_request_url: str
@@ -2806,6 +2839,7 @@ class SipEndpointCreateRequest(TypedDict, total=False):
     encryption: Encryption
     call_handler: CallHandlerType
     calling_handler_resource_id: uuid | None
+    password: str
 
 
 class SipEndpointCreateStatusCode422(TypedDict, total=False):
@@ -2857,6 +2891,7 @@ class SipEndpointUpdateRequest(TypedDict, total=False):
     encryption: Encryption
     call_handler: CallHandlerType
     calling_handler_resource_id: uuid | None
+    password: str
 
 
 class SipEndpointUpdateStatusCode422(TypedDict, total=False):
@@ -3051,6 +3086,7 @@ class Subscriber(TypedDict, total=False):
     country: str
     region: str
     company_name: str
+    time_zone: str
 
 
 class SubscriberAddressPaginationResponse(TypedDict, total=False):
@@ -3084,6 +3120,16 @@ class SubscriberGuestTokenCreateRequest(TypedDict, total=False):
 
     allowed_addresses: list[uuid]
     expire_at: int
+    ch: str
+    region: str
+    email: str
+    first_name: str
+    last_name: str
+    display_name: str
+    job_title: str
+    time_zone: str
+    country: str
+    company_name: str
 
 
 class SubscriberGuestTokenCreateResponse(TypedDict, total=False):
@@ -3148,6 +3194,23 @@ class SubscriberRequest(TypedDict, total=False):
     country: str
     region: str
     company_name: str
+    time_zone: str
+
+
+class SubscriberUpdateRequest(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    password: str
+    email: str
+    first_name: str
+    last_name: str
+    display_name: str
+    job_title: str
+    timezone: str
+    country: str
+    region: str
+    company_name: str
+    time_zone: str
 
 
 class SubscriberResponse(TypedDict, total=False):
@@ -3307,14 +3370,16 @@ class SwmlScript(TypedDict, total=False):
     display_name: str
     status_callback_url: str
     status_callback_method: Literal["POST"]
+    script_type: Literal["calling", "messaging"]
 
 
 class SwmlScriptCreateRequest(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
     name: str
-    contents: str
+    contents: str | dict[str, Any]
     status_callback_url: str
+    script_type: Literal["calling", "messaging"]
 
 
 class SwmlScriptCreateStatusCode422(TypedDict, total=False):
@@ -3359,8 +3424,10 @@ class SwmlScriptUpdateRequest(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
     display_name: str
-    contents: str
+    contents: str | dict[str, Any]
     status_callback_url: str
+    name: str
+    script_type: Literal["calling", "messaging"]
 
 
 class SwmlScriptUpdateStatusCode422(TypedDict, total=False):
@@ -3993,7 +4060,7 @@ GetSubscriberSipEndpointResponse: TypeAlias = "SubscriberSIPEndpoint"
 UpdateSubscriberSipEndpointRequest: TypeAlias = "SubscriberSipEndpointRequestUpdate"
 UpdateSubscriberSipEndpointResponse: TypeAlias = "SubscriberSIPEndpoint"
 GetSubscriberResponse: TypeAlias = "SubscriberResponse"
-UpdateSubscriberRequest: TypeAlias = "SubscriberRequest"
+UpdateSubscriberRequest: TypeAlias = "SubscriberUpdateRequest"
 UpdateSubscriberResponse: TypeAlias = "SubscriberResponse"
 ListSubscriberAddressesResponse: TypeAlias = "list[SubscriberAddressesResponse]"
 ListSwmlScriptsResponse: TypeAlias = "list[SwmlScriptListResponse]"

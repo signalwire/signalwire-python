@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+### Changed
+- REST params that were declared required but that the server does not require are now
+  optional. This is a widening: every call that worked before still works.
+  - Fabric SIP endpoint `create` needs only `username`/`password`. `caller_id`, `send_as`,
+    `ciphers`, `codecs`, `encryption`, `call_handler` and `calling_handler_resource_id` are
+    optional.
+  - The fabric SIP gateway `ciphers`/`codecs`.
+  - cXML script `create(display_name=)`.
+  - The guest token's `allowed_addresses`.
+  - `short_codes.update(name=, message_handler=)`.
+  - The fabric subscriber, conference room, SIP endpoint, number group and verified
+    caller ID `update` bodies.
+  - SWML script `contents` also accepts a dict.
+  - SWML webhook `used_for` accepts `messaging`.
+
 ### Added
 - `client.space`: the Space Administration API (`/api/space`) — space settings,
   geographic permissions, billing profile, billing statements (JSON, CSV text via
@@ -24,6 +39,26 @@
   `request_cnam` and `clear_cnam`.
 - The phone-number and address response types gain the fields the server already
   returns: `e911_status` and `cnam`; `emergency_enabled`, `validated` and `validated_at`.
+- REST request params and response fields the server already accepts or returns (checked
+  against its routes, contracts and serializers), all optional:
+  - Relay list methods take cursor pagination (`page_number`, `page_size`, `page_token`) on
+    queues, queue members, verified caller IDs and the registry brands, campaigns, numbers and
+    orders. `queues.list()` also takes `filter_name`.
+  - `addresses.create(emergency_enabled=, auto_correct_address=)`.
+  - Registry brand and campaign create/update take `signalwire_contact_emails`. Managed
+    creates take `csp_brand_reference` / `csp_campaign_reference`. Campaign update takes
+    `status_callback_url`.
+  - `sip_profile.update(default_outbound_policy=)`.
+  - Fabric `cxml_applications.update()` takes the `call_*` / `message_*` URL and method
+    fields and `name`.
+  - `subscribers.create/update(time_zone=)`.
+  - AI agents take `post_prompt_auth_user`, `post_prompt_auth_password` and `multilingual`.
+  - Call flows take `flow_data` and `relayml`.
+  - cXML and SWML scripts take `name` and `script_type`.
+  - SIP endpoints take `password`.
+  - The guest token takes the subscriber profile fields.
+  - The brand, campaign, order, SIP profile, cXML application, AI agent, SWML script and
+    assign-address response types gain the fields the server emits.
 - `FunctionResult.change_voice(voice)` emits the SWAIG `change_voice` action,
   which changes the agent's voice mid-call. `voice` is an `engine.voice:model`
   spec, the same form the SWML `languages` list uses (the `engine.` prefix and

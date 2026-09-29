@@ -560,7 +560,7 @@ class TestFabricWire:
     def test_cxml_scripts_create(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.fabric.cxml_scripts.create(display_name="x", contents="x")
+        signalwire_client.fabric.cxml_scripts.create(contents="x")
         last = mock.last_request()
         assert last.method == "POST"
         assert last.matched_route == "fabric.create_cxml_script"
@@ -570,7 +570,7 @@ class TestFabricWire:
     ) -> None:
         mock.push_scenario("fabric.create_cxml_script", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.fabric.cxml_scripts.create(display_name="x", contents="x")
+            signalwire_client.fabric.cxml_scripts.create(contents="x")
         assert exc.value.status_code == 500
 
     def test_cxml_scripts_delete(
@@ -1264,16 +1264,7 @@ class TestFabricWire:
     def test_sip_endpoints_create(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.fabric.sip_endpoints.create(
-            username="x",
-            caller_id="x",
-            send_as="x",
-            ciphers=["AEAD_AES_256_GCM_8"],
-            codecs=["PCMU"],
-            encryption="required",
-            call_handler="default",
-            calling_handler_resource_id="x",
-        )
+        signalwire_client.fabric.sip_endpoints.create(username="x")
         last = mock.last_request()
         assert last.method == "POST"
         assert last.matched_route == "fabric.create_sip_endpoint"
@@ -1283,16 +1274,7 @@ class TestFabricWire:
     ) -> None:
         mock.push_scenario("fabric.create_sip_endpoint", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.fabric.sip_endpoints.create(
-                username="x",
-                caller_id="x",
-                send_as="x",
-                ciphers=["AEAD_AES_256_GCM_8"],
-                codecs=["PCMU"],
-                encryption="required",
-                call_handler="default",
-                calling_handler_resource_id="x",
-            )
+            signalwire_client.fabric.sip_endpoints.create(username="x")
         assert exc.value.status_code == 500
 
     def test_sip_endpoints_delete(
@@ -1379,11 +1361,7 @@ class TestFabricWire:
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
         signalwire_client.fabric.sip_gateways.create(
-            name="x",
-            uri="x",
-            encryption="required",
-            ciphers=["AEAD_AES_256_GCM_8"],
-            codecs=["PCMU"],
+            name="x", uri="x", encryption="required"
         )
         last = mock.last_request()
         assert last.method == "POST"
@@ -1395,11 +1373,7 @@ class TestFabricWire:
         mock.push_scenario("fabric.create_sip_gateway", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
             signalwire_client.fabric.sip_gateways.create(
-                name="x",
-                uri="x",
-                encryption="required",
-                ciphers=["AEAD_AES_256_GCM_8"],
-                codecs=["PCMU"],
+                name="x", uri="x", encryption="required"
             )
         assert exc.value.status_code == 500
 
@@ -1878,7 +1852,7 @@ class TestFabricWire:
     def test_tokens_create_guest_token(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.fabric.tokens.create_guest_token(allowed_addresses=["x"])
+        signalwire_client.fabric.tokens.create_guest_token()
         last = mock.last_request()
         assert last.method == "POST"
         assert last.matched_route == "fabric.create_subscriber_guest_token"
@@ -1888,7 +1862,7 @@ class TestFabricWire:
     ) -> None:
         mock.push_scenario("fabric.create_subscriber_guest_token", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.fabric.tokens.create_guest_token(allowed_addresses=["x"])
+            signalwire_client.fabric.tokens.create_guest_token()
         assert exc.value.status_code == 500
 
     def test_tokens_create_invite_token(

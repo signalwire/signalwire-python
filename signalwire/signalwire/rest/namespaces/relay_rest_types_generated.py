@@ -6,7 +6,7 @@
 # differently-shaped server response is returned unchanged and never raises.
 from __future__ import annotations
 from enum import Enum
-from typing import Literal, TypeAlias, TypedDict
+from typing import Any, Literal, TypeAlias, TypedDict
 
 
 class AddNumberGroupMembershipRequest(TypedDict, total=False):
@@ -172,6 +172,9 @@ class Brand(TypedDict, total=False):
     status_callback_url: str
     created_at: str
     updated_at: str
+    signalwire_contact_emails: list[str]
+    large_message_limit: str | None
+    number_pooling_for_company: str | None
 
 
 class BrandListResponse(TypedDict, total=False):
@@ -209,6 +212,9 @@ class BrandResponse(TypedDict, total=False):
     status_callback_url: str
     created_at: str
     updated_at: str
+    signalwire_contact_emails: list[str]
+    large_message_limit: str | None
+    number_pooling_for_company: str | None
 
 
 CallReceiveMode: TypeAlias = "Literal['voice', 'fax']"
@@ -252,6 +258,12 @@ class Campaign(TypedDict, total=False):
     status_callback_url: str
     created_at: str
     updated_at: str
+    dynamic_messages: str | None
+    requested_throughput: str | None
+    daily_messages_per_number: str | None
+    privacy_policy_link: str | None
+    purchase_or_port_numbers: str | None
+    signalwire_contact_emails: list[str]
 
 
 class CampaignListResponse(TypedDict, total=False):
@@ -303,6 +315,12 @@ class CampaignResponse(TypedDict, total=False):
     status_callback_url: str
     created_at: str
     updated_at: str
+    dynamic_messages: str | None
+    requested_throughput: str | None
+    daily_messages_per_number: str | None
+    privacy_policy_link: str | None
+    purchase_or_port_numbers: str | None
+    signalwire_contact_emails: list[str]
 
 
 class CarrierLookupInfo(TypedDict, total=False):
@@ -354,6 +372,8 @@ class CreateAddressRequest(TypedDict, total=False):
     city: str
     state: str
     postal_code: str
+    emergency_enabled: bool
+    auto_correct_address: bool
 
 
 class CreateCspBrandRequest(TypedDict, total=False):
@@ -367,6 +387,7 @@ class CreateCspBrandRequest(TypedDict, total=False):
     name: str
     csp_brand_reference: str
     status_callback_url: str
+    signalwire_contact_emails: list[str] | str
 
 
 class CreateDomainApplicationRequest(TypedDict, total=False):
@@ -423,6 +444,8 @@ class CreateManagedBrandRequest(TypedDict, total=False):
     company_vertical: CompanyVertical
     company_website: str
     status_callback_url: str
+    csp_brand_reference: str
+    signalwire_contact_emails: list[str] | str
 
 
 class CreateManagedCampaignRequest(TypedDict, total=False):
@@ -460,6 +483,8 @@ class CreateManagedCampaignRequest(TypedDict, total=False):
     lead_generation: bool
     terms_and_conditions: bool
     status_callback_url: str
+    csp_campaign_reference: str
+    signalwire_contact_emails: list[str] | str
 
 
 class CreateNumberGroupRequest(TypedDict, total=False):
@@ -495,6 +520,7 @@ class CreatePartnerCampaignRequest(TypedDict, total=False):
     brand_id: uuid
     csp_campaign_reference: str
     status_callback_url: str
+    signalwire_contact_emails: list[str] | str
 
 
 class CreateQueueRequest(TypedDict, total=False):
@@ -828,6 +854,9 @@ class Order(TypedDict, total=False):
     created_at: str
     updated_at: str
     status_callback_url: str
+    campaign_id: str
+    brand_id: str
+    phone_numbers: list[dict[str, Any]]
 
 
 class OrderListResponse(TypedDict, total=False):
@@ -854,6 +883,9 @@ class OrderResponse(TypedDict, total=False):
     created_at: str
     updated_at: str
     status_callback_url: str
+    campaign_id: str
+    brand_id: str
+    phone_numbers: list[dict[str, Any]]
 
 
 class PaginationLinks(TypedDict, total=False):
@@ -1339,6 +1371,7 @@ class SipProfileResponse(TypedDict, total=False):
     default_ciphers: list[str]
     default_encryption: Literal["required", "optional"]
     default_send_as: str
+    default_outbound_policy: Literal["passthrough", "block-pstn"]
 
 
 class SipRecording(TypedDict, total=False):
@@ -1435,6 +1468,8 @@ class UpdateCampaignRequest(TypedDict, total=False):
     """
 
     name: str
+    status_callback_url: str
+    signalwire_contact_emails: list[str] | str
 
 
 class UpdateDomainApplicationRequest(TypedDict, total=False):
@@ -1613,6 +1648,7 @@ class UpdateSipProfileRequest(TypedDict, total=False):
     default_ciphers: list[str]
     default_encryption: Literal["required", "optional"]
     default_send_as: str
+    default_outbound_policy: Literal["passthrough", "block-pstn"]
 
 
 class UpdateVerifiedCallerIDRequest(TypedDict, total=False):

@@ -107,6 +107,7 @@ if TYPE_CHECKING:
         SubscriberSIPEndpoint,
         SubscriberSipEndpointListResponse,
         SubscriberTokenResponse,
+        SubscriberUpdateRequest,
         SwmlScriptCreateRequest,
         SwmlScriptListResponse,
         SwmlScriptResponse,
@@ -649,6 +650,9 @@ class AiAgents(
         pronounce: list[Pronounce] | None = None,
         SWAIG: SWAIG | None = None,
         agent_id: uuid | None = None,
+        post_prompt_auth_user: str | None = None,
+        post_prompt_auth_password: str | None = None,
+        multilingual: dict[str, Any] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -667,6 +671,9 @@ class AiAgents(
                 "SWAIG": SWAIG,
                 "agent_id": agent_id,
                 "name": name,
+                "post_prompt_auth_user": post_prompt_auth_user,
+                "post_prompt_auth_password": post_prompt_auth_password,
+                "multilingual": multilingual,
             }.items()
             if v is not None
         }
@@ -696,6 +703,9 @@ class AiAgents(
         SWAIG: SWAIGUpdate | None = None,
         agent_id: uuid | None = None,
         name: str | None = None,
+        post_prompt_auth_user: str | None = None,
+        post_prompt_auth_password: str | None = None,
+        multilingual: dict[str, Any] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -714,6 +724,9 @@ class AiAgents(
                 "SWAIG": SWAIG,
                 "agent_id": agent_id,
                 "name": name,
+                "post_prompt_auth_user": post_prompt_auth_user,
+                "post_prompt_auth_password": post_prompt_auth_password,
+                "multilingual": multilingual,
             }.items()
             if v is not None
         }
@@ -747,12 +760,20 @@ class CallFlows(
         self,
         *,
         title: str,
+        flow_data: dict[str, Any] | str | None = None,
+        relayml: dict[str, Any] | str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> CallFlowResponse:
         body: dict[str, Any] = {
-            k: v for k, v in {"title": title}.items() if v is not None
+            k: v
+            for k, v in {
+                "title": title,
+                "flow_data": flow_data,
+                "relayml": relayml,
+            }.items()
+            if v is not None
         }
         if extras:
             body.update(extras)
@@ -771,13 +792,20 @@ class CallFlows(
         *,
         title: str | None = None,
         document_version: int | None = None,
+        flow_data: dict[str, Any] | str | None = None,
+        relayml: dict[str, Any] | str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> CallFlowResponse:
         body: dict[str, Any] = {
             k: v
-            for k, v in {"title": title, "document_version": document_version}.items()
+            for k, v in {
+                "title": title,
+                "document_version": document_version,
+                "flow_data": flow_data,
+                "relayml": relayml,
+            }.items()
             if v is not None
         }
         if extras:
@@ -1015,6 +1043,19 @@ class CxmlApplications(BaseResource):
         sms_fallback_method: Literal["GET"] | Literal["POST"] | None = None,
         sms_status_callback: str | None = None,
         sms_status_callback_method: Literal["GET"] | Literal["POST"] | None = None,
+        name: str | None = None,
+        call_request_url: str | None = None,
+        call_request_method: Literal["GET", "POST"] | None = None,
+        call_fallback_url: str | None = None,
+        call_fallback_method: Literal["GET", "POST"] | None = None,
+        call_status_url: str | None = None,
+        call_status_method: Literal["GET", "POST"] | None = None,
+        message_request_url: str | None = None,
+        message_request_method: Literal["GET", "POST"] | None = None,
+        message_fallback_url: str | None = None,
+        message_fallback_method: Literal["GET", "POST"] | None = None,
+        message_status_url: str | None = None,
+        message_status_method: Literal["GET", "POST"] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -1036,6 +1077,19 @@ class CxmlApplications(BaseResource):
                 "sms_fallback_method": sms_fallback_method,
                 "sms_status_callback": sms_status_callback,
                 "sms_status_callback_method": sms_status_callback_method,
+                "name": name,
+                "call_request_url": call_request_url,
+                "call_request_method": call_request_method,
+                "call_fallback_url": call_fallback_url,
+                "call_fallback_method": call_fallback_method,
+                "call_status_url": call_status_url,
+                "call_status_method": call_status_method,
+                "message_request_url": message_request_url,
+                "message_request_method": message_request_method,
+                "message_fallback_url": message_fallback_url,
+                "message_fallback_method": message_fallback_method,
+                "message_status_url": message_status_url,
+                "message_status_method": message_status_method,
             }.items()
             if v is not None
         }
@@ -1086,10 +1140,12 @@ class CxmlScripts(
     def create(  # type: ignore[override]
         self,
         *,
-        display_name: str,
         contents: str,
+        display_name: str | None = None,
         status_callback_url: str | None = None,
         status_callback_method: Literal["GET"] | Literal["POST"] | None = None,
+        name: str | None = None,
+        script_type: Literal["calling", "faxing", "messaging"] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -1101,6 +1157,8 @@ class CxmlScripts(
                 "contents": contents,
                 "status_callback_url": status_callback_url,
                 "status_callback_method": status_callback_method,
+                "name": name,
+                "script_type": script_type,
             }.items()
             if v is not None
         }
@@ -1123,6 +1181,8 @@ class CxmlScripts(
         contents: str | None = None,
         status_callback_url: str | None = None,
         status_callback_method: Literal["GET"] | Literal["POST"] | None = None,
+        name: str | None = None,
+        script_type: Literal["calling", "faxing", "messaging"] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -1134,6 +1194,8 @@ class CxmlScripts(
                 "contents": contents,
                 "status_callback_url": status_callback_url,
                 "status_callback_method": status_callback_method,
+                "name": name,
+                "script_type": script_type,
             }.items()
             if v is not None
         }
@@ -1400,14 +1462,15 @@ class SipEndpoints(
         self,
         *,
         username: str,
-        caller_id: str,
-        send_as: str,
-        ciphers: list[Ciphers],
-        codecs: list[Codecs],
-        encryption: Encryption,
-        call_handler: CallHandlerType,
-        calling_handler_resource_id: uuid | None,
         id: uuid | None = None,
+        caller_id: str | None = None,
+        send_as: str | None = None,
+        ciphers: list[Ciphers] | None = None,
+        codecs: list[Codecs] | None = None,
+        encryption: Encryption | None = None,
+        call_handler: CallHandlerType | None = None,
+        calling_handler_resource_id: uuid | None | None = None,
+        password: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -1424,6 +1487,7 @@ class SipEndpoints(
                 "encryption": encryption,
                 "call_handler": call_handler,
                 "calling_handler_resource_id": calling_handler_resource_id,
+                "password": password,
             }.items()
             if v is not None
         }
@@ -1450,6 +1514,7 @@ class SipEndpoints(
         encryption: Encryption | None = None,
         call_handler: CallHandlerType | None = None,
         calling_handler_resource_id: uuid | None | None = None,
+        password: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -1465,6 +1530,7 @@ class SipEndpoints(
                 "encryption": encryption,
                 "call_handler": call_handler,
                 "calling_handler_resource_id": calling_handler_resource_id,
+                "password": password,
             }.items()
             if v is not None
         }
@@ -1496,8 +1562,8 @@ class SipGateways(
         name: str,
         uri: str,
         encryption: Encryption,
-        ciphers: list[Ciphers],
-        codecs: list[Codecs],
+        ciphers: list[Ciphers] | None = None,
+        codecs: list[Codecs] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -1564,7 +1630,7 @@ class Subscribers(
         "SubscriberListResponse",
         "SubscriberResponse",
         "SubscriberRequest",
-        "SubscriberRequest",
+        "SubscriberUpdateRequest",
     ]
 ):
     """Typed resource for ``/resources/subscribers`` (generated)."""
@@ -1587,6 +1653,7 @@ class Subscribers(
         country: str | None = None,
         region: str | None = None,
         company_name: str | None = None,
+        time_zone: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -1604,6 +1671,7 @@ class Subscribers(
                 "country": country,
                 "region": region,
                 "company_name": company_name,
+                "time_zone": time_zone,
             }.items()
             if v is not None
         }
@@ -1632,6 +1700,7 @@ class Subscribers(
         country: str | None = None,
         region: str | None = None,
         company_name: str | None = None,
+        time_zone: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -1649,6 +1718,7 @@ class Subscribers(
                 "country": country,
                 "region": region,
                 "company_name": company_name,
+                "time_zone": time_zone,
             }.items()
             if v is not None
         }
@@ -1809,8 +1879,9 @@ class SwmlScripts(
         self,
         *,
         name: str,
-        contents: str,
+        contents: str | dict[str, Any],
         status_callback_url: str | None = None,
+        script_type: Literal["calling", "messaging"] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -1821,6 +1892,7 @@ class SwmlScripts(
                 "name": name,
                 "contents": contents,
                 "status_callback_url": status_callback_url,
+                "script_type": script_type,
             }.items()
             if v is not None
         }
@@ -1840,8 +1912,10 @@ class SwmlScripts(
         /,
         *,
         display_name: str | None = None,
-        contents: str | None = None,
+        contents: str | dict[str, Any] | None = None,
         status_callback_url: str | None = None,
+        name: str | None = None,
+        script_type: Literal["calling", "messaging"] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -1852,6 +1926,8 @@ class SwmlScripts(
                 "display_name": display_name,
                 "contents": contents,
                 "status_callback_url": status_callback_url,
+                "name": name,
+                "script_type": script_type,
             }.items()
             if v is not None
         }
@@ -1882,7 +1958,7 @@ class SwmlWebhooks(
         *,
         primary_request_url: str,
         name: str | None = None,
-        used_for: Literal["calling"] | None = None,
+        used_for: Literal["calling", "messaging"] | None = None,
         primary_request_method: Literal["GET"] | Literal["POST"] | None = None,
         fallback_request_url: str | None = None,
         fallback_request_method: Literal["GET"] | Literal["POST"] | None = None,
@@ -1922,7 +1998,7 @@ class SwmlWebhooks(
         /,
         *,
         name: str | None = None,
-        used_for: Literal["calling"] | None = None,
+        used_for: Literal["calling", "messaging"] | None = None,
         primary_request_url: str | None = None,
         primary_request_method: Literal["GET"] | Literal["POST"] | None = None,
         fallback_request_url: str | None = None,
@@ -2065,8 +2141,18 @@ class FabricTokens(BaseResource):
     def create_guest_token(
         self,
         *,
-        allowed_addresses: list[uuid],
+        allowed_addresses: list[uuid] | None = None,
         expire_at: int | None = None,
+        ch: str | None = None,
+        region: str | None = None,
+        email: str | None = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        display_name: str | None = None,
+        job_title: str | None = None,
+        time_zone: str | None = None,
+        country: str | None = None,
+        company_name: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -2076,6 +2162,16 @@ class FabricTokens(BaseResource):
             for k, v in {
                 "allowed_addresses": allowed_addresses,
                 "expire_at": expire_at,
+                "ch": ch,
+                "region": region,
+                "email": email,
+                "first_name": first_name,
+                "last_name": last_name,
+                "display_name": display_name,
+                "job_title": job_title,
+                "time_zone": time_zone,
+                "country": country,
+                "company_name": company_name,
             }.items()
             if v is not None
         }

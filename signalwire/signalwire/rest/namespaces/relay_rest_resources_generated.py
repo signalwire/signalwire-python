@@ -99,6 +99,8 @@ class Addresses(BaseResource):
         postal_code: str,
         address_type: AddressType | None = None,
         address_number: str | None = None,
+        emergency_enabled: bool | None = None,
+        auto_correct_address: bool | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -117,6 +119,8 @@ class Addresses(BaseResource):
                 "city": city,
                 "state": state,
                 "postal_code": postal_code,
+                "emergency_enabled": emergency_enabled,
+                "auto_correct_address": auto_correct_address,
             }.items()
             if v is not None
         }
@@ -1089,12 +1093,20 @@ class RegistryCampaigns(BaseResource):
         id: str,
         *,
         name: str | None = None,
+        status_callback_url: str | None = None,
+        signalwire_contact_emails: list[str] | str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> CampaignResponse:
         body: dict[str, Any] = {
-            k: v for k, v in {"name": name}.items() if v is not None
+            k: v
+            for k, v in {
+                "name": name,
+                "status_callback_url": status_callback_url,
+                "signalwire_contact_emails": signalwire_contact_emails,
+            }.items()
+            if v is not None
         }
         if extras:
             body.update(extras)
@@ -1219,8 +1231,8 @@ class ShortCodes(BaseResource):
         self,
         id: str,
         *,
-        name: str,
-        message_handler: ShortCodeMessageHandler,
+        name: str | None = None,
+        message_handler: ShortCodeMessageHandler | None = None,
         message_request_url: str | None = None,
         message_request_method: HttpMethod | None = None,
         message_fallback_url: str | None = None,
@@ -1278,6 +1290,7 @@ class SipProfile(BaseResource):
         default_ciphers: list[str] | None = None,
         default_encryption: Literal["required", "optional"] | None = None,
         default_send_as: str | None = None,
+        default_outbound_policy: Literal["passthrough", "block-pstn"] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -1290,6 +1303,7 @@ class SipProfile(BaseResource):
                 "default_ciphers": default_ciphers,
                 "default_encryption": default_encryption,
                 "default_send_as": default_send_as,
+                "default_outbound_policy": default_outbound_policy,
             }.items()
             if v is not None
         }
