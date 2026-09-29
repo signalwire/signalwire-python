@@ -3,7 +3,7 @@
 ## [Unreleased]
 
 Fixes from a review of 3.5.0 made while porting it to the TypeScript SDK:
-security fixes in the web service, the per-request copy, two skills and the AI
+security fixes in the web service, the per-request copy, three skills and the AI
 Chat routers; DataMap tools, the swaig-test simulator and their docs now follow
 the platform's rules; and fixes for Cloud Run, LiveWire, BedrockAgent, `pay()`
 and `join_conference()`.
@@ -29,6 +29,10 @@ and `join_conference()`.
   atomic, so overlapping requests can't redeem a nonce twice or pass the
   typing cap. Routers that share a `registry` can't be made atomic this way;
   the module documentation says what to do instead.
+- swml_transfer lists its destinations in the prompt without the credentials
+  a URL carries. A transfer to another agent's URL holds that agent's basic
+  auth, which the model could repeat to a caller. The transfer still uses the
+  full URL.
 
 ### Fixed
 - DataMap: `body()` sets `params`, the only field the platform sends as the
