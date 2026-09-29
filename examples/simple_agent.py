@@ -106,7 +106,6 @@ class SimpleAgent(AgentBase):
         self.set_prompt_llm_params(
             temperature=0.3,  # Low temperature for more consistent responses
             top_p=0.9,  # Slightly reduced for focused responses
-            barge_confidence=0.7,  # Higher confidence threshold
             presence_penalty=0.1,  # Slight penalty for repetition
             frequency_penalty=0.2,  # Encourage varied vocabulary
         )

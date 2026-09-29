@@ -33,7 +33,6 @@ class PreciseAssistant(AgentBase):
         self.set_prompt_llm_params(
             temperature=0.2,  # Very low for consistent responses
             top_p=0.85,  # More focused token selection
-            barge_confidence=0.8,  # Hard to interrupt - let it finish technical info
             presence_penalty=0.0,  # No penalty - technical terms may repeat
             frequency_penalty=0.1,  # Slight penalty for word variety
         )
@@ -89,7 +88,6 @@ class CreativeAssistant(AgentBase):
         self.set_prompt_llm_params(
             temperature=0.8,  # High for creative variety
             top_p=0.95,  # Wide token selection
-            barge_confidence=0.5,  # Easy to interrupt for collaboration
             presence_penalty=0.2,  # Encourage new topics
             frequency_penalty=0.3,  # Strong vocabulary variety
         )
@@ -156,7 +154,6 @@ class CustomerServiceAgent(AgentBase):
         self.set_prompt_llm_params(
             temperature=0.4,  # Balanced consistency
             top_p=0.9,  # Standard token selection
-            barge_confidence=0.7,  # Moderate interruption threshold
             presence_penalty=0.1,  # Slight penalty for repetition
             frequency_penalty=0.1,  # Encourage natural variety
         )
@@ -199,12 +196,10 @@ def main():
 
         if agent_type == "precise":
             agent = PreciseAssistant()
-            print("Starting Precise Assistant (low temperature, hard to interrupt)...")
+            print("Starting Precise Assistant (low temperature, focused sampling)...")
         elif agent_type == "creative":
             agent = CreativeAssistant()
-            print(
-                "Starting Creative Assistant (high temperature, easy to interrupt)..."
-            )
+            print("Starting Creative Assistant (high temperature, wide sampling)...")
         elif agent_type == "support":
             agent = CustomerServiceAgent()
             print("Starting Customer Service Agent (balanced parameters)...")

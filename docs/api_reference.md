@@ -162,7 +162,6 @@ def set_prompt_llm_params(**params) -> AgentBase
 **Common Parameters:**
 - `temperature`: Controls randomness. Lower = more focused
 - `top_p`: Nucleus sampling threshold
-- `barge_confidence`: ASR confidence to interrupt
 - `presence_penalty`: Topic diversity control
 - `frequency_penalty`: Repetition control
 
@@ -174,7 +173,6 @@ Note: No defaults are sent unless explicitly set. Invalid parameters for the sel
 agent.set_prompt_llm_params(
     temperature=0.3,
     top_p=0.9,
-    barge_confidence=0.7,
     presence_penalty=0.1,
     frequency_penalty=0.2
 )
@@ -195,7 +193,7 @@ def set_post_prompt_llm_params(**params) -> AgentBase
 - `presence_penalty`: Topic diversity control
 - `frequency_penalty`: Repetition control
 
-Note: barge_confidence is not applicable to post-prompt. No defaults are sent unless explicitly set.
+Note: No defaults are sent unless explicitly set.
 
 **Usage:**
 ```python

@@ -12,7 +12,6 @@ real example bug; every entry names a concrete external requirement.
 - examples/bedrock_with_skills.py — weather_api skill requires a real weather-provider api_key (mike, 2026-07-08)
 - examples/datasphere_serverless_env_demo.py — requires DATASPHERE_* env (real Datasphere index/creds) (mike, 2026-07-08)
 - examples/datasphere_webhook_env_demo.py — requires DATASPHERE_* env (real Datasphere index/creds) (mike, 2026-07-08)
-- examples/mcp_gateway_demo.py — mcp_gateway skill setup requires a reachable external MCP gateway (mike, 2026-07-08)
 - examples/quickstart_rest.py — issues a real fabric.ai_agents.create() REST call on load; needs real SignalWire project creds (401 against mock) (mike, 2026-07-08)
 - examples/lambda_agent.py — requires the optional `mangum` AWS-Lambda adapter (deployment-only, not a base dependency) (mike, 2026-07-08)
 - examples/swml_service_example.py — interactive: calls input() for a menu choice; cannot run headless (EOFError) (mike, 2026-07-08)

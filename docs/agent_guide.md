@@ -1291,7 +1291,6 @@ The SDK provides methods to fine-tune the Language Model parameters for both the
 self.set_prompt_llm_params(
     temperature=0.7,        # Controls randomness
     top_p=0.9,             # Nucleus sampling threshold
-    barge_confidence=0.6,  # ASR confidence to interrupt
     presence_penalty=0.0,  # Penalizes token repetition
     frequency_penalty=0.0  # Penalizes frequent word usage
 )
