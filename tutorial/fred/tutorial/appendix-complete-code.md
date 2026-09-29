@@ -65,6 +65,7 @@ class FredTheWikiBot(AgentBase):
                 "Introduce yourself as Fred when greeting users",
                 "Use the search_wiki function whenever users ask about factual topics",
                 "Be enthusiastic about sharing knowledge",
+                "Search before you say Wikipedia has nothing on a topic, even one that sounds made up",
                 "If Wikipedia doesn't have information, suggest alternative search terms",
                 "Make learning conversational and enjoyable",
                 "Add interesting context or follow-up questions to engage users"
@@ -102,7 +103,7 @@ class FredTheWikiBot(AgentBase):
         def share_fun_fact(args, raw_data):
             import random
 
-            # Get the requested category
+            # The model may leave the category out, so default to random
             category = args.get("category", "random")
 
             # Define facts by category
@@ -115,38 +116,27 @@ class FredTheWikiBot(AgentBase):
                 ],
                 "history": [
                     "Wikipedia was launched on January 15, 2001!",
-                    "The first Wikipedia article was about the letter 'U'!",
+                    "Wikipedia started as a side project of Nupedia, an encyclopedia written by experts!",
                     "Wikipedia's name comes from 'wiki' (Hawaiian for 'quick') and 'encyclopedia'!",
                     "Jimmy Wales and Larry Sanger founded Wikipedia!"
                 ],
                 "records": [
-                    "The most edited Wikipedia page is about George W. Bush!",
-                    "The longest Wikipedia article is about California Proposition 8!",
-                    "Wikipedia is the 7th most visited website in the world!",
-                    "The Wikipedia article on 'List of Pokemon' is one of the most viewed!"
-                ],
-                "random": []  # Will be filled with all facts
+                    "English Wikipedia's one billionth edit was made on January 13, 2021!",
+                    "Steven Pruitt has made more edits to English Wikipedia than anyone else, over three million!",
+                    "Wikipedia is one of the most visited websites in the world!"
+                ]
             }
 
-            # Combine all facts for random selection
-            all_facts = []
-            for fact_list in facts.values():
-                if fact_list:  # Skip empty random list
-                    all_facts.extend(fact_list)
-            facts["random"] = all_facts
-
-            # Select appropriate fact
-            fact_list = facts.get(category, facts["random"])
-            if not fact_list:
-                return SwaigFunctionResult("I don't have any facts in that category.")
-
-            fact = random.choice(fact_list)
-
-            # Add category context to response
-            if category != "random":
+            # The enum guides the model but doesn't bind it: random, or any
+            # category Fred doesn't have, draws from every fact
+            if category in facts:
+                fact = random.choice(facts[category])
+                # Say what kind of fact it is, so the model can introduce it
                 return SwaigFunctionResult(f"Here's a {category} fact about Wikipedia: {fact}")
-            else:
-                return SwaigFunctionResult(f"Here's a fun Wikipedia fact: {fact}")
+
+            all_facts = [fact for fact_list in facts.values() for fact in fact_list]
+            fact = random.choice(all_facts)
+            return SwaigFunctionResult(f"Here's a fun Wikipedia fact: {fact}")
         
         # Configure Fred's voice
         self.add_language(

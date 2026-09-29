@@ -154,7 +154,8 @@ mcp-gateway          # MCP Gateway service
 
 `DataMap` defines server-side API tools that execute REST calls without agent webhooks. Supports expression evaluation for conditional logic.
 - Created with fluent API: `DataMap('tool_name').description('...').webhook('GET', 'url').output(...)`
-- Variable expansion: `${args.param}`, `${global_data.key}`, and a webhook response's fields from the root, `${field}`; prefix helpers chain, as in `${lc:enc:args.city}`
+- Variable expansion: a webhook's `url` and `params` read `${args.param}` and `${global_data.key}`; its `output`, `expressions` and `foreach` read the response's fields from the root (`${field}`) and the arguments as `${input.args.param}`. Header values aren't expanded. The prefix helpers `lc:`, `enc:` and `fmt_ph:` apply in a fixed order (fmt_ph, lc, enc), as in `${lc:enc:args.city}`; there's no `enc:url:`
+- The platform requests one webhook per call, the first whose `require_args` are met; if it fails, the fallback output runs, not the next webhook
 - Use DataMap for simple API integrations, webhooks for complex logic
 
 ### Skills System
@@ -177,7 +178,7 @@ Skills are pluggable capabilities loaded via `SkillManager` and discovered throu
 ### LLM Parameter Tuning
 - Use `set_prompt_llm_params(**params)` to customize main prompt behavior
 - Use `set_post_prompt_llm_params(**params)` for different post-prompt parameters
-- Common parameters: temperature, top_p, barge_confidence, presence_penalty, frequency_penalty
+- Common parameters: temperature, top_p, presence_penalty, frequency_penalty. Interruption isn't an LLM parameter: tune it with AI params such as `set_param("barge_min_words", 2)` or `enable_barge`
 - No defaults are sent unless explicitly set
 
 ### Security Considerations

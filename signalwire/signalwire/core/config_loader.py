@@ -108,9 +108,9 @@ class ConfigLoader:
             # Try to parse as JSON to get proper types
             if result.lower() in ("true", "false"):
                 return result.lower() == "true"
-            if result.isdigit():
+            if result.isascii() and result.isdigit():
                 return int(result)
-            if result.replace(".", "", 1).isdigit():
+            if result.isascii() and result.replace(".", "", 1).isdigit():
                 return float(result)
             return result
 

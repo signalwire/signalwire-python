@@ -87,6 +87,8 @@ if __name__ == "__main__":
     run_app(server)
 ```
 
+`run_app()` runs the entrypoint once, at startup, rather than per call. When the entrypoint returns, it builds a SignalWire agent from the last `AgentSession` the entrypoint started and serves it over HTTP. SignalWire then fetches that agent's configuration for each call.
+
 ## What's different under the hood
 
 LiveWire keeps the LiveKit API surface, but maps or no-ops each piece differently:
@@ -97,14 +99,16 @@ LiveWire keeps the LiveKit API surface, but maps or no-ops each piece differentl
 
 - **LLM model**: The model string (e.g. `"openai/gpt-4o"`) is mapped to
   SignalWire's AI engine parameter.  The provider prefix is stripped
-  automatically.
+  automatically.  An LLM plugin object, such as `OpenAILLM(model="gpt-4o")`
+  or `inference.LLM(model="openai/gpt-4o")`, contributes its `model` the
+  same way; a plugin without a model leaves the parameter unset.
 
 - **Rooms**: SignalWire does not use the LiveKit room abstraction.
   `ctx.connect()` and `ctx.wait_for_participant()` are safe no-ops.
 
 - **Barge-in / interruptions**: `session.interrupt()` is a no-op because
   SignalWire handles barge-in automatically.  `allow_interruptions=False`
-  maps to `barge_confidence=1.0`.
+  sets the `enable_barge` AI parameter to false.
 
 - **Endpointing delays**: `min_endpointing_delay` maps to
   `end_of_speech_timeout`; `max_endpointing_delay` maps to

@@ -175,6 +175,13 @@ class SpiderSkill(SkillBase):
                 },
             }
         )
+        # tool_name is a prefix here (<tool_name>_scrape_url), and the tools keep
+        # their plain names when it isn't set, so it has no default
+        schema["tool_name"] = {
+            "type": "string",
+            "description": "Prefix for the tool names, as in <tool_name>_scrape_url. When unset, the tools keep their plain names.",
+            "required": False,
+        }
         return schema
 
     def __init__(self, agent: "AgentBase", params: dict[str, Any]):

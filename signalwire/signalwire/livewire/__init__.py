@@ -20,6 +20,7 @@ import inspect
 import logging
 import threading
 import asyncio
+import contextvars
 from typing import Any, Optional, TYPE_CHECKING
 from collections.abc import Callable
 
@@ -32,6 +33,29 @@ if TYPE_CHECKING:
 
 _NOT_GIVEN = object()
 NOT_GIVEN = _NOT_GIVEN
+
+# The JobContext whose entrypoint run_app() is running, so that
+# AgentSession.start() can hand its session to the job without the
+# entrypoint passing the context along.
+_current_job: contextvars.ContextVar[Optional["JobContext"]] = contextvars.ContextVar(
+    "livewire_current_job", default=None
+)
+
+
+def _model_name(llm: Any) -> str | None:
+    """The model name an ``llm`` option names, or None.
+
+    A string is the model name itself. A plugin object, such as
+    ``OpenAILLM(model="gpt-4o")`` or ``inference.LLM(model=...)``, carries it
+    in its ``model`` attribute; one without a model names none.
+    """
+    if llm is NOT_GIVEN or llm is None:
+        return None
+    model = llm if isinstance(llm, str) else getattr(llm, "model", None)
+    if not isinstance(model, str) or not model:
+        return None
+    return model
+
 
 # ---------------------------------------------------------------------------
 # Banner
@@ -493,6 +517,7 @@ class AgentSession:
         self._agent: Agent | None = None
         self._sw_agent: Any = None  # Will hold the real AgentBase
         self._say_queue: list[str] = []
+        self._reply_instructions: list[str] = []
         self._history: list[dict[str, str]] = []
         self._noop = _NoopTracker()
         self._started = False
@@ -520,20 +545,55 @@ class AgentSession:
     async def start(
         self, agent: Agent, *, room: Any = None, record: bool = False
     ) -> None:
-        """Bind to an Agent and prepare the underlying SignalWire AgentBase."""
+        """Bind to an Agent.
+
+        Inside :func:`run_app`, this also makes the session the one the job
+        serves: once the entrypoint returns, ``run_app()`` builds the
+        SignalWire agent from the last session started and runs it. The
+        agent is built then, not here, so ``say()``, ``generate_reply()`` and
+        ``update_agent()`` calls that follow still apply.
+        """
         self._agent = agent
         agent.session = self
         self._started = True
+        job = _current_job.get()
+        if job is not None:
+            job._session = self
 
     def say(self, text: str) -> None:
-        """Queue text to be spoken by the agent."""
+        """Have the agent open the call with ``text``, word for word.
+
+        The text becomes the AI's ``static_greeting``, which the platform
+        speaks as the agent's first words; several calls are joined. Once the
+        agent is built, SignalWire can't add speech from here, so a later
+        call is ignored with a log message.
+        """
+        if self._sw_agent is not None:
+            self._noop.once(
+                "say_after_build",
+                "AgentSession.say() after the agent was built: SignalWire "
+                "can't add speech mid-call from the session, so it's ignored",
+            )
+            return
         self._say_queue.append(text)
 
     def generate_reply(self, *, instructions: str | None = None) -> None:
-        """Trigger the agent to generate a reply.  On SignalWire the prompt
-        handles this; if *instructions* is provided they are noted."""
-        if instructions:
-            self._say_queue.append(instructions)
+        """Guide the agent's first reply.
+
+        ``instructions`` is added to the prompt, under "Initial Greeting".
+        Without instructions there's nothing to add: the agent replies on its
+        own. Once the agent is built, a call is ignored with a log message.
+        """
+        if not instructions:
+            return
+        if self._sw_agent is not None:
+            self._noop.once(
+                "generate_reply_after_build",
+                "AgentSession.generate_reply() after the agent was built: "
+                "the prompt is already set, so it's ignored",
+            )
+            return
+        self._reply_instructions.append(instructions)
 
     def interrupt(self) -> None:
         """Noop -- SignalWire handles barge-in automatically."""
@@ -549,7 +609,7 @@ class AgentSession:
         agent.session = self
 
     # ------------------------------------------------------------------
-    # Build the real SignalWire agent (called by run_app)
+    # Build the real SignalWire agent (run_app calls this for the job's session)
     # ------------------------------------------------------------------
 
     def _build_sw_agent(self) -> Any:
@@ -566,13 +626,22 @@ class AgentSession:
             schema_validation=False,
         )
 
-        # Prompt
-        sw.set_prompt_text(agent.instructions)
+        # Prompt: the agent's instructions, then what generate_reply() asked
+        # for. The prompt is text, which leaves out any POM section, so the
+        # reply instructions are part of the text.
+        prompt = agent.instructions
+        if self._reply_instructions:
+            greeting = "\n\n".join(self._reply_instructions)
+            prompt = f"{prompt}\n\n## Initial Greeting\n\n{greeting}".lstrip()
+        sw.set_prompt_text(prompt)
 
-        # LLM model
-        llm_model = self._llm or getattr(agent, "_llm_hint", NOT_GIVEN)
-        if llm_model is not NOT_GIVEN and llm_model is not None:
-            model_str = str(llm_model)
+        # say(): the platform speaks static_greeting as the agent's first words
+        if self._say_queue:
+            sw.set_param("static_greeting", " ".join(self._say_queue))
+
+        # LLM model: a model name, or a plugin object's model
+        model_str = _model_name(self._llm or getattr(agent, "_llm_hint", NOT_GIVEN))
+        if model_str:
             # Strip provider prefix if present  e.g. "openai/gpt-4" -> "gpt-4"
             if "/" in model_str:
                 model_str = model_str.split("/", 1)[1]
@@ -585,7 +654,8 @@ class AgentSession:
         if agent_allow is not NOT_GIVEN:
             allow = agent_allow
         if not allow:
-            sw.set_param("barge_confidence", 1.0)
+            # The platform's switch for barge-in; barge_confidence does nothing
+            sw.set_param("enable_barge", False)
 
         # Endpointing delays
         min_ep: Any = self._min_endpointing_delay
@@ -601,10 +671,6 @@ class AgentSession:
             max_ep = agent_max
         if max_ep and max_ep > 0:
             sw.set_param("attention_timeout", int(max_ep * 1000))
-
-        # Initial greeting (say queue)
-        for text in self._say_queue:
-            sw.prompt_add_section("Initial Greeting", text)
 
         # Register tools
         all_tools = list(self._tools) + list(agent._tools)
@@ -679,7 +745,10 @@ class JobContext:
     def __init__(self) -> None:
         self.room = Room()
         self.proc = JobProcess()
-        self._agent = None
+        # An AgentBase to run, if the entrypoint sets one itself
+        self._agent: Any = None
+        # The last AgentSession started while this job's entrypoint ran
+        self._session: AgentSession | None = None
 
     async def connect(self) -> None:
         """Noop -- SignalWire agents connect automatically when the platform
@@ -824,9 +893,12 @@ inference = _InferenceNamespace()
 
 
 def run_app(server: AgentServer) -> None:
-    """Print banner, print a random tip, run the agent.
+    """Print banner, run the entrypoint, print a random tip, serve the agent.
 
     This is the main entry point -- mirrors ``livekit.agents.cli.run_app``.
+    The entrypoint runs with a :class:`JobContext`; when it returns, the
+    SignalWire agent built from the last ``AgentSession`` it started is run,
+    which serves HTTP until the process stops.
     """
     _print_banner()
 
@@ -839,24 +911,33 @@ def run_app(server: AgentServer) -> None:
     ctx = JobContext()
 
     # Call the entrypoint -- should create session, agent, tools, etc.
+    # AgentSession.start() finds the job through _current_job.
     if server._entrypoint is not None:
         entry = server._entrypoint
-        if asyncio.iscoroutinefunction(entry):
-            asyncio.get_event_loop().run_until_complete(entry(ctx))
-        else:
-            entry(ctx)
+        token = _current_job.set(ctx)
+        try:
+            if asyncio.iscoroutinefunction(entry):
+                asyncio.run(entry(ctx))
+            else:
+                entry(ctx)
+        finally:
+            _current_job.reset(token)
+
+    # Build the SignalWire agent from the last session the entrypoint
+    # started, unless the entrypoint set ctx._agent itself
+    if ctx._agent is None and ctx._session is not None:
+        ctx._agent = ctx._session._build_sw_agent()
 
     # Print a random tip right before starting
     _print_tip()
 
     # Start the underlying SignalWire agent
     if ctx._agent is not None:
-        # The entrypoint set ctx._agent to an AgentBase -- run it
         ctx._agent.run()
     else:
         _logger.error(
-            "no agent was started -- did you call session.start() and "
-            "session._build_sw_agent()?"
+            "no agent was started -- the entrypoint must call "
+            "await session.start(agent)"
         )
 
 

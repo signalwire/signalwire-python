@@ -365,7 +365,7 @@ result.say("Joining you to the team conference") \
 - `end_on_exit`: Conference ends when this participant exits (default: False)
 
 **Capacity & Region:**
-- `max_participants`: Maximum participants <= 250 (default: 250)
+- `max_participants`: Maximum participants, 2 or more (default: not sent, so the platform's default applies)
 - `region`: Conference region for optimization
 - `wait_url`: SWML URL for custom hold music
 
@@ -854,9 +854,9 @@ These keys are only present for traditional webhook SWAIG functions:
 
 | Key | Type | Description |
 |-----|------|-------------|
-| `prompt_vars` | object | Template variables built from call context, SWML vars, and global_data |
+| `prompt_vars` | object | Template variables built from call context, SWML vars, and global_data. They're merged into the root of the call data; a webhook's output, and the top-level output, also read them as `prompt_vars` |
 | `args` | object | First parsed argument object, for template access |
-| `input` | object | Copy of entire post_data for variable expansion |
+| `input` | object | Empty in the call data. In a webhook's foreach, expressions and output, a copy of the call data, where the arguments are `${input.args.x}` |
 
 ### prompt_vars Contents
 
@@ -888,9 +888,11 @@ All keys from `global_data` are also merged into `prompt_vars`, with global_data
 DataMap processing supports template expansion with access to:
 
 - Nested object access via dot notation: `${user.name}`
-- Array access: `${items[0].value}`
-- Encoding functions: `${enc:url:variable}`
-- Built-in functions: `@{strftime %Y-%m-%d}`, `@{expr 2+2}`
+- Array access: `${items[0].value}`, and `${items[-1].value}` for the last element
+- Prefix helpers: `${enc:variable}` URL-encodes, `${lc:variable}` lowercases, and `${fmt_ph:variable}` formats a phone number. There's no `enc:url`: the platform reads `${enc:url:variable}` as the path `url:variable`, which expands to nothing
+- Built-in functions: `@{strftime_tz America/Chicago %Y-%m-%d}`, `@{expr 2+2}`
+
+A webhook's URL and params read the arguments as `${args.x}`. Its output reads the response's fields from the root, and the arguments as `${input.args.x}`. See the [DataMap Guide](datamap_guide.md#23-context-and-variable-scope).
 
 ---
 

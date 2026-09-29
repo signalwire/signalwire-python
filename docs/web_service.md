@@ -52,7 +52,7 @@ pip install signalwire-sdk
 
 ## Quick Start
 
-This starts a service that serves two directories over HTTP:
+This starts a service that serves two directories over HTTP. WebService needs basic-auth credentials, so the example passes them. [Basic Authentication](#basic-authentication) lists the other ways to set them.
 
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
@@ -64,13 +64,14 @@ service = WebService(
     directories={
         "/docs": "./documentation",
         "/assets": "./static/assets"
-    }
+    },
+    basic_auth=("admin", "change-this-password")
 )
 
 # Start the service
 service.start()
 # Service available at http://localhost:8002
-# Basic Auth: dev:w00t (auto-generated)
+# Basic Auth: admin:(credentials configured) (source: provided)
 ```
 
 ## Configuration
@@ -118,7 +119,7 @@ export SWML_CORS_ORIGINS="https://app.example.com"
 
 ### 3. Configuration File
 
-Create a `web.json` or `swml_web.json` file:
+Create a `web_config.json` file. WebService also looks for `.swml/web_config.json`, then the shared `config.json` locations:
 
 ```json
 {
@@ -135,13 +136,15 @@ Create a `web.json` or `swml_web.json` file:
         "blocked_extensions": [".env", ".key", ".pem"]
     },
     "security": {
-        "basic_auth": {
-            "username": "admin",
-            "password": "secure123"
+        "auth": {
+            "basic": {
+                "user": "admin",
+                "password": "secure123"
+            }
         },
         "ssl_enabled": true,
-        "ssl_cert": "/etc/ssl/certs/server.crt",
-        "ssl_key": "/etc/ssl/private/server.key",
+        "ssl_cert_path": "/etc/ssl/certs/server.crt",
+        "ssl_key_path": "/etc/ssl/private/server.key",
         "allowed_hosts": ["*"],
         "cors_origins": ["*"]
     }
@@ -152,12 +155,13 @@ Create a `web.json` or `swml_web.json` file:
 
 ### Basic Authentication
 
-WebService implements HTTP Basic Authentication. Credentials can be set via:
+WebService implements HTTP Basic Authentication on every file it serves. Set the credentials in one of these ways:
 
 1. **Constructor**: `basic_auth=("username", "password")`
 2. **Environment**: `SWML_BASIC_AUTH_USER` and `SWML_BASIC_AUTH_PASSWORD`
-3. **Config file**: `security.basic_auth` section
-4. **Auto-generated**: If not specified, generates random credentials
+3. **Config file**: the `security.auth.basic` section, with `user` and `password`
+
+`start()` raises `RuntimeError` when none of them is set. A password must not be empty: `basic_auth=("admin", "")` counts as not set. The SDK would otherwise generate a random password, and WebService, like `AgentBase`, never prints a password, so nobody could use it. At startup WebService prints the user name and where the credentials came from (`provided`, `environment` or `config file`), not the password.
 
 ### File Security
 
@@ -169,8 +173,10 @@ WebService blocks these extensions and files by default:
 - `.pyc`, `__pycache__`
 - `.DS_Store`, `.swp`
 
+An entry blocks a directory of that name as well as a file, so nothing under `__pycache__` is served. Whatever `blocked_extensions` holds, WebService also refuses any path with a component that starts with a dot. That covers everything under a `.git` directory and files such as `.env.production`. The one exception is `.well-known`, the standard public location for ACME challenges and `security.txt`, which is served. Directory listings hide every entry that starts with a dot.
+
 #### Path Traversal Protection
-WebService prevents access outside designated directories:
+WebService prevents access outside designated directories. It resolves each path, following symbolic links, before it checks that the path is inside the mounted directory. This includes the `index.html` it serves for a directory, so a link that points outside the mount is refused:
 ```python
 # These attempts will be blocked:
 # GET /docs/../../../etc/passwd
@@ -228,8 +234,8 @@ Or set the same options in the security section of a configuration file:
 {
     "security": {
         "ssl_enabled": true,
-        "ssl_cert": "/etc/ssl/certs/server.crt",
-        "ssl_key": "/etc/ssl/private/server.key"
+        "ssl_cert_path": "/etc/ssl/certs/server.crt",
+        "ssl_key_path": "/etc/ssl/private/server.key"
     }
 }
 ```
@@ -267,7 +273,7 @@ Health check endpoint (no authentication required)
 ### GET /
 Root endpoint showing available directories
 
-**Response:** HTML page listing all mounted directories
+**Response:** HTML page listing each mounted route and its local directory. It needs authentication, and returns 401 without valid credentials. With a directory mounted at `/`, it serves that directory instead.
 
 ### GET /{route}/{file_path}
 Serve files from mounted directories
@@ -276,12 +282,18 @@ Serve files from mounted directories
 - `route`: The mounted directory route (e.g., `/docs`)
 - `file_path`: Path to file within the directory
 
+A route matches at a path-segment boundary, so `/docs` serves `/docs/a.html` but not `/docsx/a.html`, and the longest matching route wins. A directory mounted at `/` serves every path except `/health`.
+
 **Response:**
 - File content with appropriate MIME type
-- 404 if file not found
-- 403 if file type blocked or directory browsing disabled
+- 307 redirect to the same path with a trailing slash, for a directory requested without one
+- 401 without valid credentials
+- 404 if file not found, or nothing is mounted at the path
+- 403 if the path or file type is blocked, the path leaves the mounted directory, or directory browsing is disabled
 
 ## Usage Examples
+
+These examples assume `SWML_BASIC_AUTH_USER` and `SWML_BASIC_AUTH_PASSWORD` are set in the environment, since `start()` refuses to run without credentials.
 
 ### Basic File Serving
 
@@ -335,7 +347,7 @@ service = WebService(
 
 ### Dynamic Directory Management
 
-`add_directory()` and `remove_directory()` change what a running service serves:
+`add_directory()` and `remove_directory()` change what a running service serves, starting with the next request. Adding a route that is already mounted points it at the new directory:
 
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
@@ -502,6 +514,8 @@ User=www-data
 WorkingDirectory=/opt/signalwire
 Environment="SWML_SSL_CERT_PATH=/etc/ssl/certs/server.crt"
 Environment="SWML_SSL_KEY_PATH=/etc/ssl/private/server.key"
+Environment="SWML_BASIC_AUTH_USER=admin"
+Environment="SWML_BASIC_AUTH_PASSWORD=change-this-password"
 ExecStart=/usr/bin/python3 -c "from signalwire import WebService; WebService(directories={'/': '/var/www/html'}).start()"
 Restart=always
 
@@ -552,7 +566,7 @@ server {
 
 Follow these practices in production:
 1. **Always use HTTPS in production** - Protect data in transit
-2. **Change default credentials** - Never use auto-generated auth in production
+2. **Use strong credentials** - Set a long, random password and keep it out of source control
 3. **Restrict file types** - Use `allowed_extensions` to whitelist safe files
 4. **Disable directory browsing** - Turn off in production environments
 5. **Use reverse proxy** - Put Nginx/Apache in front for additional security
@@ -672,7 +686,7 @@ def start(self,
 
 ##### add_directory()
 
-Add a new directory to serve.
+Add a new directory to serve. It takes effect with the next request, on a running service too.
 
 <!-- snippet: no-compile signature-illustration -->
 ```python
@@ -681,7 +695,7 @@ def add_directory(self, route: str, directory: str) -> None
 
 ##### remove_directory()
 
-Remove a directory from being served.
+Remove a directory from being served. Its files stop being served with the next request. The route can be given with or without its leading or trailing slash.
 
 <!-- snippet: no-compile signature-illustration -->
 ```python

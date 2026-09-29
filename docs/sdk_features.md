@@ -117,13 +117,13 @@ data_map = (DataMap("check_stock")
     .purpose("Check product stock levels")
     .parameter("sku", "string", "Product SKU", required=True)
     .webhook("GET", "https://api.warehouse.com/stock/${args.sku}")
-    .output(FunctionResult("Stock for ${args.sku}: ${quantity} units"))
+    .output(FunctionResult("Stock for ${input.args.sku}: ${quantity} units"))
     .fallback_output(FunctionResult("Could not check stock right now")))
 
 agent.register_swaig_function(data_map.to_swaig_function())
 ```
 
-DataMap tools execute on SignalWire's servers. No webhook is needed. The SDK generates the `data_map` structure in the SWML with variable expansion (`${args.*}`, a webhook response's fields from the root such as `${quantity}`, and `${global_data.*}`), foreach iteration, expression matching, and error handling. Your agent never receives the callback; SignalWire handles the entire API call.
+DataMap tools execute on SignalWire's servers. No webhook is needed. The SDK generates the `data_map` structure in the SWML with variable expansion (`${args.*}` in the request URL, a webhook response's fields from the root such as `${quantity}` in its output, where the arguments are `${input.args.*}`, and `${global_data.*}`), foreach iteration, expression matching, and error handling. Your agent never receives the callback; SignalWire handles the entire API call.
 
 ### 3. Skills (Packaged Integrations)
 
@@ -285,7 +285,7 @@ That single call auto-detects the environment and does the right thing:
 |-------------|-----------|--------------|
 | **Standalone** | Default | Starts uvicorn HTTP server with FastAPI |
 | **AWS Lambda** | `AWS_LAMBDA_FUNCTION_NAME` or `LAMBDA_TASK_ROOT` env var | Returns Lambda-formatted response |
-| **Google Cloud Functions** | GCF environment markers | Returns Flask-compatible response |
+| **Google Cloud Functions** | `FUNCTION_TARGET` env var (Cloud Run, with only `K_SERVICE`, is standalone) | Returns Flask-compatible response |
 | **Azure Functions** | Azure Functions env vars | Returns Azure HttpResponse |
 | **CGI** | CGI environment variables | Reads stdin, writes stdout |
 
@@ -401,7 +401,7 @@ Everything the platform supports, the SDK exposes as methods:
 
 ```python
 # LLM tuning
-agent.set_prompt_llm_params(temperature=0.3, top_p=0.9, barge_confidence=0.7)
+agent.set_prompt_llm_params(temperature=0.3, top_p=0.9)
 
 # Multi-language
 agent.add_language("Spanish", "es", "google.es-ES-Neural2-A",
@@ -418,8 +418,7 @@ agent.set_params({"enable_thinking": True, "thinking_model": "o4-mini"})
 # Interruption control
 agent.set_params({
     "barge_match_string": "^(stop|cancel|nevermind)$",
-    "barge_min_words": 2,
-    "barge_confidence": 0.8
+    "barge_min_words": 2
 })
 
 # Native functions with custom fillers

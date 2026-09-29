@@ -185,16 +185,18 @@ The final response combines the query and the formatted results:
 
 <!-- snippet: no-compile fluent-chain-excerpt (leading-dot method call lifted from a builder chain) -->
 ```python
-.output(FunctionResult('I found results for "${args.query}":\n\n${formatted_results}'))
+.output(FunctionResult('I found results for "${input.args.query}":\n\n${formatted_results}'))
 ```
 
 References:
-- `${args.query}`: User's search query
+- `${input.args.query}`: User's search query
 - `${formatted_results}`: String built by foreach
+
+A webhook's output expands against the API response, with the call's data under `input`, so the query is `${input.args.query}` there. `${args.query}` in a webhook output reads the response and expands to nothing. The webhook `params` and the fallback output expand against the call's data, so they use `${args.query}`.
 
 ### 5. **Error Handling**
 
-The tool falls back to a custom message when the API reports an error or returns nothing to format:
+The tool falls back to a custom message when the request fails or the API's response has an `error` key:
 
 <!-- snippet: no-compile fluent-chain-excerpt (leading-dot method calls lifted from a builder chain) -->
 ```python

@@ -808,7 +808,9 @@ class SWMLService(ToolMixin):
                 if int(content_length) > MAX_REQUEST_BODY_SIZE:
                     raise ValueError("Request body too large")
             except (ValueError, TypeError):
-                if isinstance(content_length, str) and not content_length.isdigit():
+                if isinstance(content_length, str) and not (
+                    content_length.isascii() and content_length.isdigit()
+                ):
                     pass
                 else:
                     raise

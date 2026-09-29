@@ -1090,7 +1090,7 @@ class TestRouteHandlers:
         from starlette.testclient import TestClient
         ws = self._make_testable_service(directories={"/docs": "/tmp"})
         client = TestClient(ws.app)
-        resp = client.get("/")
+        resp = client.get("/", auth=self._auth())
         assert resp.status_code == 200
         assert "SignalWire Web Service" in resp.text
         assert "/docs" in resp.text
@@ -1100,9 +1100,31 @@ class TestRouteHandlers:
         from starlette.testclient import TestClient
         ws = self._make_testable_service()
         client = TestClient(ws.app)
-        resp = client.get("/")
+        resp = client.get("/", auth=self._auth())
         assert resp.status_code == 200
         assert "Available Directories" in resp.text
+
+    def test_root_listing_needs_the_credentials(self) -> None:
+        """The listing shows each mount's local path, so it needs credentials."""
+        from starlette.testclient import TestClient
+        ws = self._make_testable_service(directories={"/docs": "/srv/private/docs"})
+        client = TestClient(ws.app)
+        assert client.get("/").status_code == 401
+        assert client.get("/", auth=("testuser", "wrong")).status_code == 401
+        resp = client.get("/", auth=self._auth())
+        assert resp.status_code == 200
+        assert "/srv/private/docs" in resp.text
+
+    def test_root_listing_escapes_routes_and_paths(self) -> None:
+        from starlette.testclient import TestClient
+        ws = self._make_testable_service(
+            directories={'/a"><script>x()</script>': "/srv/<b>docs</b>"})
+        client = TestClient(ws.app)
+        resp = client.get("/", auth=self._auth())
+        assert "<script>" not in resp.text
+        assert "<b>docs</b>" not in resp.text
+        assert "&lt;script&gt;" in resp.text
+        assert "/srv/&lt;b&gt;docs&lt;/b&gt;" in resp.text
 
     def _auth(self) -> tuple[str, str]:
         """Return basic auth tuple for TestClient requests."""
@@ -1457,14 +1479,16 @@ class TestStartEdgeCases:
 class TestAddDirectoryWithApp:
     """Tests for add_directory when app is already set."""
 
-    def test_add_directory_triggers_mount(self, tmp_path: Path) -> None:
-        """Adding a directory when app exists should call _mount_directories."""
-        ws = _make_web_service()
+    def test_add_directory_registers_no_new_route(self, tmp_path: Path) -> None:
+        """One route serves every mount, so adding one leaves the routes as
+        they were instead of registering the existing mounts again."""
+        ws = _make_web_service(directories={"/old": str(tmp_path)})
+        before = [getattr(r, "path", None) for r in ws.app.routes]
         d = tmp_path / "new_dir"
         d.mkdir()
-        with patch.object(ws, "_mount_directories") as mock_mount:
-            ws.add_directory("/new", str(d))
-            mock_mount.assert_called_once()
+        ws.add_directory("/new", str(d))
+        assert [getattr(r, "path", None) for r in ws.app.routes] == before
+        assert before.count("/{request_path:path}") == 1
         _stop_patches(ws)
 
     def test_add_directory_without_app_skips_mount(self, tmp_path: Path) -> None:
@@ -1474,4 +1498,352 @@ class TestAddDirectoryWithApp:
         d.mkdir()
         ws.add_directory("/new", str(d))
         assert "/new" in ws.directories
+        _stop_patches(ws)
+
+
+# ---------------------------------------------------------------------------
+# Paths a mount must not serve
+# ---------------------------------------------------------------------------
+
+AUTH = ("testuser", "testpass")
+
+
+def _client(directories: dict[str, str], **kwargs: Any) -> tuple[Any, Any]:
+    """A WebService with a real app, and a TestClient for it."""
+    from starlette.testclient import TestClient
+
+    ws = TestRouteHandlers()._make_testable_service(directories=directories, **kwargs)
+    return ws, TestClient(ws.app, raise_server_exceptions=False)
+
+
+class TestDirectoryRedirect:
+    """A directory requested without its trailing slash redirects to the same
+    path with one, on this host, as the client wrote it."""
+
+    def _site(self, tmp_path: Path) -> Path:
+        site = tmp_path / "site"
+        for name in ("example.org", "slash#name", "docs"):
+            (site / name).mkdir(parents=True)
+            (site / name / "index.html").write_text(name)
+        return site
+
+    def test_an_encoded_slash_cant_redirect_to_another_host(self, tmp_path: Path) -> None:
+        _, client = _client({"/": str(self._site(tmp_path))})
+        resp = client.get("/%2fexample.org", auth=AUTH, follow_redirects=False)
+        assert resp.status_code == 307
+        assert not resp.headers["location"].startswith("//")
+        assert resp.headers["location"] == "/%2fexample.org/"
+
+    def test_an_encoded_character_in_a_name_is_kept(self, tmp_path: Path) -> None:
+        _, client = _client({"/": str(self._site(tmp_path))})
+        resp = client.get("/slash%23name", auth=AUTH, follow_redirects=False)
+        assert resp.status_code == 307
+        assert resp.headers["location"] == "/slash%23name/"
+        followed = client.get(resp.headers["location"], auth=AUTH)
+        assert followed.text == "slash#name"
+
+    @pytest.mark.parametrize(
+        ("scope", "location"),
+        [
+            ({"path": "/files/a#b"}, "/files/a%23b/"),
+            ({"path": "/files/a?b"}, "/files/a%3Fb/"),
+            ({"path": "//example.org"}, "/example.org/"),
+            ({"path": "/docs", "root_path": "/files"}, "/files/docs/"),
+            ({"path": "/files/docs", "root_path": "/files"}, "/files/docs/"),
+            ({"path": "/application/docs", "root_path": "/app"}, "/app/application/docs/"),
+        ],
+    )
+    def test_without_raw_path_the_decoded_path_is_quoted(
+        self, scope: dict[str, str], location: str
+    ) -> None:
+        from signalwire.web.web_service import _same_origin_redirect
+
+        class Request:
+            pass
+
+        request = Request()
+        request.scope = scope  # type: ignore[attr-defined]  # a minimal stand-in
+        assert _same_origin_redirect(request) == location
+
+    def test_a_mounted_directory_keeps_its_prefix(self, tmp_path: Path) -> None:
+        _, client = _client({"/files": str(self._site(tmp_path))})
+        resp = client.get("/files/docs", auth=AUTH, follow_redirects=False)
+        assert resp.status_code == 307
+        assert resp.headers["location"] == "/files/docs/"
+
+
+class TestHiddenAndBlockedPaths:
+    """A dot entry or a blocked name is refused anywhere on the path, not
+    only as the file's own name or extension."""
+
+    def _repo(self, tmp_path: Path) -> Path:
+        d = tmp_path / "www"
+        (d / ".git").mkdir(parents=True)
+        (d / ".git" / "config").write_text("[remote] url = https://token@host/repo")
+        (d / ".git" / "HEAD").write_text("ref: refs/heads/main")
+        (d / "docs" / ".private").mkdir(parents=True)
+        (d / "docs" / ".private" / "notes.txt").write_text("private")
+        (d / ".env.production").write_text("KEY=value")
+        (d / "__pycache__").mkdir()
+        (d / "__pycache__" / "notes.txt").write_text("cached")
+        (d / "index.txt").write_text("public")
+        return d
+
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/files/.git/config",
+            "/files/.git/HEAD",
+            "/files/docs/.private/notes.txt",
+            "/files/.env.production",
+            "/files/__pycache__/notes.txt",
+        ],
+    )
+    def test_refused(self, tmp_path: Path, path: str) -> None:
+        _, client = _client({"/files": str(self._repo(tmp_path))})
+        resp = client.get(path, auth=AUTH)
+        assert resp.status_code == 403
+        assert resp.json() == {"detail": "Access denied"}
+
+    def test_a_public_file_beside_them_is_served(self, tmp_path: Path) -> None:
+        _, client = _client({"/files": str(self._repo(tmp_path))})
+        resp = client.get("/files/index.txt", auth=AUTH)
+        assert resp.status_code == 200
+        assert resp.text == "public"
+
+    def test_well_known_is_served(self, tmp_path: Path) -> None:
+        # The standard public location for ACME challenges and security.txt
+        repo = self._repo(tmp_path)
+        (repo / ".well-known" / "acme-challenge").mkdir(parents=True)
+        (repo / ".well-known" / "acme-challenge" / "token").write_text("proof")
+        _, client = _client({"/files": str(repo)})
+        resp = client.get("/files/.well-known/acme-challenge/token", auth=AUTH)
+        assert resp.status_code == 200
+        assert resp.text == "proof"
+
+    def test_a_hidden_directory_is_not_listed(self, tmp_path: Path) -> None:
+        _, client = _client(
+            {"/files": str(self._repo(tmp_path))}, enable_directory_browsing=True
+        )
+        resp = client.get("/files/.git/", auth=AUTH)
+        assert resp.status_code == 403
+        assert "config" not in resp.text
+
+    def test_the_listing_omits_blocked_directories(self, tmp_path: Path) -> None:
+        _, client = _client(
+            {"/files": str(self._repo(tmp_path))}, enable_directory_browsing=True
+        )
+        resp = client.get("/files/", auth=AUTH)
+        assert resp.status_code == 200
+        assert "docs/" in resp.text
+        assert "__pycache__" not in resp.text
+        assert ".git" not in resp.text
+
+    def test_a_link_to_a_hidden_directory_is_refused(self, tmp_path: Path) -> None:
+        d = self._repo(tmp_path)
+        (d / "repo").symlink_to(d / ".git")
+        _, client = _client({"/files": str(d)})
+        resp = client.get("/files/repo/config", auth=AUTH)
+        assert resp.status_code == 403
+        assert "token" not in resp.text
+
+
+class TestSymbolicLinks:
+    """Every path is resolved, symbolic links followed, before the
+    containment check, the index.html fallback included."""
+
+    def _mount(self, tmp_path: Path) -> Path:
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        (outside / "secret.html").write_text("SECRET")
+        d = tmp_path / "www"
+        (d / "sub").mkdir(parents=True)
+        (d / "pages").mkdir()
+        (d / "pages" / "home.html").write_text("HOME")
+        return d
+
+    def test_an_index_html_linked_outside_the_mount_is_refused(
+        self, tmp_path: Path
+    ) -> None:
+        d = self._mount(tmp_path)
+        (d / "sub" / "index.html").symlink_to(tmp_path / "outside" / "secret.html")
+        _, client = _client({"/files": str(d)})
+        resp = client.get("/files/sub/", auth=AUTH)
+        assert resp.status_code == 403
+        assert "SECRET" not in resp.text
+
+    def test_an_index_html_linked_inside_the_mount_is_served(
+        self, tmp_path: Path
+    ) -> None:
+        d = self._mount(tmp_path)
+        (d / "sub" / "index.html").symlink_to(d / "pages" / "home.html")
+        _, client = _client({"/files": str(d)})
+        resp = client.get("/files/sub/", auth=AUTH)
+        assert resp.status_code == 200
+        assert resp.text == "HOME"
+
+    def test_a_file_linked_outside_the_mount_is_refused(self, tmp_path: Path) -> None:
+        d = self._mount(tmp_path)
+        (d / "link.html").symlink_to(tmp_path / "outside" / "secret.html")
+        _, client = _client({"/files": str(d)})
+        resp = client.get("/files/link.html", auth=AUTH)
+        assert resp.status_code == 403
+        assert "SECRET" not in resp.text
+
+    def test_a_directory_without_its_slash_is_redirected(self, tmp_path: Path) -> None:
+        """Relative links in the index page need the trailing slash."""
+        d = self._mount(tmp_path)
+        _, client = _client({"/files": str(d)})
+        resp = client.get("/files/pages", auth=AUTH, follow_redirects=False)
+        assert resp.status_code == 307
+        assert resp.headers["location"] == "/files/pages/"
+
+
+class TestDirectoriesAtRuntime:
+    """The route reads ``directories`` on every request."""
+
+    def _dirs(self, tmp_path: Path) -> tuple[Path, Path]:
+        a, b = tmp_path / "a", tmp_path / "b"
+        a.mkdir()
+        b.mkdir()
+        (a / "f.txt").write_text("from a")
+        (b / "f.txt").write_text("from b")
+        return a, b
+
+    def test_add_directory_serves_at_once(self, tmp_path: Path) -> None:
+        a, _ = self._dirs(tmp_path)
+        ws, client = _client({})
+        assert client.get("/late/f.txt", auth=AUTH).status_code == 404
+        ws.add_directory("/late", str(a))
+        resp = client.get("/late/f.txt", auth=AUTH)
+        assert resp.status_code == 200
+        assert resp.text == "from a"
+
+    @pytest.mark.parametrize("route", ["/gone", "gone", "/gone/"])
+    def test_remove_directory_stops_serving_at_once(
+        self, tmp_path: Path, route: str
+    ) -> None:
+        a, _ = self._dirs(tmp_path)
+        ws, client = _client({"/gone": str(a)})
+        assert client.get("/gone/f.txt", auth=AUTH).status_code == 200
+        ws.remove_directory(route)
+        assert ws.directories == {}
+        assert client.get("/gone/f.txt", auth=AUTH).status_code == 404
+
+    def test_adding_a_mounted_route_again_repoints_it(self, tmp_path: Path) -> None:
+        a, b = self._dirs(tmp_path)
+        ws, client = _client({"/docs": str(a)})
+        ws.add_directory("/docs/", str(b))
+        assert ws.directories == {"/docs": str(b)}
+        assert client.get("/docs/f.txt", auth=AUTH).text == "from b"
+
+    def test_a_route_matches_at_a_segment_boundary(self, tmp_path: Path) -> None:
+        a, _ = self._dirs(tmp_path)
+        _, client = _client({"/docs": str(a)})
+        assert client.get("/docsx/f.txt", auth=AUTH).status_code == 404
+
+    def test_the_longest_route_wins(self, tmp_path: Path) -> None:
+        a, b = self._dirs(tmp_path)
+        _, client = _client({"/": str(a), "/docs": str(b)})
+        assert client.get("/docs/f.txt", auth=AUTH).text == "from b"
+        assert client.get("/f.txt", auth=AUTH).text == "from a"
+
+
+class TestRootMount:
+    """A directory mounted at ``/`` serves every path but ``/health``."""
+
+    def _site(self, tmp_path: Path) -> Path:
+        d = tmp_path / "site"
+        (d / "css").mkdir(parents=True)
+        (d / "index.html").write_text("<h1>Site</h1>")
+        (d / "css" / "app.css").write_text("body {}")
+        return d
+
+    def test_serves_files(self, tmp_path: Path) -> None:
+        _, client = _client({"/": str(self._site(tmp_path))})
+        resp = client.get("/css/app.css", auth=AUTH)
+        assert resp.status_code == 200
+        assert resp.text == "body {}"
+
+    def test_serves_its_index_at_the_root(self, tmp_path: Path) -> None:
+        _, client = _client({"/": str(self._site(tmp_path))})
+        resp = client.get("/", auth=AUTH)
+        assert resp.status_code == 200
+        assert resp.text == "<h1>Site</h1>"
+
+    def test_the_root_needs_credentials(self, tmp_path: Path) -> None:
+        _, client = _client({"/": str(self._site(tmp_path))})
+        assert client.get("/").status_code == 401
+        assert client.get("/", auth=("testuser", "wrong")).status_code == 401
+
+    def test_health_is_still_the_health_check(self, tmp_path: Path) -> None:
+        _, client = _client({"/": str(self._site(tmp_path))})
+        resp = client.get("/health")
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "healthy"
+        assert "Cache-Control" not in resp.headers
+
+
+class TestCredentials:
+    """A generated password is never shown, so start() needs credentials
+    someone knows. The source is reported as AgentBase reports it."""
+
+    def test_start_refuses_a_generated_password(self) -> None:
+        ws = _make_web_service()
+        ws._basic_auth_source = "generated"
+        mock_uvicorn = MagicMock()
+        with patch.dict("sys.modules", {"uvicorn": mock_uvicorn}):
+            with pytest.raises(RuntimeError, match="SWML_BASIC_AUTH_PASSWORD"):
+                ws.start()
+        mock_uvicorn.run.assert_not_called()
+        _stop_patches(ws)
+
+    def test_no_configured_credentials_means_a_generated_password(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("SWML_BASIC_AUTH_USER", raising=False)
+        monkeypatch.delenv("SWML_BASIC_AUTH_PASSWORD", raising=False)
+        with patch(
+            "signalwire.core.security_config.ConfigLoader.find_config_file",
+            return_value=None,
+        ), patch(
+            "signalwire.web.web_service.ConfigLoader.find_config_file",
+            return_value=None,
+        ):
+            from signalwire.web.web_service import WebService
+
+            ws = WebService(directories={})
+        assert ws._basic_auth_source == "generated"
+        with pytest.raises(RuntimeError, match="basic_auth"):
+            ws.start()
+
+    def test_an_empty_password_is_not_a_password(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("SWML_BASIC_AUTH_USER", raising=False)
+        monkeypatch.delenv("SWML_BASIC_AUTH_PASSWORD", raising=False)
+        with patch(
+            "signalwire.core.security_config.ConfigLoader.find_config_file",
+            return_value=None,
+        ), patch(
+            "signalwire.web.web_service.ConfigLoader.find_config_file",
+            return_value=None,
+        ):
+            from signalwire.web.web_service import WebService
+
+            ws = WebService(directories={}, basic_auth=("user", ""))
+        assert ws._basic_auth_source == "generated"
+        assert ws._basic_auth[1] != ""
+        with pytest.raises(RuntimeError, match="basic_auth"):
+            ws.start()
+
+    def test_start_reports_the_source_not_the_password(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        ws = _make_web_service(basic_auth=("admin", "hunter2-password"))
+        mock_uvicorn = MagicMock()
+        with patch.dict("sys.modules", {"uvicorn": mock_uvicorn}):
+            ws.start()
+        out = capsys.readouterr().out
+        assert "Basic Auth: admin:(credentials configured) (source: provided)" in out
+        assert "hunter2-password" not in out
+        mock_uvicorn.run.assert_called_once()
         _stop_patches(ws)

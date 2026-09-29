@@ -1216,6 +1216,25 @@ class TestAzureModeBehavior:
             with patch("builtins.print"):
                 agent.run(force_mode="cgi")
 
+    def test_run_serves_on_cloud_run(self) -> None:
+        """Cloud Run sets K_SERVICE for every service; run() must start the
+        server there, not answer one serverless request and return."""
+        agent = _build_mixin()
+        agent.serve = MagicMock()
+        agent.handle_serverless_request = MagicMock()
+        env = {"K_SERVICE": "my-service", "GOOGLE_CLOUD_PROJECT": "my-project"}
+        with patch.dict(os.environ, env, clear=False):
+            for k in (
+                "GATEWAY_INTERFACE", "AWS_LAMBDA_FUNCTION_NAME", "LAMBDA_TASK_ROOT",
+                "FUNCTION_TARGET", "AZURE_FUNCTIONS_ENVIRONMENT",
+                "FUNCTIONS_WORKER_RUNTIME", "AzureWebJobsStorage",
+            ):
+                os.environ.pop(k, None)
+            result = agent.run(port=8080)
+        agent.serve.assert_called_once_with(None, 8080)
+        agent.handle_serverless_request.assert_not_called()
+        assert result is None
+
     def test_run_auto_detection_defaults_to_server(self) -> None:
         agent = _build_mixin()
         agent.serve = MagicMock()

@@ -110,6 +110,14 @@ class DataSphereServerlessSkill(SkillBase):
                 },
             }
         )
+        # The base schema's tool_name default is the skill name, but the tool
+        # is named search_knowledge when tool_name isn't set
+        schema["tool_name"] = {
+            "type": "string",
+            "description": "Custom name for the search tool (enables multiple instances)",
+            "default": "search_knowledge",
+            "required": False,
+        }
         return schema
 
     def get_instance_key(self) -> str:
@@ -217,9 +225,13 @@ class DataSphereServerlessSkill(SkillBase):
                     "append": "=== RESULT ===\n${this.text}\n" + "=" * 50 + "\n\n",
                 }
             )
+            # A webhook's output expands against the API response, with the
+            # call's data under "input", so the query is ${input.args.query}
+            # here. The params above and the fallback output below expand
+            # against the call's data, where it is ${args.query}.
             .output(
                 FunctionResult(
-                    'I found results for "${args.query}":\n\n${formatted_results}'
+                    'I found results for "${input.args.query}":\n\n${formatted_results}'
                 )
             )
             .error_keys(["error"])

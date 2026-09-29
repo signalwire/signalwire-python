@@ -77,9 +77,10 @@ server.run()
 **Automatic Features:**
 
 - Health check endpoint at `/health`
-- Shared authentication across all agents
 - Unified logging
 - Graceful shutdown handling
+
+Each agent keeps its own basic auth credentials. When `SWML_BASIC_AUTH_USER` and `SWML_BASIC_AUTH_PASSWORD` are set, every agent reads the same ones. Without them, each agent generates its own password. [Creating the Server](#4-creating-the-server) shows why PC Builder Pro gives all three the same credentials.
 
 **Configuration Options:**
 
@@ -134,7 +135,7 @@ This method builds URLs that work with:
 - SignalWire's proxy tunnels
 - Custom domains
 
-Call it with `include_auth=True` to get a URL with basic auth credentials embedded, ready to use as a transfer target:
+Call it with `include_auth=True` to get a URL with the agent's own basic auth credentials embedded, ready to use as a transfer target. Another agent accepts the URL only if it has the same credentials:
 
 ```python
 # Returns the correct URL for the current environment
@@ -207,12 +208,13 @@ Alex greets the caller and routes them to sales or support:
 
 ```python
 class TriageAgent(AgentBase):
-    def __init__(self):
+    def __init__(self, basic_auth=None):
         super().__init__(
             name="PC Builder Triage Agent",
             route="/",  # Root route
             host="0.0.0.0",
-            port=3001
+            port=3001,
+            basic_auth=basic_auth,
         )
         
         # Configure prompt
@@ -231,7 +233,7 @@ class TriageAgent(AgentBase):
 
 ### 2. Dynamic Transfer Configuration
 
-Alex's callback builds each destination URL, then configures `swml_transfer` with them:
+Alex's callback builds each destination URL, then configures `swml_transfer` with them. The URLs carry Alex's credentials, which SignalWire needs to request the other agents' SWML. The skill lists each destination in the prompt without them, so the model never sees the password:
 
 ```python
 def configure_transfer_tools(self, query_params, body_params, headers, agent):
@@ -303,14 +305,17 @@ def create_pc_builder_app(host="0.0.0.0", port=3001):
     # Create server
     server = AgentServer(host=host, port=port)
     
+    # One set of credentials for the three agents, so transfers between them work
+    credentials = shared_credentials()
+
     # Create and register agents
-    triage = TriageAgent()
+    triage = TriageAgent(basic_auth=credentials)
     server.register(triage, "/")
     
-    sales = SalesAgent()
+    sales = SalesAgent(basic_auth=credentials)
     server.register(sales, "/sales")
     
-    support = SupportAgent()
+    support = SupportAgent(basic_auth=credentials)
     server.register(support, "/support")
     
     # Add info endpoint
@@ -327,13 +332,22 @@ def create_pc_builder_app(host="0.0.0.0", port=3001):
     return server
 ```
 
+The transfer URL carries the triage agent's credentials, and the sales agent checks them. If each agent generated its own password, every transfer would fail with `401`. `shared_credentials()` makes sure the three agents agree:
+
+```python
+def shared_credentials():
+    user = os.environ.get("SWML_BASIC_AUTH_USER") or "signalwire"
+    password = os.environ.get("SWML_BASIC_AUTH_PASSWORD") or secrets.token_urlsafe(32)
+    return user, password
+```
+
 ---
 
 ## Testing Multi-Agent Flows
 
 ### Starting the System
 
-Every route needs basic auth, so set credentials before starting the system:
+Every route needs basic auth, so set credentials before starting the system. Without them, `pc_builder.py` generates one password for the three agents and doesn't log it:
 
 ```bash
 export SWML_BASIC_AUTH_USER=devuser
@@ -405,7 +419,7 @@ python tutorial/multi_agents/pc_builder.py
 
 **1. Single Server**:
 - All agents on one AgentServer
-- Shared resources and authentication
+- One process to run and monitor, with one set of credentials for agents that transfer to each other
 - Best for small to medium deployments
 
 **2. Distributed Agents**:

@@ -114,14 +114,25 @@ def _record_explicit_args(init: Callable[_P, None]) -> Callable[_P, None]:
     return wrapper
 
 
-def _bound_to(function: Any, original: object, ephemeral: object) -> Any:
-    """``function``, with its handler bound to ``ephemeral`` if it's bound to ``original``."""
+def _copied_tool(function: Any, original: object, ephemeral: object) -> Any:
+    """A per-request copy of a registered tool.
+
+    A DataMap tool (a dict) is copied deeply. Any other tool is copied with
+    its dict, list and set attributes copied deeply, so a per-request
+    callback can change the copy's schema, security or SWAIG fields without
+    changing the tool for other calls. Its handler is shared, bound to
+    ``ephemeral`` if it's bound to ``original``.
+    """
+    if isinstance(function, dict):
+        return copy.deepcopy(function)
+    copied = copy.copy(function)
+    for key, value in getattr(function, "__dict__", {}).items():
+        if isinstance(value, (dict, list, set)):
+            setattr(copied, key, copy.deepcopy(value))
     rebound = _rebound(getattr(function, "handler", None), original, ephemeral)
-    if rebound is None:
-        return function
-    function = copy.copy(function)
-    function.handler = rebound
-    return function
+    if rebound is not None:
+        copied.handler = rebound
+    return copied
 
 
 def _rebound(handler: Any, original: object, ephemeral: object) -> Any:
@@ -555,6 +566,10 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
                 region = os.getenv("AWS_REGION", "us-east-1")
                 function_name = os.getenv("AWS_LAMBDA_FUNCTION_NAME", "unknown")
                 base_url = f"https://{function_name}.lambda-url.{region}.on.aws"
+        elif mode == "google_cloud_function" and os.getenv("FUNCTION_URL"):
+            # The function's URL, when the deployment (or swaig-test's
+            # --gcp-function-url) sets it
+            base_url = os.environ["FUNCTION_URL"].rstrip("/")
         elif mode == "google_cloud_function":
             # Google Cloud Functions URL format
             project_id = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("GCP_PROJECT")
@@ -574,6 +589,10 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
             else:
                 # Fallback for local testing or incomplete environment
                 base_url = "https://localhost:8080"
+        elif mode == "azure_function" and os.getenv("AZURE_FUNCTION_URL"):
+            # The function's URL, when the deployment (or swaig-test's
+            # --azure-function-url) sets it
+            base_url = os.environ["AZURE_FUNCTION_URL"].rstrip("/")
         elif mode == "azure_function":
             # Azure Functions URL format
             function_app_name = os.getenv("WEBSITE_SITE_NAME") or os.getenv(
@@ -1865,9 +1884,10 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
             _current_document (a new, empty document; the render rebuilds it),
             _prompt_manager (fresh instance; its _sections, _prompt_text,
                 _post_prompt_text and _contexts are copied),
-            _tool_registry (fresh instance; its _swaig_functions and
-                _tool_instances are copied, and a tool whose handler is a
-                method of this agent gets a handler bound to the copy)
+            _tool_registry (fresh instance; each tool in _swaig_functions is
+                copied, with its dict, list and set attributes copied deeply
+                and a handler that's a method of this agent bound to the
+                copy; _tool_instances is copied)
 
         Anything NOT in that list is the master's own object, shared with
         every other request in flight. The distinction that matters is between
@@ -2000,13 +2020,13 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
 
         # Create new tool registry for the ephemeral agent
         ephemeral_agent._tool_registry = ToolRegistry(ephemeral_agent)
-        # Copy the SWAIG functions. Most can be shared; one whose handler is
-        # a method of this agent is copied with the handler bound to the
-        # copy, so the handler's self sees what the per-request callback
+        # Copy the SWAIG functions, so a per-request callback that changes a
+        # tool changes it for this request only. A handler that's a method of
+        # this agent is bound to the copy, so its self sees what the callback
         # configured, as on_summary does.
         if hasattr(self._tool_registry, "_swaig_functions"):
             ephemeral_agent._tool_registry._swaig_functions = {
-                name: _bound_to(function, self, ephemeral_agent)
+                name: _copied_tool(function, self, ephemeral_agent)
                 for name, function in self._tool_registry._swaig_functions.items()
             }
         if hasattr(self._tool_registry, "_tool_instances"):

@@ -162,7 +162,6 @@ def set_prompt_llm_params(**params) -> AgentBase
 **Common Parameters:**
 - `temperature`: Controls randomness. Lower = more focused
 - `top_p`: Nucleus sampling threshold
-- `barge_confidence`: ASR confidence to interrupt
 - `presence_penalty`: Topic diversity control
 - `frequency_penalty`: Repetition control
 
@@ -174,7 +173,6 @@ Note: No defaults are sent unless explicitly set. Invalid parameters for the sel
 agent.set_prompt_llm_params(
     temperature=0.3,
     top_p=0.9,
-    barge_confidence=0.7,
     presence_penalty=0.1,
     frequency_penalty=0.2
 )
@@ -195,7 +193,7 @@ def set_post_prompt_llm_params(**params) -> AgentBase
 - `presence_penalty`: Topic diversity control
 - `frequency_penalty`: Repetition control
 
-Note: barge_confidence is not applicable to post-prompt. No defaults are sent unless explicitly set.
+Note: No defaults are sent unless explicitly set.
 
 **Usage:**
 ```python
@@ -2014,7 +2012,7 @@ Join a SignalWire room.
 result.join_room("support_room_1")
 ```
 
-##### `join_conference(name: str, muted: bool = False, beep: str = "true", start_on_enter: bool = True, end_on_exit: bool = False, wait_url: Optional[str] = None, max_participants: int = 250, record: str = "do-not-record", region: Optional[str] = None, trim: str = "trim-silence", coach: Optional[str] = None, status_callback_event: Optional[str] = None, status_callback: Optional[str] = None, status_callback_method: str = "POST", recording_status_callback: Optional[str] = None, recording_status_callback_method: str = "POST", recording_status_callback_event: str = "completed", result: Optional[Any] = None) -> FunctionResult`
+##### `join_conference(name: str, muted: bool = False, beep: str = "true", start_on_enter: bool = True, end_on_exit: bool = False, wait_url: Optional[str] = None, max_participants: Optional[int] = None, record: str = "do-not-record", region: Optional[str] = None, trim: str = "trim-silence", coach: Optional[str] = None, status_callback_event: Optional[str] = None, status_callback: Optional[str] = None, status_callback_method: str = "POST", recording_status_callback: Optional[str] = None, recording_status_callback_method: str = "POST", recording_status_callback_event: str = "completed", result: Optional[Any] = None) -> FunctionResult`
 Join a conference call.
 
 **Parameters:**
@@ -2024,7 +2022,7 @@ Join a conference call.
 - `start_on_enter` (bool): Start conference when this participant enters (default: True)
 - `end_on_exit` (bool): End conference when this participant exits (default: False)
 - `wait_url` (Optional[str]): URL for hold music/content
-- `max_participants` (int): Maximum participants (default: 250)
+- `max_participants` (int): Maximum participants, 2 or more (default: None, which leaves it out so the platform's default applies)
 - `record` (str): Recording setting (default: "do-not-record")
 - `region` (Optional[str]): SignalWire region
 - `trim` (str): Trim setting for recordings (default: "trim-silence")
@@ -2088,7 +2086,6 @@ result.pay(
 # Payment with custom settings
 result.pay(
     payment_connector_url="https://payment-processor.com/webhook",
-    input_method="speech",
     timeout=10,
     max_attempts=3,
     security_code=True,
@@ -2341,17 +2338,20 @@ data_map.parameter('categories', 'array', 'Search categories to include')
 Configure an HTTP API call.
 
 **Parameters:**
-- `method` (str): HTTP method: "GET", "POST", "PUT", "DELETE", "PATCH"
+- `method` (str): "GET" or "POST". The platform sends a POST when this is "POST" or the webhook has params, and a GET otherwise, so "PUT", "PATCH" and "DELETE" are sent as GET
 - `url` (str): API endpoint URL (supports `${variable}` substitution)
-- `headers` (Optional[Dict[str, str]]): HTTP headers to send
-- `form_param` (Optional[str]): Send JSON body as single form parameter with this name
-- `input_args_as_params` (bool): Merge function arguments into URL parameters (default: False)
-- `require_args` (Optional[List[str]]): Only execute if these arguments are present
+- `headers` (Optional[Dict[str, str]]): HTTP headers to send, as written. The platform doesn't expand templates in header values
+- `form_param` (Optional[str]): Send the JSON params as a single form field with this name
+- `input_args_as_params` (bool): Merge the function's arguments into the params, the JSON body, which makes the request a POST (default: False)
+- `require_args` (Optional[List[str]]): Skip this webhook, without a request, unless at least one of these arguments is present
+
+The platform requests the first webhook whose `require_args` are met, and no other. When that webhook fails, it doesn't try the next one; the `fallback_output()` runs.
 
 **Variable Substitution in URLs:**
 - `${args.parameter_name}`: Function argument values
 - `${global_data.key}`: Call-wide data store (user info, call state - NOT credentials)
-- `${meta_data.call_id}`: Call and function metadata
+- `${meta_data.key}`: The function's metadata
+- `${call_id}`: The call's ID; other call details, such as `${caller_id_num}`, are at the root too
 
 **Usage:**
 ```python
@@ -2384,7 +2384,7 @@ data_map.webhook(
 ```
 
 ##### `body(data: Dict[str, Any]) -> DataMap`
-Set the JSON body for POST/PUT requests.
+Set the JSON request body; the same as `params()`. The platform reads a webhook's body from its `params` field, so `body()` sets `params`, and the webhook is sent as a POST.
 
 **Parameters:**
 - `data` (Dict[str, Any]): JSON body data (supports `${variable}` substitution)
@@ -2404,20 +2404,20 @@ data_map.body({
 # Body with call-related data (NOT sensitive info)
 data_map.body({
     'customer_id': '${global_data.customer_id}',
-    'request_id': '${meta_data.call_id}',
+    'request_id': '${call_id}',
     'search': '${args.query}'
 })
 ```
 
 ##### `params(data: Dict[str, Any]) -> DataMap`
-Set URL query parameters.
+Set the request's JSON body. The platform sends `params` as the body, not as URL query parameters, so a webhook with params is sent as a POST whatever its method. For a GET, put query parameters in the URL, as in `'https://api.example.com/weather?q=${enc:args.location}'`.
 
 **Parameters:**
-- `data` (Dict[str, Any]): Query parameters (supports `${variable}` substitution)
+- `data` (Dict[str, Any]): Body fields (supports `${variable}` substitution against the call data, such as `${args.location}`)
 
 **Usage:**
 ```python
-# URL parameters with substitution
+# A JSON body with substitution
 data_map.params({
     'api_key': 'YOUR_API_KEY',
     'q': '${args.location}',
@@ -2428,24 +2428,25 @@ data_map.params({
 
 #### Multiple Webhooks and Fallbacks
 
-DataMap supports multiple webhook configurations for fallback scenarios:
+The platform requests one webhook per call: the first whose `require_args` are met. It doesn't try a later webhook when that one fails; the `fallback_output()` runs instead. Several webhooks are useful when `require_args` choose between them:
 
 ```python
-# Primary API with fallback
-data_map = (DataMap('search_with_fallback')
-    .purpose('Search with multiple API fallbacks')
-    .parameter('query', 'string', 'Search query', required=True)
-    
-    # Primary API
-    .webhook('GET', 'https://api.primary.com/search?q=${args.query}')
-    .output(FunctionResult('Primary result: ${title}'))
-    
-    # Fallback API
-    .webhook('GET', 'https://api.fallback.com/search?q=${args.query}')
-    .output(FunctionResult('Fallback result: ${title}'))
-    
-    # Final fallback if all APIs fail
-    .fallback_output(FunctionResult('Sorry, all search services are currently unavailable'))
+# Look an order up by its number, or else by the customer's email
+data_map = (DataMap('find_order')
+    .purpose('Find an order by its number or the customer email')
+    .parameter('order_id', 'string', 'Order number')
+    .parameter('email', 'string', 'Customer email address')
+
+    # Requested when the AI supplied an order number
+    .webhook('GET', 'https://api.example.com/orders/${enc:args.order_id}', require_args=['order_id'])
+    .output(FunctionResult('Order ${id}: ${status}'))
+
+    # Requested when it supplied only an email
+    .webhook('GET', 'https://api.example.com/orders?email=${enc:args.email}', require_args=['email'])
+    .output(FunctionResult('Latest order for ${input.args.email}: ${array[0].status}'))
+
+    # Used when the webhook that ran fails, or neither argument was supplied
+    .fallback_output(FunctionResult('Sorry, the order service is unavailable right now'))
 )
 ```
 
@@ -2463,18 +2464,20 @@ Set the response template for successful API calls.
 - `${field}`: fields of the API's JSON response, read from the root with no prefix
 - `${nested.field}`: nested response fields
 - `${array[0].field}`: elements of a response that is a JSON array
-- `${args.parameter}`: Original function arguments
+- `${input.args.parameter}`: Original function arguments. The call data is under `input` in an output, so `${args.parameter}` is empty there
+- `${input.call_id}`, `${input.meta_data.key}`: the call details and the function's metadata
 - `${global_data.key}`: Call-wide data store (user info, call state)
+- `${prompt_vars.key}`: the prompt variables
 
 **Usage:**
 ```python
 # Simple response template
-data_map.output(FunctionResult('Weather in ${args.location}: ${current.condition.text}, ${current.temp_f}°F'))
+data_map.output(FunctionResult('Weather in ${input.args.location}: ${current.condition.text}, ${current.temp_f}°F'))
 
 # Response with actions
 data_map.output(
     FunctionResult('Found ${total_results} results')
-    .update_global_data({'last_search': '${args.query}'})
+    .update_global_data({'last_search': '${input.args.query}'})
     .add_action('play', 'search_complete.mp3')
 )
 
@@ -2485,7 +2488,7 @@ data_map.output(
 ```
 
 ##### `fallback_output(result: FunctionResult) -> DataMap`
-Set the response when all webhooks fail.
+Set the top-level output. The platform uses it when no expression matched and the webhook stage produced no result: the webhook it requested failed, or no webhook was eligible. Its templates read the call data, where an argument is `${args.x}`.
 
 **Parameters:**
 - `result` (FunctionResult): Fallback response
@@ -2556,7 +2559,8 @@ control_map = (DataMap('file_control')
     .purpose('Control file playback')
     .parameter('command', 'string', 'Playback command', required=True)
     .parameter('filename', 'string', 'File to control')
-    
+    .parameter('level', 'string', 'Volume level, from 0 to 10')
+
     # Start commands
     .expression(
         '${args.command}', 
@@ -2573,25 +2577,23 @@ control_map = (DataMap('file_control')
         .add_action('stop_playback', True)
     )
     
-    # Volume commands
+    # Volume commands, with the level in its own argument
     .expression(
         '${args.command}',
-        r'volume (\d+)',
-        FunctionResult('Setting volume to ${match.1}')
-        .add_action('set_volume', '${match.1}')
+        r'volume',
+        FunctionResult('Setting volume to ${args.level}')
+        .add_action('set_volume', '${args.level}')
     )
 )
 ```
 
-**Pattern Matching Variables:**
-- `${match.0}`: Full match
-- `${match.1}`, `${match.2}`, etc.: Capture groups
-- `${match.group_name}`: Named capture groups
+**Pattern Matching:**
+The platform expands the test value against the call data and searches it for the pattern, a regular expression that can match anywhere in the value, without regard to case unless it's written as `/pattern/flags`. It doesn't expose capture groups to templates, so a value the output needs should come from its own argument, as `level` does here. Expressions run in order, and the first that produces an output ends the function.
 
 ### Error Handling
 
 ##### `error_keys(keys: List[str]) -> DataMap`
-Specify response fields that indicate errors.
+Specify response fields that indicate errors, for the most recent webhook. The webhook fails when its JSON response has any of these fields at the top level, whatever the value, and the `fallback_output()` runs. An HTTP status outside 200-299 isn't a failure by itself: the platform adds an `http_code` field to such a response, so list `http_code` to fail on it.
 
 **Parameters:**
 - `keys` (List[str]): List of field names that indicate API errors
@@ -2599,13 +2601,13 @@ Specify response fields that indicate errors.
 **Usage:**
 ```python
 # Treat these response fields as errors
-data_map.error_keys(['error', 'error_message', 'status_code'])
+data_map.error_keys(['error', 'error_message', 'http_code'])
 
-# If API returns {"error": "Not found"}, DataMap will treat this as an error
+# If the API returns {"error": "Not found"}, or any status outside 200-299, the webhook fails
 ```
 
 ##### `global_error_keys(keys: List[str]) -> DataMap`
-Set global error keys for all webhooks in this DataMap.
+Set a top-level `error_keys` field. The platform ignores it, and checks only each webhook's own error keys, so call `error_keys()` after the webhook instead. `error_keys()` called before any webhook sets the same ignored field.
 
 **Parameters:**
 - `keys` (List[str]): Global error field names
@@ -2618,7 +2620,7 @@ data_map.global_error_keys(['error', 'message', 'code'])
 ### Advanced Configuration
 
 ##### `webhook_expressions(expressions: List[Dict[str, Any]]) -> DataMap`
-Attach expressions to the most recently added webhook, storing them under its `expressions` field. Call `webhook()` first; calling this before any webhook has been added raises `ValueError`.
+Attach expressions to the most recently added webhook, storing them under its `expressions` field. Call `webhook()` first; calling this before any webhook has been added raises `ValueError`. They run after the webhook's `foreach`, against its response, and the first that produces an output replaces the webhook's own output. Their templates read the response's fields from the root, and the call data under `input`, such as `${input.args.id}`.
 
 **Parameters:**
 - `expressions` (List[Dict[str, Any]]): Expression objects to store as given, each needing the same `string`, `pattern` and `output` keys as `expression()`
@@ -2652,8 +2654,8 @@ weather_tool = (DataMap('get_weather')
     .purpose('Get current weather information')
     .parameter('location', 'string', 'City name or ZIP code', required=True)
     .parameter('units', 'string', 'Temperature units', enum=['celsius', 'fahrenheit'])
-    .webhook('GET', 'https://api.weather.com/v1/current?key=API_KEY&q=${args.location}&units=${args.units}')
-    .output(FunctionResult('Weather in ${args.location}: ${current.condition.text}, ${current.temp_f}°F'))
+    .webhook('GET', 'https://api.weather.com/v1/current?key=API_KEY&q=${enc:args.location}&units=${enc:args.units}')
+    .output(FunctionResult('Weather in ${input.args.location}: ${current.condition.text}, ${current.temp_f}°F'))
     .error_keys(['error'])
 )
 
@@ -2675,7 +2677,7 @@ search_tool = (DataMap('search_knowledge')
         'https://api.company.com/search',
         headers={'Authorization': 'Bearer TOKEN'}
     )
-    .body({
+    .params({
         'query': '${args.query}',
         'category': '${args.category}',
         'limit': 5
@@ -2759,7 +2761,7 @@ Create a simple API integration tool.
 - `parameters` (Optional[Dict[str, Dict]]): Parameter definitions
 - `method` (str): HTTP method (default: "GET")
 - `headers` (Optional[Dict[str, str]]): HTTP headers
-- `body` (Optional[Dict[str, Any]]): Request body
+- `body` (Optional[Dict[str, Any]]): JSON request body, set as the webhook's params
 - `error_keys` (Optional[List[str]]): Error field names
 
 **Usage:**
@@ -2768,8 +2770,8 @@ from signalwire.core.data_map import create_simple_api_tool
 
 weather = create_simple_api_tool(
     name='get_weather',
-    url='https://api.weather.com/v1/current?key=API_KEY&q=${location}',
-    response_template='Weather in ${args.location}: ${current.condition.text}',
+    url='https://api.weather.com/v1/current?key=API_KEY&q=${enc:args.location}',
+    response_template='Weather in ${input.args.location}: ${current.condition.text}',
     parameters={
         'location': {
             'type': 'string', 
@@ -2797,15 +2799,19 @@ from signalwire.core.data_map import create_expression_tool
 
 file_control = create_expression_tool(
     name='file_control',
+    # Maps a test value to a (pattern, FunctionResult) pair
     patterns={
-        r'start.*': ('${args.command}', FunctionResult().add_action('start_playback', True)),
-        r'stop.*': ('${args.command}', FunctionResult().add_action('stop_playback', True))
+        '${args.command}': (r'start|play', FunctionResult('Starting playback').add_action('start_playback', {'file': '${args.filename}'})),
     },
     parameters={
         'command': {
             'type': 'string',
             'description': 'Playback command',
             'required': True
+        },
+        'filename': {
+            'type': 'string',
+            'description': 'File to play'
         }
     }
 )
@@ -2813,21 +2819,21 @@ file_control = create_expression_tool(
 agent.register_swaig_function(file_control.to_swaig_function())
 ```
 
+A dict holds one pattern per test value. For several patterns on the same value, chain `DataMap.expression()` calls instead.
+
 ### Method Chaining
 
 All DataMap methods return `self`, enabling fluent method chaining:
 
 ```python
 complete_tool = (DataMap('comprehensive_search')
-    .purpose('Comprehensive search with fallbacks')
+    .purpose('Search the knowledge base')
     .parameter('query', 'string', 'Search query', required=True)
     .parameter('category', 'string', 'Search category', enum=['all', 'docs', 'faq'])
-    .webhook('GET', 'https://primary-api.com/search?q=${args.query}&cat=${args.category}')
-    .output(FunctionResult('Primary: ${title}'))
-    .webhook('GET', 'https://backup-api.com/search?q=${args.query}')
-    .output(FunctionResult('Backup: ${title}'))
-    .fallback_output(FunctionResult('All search services unavailable'))
+    .webhook('GET', 'https://api.example.com/search?q=${enc:args.query}&cat=${enc:args.category}')
+    .output(FunctionResult('Top result: ${title}'))
     .error_keys(['error', 'message'])
+    .fallback_output(FunctionResult('Search is unavailable right now'))
 )
 ```
 
@@ -3114,7 +3120,7 @@ class CustomSkill(SkillBase):
             .description("Custom API integration")
             .parameter("query", "string", "Search query", required=True)
             .webhook("GET", f"https://api.example.com/search?key={self.api_key}&q=${{args.query}}")
-            .output(FunctionResult("Found: ${{response.title}}"))
+            .output(FunctionResult("Found: ${{title}}"))
         )
         
         self.agent.register_swaig_function(tool.to_swaig_function())

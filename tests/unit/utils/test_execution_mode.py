@@ -54,6 +54,38 @@ class TestGetExecutionMode:
                 os.environ.pop(k, None)
             assert get_execution_mode() == "google_cloud_function"
 
+    @pytest.mark.parametrize(
+        "env",
+        [
+            {"K_SERVICE": "my-service", "K_REVISION": "my-service-00001", "PORT": "8080"},
+            {"GOOGLE_CLOUD_PROJECT": "my-project"},
+            {"K_SERVICE": "my-service", "GOOGLE_CLOUD_PROJECT": "my-project"},
+        ],
+    )
+    def test_cloud_run_and_a_project_alone_are_server_mode(
+        self, env: dict[str, str]
+    ) -> None:
+        """Cloud Run sets K_SERVICE for every service, and GOOGLE_CLOUD_PROJECT
+        is set on many machines. Neither means a Cloud Function, whose
+        Functions Framework sets FUNCTION_TARGET."""
+        with patch.dict(os.environ, env, clear=False):
+            for k in (
+                "GATEWAY_INTERFACE", "AWS_LAMBDA_FUNCTION_NAME", "LAMBDA_TASK_ROOT",
+                "FUNCTION_TARGET", "AZURE_FUNCTIONS_ENVIRONMENT",
+                "FUNCTIONS_WORKER_RUNTIME", "AzureWebJobsStorage",
+            ):
+                os.environ.pop(k, None)
+            assert get_execution_mode() == "server"
+
+    def test_a_function_on_cloud_run_is_a_cloud_function(self) -> None:
+        """A second-generation function runs on Cloud Run, so it has K_SERVICE
+        too; FUNCTION_TARGET is what decides."""
+        env = {"FUNCTION_TARGET": "main", "K_SERVICE": "my-function"}
+        with patch.dict(os.environ, env, clear=False):
+            for k in ("GATEWAY_INTERFACE", "AWS_LAMBDA_FUNCTION_NAME", "LAMBDA_TASK_ROOT"):
+                os.environ.pop(k, None)
+            assert get_execution_mode() == "google_cloud_function"
+
     def test_azure_function_detected(self) -> None:
         with patch.dict(os.environ, {"AZURE_FUNCTIONS_ENVIRONMENT": "Production"}, clear=False):
             for k in (

@@ -81,6 +81,8 @@ These parameters apply when `remote_url` is set:
 - `remote_url`: URL of remote search server
 - `index_name`: Name of index on remote server
 
+SSRF protection refuses a `remote_url` that resolves to a private or internal address, and setup fails. The skill also checks each request, each redirect and each connection, so a server that redirects to an internal address gets an error instead of results. To use a search server on `localhost` or a private network, set `SWML_ALLOW_PRIVATE_URLS=true`. The skill connects directly, ignoring `HTTP_PROXY` and `HTTPS_PROXY`, so that the check applies to each connection. To send requests through a proxy that blocks private destinations itself, set `SWML_URL_FETCH_USE_PROXY=true`.
+
 ### Response Formatting
 
 These parameters shape the text the tool returns:
@@ -252,7 +254,7 @@ The two NLP backends trade speed for quality:
 
 ## Environment Variables
 
-None required - all configuration comes through skill parameters.
+None required - all configuration comes through skill parameters. `SWML_ALLOW_PRIVATE_URLS` and `SWML_URL_FETCH_USE_PROXY` change how a `remote_url` is checked; see [Remote Backend](#remote-backend).
 
 ## Troubleshooting
 

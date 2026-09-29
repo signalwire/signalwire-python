@@ -57,6 +57,73 @@ from .output.swml_dump import handle_dump_swml, setup_output_suppression
 from .output.output_formatter import display_agent_tools, format_result
 
 
+# The variables each platform's function URL is built from, when the URL
+# variable itself isn't set
+_URL_PARTS: dict[str, tuple[str, tuple[str, ...]]] = {
+    "lambda": (
+        "AWS_LAMBDA_FUNCTION_URL",
+        ("AWS_LAMBDA_FUNCTION_NAME", "AWS_REGION"),
+    ),
+    "cloud_function": (
+        "FUNCTION_URL",
+        (
+            "GOOGLE_CLOUD_PROJECT",
+            "GCP_PROJECT",
+            "GOOGLE_CLOUD_REGION",
+            "FUNCTION_REGION",
+            "K_SERVICE",
+            "FUNCTION_TARGET",
+        ),
+    ),
+    "azure_function": (
+        "AZURE_FUNCTION_URL",
+        ("WEBSITE_SITE_NAME", "AZURE_FUNCTIONS_APP_NAME", "AZURE_FUNCTION_NAME"),
+    ),
+}
+
+
+# Variables the SDK reads for the same part of a function URL, the one it
+# prefers first. A preset value under a preferred name would hide a value
+# the user gave under a later one.
+_URL_PART_NAMES: dict[str, tuple[tuple[str, ...], ...]] = {
+    "cloud_function": (
+        ("GOOGLE_CLOUD_PROJECT", "GCP_PROJECT"),
+        ("FUNCTION_REGION", "GOOGLE_CLOUD_REGION"),
+        ("K_SERVICE", "FUNCTION_TARGET"),
+    ),
+    "azure_function": (("WEBSITE_SITE_NAME", "AZURE_FUNCTIONS_APP_NAME"),),
+}
+
+
+def _preset_vars_to_omit(platform: str, env_overrides: dict[str, str]) -> list[str]:
+    """The preset variables to leave out of a serverless simulation.
+
+    The user's values (by flag, --env or --env-file) must decide the URL:
+    - The SDK uses a platform's function URL variable before it builds the
+      URL from the parts, so when the user sets a part without the URL, the
+      preset's URL is left out.
+    - The SDK reads some parts under two names, preferring one. When the user
+      sets a part under the other name, the preset's preferred one is left
+      out.
+    """
+    omit: list[str] = []
+    if platform in _URL_PARTS:
+        url_var, parts = _URL_PARTS[platform]
+        if url_var not in env_overrides and any(
+            part in env_overrides for part in parts
+        ):
+            omit.append(url_var)
+    for names in _URL_PART_NAMES.get(platform, ()):
+        given = [index for index, name in enumerate(names) if name in env_overrides]
+        if given:
+            omit.extend(
+                name
+                for name in names[: given[0]]
+                if name not in env_overrides and name not in omit
+            )
+    return omit
+
+
 def print_help_platforms() -> None:
     """Print detailed help for serverless platform options"""
     print("""
@@ -574,7 +641,9 @@ def main() -> int:
 
         # Create and activate simulator
         serverless_simulator = ServerlessSimulator(
-            args.simulate_serverless, env_overrides
+            args.simulate_serverless,
+            env_overrides,
+            _preset_vars_to_omit(args.simulate_serverless, env_overrides),
         )
         serverless_simulator.activate(args.verbose and not args.raw)
 
@@ -829,9 +898,19 @@ def main() -> int:
                     print("Function type: DataMap (serverless)")
                     print("-" * 60)
 
-                # Execute DataMap function (is_datamap implies func is a dict)
+                # Execute DataMap function (is_datamap implies func is a dict).
+                # --custom-data supplies the call data the platform would add;
+                # without its global_data, the agent's global data applies, as
+                # on a call.
+                call_data = json.loads(args.custom_data) if args.custom_data else {}
+                agent_global_data = getattr(agent, "_global_data", None)
+                if "global_data" not in call_data and agent_global_data:
+                    call_data["global_data"] = dict(agent_global_data)
                 result = execute_datamap_function(
-                    cast(dict[str, Any], func), function_args, args.verbose
+                    cast(dict[str, Any], func),
+                    function_args,
+                    args.verbose,
+                    call_data=call_data or None,
                 )
                 print("RESULT:")
                 print(format_result(result))

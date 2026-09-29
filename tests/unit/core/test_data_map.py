@@ -144,16 +144,27 @@ class TestDataMapWebhooks:
         assert webhook["require_args"] == ["location"]
     
     def test_webhook_body_and_params(self) -> None:
-        """Test adding body and params to webhook"""
+        """body() and params() both set the webhook's params, the request body"""
         data_map = DataMap("test_function")
         
         data_map.webhook("POST", "https://api.example.com/data")
-        data_map.body({"query": "${location}", "format": "json"})
+        data_map.body({"query": "${args.location}", "format": "json"})
+        assert data_map._webhooks[0]["params"] == {"query": "${args.location}", "format": "json"}
+        assert "body" not in data_map._webhooks[0]
+
         data_map.params({"api_key": "12345"})
-        
-        # Body and params should be stored for the last webhook
-        assert hasattr(data_map, '_webhooks')
-        assert len(data_map._webhooks) == 1
+        assert data_map._webhooks[0]["params"] == {"api_key": "12345"}
+
+    def test_body_is_serialized_as_params(self) -> None:
+        """The platform reads no body field, so body() must produce params"""
+        data_map = (DataMap("search")
+                    .webhook("POST", "https://api.example.com/search")
+                    .body({"q": "${args.query}"})
+                    .output(FunctionResult("Found ${total}")))
+
+        webhook = data_map.to_swaig_function()["data_map"]["webhooks"][0]
+        assert webhook["params"] == {"q": "${args.query}"}
+        assert "body" not in webhook
 
 
 class TestDataMapOutput:
@@ -275,6 +286,21 @@ class TestDataMapFactoryFunctions:
         assert isinstance(data_map, DataMap)
         assert data_map.function_name == "weather_tool"
     
+    def test_create_simple_api_tool_body_becomes_params(self) -> None:
+        """create_simple_api_tool's body is sent as the webhook's params"""
+        data_map = create_simple_api_tool(
+            name="search",
+            url="https://api.example.com/search",
+            response_template="Found ${total} for ${input.args.query}",
+            method="POST",
+            body={"q": "${args.query}"},
+        )
+
+        webhook = data_map.to_swaig_function()["data_map"]["webhooks"][0]
+        assert webhook["params"] == {"q": "${args.query}"}
+        assert "body" not in webhook
+        assert webhook["output"] == {"response": "Found ${total} for ${input.args.query}"}
+
     def test_create_simple_api_tool_with_parameters(self) -> None:
         """Test create_simple_api_tool with parameters"""
         parameters = {

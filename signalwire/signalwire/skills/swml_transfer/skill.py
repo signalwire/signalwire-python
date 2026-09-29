@@ -7,11 +7,23 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
+import re
 from typing import Any, ClassVar
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.data_map import DataMap
 from signalwire.core.function_result import FunctionResult
+
+_URL_CREDENTIALS = re.compile(r"^([a-z][a-z0-9+.-]*://)[^/?#]*@", re.IGNORECASE)
+
+
+def _shown_destination(destination: str) -> str:
+    """A destination as the model may see it: a URL without its credentials.
+
+    A transfer to another agent's URL carries that agent's basic-auth
+    credentials, which the model could repeat to a caller.
+    """
+    return _URL_CREDENTIALS.sub(r"\1", destination)
 
 
 class SWMLTransferSkill(SkillBase):
@@ -116,6 +128,14 @@ class SWMLTransferSkill(SkillBase):
                 },
             }
         )
+        # The base schema's tool_name default is the skill name, but the tool
+        # is named transfer_call when tool_name isn't set
+        schema["tool_name"] = {
+            "type": "string",
+            "description": "Name of the transfer function (enables multiple instances)",
+            "default": "transfer_call",
+            "required": False,
+        }
         return schema
 
     def get_instance_key(self) -> str:
@@ -327,9 +347,9 @@ class SWMLTransferSkill(SkillBase):
                 if clean_pattern and not clean_pattern.startswith("."):
                     # Create a description for this transfer destination
                     if "url" in config:
-                        destination = config["url"]
+                        destination = _shown_destination(config["url"])
                     else:
-                        destination = config["address"]
+                        destination = _shown_destination(config["address"])
                     transfer_desc = f'"{clean_pattern}" - transfers to {destination}'
                     transfer_bullets.append(transfer_desc)
 

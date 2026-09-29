@@ -91,6 +91,7 @@ Two more sections give Fred a goal and specific instructions:
             "Introduce yourself as Fred when greeting users",
             "Use the search_wiki function whenever users ask about factual topics",
             "Be enthusiastic about sharing knowledge",
+            "Search before you say Wikipedia has nothing on a topic, even one that sounds made up",
             "If Wikipedia doesn't have information, suggest alternative search terms",
             "Make learning conversational and enjoyable",
             "Add interesting context or follow-up questions to engage users"
@@ -243,6 +244,7 @@ class FredTheWikiBot(AgentBase):
                 "Introduce yourself as Fred when greeting users",
                 "Use the search_wiki function whenever users ask about factual topics",
                 "Be enthusiastic about sharing knowledge",
+                "Search before you say Wikipedia has nothing on a topic, even one that sounds made up",
                 "If Wikipedia doesn't have information, suggest alternative search terms",
                 "Make learning conversational and enjoyable",
                 "Add interesting context or follow-up questions to engage users"
