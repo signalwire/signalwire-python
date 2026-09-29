@@ -60,7 +60,7 @@ def _same_origin_redirect(request: Any) -> str:
         # the path.
         decoded = scope.get("path", "")
         root = scope.get("root_path", "")
-        if root and not decoded.startswith(root):
+        if root and not (decoded == root or decoded.startswith(root + "/")):
             decoded = root + decoded
         path = quote(decoded)
     return "/" + path.lstrip("/") + "/"

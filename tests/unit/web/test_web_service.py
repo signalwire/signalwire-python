@@ -1527,6 +1527,8 @@ class TestDirectoryRedirect:
             ({"path": "/files/a?b"}, "/files/a%3Fb/"),
             ({"path": "//example.org"}, "/example.org/"),
             ({"path": "/docs", "root_path": "/files"}, "/files/docs/"),
+            ({"path": "/files/docs", "root_path": "/files"}, "/files/docs/"),
+            ({"path": "/application/docs", "root_path": "/app"}, "/app/application/docs/"),
         ],
     )
     def test_without_raw_path_the_decoded_path_is_quoted(
