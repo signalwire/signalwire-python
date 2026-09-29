@@ -772,7 +772,36 @@ class TestDataSphereServerlessSkillRegisterTools:
         assert "output" in webhook
         assert "response" in webhook["output"]
         assert "${formatted_results}" in webhook["output"]["response"]
-        assert "${args.query}" in webhook["output"]["response"]
+
+    def test_webhook_output_reads_query_from_input(self) -> None:
+        """The webhook output names the query through ${input.args.query}.
+
+        A webhook's output expands against the API response, with the call's
+        data under "input", so ${args.query} there would expand to nothing.
+        """
+        skill, mock_agent = _create_skill()
+        skill.setup()
+        skill.register_tools()
+
+        swaig_func = mock_agent.register_swaig_function.call_args[0][0]
+        response = swaig_func["data_map"]["webhooks"][0]["output"]["response"]
+        assert response == (
+            'I found results for "${input.args.query}":\n\n${formatted_results}'
+        )
+        assert "${args.query}" not in response
+
+    def test_webhook_params_and_fallback_read_query_from_args(self) -> None:
+        """Params and the fallback output expand against the call's data."""
+        skill, mock_agent = _create_skill(
+            params={"no_results_message": "Nothing for {query}."}
+        )
+        skill.setup()
+        skill.register_tools()
+
+        swaig_func = mock_agent.register_swaig_function.call_args[0][0]
+        data_map = swaig_func["data_map"]
+        assert data_map["webhooks"][0]["params"]["query_string"] == "${args.query}"
+        assert data_map["output"]["response"] == "Nothing for ${args.query}."
 
     def test_register_tools_has_error_keys(self) -> None:
         """Test that webhook has error_keys configured"""

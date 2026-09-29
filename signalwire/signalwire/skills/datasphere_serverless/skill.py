@@ -217,9 +217,13 @@ class DataSphereServerlessSkill(SkillBase):
                     "append": "=== RESULT ===\n${this.text}\n" + "=" * 50 + "\n\n",
                 }
             )
+            # A webhook's output expands against the API response, with the
+            # call's data under "input", so the query is ${input.args.query}
+            # here. The params above and the fallback output below expand
+            # against the call's data, where it is ${args.query}.
             .output(
                 FunctionResult(
-                    'I found results for "${args.query}":\n\n${formatted_results}'
+                    'I found results for "${input.args.query}":\n\n${formatted_results}'
                 )
             )
             .error_keys(["error"])
