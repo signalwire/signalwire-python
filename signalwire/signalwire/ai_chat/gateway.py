@@ -157,8 +157,11 @@ class GatewayRejection(Exception):
             status: HTTP status to send back (401 bad key, 403 origin/handle,
                 400 disallowed method, 413 a request, message or metadata
                 over its size limit, 429 a cap was hit).
-            reason: Short, non-leaking explanation. It reaches the browser, so
-                it must not disclose why a handle failed to verify.
+            reason: Short, fixed explanation. It reaches the browser, so it
+                names only the bucket: for a handle, "malformed handle" (it
+                doesn't parse), "invalid handle" (its signature doesn't
+                verify) or "expired handle" (it verified but is past its
+                expiry), and never the caps' values or the allowlist.
         """
         self.status = status
         self.reason = reason

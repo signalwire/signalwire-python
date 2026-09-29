@@ -49,8 +49,10 @@ redeemed nonce would come back to life.
 
 Redemption for a handle is single use. A redeemed nonce stays in the table,
 marked redeemed, until its TTL passes, so it can't be registered again in the
-meantime. Typing is not single use: it is repeatable until the nonce is
-redeemed or its ``nonce_ttl`` passes, bounded by ``max_messages_per_call``.
+meantime. Typing is not single use: it is repeatable, bounded by
+``max_messages_per_call``, until the nonce is redeemed (which ends the call)
+or ``nonce_ttl`` seconds pass after it was registered. A call that outlasts
+``nonce_ttl`` loses typing, so set it to cover the longest call.
 
 An unknown nonce is answered exactly like an expired or redeemed one, so this
 cannot be used to probe whether a given call is live.
