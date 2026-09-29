@@ -23,6 +23,7 @@ and ${call_data.summary} to the receiving agent.
 """
 
 import os
+import secrets
 from datetime import datetime
 from typing import Dict, Any, Optional
 from signalwire import AgentBase, AgentServer
@@ -34,12 +35,13 @@ logger = get_logger(__name__)
 
 # Define the Triage Agent (root route)
 class TriageAgent(AgentBase):
-    def __init__(self):
+    def __init__(self, basic_auth=None):
         super().__init__(
             name="PC Builder Triage Agent",
             route="/",  # Root route
             host="0.0.0.0",
-            port=3001
+            port=3001,
+            basic_auth=basic_auth,
         )
         
         # Configure prompt using POM
@@ -150,12 +152,13 @@ class TriageAgent(AgentBase):
 
 # Define the Sales Agent
 class SalesAgent(AgentBase):
-    def __init__(self):
+    def __init__(self, basic_auth=None):
         super().__init__(
             name="PC Builder Sales Specialist",
             route="/sales",
             host="0.0.0.0", 
-            port=3001
+            port=3001,
+            basic_auth=basic_auth,
         )
         
         # Set up dynamic configuration to check for transfer
@@ -306,12 +309,13 @@ class SalesAgent(AgentBase):
 
 # Define the Support Agent  
 class SupportAgent(AgentBase):
-    def __init__(self):
+    def __init__(self, basic_auth=None):
         super().__init__(
             name="PC Builder Support Specialist",
             route="/support",
             host="0.0.0.0",
-            port=3001
+            port=3001,
+            basic_auth=basic_auth,
         )
 
         # Set up dynamic configuration to check for transfer
@@ -461,6 +465,20 @@ class SupportAgent(AgentBase):
         )
 
 
+def shared_credentials():
+    """
+    The basic auth credentials to give all three agents
+
+    A transfer URL carries the triage agent's credentials, and the sales and
+    support agents check them, so the three must agree. Without
+    SWML_BASIC_AUTH_PASSWORD each agent would generate its own password, and
+    every transfer would fail with 401; generate one for all three instead.
+    """
+    user = os.environ.get("SWML_BASIC_AUTH_USER") or "signalwire"
+    password = os.environ.get("SWML_BASIC_AUTH_PASSWORD") or secrets.token_urlsafe(32)
+    return user, password
+
+
 def create_pc_builder_app(host: str = "0.0.0.0", port: int = 3001, log_level: str = "info") -> AgentServer:
     """
     Create and configure the PC Builder application with three specialized agents
@@ -476,16 +494,19 @@ def create_pc_builder_app(host: str = "0.0.0.0", port: int = 3001, log_level: st
     # Create the server
     server = AgentServer(host=host, port=port, log_level=log_level)
     
+    # One set of credentials for the three agents, so transfers between them work
+    credentials = shared_credentials()
+
     # Create and register Triage Agent (root)
-    triage = TriageAgent()
+    triage = TriageAgent(basic_auth=credentials)
     server.register(triage, "/")
     
     # Create and register Sales Agent
-    sales = SalesAgent()
+    sales = SalesAgent(basic_auth=credentials)
     server.register(sales, "/sales")
     
     # Create and register Support Agent
-    support = SupportAgent()
+    support = SupportAgent(basic_auth=credentials)
     server.register(support, "/support")
     
     # Add a root endpoint to show available agents

@@ -84,6 +84,10 @@ and `join_conference()`.
 - The examples no longer pass `barge_confidence`, which isn't in the schema,
   and `mcp_gateway_demo.py` reads the gateway's URL and credentials from the
   environment.
+- The multi-agent tutorial's PC Builder Pro gives its three agents one set of
+  credentials. Without `SWML_BASIC_AUTH_PASSWORD`, each generated its own, and
+  every transfer between them failed with 401. The lesson no longer says
+  AgentServer shares authentication across agents.
 
 ### Notes for upgraders
 - WebService needs credentials before `start()`: `SWML_BASIC_AUTH_USER` and
