@@ -14,6 +14,8 @@ import pytest
 
 from signalwire.cli.execution.datamap_exec import execute_datamap_function
 
+pytestmark = pytest.mark.usefixtures("route_public_session_to_requests")
+
 
 def _config(error_keys: Any = None) -> dict[str, Any]:
     webhook: dict[str, Any] = {

@@ -26,6 +26,8 @@ import pytest
 
 from signalwire.cli.execution.datamap_exec import execute_datamap_function, simple_template_expand
 
+pytestmark = pytest.mark.usefixtures("route_public_session_to_requests")
+
 DATA: dict[str, Any] = {
     "args": {
         "city": "New York",

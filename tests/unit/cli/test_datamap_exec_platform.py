@@ -30,6 +30,8 @@ import requests
 
 from signalwire.cli.execution.datamap_exec import PLATFORM_ERROR_RESPONSE, execute_datamap_function
 
+pytestmark = pytest.mark.usefixtures("route_public_session_to_requests")
+
 
 def _response(payload: Any, status: int = 200) -> Mock:
     text = payload if isinstance(payload, str) else json.dumps(payload)

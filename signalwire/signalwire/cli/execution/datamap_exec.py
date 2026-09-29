@@ -35,7 +35,7 @@ import re
 import sys
 from copy import deepcopy
 from typing import Any
-from urllib.parse import unquote
+from urllib.parse import unquote, urljoin, urlsplit
 
 import requests
 
@@ -559,11 +559,68 @@ def _curl_error_code(error: Exception) -> int:
     """A curl result code standing in for a request exception."""
     if isinstance(error, requests.Timeout):
         return 28
+    if isinstance(error, requests.TooManyRedirects):
+        return 47
     if isinstance(error, requests.exceptions.SSLError):
         return 35
     if isinstance(error, requests.ConnectionError):
         return 7
     return 1
+
+
+# The platform follows this many redirects (CURLOPT_MAXREDIRS)
+_MAX_REDIRECTS = 15
+
+
+def _send(
+    run: _Run,
+    url: str,
+    post: bool,
+    body: str | None,
+    headers: dict[str, str],
+    auth: Any,
+) -> requests.Response:
+    """Send the webhook's request, following redirects as the platform does.
+
+    The platform follows up to 15 redirects and sends a POST again, with its
+    body, after any of them (CURL_REDIR_POST_ALL); it follows none for a
+    request it signs, which this doesn't simulate. Every request, redirects
+    included, goes through the session that refuses private and internal
+    addresses, as the SDK's other fetches of user-supplied URLs do. Like
+    curl, it sends credentials only to the host they were given for.
+    """
+    from signalwire.utils.url_validator import _PublicSession
+
+    timeout = (_CONNECT_TIMEOUT, _TOTAL_TIMEOUT)
+    method = "POST" if post else "GET"
+    origin = urlsplit(url).netloc
+    with _PublicSession() as session:
+        for _ in range(_MAX_REDIRECTS + 1):
+            same_host = urlsplit(url).netloc == origin
+            send_headers = (
+                headers
+                if same_host
+                else {
+                    name: value
+                    for name, value in headers.items()
+                    if name.lower() not in ("authorization", "cookie")
+                }
+            )
+            response = session.request(
+                method,
+                url,
+                data=body if post else None,
+                headers=send_headers,
+                auth=auth if same_host else None,
+                timeout=timeout,
+                allow_redirects=False,
+            )
+            location = response.headers.get("location")
+            if not response.is_redirect or not location:
+                return response
+            url = urljoin(url, location)
+            run.log(f"Following redirect ({response.status_code}) to: {url}")
+    raise requests.TooManyRedirects(f"More than {_MAX_REDIRECTS} redirects")
 
 
 def _request(run: _Run, webhook: Any, call_data: dict[str, Any]) -> Any:
@@ -632,19 +689,7 @@ def _request(run: _Run, webhook: Any, call_data: dict[str, Any]) -> Any:
     text = ""
     curl_error: int | None = None
     try:
-        from signalwire.utils.url_validator import validate_url
-
-        if not validate_url(url):
-            raise ValueError(f"URL rejected by SSRF protection: {url}")
-        timeout = (_CONNECT_TIMEOUT, _TOTAL_TIMEOUT)
-        if post:
-            response = requests.post(
-                url, data=body, headers=request_headers, auth=auth, timeout=timeout
-            )
-        else:
-            response = requests.get(
-                url, headers=request_headers, auth=auth, timeout=timeout
-            )
+        response = _send(run, url, post, body, request_headers, auth)
         status = response.status_code
         text = response.text or ""
         run.log(f"Response status: {status}")
