@@ -1494,6 +1494,39 @@ def _client(directories: dict[str, str], **kwargs: Any) -> tuple[Any, Any]:
     return ws, TestClient(ws.app, raise_server_exceptions=False)
 
 
+class TestDirectoryRedirect:
+    """A directory requested without its trailing slash redirects to the same
+    path with one, on this host, as the client wrote it."""
+
+    def _site(self, tmp_path: Path) -> Path:
+        site = tmp_path / "site"
+        for name in ("example.org", "slash#name", "docs"):
+            (site / name).mkdir(parents=True)
+            (site / name / "index.html").write_text(name)
+        return site
+
+    def test_an_encoded_slash_cant_redirect_to_another_host(self, tmp_path: Path) -> None:
+        _, client = _client({"/": str(self._site(tmp_path))})
+        resp = client.get("/%2fexample.org", auth=AUTH, follow_redirects=False)
+        assert resp.status_code == 307
+        assert not resp.headers["location"].startswith("//")
+        assert resp.headers["location"] == "/%2fexample.org/"
+
+    def test_an_encoded_character_in_a_name_is_kept(self, tmp_path: Path) -> None:
+        _, client = _client({"/": str(self._site(tmp_path))})
+        resp = client.get("/slash%23name", auth=AUTH, follow_redirects=False)
+        assert resp.status_code == 307
+        assert resp.headers["location"] == "/slash%23name/"
+        followed = client.get(resp.headers["location"], auth=AUTH)
+        assert followed.text == "slash#name"
+
+    def test_a_mounted_directory_keeps_its_prefix(self, tmp_path: Path) -> None:
+        _, client = _client({"/files": str(self._site(tmp_path))})
+        resp = client.get("/files/docs", auth=AUTH, follow_redirects=False)
+        assert resp.status_code == 307
+        assert resp.headers["location"] == "/files/docs/"
+
+
 class TestHiddenAndBlockedPaths:
     """A dot entry or a blocked name is refused anywhere on the path, not
     only as the file's own name or extension."""

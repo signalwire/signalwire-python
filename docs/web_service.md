@@ -173,7 +173,7 @@ WebService blocks these extensions and files by default:
 - `.pyc`, `__pycache__`
 - `.DS_Store`, `.swp`
 
-An entry blocks a directory of that name as well as a file, so nothing under `__pycache__` is served. Whatever `blocked_extensions` holds, WebService also refuses any path with a component that starts with a dot. That covers everything under a `.git` directory, files such as `.env.production`, and a `.well-known` directory. Directory listings hide the same entries.
+An entry blocks a directory of that name as well as a file, so nothing under `__pycache__` is served. Whatever `blocked_extensions` holds, WebService also refuses any path with a component that starts with a dot. That covers everything under a `.git` directory and files such as `.env.production`. The one exception is `.well-known`, the standard public location for ACME challenges and `security.txt`, which is served. Directory listings hide every entry that starts with a dot.
 
 #### Path Traversal Protection
 WebService prevents access outside designated directories. It resolves each path, following symbolic links, before it checks that the path is inside the mounted directory. This includes the `index.html` it serves for a directory, so a link that points outside the mount is refused:

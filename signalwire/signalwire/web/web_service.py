@@ -9,6 +9,7 @@ See LICENSE file in the project root for full license information.
 
 import os
 import mimetypes
+from urllib.parse import quote
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any, Optional, TYPE_CHECKING
@@ -40,6 +41,19 @@ from signalwire.core.logging_config import get_logger
 logger = get_logger("web_service")
 
 
+def _same_origin_redirect(request: Any) -> str:
+    """The request's path with a trailing slash, as a redirect on this host.
+
+    It's built from the path as the client sent it, still percent-encoded, so
+    a directory named ``a#b`` keeps its name and ``/%2fexample.org`` isn't
+    decoded into ``//example.org``, which a browser reads as another host.
+    Leading slashes are collapsed to one for the same reason.
+    """
+    raw = request.scope.get("raw_path")
+    path = raw.decode("latin-1") if raw else quote(request.url.path)
+    return "/" + path.lstrip("/") + "/"
+
+
 class WebService:
     """Static file serving service with HTTP API.
 
@@ -47,8 +61,8 @@ class WebService:
     route serves them all and looks the request path up in ``directories``
     on every request, so ``add_directory()`` and ``remove_directory()`` take
     effect at once. A path is refused if any of its components starts with a
-    dot or is a blocked name, or if it resolves, symbolic links followed, to
-    somewhere outside its mounted directory.
+    dot (other than ``.well-known``) or is a blocked name, or if it resolves,
+    symbolic links followed, to somewhere outside its mounted directory.
     """
 
     def __init__(
@@ -76,7 +90,8 @@ class WebService:
             blocked_extensions: Blocked extensions and file names (e.g.,
                 ['.env', '.pem']). An entry is also refused as the name of
                 any directory on the path. Whatever this holds, a path with a
-                component that starts with a dot is never served.
+                component that starts with a dot, other than ``.well-known``,
+                is never served.
             max_file_size: Maximum file size in bytes to serve
             enable_cors: Enable CORS support
         """
@@ -533,7 +548,9 @@ class WebService:
         if full_path.is_dir():
             # Relative links in a listing or an index page need the slash
             if not path.endswith("/") and RedirectResponse is not None:
-                return RedirectResponse(url=request.url.path + "/", status_code=307)
+                return RedirectResponse(
+                    url=_same_origin_redirect(request), status_code=307
+                )
             if not self.enable_directory_browsing:
                 # Try to serve index.html if it exists
                 index_path = (full_path / "index.html").resolve()

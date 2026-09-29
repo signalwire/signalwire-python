@@ -22,9 +22,11 @@ and `join_conference()`.
   connections to private addresses, as web_search and spider do.
 - ChatGateway and HandoffRouter cap the request body at 64 KiB and a message at
   8 KiB, and answer 413 over either.
-- HandoffRouter keeps a nonce's first registration. Registering it again no
-  longer resets its typing cap or moves it to another call, and a redeemed
-  nonce can't be registered again.
+- HandoffRouter keeps a nonce's first registration until its `nonce_ttl`
+  passes. Registering it again no longer resets its typing cap or moves it to
+  another call, and a redeemed nonce can't be registered again before then.
+  Registration, redemption and the typing count are atomic, so overlapping
+  requests can't redeem a nonce twice or pass the typing cap.
 
 ### Fixed
 - DataMap: `body()` sets `params`, the only field the platform sends as the
