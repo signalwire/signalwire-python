@@ -267,3 +267,11 @@ show_error_codes = true
 module = "numpy.*"
 follow_imports = "skip"
 follow_imports_for_stubs = true
+
+# Deprecated 3.0 (pulled in by flask-limiter's limits) uses the same 3.12+
+# `type` statement, and is installed only on the 3.12/3.13 runners. We don't
+# check its types either.
+[[tool.mypy.overrides]]
+module = "deprecated.*"
+follow_imports = "skip"
+follow_imports_for_stubs = true
