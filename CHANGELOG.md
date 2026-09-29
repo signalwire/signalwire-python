@@ -21,7 +21,9 @@ and `join_conference()`.
   setting a DataMap webhook's header, changed it for every later call.
 - The mcp_gateway skill, and the native_vector_search skill in remote mode,
   send every request through the session that refuses redirects and
-  connections to private addresses, as web_search and spider do.
+  connections to private addresses, as web_search and spider do. The
+  mcp_gateway skill's health check sends the configured credentials, as its
+  other requests do.
 - ChatGateway and HandoffRouter cap the request body at 64 KiB and a message at
   8 KiB, and answer 413 over either.
 - HandoffRouter keeps a nonce's first registration until its `nonce_ttl`

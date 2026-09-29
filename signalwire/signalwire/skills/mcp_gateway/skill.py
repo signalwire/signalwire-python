@@ -163,12 +163,11 @@ class MCPGatewaySkill(SkillBase):
         # Session ID will be set from call_id when first tool is used
         self.session_id = None
 
-        # Validate gateway connection
+        # Validate gateway connection, with the credentials every request
+        # carries, for a gateway that also puts /health behind them
         try:
             response = self.http.get(
-                f"{self.gateway_url}/health",
-                timeout=self.request_timeout,
-                verify=self.verify_ssl,
+                f"{self.gateway_url}/health", **self._request_options()
             )
             response.raise_for_status()
             self.logger.info(f"Connected to MCP Gateway at {self.gateway_url}")
@@ -184,6 +183,10 @@ class MCPGatewaySkill(SkillBase):
         Sent through the skill's ``_PublicSession``, which refuses a redirect
         to, or a connection that reaches, a private or internal address.
         """
+        return self.http.request(method, url, **self._request_options(**kwargs))
+
+    def _request_options(self, **kwargs: Any) -> dict[str, Any]:
+        """The request options ``kwargs`` needs: credentials, timeout, verify."""
         headers = kwargs.get("headers", {})
         if self.auth_token:
             headers["Authorization"] = f"Bearer {self.auth_token}"
@@ -194,8 +197,7 @@ class MCPGatewaySkill(SkillBase):
 
         kwargs["timeout"] = kwargs.get("timeout", self.request_timeout)
         kwargs["verify"] = kwargs.get("verify", self.verify_ssl)
-
-        return self.http.request(method, url, **kwargs)
+        return kwargs
 
     def register_tools(self) -> None:
         """Register SWAIG tools from MCP services"""

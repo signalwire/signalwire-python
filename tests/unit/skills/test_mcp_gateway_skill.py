@@ -322,9 +322,27 @@ class TestSetup:
 
         mock_get.assert_called_once_with(
             "https://my-gateway.io/health",
+            headers={},
+            auth=HTTPBasicAuth("user", "pass"),
             timeout=30,
             verify=True,
         )
+
+    @patch("signalwire.utils.url_validator.validate_url", return_value=True)
+    @patch("signalwire.utils.url_validator._PublicSession.get")
+    def test_setup_health_check_sends_the_token(self, mock_get: Mock, mock_validate: Mock) -> None:
+        """The health check carries the credentials, for a gateway that needs them there."""
+        mock_get.return_value = Mock(raise_for_status=Mock())
+
+        skill, _ = _make_skill(
+            params={"gateway_url": "https://my-gateway.io", "auth_token": "t0ken"},
+            skip_setup=False,
+        )
+        assert skill.setup()
+
+        _, kwargs = mock_get.call_args
+        assert kwargs["headers"] == {"Authorization": "Bearer t0ken"}
+        assert "auth" not in kwargs
 
 
 # ---------------------------------------------------------------------------
