@@ -2,8 +2,8 @@
 Examples that set things the schema or the skills refuse.
 
 llm_params_demo.py and simple_agent.py passed barge_confidence to
-set_prompt_llm_params(). The SWML schema's prompt object doesn't define it,
-so their documents failed validation. mcp_gateway_demo.py defaulted to
+set_prompt_llm_params(). The platform never applies it, and the SWML schema's
+prompt object doesn't define it, so their documents failed validation. mcp_gateway_demo.py defaulted to
 http://localhost:8080 with placeholder credentials, which the mcp_gateway
 skill's URL check refuses, so constructing the agent raised.
 """

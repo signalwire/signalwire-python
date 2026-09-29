@@ -36,16 +36,10 @@ _BEDROCK_VERB_KEYS = (
     "post_prompt_url",
 )
 
-# The prompt keys copied from the ai verb's prompt. voice_id, temperature,
-# top_p and max_tokens, which the Bedrock prompt also defines, are set from
-# the agent's own settings.
-_BEDROCK_PROMPT_KEYS = (
-    "text",
-    "pom",
-    "confidence",
-    "presence_penalty",
-    "frequency_penalty",
-)
+# The prompt keys copied from the ai verb's prompt. The platform's Bedrock
+# session reads only these, voice_id, temperature and top_p; the last three
+# are set from the agent's own settings, as is max_tokens.
+_BEDROCK_PROMPT_KEYS = ("text", "pom")
 
 # The prompt keys set from the agent's own settings
 _AGENT_PROMPT_KEYS = ("voice_id", "temperature", "top_p", "max_tokens")
@@ -129,9 +123,10 @@ class BedrockAgent(AgentBase):
             system_prompt: Initial system prompt (can be overridden with set_prompt)
             voice_id: Bedrock voice: tiffany, matthew, amy, lupe or carlos
                 (default: matthew)
-            temperature: Generation temperature (0-1)
+            temperature: Generation temperature (0-2)
             top_p: Nucleus sampling parameter (0-1)
-            max_tokens: Maximum tokens to generate
+            max_tokens: Maximum tokens to generate. The platform's Bedrock
+                session doesn't read it; it uses 1024
             **kwargs: Additional arguments passed to AgentBase
 
         Raises:
@@ -257,9 +252,9 @@ class BedrockAgent(AgentBase):
         Returns:
             Updated prompt configuration with voice
         """
-        # Copy what the Bedrock prompt object defines, including
-        # presence_penalty and frequency_penalty. Anything else, such as
-        # barge_confidence or contexts, is left out.
+        # Copy the prompt text. Anything else, such as confidence or
+        # contexts, is left out: the platform's Bedrock session doesn't
+        # read it.
         filtered_config = {
             key: value
             for key, value in prompt_config.items()
@@ -310,9 +305,10 @@ class BedrockAgent(AgentBase):
         ``${temperature}``.
 
         Args:
-            temperature: Generation temperature (0-1)
+            temperature: Generation temperature (0-2)
             top_p: Nucleus sampling parameter (0-1)
-            max_tokens: Maximum tokens to generate
+            max_tokens: Maximum tokens to generate. The platform's Bedrock
+                session doesn't read it; it uses 1024
 
         Raises:
             ValueError: If temperature or top_p isn't a number, or max_tokens
@@ -381,19 +377,14 @@ class BedrockAgent(AgentBase):
             "set_post_prompt_llm_params() called but Bedrock post-prompt uses OpenAI configured in C code"
         )
 
-    # Prompt settings the Bedrock prompt object defines, besides the
-    # inference settings that set_inference_params() owns
-    _BEDROCK_PROMPT_PARAMS = ("confidence", "presence_penalty", "frequency_penalty")
-
     def set_prompt_llm_params(self, **params: Any) -> "BedrockAgent":
         """
-        Set the prompt settings that Bedrock's prompt object defines
+        Set the prompt's inference settings
 
         temperature, top_p and max_tokens update the inference settings, as
-        set_inference_params() does. confidence, presence_penalty and
-        frequency_penalty go into the prompt object. Anything else, such as
-        barge_confidence, isn't part of the Bedrock prompt, so it's ignored
-        with a warning.
+        set_inference_params() does. The platform's Bedrock session reads no
+        other prompt setting, so anything else, such as confidence,
+        presence_penalty or barge_confidence, is ignored with a warning.
 
         Args:
             **params: Prompt settings
@@ -410,15 +401,12 @@ class BedrockAgent(AgentBase):
             top_p=params.pop("top_p", None),
             max_tokens=params.pop("max_tokens", None),
         )
-        for key in self._BEDROCK_PROMPT_PARAMS:
-            if key in params:
-                self._prompt_llm_params[key] = params.pop(key)
         if params:
             names = ", ".join(sorted(params))
             ignored = "it's" if len(params) == 1 else "they're"
             logger.warning(
-                f"set_prompt_llm_params(): Bedrock's prompt doesn't define "
-                f"{names}, so {ignored} ignored"
+                f"set_prompt_llm_params(): the platform's Bedrock session doesn't "
+                f"use {names}, so {ignored} ignored"
             )
         return self
 

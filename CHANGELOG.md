@@ -74,15 +74,18 @@ and `join_conference()`.
 - BedrockAgent warns once for each feature it leaves out because Bedrock
   doesn't support it (hints, languages, pronunciations, multilingual settings
   and contexts), and raises `ValueError` for a non-numeric temperature, top_p
-  or max_tokens.
+  or max_tokens. `set_prompt_llm_params()` ignores `confidence`,
+  `presence_penalty` and `frequency_penalty` with a warning, as the platform's
+  Bedrock session does; it reads only `temperature` and `top_p`, and uses
+  1024 for `max_tokens`.
 - `pay()` sends integers and booleans. The platform reads `timeout`,
   `max_attempts`, `min_postal_code_length` and `security_code` only as JSON
   numbers and booleans, so the strings it sent were ignored or read as false.
   `join_conference()`'s `max_participants` defaults to None, is sent whenever
   given, and accepts any integer of at least 2, as the platform does; it
   refused anything over 250.
-- The examples no longer pass `barge_confidence`, which isn't in the schema,
-  and `mcp_gateway_demo.py` reads the gateway's URL and credentials from the
+- The examples and docs no longer pass `barge_confidence`, which the platform
+  accepts but never applies, and `mcp_gateway_demo.py` reads the gateway's URL and credentials from the
   environment.
 - The multi-agent tutorial's PC Builder Pro gives its three agents one set of
   credentials. Without `SWML_BASIC_AUTH_PASSWORD`, each generated its own, and

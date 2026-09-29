@@ -1,10 +1,11 @@
 """
 Tests for BedrockAgent's amazon_bedrock rendering.
 
-BedrockAgent stored max_tokens but never rendered it (B12), dropped the
-presence_penalty and frequency_penalty settings the Bedrock prompt object
-defines (B13), and its examples used a voice the schema rejects (B14).
-These tests render the document and validate it against the SWML schema.
+BedrockAgent stored max_tokens but never rendered it (B12), and its examples
+used a voice the schema rejects (B14). The platform's Bedrock session reads
+the prompt's text or pom, voice_id, temperature and top_p, so other prompt
+settings are ignored with a warning. These tests render the document and
+validate it against the SWML schema.
 """
 
 import json
@@ -46,13 +47,21 @@ def test_set_inference_params_updates_max_tokens(agent: BedrockAgent) -> None:
     assert _bedrock_verb(_render(agent))["prompt"]["max_tokens"] == 2048
 
 
-def test_prompt_keeps_settings_the_bedrock_schema_defines(agent: BedrockAgent) -> None:
+def test_prompt_carries_only_what_the_platform_reads(agent: BedrockAgent) -> None:
     prompt = _bedrock_verb(_render(agent))["prompt"]
-    assert prompt["presence_penalty"] == 0.3
-    assert prompt["frequency_penalty"] == 0.2
-    assert prompt["confidence"] == 0.5
-    assert "barge_confidence" not in prompt
+    assert set(prompt) == {"text", "voice_id", "temperature", "top_p", "max_tokens"}
     assert prompt["voice_id"] == "tiffany"
+
+
+def test_settings_the_platform_doesnt_read_are_ignored_with_a_warning() -> None:
+    with patch("signalwire.agents.bedrock.logger") as log:
+        BedrockAgent(name="bedrock", route="/bedrock").set_prompt_llm_params(
+            temperature=0.5, presence_penalty=0.3, frequency_penalty=0.2, confidence=0.5
+        )
+    assert _warnings(log) == [
+        "set_prompt_llm_params(): the platform's Bedrock session doesn't use "
+        "confidence, frequency_penalty, presence_penalty, so they're ignored"
+    ]
 
 
 def test_rendered_document_is_valid_swml(agent: BedrockAgent) -> None:
@@ -206,7 +215,7 @@ def test_ignored_prompt_setting_warning_is_singular_for_one_key() -> None:
             barge_confidence=0.4
         )
     assert _warnings(log) == [
-        "set_prompt_llm_params(): Bedrock's prompt doesn't define "
+        "set_prompt_llm_params(): the platform's Bedrock session doesn't use "
         "barge_confidence, so it's ignored"
     ]
 
@@ -217,6 +226,6 @@ def test_ignored_prompt_setting_warning_is_plural_for_several_keys() -> None:
             barge_confidence=0.4, model="x"
         )
     assert _warnings(log) == [
-        "set_prompt_llm_params(): Bedrock's prompt doesn't define "
+        "set_prompt_llm_params(): the platform's Bedrock session doesn't use "
         "barge_confidence, model, so they're ignored"
     ]
