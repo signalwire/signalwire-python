@@ -25,8 +25,10 @@ and `join_conference()`.
 - HandoffRouter keeps a nonce's first registration until its `nonce_ttl`
   passes. Registering it again no longer resets its typing cap or moves it to
   another call, and a redeemed nonce can't be registered again before then.
-  Registration, redemption and the typing count are atomic, so overlapping
-  requests can't redeem a nonce twice or pass the typing cap.
+  Within one router, registration, redemption and the typing count are
+  atomic, so overlapping requests can't redeem a nonce twice or pass the
+  typing cap. Routers that share a `registry` can't be made atomic this way;
+  the module documentation says what to do instead.
 
 ### Fixed
 - DataMap: `body()` sets `params`, the only field the platform sends as the

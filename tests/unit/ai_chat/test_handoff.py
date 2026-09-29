@@ -17,6 +17,7 @@ Three properties matter more than the happy path:
 """
 
 import asyncio
+import copy
 import logging
 import threading
 from collections.abc import Iterator
@@ -321,6 +322,45 @@ class TestConcurrency:
         assert asyncio.run(router.say("n", "again"))
         assert not asyncio.run(router.say("n", "over the cap"))
         assert attempts == ["first", "again"]
+
+
+class TestCopyingRegistry:
+    """A shared registry, such as one backed by a cache, returns a copy of
+    an entry rather than the stored object."""
+
+    class Copying(dict[str, Any]):
+        def get(self, key: Any, default: Any = None) -> Any:
+            value = super().get(key, default)
+            return copy.deepcopy(value)
+
+        def __setitem__(self, key: str, value: Any) -> None:
+            super().__setitem__(key, copy.deepcopy(value))
+
+    def test_a_failed_delivery_gives_its_slot_back(self, gateway: ChatGateway) -> None:
+        attempts: list[str] = []
+
+        def send(call_id: str, text: str) -> bool:
+            attempts.append(text)
+            if len(attempts) == 1:
+                raise ConnectionError("platform unavailable")
+            return True
+
+        router = HandoffRouter(
+            gateway=gateway, send_message=send, max_messages_per_call=1,
+            registry=self.Copying(),
+        )
+        router.register("n", conversation_id="c", call_id="call-1")
+        assert not asyncio.run(router.say("n", "first"))
+        assert asyncio.run(router.say("n", "again"))
+        assert not asyncio.run(router.say("n", "over the cap"))
+        assert attempts == ["first", "again"]
+
+    def test_a_redeemed_nonce_stays_redeemed(self, gateway: ChatGateway) -> None:
+        router = HandoffRouter(gateway=gateway, registry=self.Copying())
+        router.register("n", conversation_id="c", call_id="call-1")
+        assert asyncio.run(router.redeem("n")) is not None
+        router.register("n", conversation_id="c", call_id="call-1")
+        assert asyncio.run(router.redeem("n")) is None
 
 
 class TestEscalate:

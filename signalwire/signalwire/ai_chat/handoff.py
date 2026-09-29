@@ -77,11 +77,15 @@ The nonce registry lives in this process, like ``ChatGateway``'s rate-limit
 counters. A redemption must reach the replica that served the dial. Run one
 replica, use sticky routing, or supply a shared ``registry``.
 
-Within the process, registration, redemption and the typing count are
-atomic: the per-call config callback that registers a nonce runs in a worker
-thread, and ``/handoff`` and ``/say`` requests can overlap. A lock in this
-object gives that atomicity; a shared ``registry`` used from several
-replicas needs atomic operations of its own.
+Within one ``HandoffRouter``, registration, redemption and the typing count
+are atomic: the per-call config callback that registers a nonce runs in a
+worker thread, and ``/handoff`` and ``/say`` requests can overlap. A lock in
+the router gives that atomicity, and it covers only that router. When
+several routers or replicas share a ``registry``, each of these steps is a
+read followed by a write that another router can interleave, so a nonce can
+be redeemed once by each, and the typing cap can be passed. The ``registry``
+is a plain mapping, so the SDK can't make those steps atomic across routers;
+use one router per nonce table, or route each call's requests to one replica.
 """
 
 # NOTE: deliberately no `from __future__ import annotations` -- FastAPI resolves
@@ -415,10 +419,19 @@ class HandoffRouter:
         except Exception as exc:
             logger.error("handoff_say_failed", error=str(exc))
             with self._lock:
-                # Not delivered: give the slot back
-                entry.messages -= 1
-                if self._nonces.get(nonce) is entry:
-                    self._nonces[nonce] = entry
+                # Not delivered: give the slot back, if the table still holds
+                # this registration. A shared registry may return a copy, so
+                # it's matched by value, and the stored count is the one
+                # decremented, keeping other requests' reservations.
+                current = self._nonces.get(nonce)
+                if (
+                    current is not None
+                    and current.messages > 0
+                    and (current.conversation_id, current.call_id, current.issued_at)
+                    == (entry.conversation_id, entry.call_id, entry.issued_at)
+                ):
+                    current.messages -= 1
+                    self._nonces[nonce] = current
             return False
         return True
 
