@@ -78,22 +78,46 @@ _URL_PARTS: dict[str, tuple[str, tuple[str, ...]]] = {
 }
 
 
-def _preset_urls_to_omit(platform: str, env_overrides: dict[str, str]) -> list[str]:
+# Variables the SDK reads for the same part of a function URL, the one it
+# prefers first. A preset value under a preferred name would hide a value
+# the user gave under a later one.
+_URL_PART_NAMES: dict[str, tuple[tuple[str, ...], ...]] = {
+    "cloud_function": (
+        ("GOOGLE_CLOUD_PROJECT", "GCP_PROJECT"),
+        ("FUNCTION_REGION", "GOOGLE_CLOUD_REGION"),
+        ("K_SERVICE", "FUNCTION_TARGET"),
+    ),
+    "azure_function": (("WEBSITE_SITE_NAME", "AZURE_FUNCTIONS_APP_NAME"),),
+}
+
+
+def _preset_vars_to_omit(platform: str, env_overrides: dict[str, str]) -> list[str]:
     """The preset variables to leave out of a serverless simulation.
 
-    The SDK uses a platform's function URL variable before it builds the URL
-    from the parts, so the preset's URL would hide the parts the user gave
-    (by flag, --env or --env-file). When the user sets a part without the
-    URL, the preset's URL is left out.
+    The user's values (by flag, --env or --env-file) must decide the URL:
+    - The SDK uses a platform's function URL variable before it builds the
+      URL from the parts, so when the user sets a part without the URL, the
+      preset's URL is left out.
+    - The SDK reads some parts under two names, preferring one. When the user
+      sets a part under the other name, the preset's preferred one is left
+      out.
     """
-    if platform not in _URL_PARTS:
-        return []
-    url_var, parts = _URL_PARTS[platform]
-    if url_var in env_overrides:
-        return []
-    if any(part in env_overrides for part in parts):
-        return [url_var]
-    return []
+    omit: list[str] = []
+    if platform in _URL_PARTS:
+        url_var, parts = _URL_PARTS[platform]
+        if url_var not in env_overrides and any(
+            part in env_overrides for part in parts
+        ):
+            omit.append(url_var)
+    for names in _URL_PART_NAMES.get(platform, ()):
+        given = [index for index, name in enumerate(names) if name in env_overrides]
+        if given:
+            omit.extend(
+                name
+                for name in names[: given[0]]
+                if name not in env_overrides and name not in omit
+            )
+    return omit
 
 
 def print_help_platforms() -> None:
@@ -615,7 +639,7 @@ def main() -> int:
         serverless_simulator = ServerlessSimulator(
             args.simulate_serverless,
             env_overrides,
-            _preset_urls_to_omit(args.simulate_serverless, env_overrides),
+            _preset_vars_to_omit(args.simulate_serverless, env_overrides),
         )
         serverless_simulator.activate(args.verbose and not args.raw)
 

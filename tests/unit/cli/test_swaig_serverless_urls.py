@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 
 from signalwire.cli.simulation.mock_env import ServerlessSimulator
-from signalwire.cli.test_swaig import _preset_urls_to_omit
+from signalwire.cli.test_swaig import _preset_vars_to_omit
 from signalwire.core.agent_base import AgentBase
 
 REPO = Path(__file__).resolve().parents[3]
@@ -78,26 +78,39 @@ class TestPresetUrlOmission:
             "AWS_LAMBDA_FUNCTION_NAME": "prod-agent",
             "AWS_REGION": "us-west-2",
         }
-        assert _preset_urls_to_omit("lambda", overrides) == ["AWS_LAMBDA_FUNCTION_URL"]
+        assert _preset_vars_to_omit("lambda", overrides) == ["AWS_LAMBDA_FUNCTION_URL"]
 
     def test_lambda_explicit_url_keeps_it(self) -> None:
         overrides = {
             "AWS_REGION": "us-west-2",
             "AWS_LAMBDA_FUNCTION_URL": "https://u1.lambda-url.us-west-2.on.aws/",
         }
-        assert _preset_urls_to_omit("lambda", overrides) == []
+        assert _preset_vars_to_omit("lambda", overrides) == []
 
     def test_lambda_no_overrides_keeps_preset(self) -> None:
-        assert _preset_urls_to_omit("lambda", {}) == []
+        assert _preset_vars_to_omit("lambda", {}) == []
 
     def test_cloud_function_parts_without_url_omit_preset_url(self) -> None:
-        assert _preset_urls_to_omit("cloud_function", {"K_SERVICE": "svc"}) == [
+        assert _preset_vars_to_omit("cloud_function", {"K_SERVICE": "svc"}) == [
             "FUNCTION_URL"
         ]
 
-    def test_other_platforms_omit_nothing(self) -> None:
-        assert _preset_urls_to_omit("azure_function", {"WEBSITE_SITE_NAME": "a"}) == []
-        assert _preset_urls_to_omit("cgi", {"HTTP_HOST": "example.com"}) == []
+    def test_a_part_under_its_other_name_omits_the_preset_name(self) -> None:
+        # The SDK prefers GOOGLE_CLOUD_PROJECT to GCP_PROJECT, and K_SERVICE
+        # to FUNCTION_TARGET, which the preset sets
+        assert _preset_vars_to_omit(
+            "cloud_function", {"GCP_PROJECT": "production"}
+        ) == ["FUNCTION_URL", "GOOGLE_CLOUD_PROJECT"]
+        assert _preset_vars_to_omit(
+            "cloud_function", {"FUNCTION_TARGET": "handler"}
+        ) == ["FUNCTION_URL", "K_SERVICE"]
+        assert _preset_vars_to_omit(
+            "azure_function", {"AZURE_FUNCTIONS_APP_NAME": "billing"}
+        ) == ["WEBSITE_SITE_NAME"]
+
+    def test_the_preferred_name_given_omits_nothing_more(self) -> None:
+        assert _preset_vars_to_omit("azure_function", {"WEBSITE_SITE_NAME": "a"}) == []
+        assert _preset_vars_to_omit("cgi", {"HTTP_HOST": "example.com"}) == []
 
 
 class TestServerlessSimulatorOmit:
@@ -200,6 +213,19 @@ class TestSwaigTestSimulatedUrls:
     def test_lambda_default_uses_preset_url(self) -> None:
         out = _swaig_test("lambda")
         assert "@abc123.lambda-url.us-east-1.on.aws/simple/swaig/" in out
+
+    def test_cloud_function_project_given_as_gcp_project(self) -> None:
+        out = _swaig_test("cloud_function", "--env", "GCP_PROJECT=production")
+        assert "@us-central1-production.cloudfunctions.net/agent/simple/swaig/" in out
+        assert "test-project" not in out
+
+    def test_cloud_function_named_by_function_target(self) -> None:
+        out = _swaig_test("cloud_function", "--env", "FUNCTION_TARGET=handler")
+        assert "@us-central1-test-project.cloudfunctions.net/handler/simple/swaig/" in out
+
+    def test_azure_app_given_as_azure_functions_app_name(self) -> None:
+        out = _swaig_test("azure_function", "--env", "AZURE_FUNCTIONS_APP_NAME=billing")
+        assert "@billing.azurewebsites.net/api/agent/simple/swaig/" in out
 
     def test_azure_default_names_the_function(self) -> None:
         out = _swaig_test("azure_function")
