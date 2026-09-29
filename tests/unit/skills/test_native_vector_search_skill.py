@@ -9,14 +9,28 @@ See LICENSE file in the project root for full license information.
 Unit tests for NativeVectorSearchSkill
 """
 
+import contextlib
 import pytest
 from typing import Any
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 
 from unittest.mock import Mock, patch
 
 from signalwire.core.function_result import FunctionResult
 from signalwire.skills.native_vector_search.skill import NativeVectorSearchSkill
+from signalwire.utils.url_validator import _PublicAdapter, _PublicSession
+
+
+@contextlib.contextmanager
+def _session_calls(mock_requests: Mock) -> Iterator[None]:
+    """Send the skill's remote-server requests to ``mock_requests``.
+
+    The skill sends them through a ``_PublicSession``, so its ``get`` and
+    ``post`` are replaced with the mock's.
+    """
+    with patch.object(_PublicSession, "get", mock_requests.get), \
+         patch.object(_PublicSession, "post", mock_requests.post):
+        yield
 
 
 # ---------------------------------------------------------------------------
@@ -142,7 +156,7 @@ class TestSetupRemoteMode:
         mock_response = Mock()
         mock_response.status_code = 200
 
-        with patch.dict("sys.modules", {"requests": mock_requests_mod}):
+        with _session_calls(mock_requests_mod):
             mock_requests_mod.get.return_value = mock_response
 
             skill = _make_skill({"remote_url": "http://localhost:8001"})
@@ -160,7 +174,7 @@ class TestSetupRemoteMode:
         mock_response = Mock()
         mock_response.status_code = 401
 
-        with patch.dict("sys.modules", {"requests": mock_requests_mod}):
+        with _session_calls(mock_requests_mod):
             mock_requests_mod.get.return_value = mock_response
 
             skill = _make_skill({"remote_url": "http://localhost:8001"})
@@ -176,7 +190,7 @@ class TestSetupRemoteMode:
         mock_response = Mock()
         mock_response.status_code = 500
 
-        with patch.dict("sys.modules", {"requests": mock_requests_mod}):
+        with _session_calls(mock_requests_mod):
             mock_requests_mod.get.return_value = mock_response
 
             skill = _make_skill({"remote_url": "http://localhost:8001"})
@@ -191,7 +205,7 @@ class TestSetupRemoteMode:
         mock_requests_mod = Mock()
         mock_requests_mod.get.side_effect = ConnectionError("refused")
 
-        with patch.dict("sys.modules", {"requests": mock_requests_mod}):
+        with _session_calls(mock_requests_mod):
             skill = _make_skill({"remote_url": "http://localhost:8001"})
             result = skill.setup()
 
@@ -205,7 +219,7 @@ class TestSetupRemoteMode:
         mock_response.status_code = 200
         mock_requests_mod.get.return_value = mock_response
 
-        with patch.dict("sys.modules", {"requests": mock_requests_mod}):
+        with _session_calls(mock_requests_mod):
             skill = _make_skill({"remote_url": "http://user:pass@localhost:8001/api"})
             skill.setup()
 
@@ -223,7 +237,7 @@ class TestSetupRemoteMode:
         mock_response.status_code = 200
         mock_requests_mod.get.return_value = mock_response
 
-        with patch.dict("sys.modules", {"requests": mock_requests_mod}):
+        with _session_calls(mock_requests_mod):
             skill = _make_skill({"remote_url": "http://localhost:8001"})
             skill.setup()
 
@@ -1106,7 +1120,7 @@ class TestSearchRemote:
 
         skill = self._setup_remote_skill()
 
-        with patch.dict("sys.modules", {"requests": mock_requests}):
+        with _session_calls(mock_requests):
             results = skill._search_remote("test query", None, 5)
 
         assert len(results) == 1
@@ -1123,7 +1137,7 @@ class TestSearchRemote:
 
         skill = self._setup_remote_skill()
 
-        with patch.dict("sys.modules", {"requests": mock_requests}):
+        with _session_calls(mock_requests):
             results = skill._search_remote("test", None, 5)
 
         assert results == []
@@ -1135,7 +1149,7 @@ class TestSearchRemote:
 
         skill = self._setup_remote_skill()
 
-        with patch.dict("sys.modules", {"requests": mock_requests}):
+        with _session_calls(mock_requests):
             results = skill._search_remote("test", None, 5)
 
         assert results == []
@@ -1151,7 +1165,7 @@ class TestSearchRemote:
         skill = self._setup_remote_skill()
         skill.remote_auth = ("user", "pass")
 
-        with patch.dict("sys.modules", {"requests": mock_requests}):
+        with _session_calls(mock_requests):
             skill._search_remote("test", None, 5)
 
         call_kwargs = mock_requests.post.call_args[1]
@@ -1170,7 +1184,7 @@ class TestSearchRemote:
         skill.similarity_threshold = 0.3
         skill.tags = ["api"]
 
-        with patch.dict("sys.modules", {"requests": mock_requests}):
+        with _session_calls(mock_requests):
             skill._search_remote("my query", None, 10)
 
         call_kwargs = mock_requests.post.call_args
@@ -1191,7 +1205,7 @@ class TestSearchRemote:
 
         skill = self._setup_remote_skill()
 
-        with patch.dict("sys.modules", {"requests": mock_requests}):
+        with _session_calls(mock_requests):
             results = skill._search_remote("test", None, 5)
 
         assert results == []
@@ -1420,7 +1434,7 @@ class TestRemoteUrlCredentialsNotLogged:
         mock_requests_mod = Mock()
         mock_requests_mod.get = get
         with patch("signalwire.utils.url_validator.validate_url", return_value=validate), \
-             patch.dict("sys.modules", {"requests": mock_requests_mod}), \
+             _session_calls(mock_requests_mod), \
              patch.object(skill, "logger") as mock_logger:
             skill.setup()
         return mock_logger
@@ -1492,7 +1506,7 @@ class TestReflectedQueryNotLoggedAboveDebug:
             remote_auth=None, index_name="default",
         )
         response = Mock(status_code=500, text=f"no index for query '{self.QUERY}'")
-        with patch("requests.post", return_value=response), patch.object(skill, "logger") as mock_logger:
+        with patch.object(_PublicSession, "post", return_value=response), patch.object(skill, "logger") as mock_logger:
             skill._search_handler({"query": self.QUERY}, {})
         assert self.QUERY not in _logged(mock_logger, ABOVE_DEBUG)
 
@@ -1554,7 +1568,7 @@ class TestCallerQueryNotLoggedAboveDebug:
                             index_name="default")
         response = Mock(status_code=200)
         response.json.return_value = {"results": []}
-        with patch("requests.post", return_value=response) as mock_post:
+        with patch.object(_PublicSession, "post", return_value=response) as mock_post:
             mock_logger = self._search(skill)
         mock_post.assert_called_once()
         assert mock_post.call_args.args[0] == "http://search.internal:8001/search"
@@ -1589,3 +1603,58 @@ class TestKeywordWeightDeprecated:
         }):
             skill._search_handler({"query": "q"}, {})
         assert "keyword_weight" not in skill.search_engine.search.call_args.kwargs  # type: ignore[union-attr]  # mock search_engine
+
+
+# ===========================================================================
+# Redirects to internal addresses
+# ===========================================================================
+
+METADATA_URL = "http://169.254.169.254/latest/meta-data/"
+
+
+@pytest.mark.usefixtures("public_test_dns")
+class TestRemoteRedirectToInternalAddress:
+    """setup() checks remote_url once. Every request to the search server
+    must also refuse a redirect to an internal address."""
+
+    @pytest.fixture(autouse=True)
+    def _no_private_urls(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("SWML_ALLOW_PRIVATE_URLS", raising=False)
+
+    def test_setup_refuses_a_redirected_health_check(self, scripted_adapter: type) -> None:
+        adapter = scripted_adapter(
+            {
+                "http://public.test/health": (307, {"Location": METADATA_URL}, b""),
+                METADATA_URL: (200, {}, b"internal-secret"),
+            }
+        )
+        skill = _make_skill({"remote_url": "http://public.test"})
+        with patch.object(_PublicAdapter, "send", adapter.send):
+            assert skill.setup() is False
+        assert skill.search_available is False
+        assert adapter.sent == ["http://public.test/health"]
+
+    def test_search_refuses_the_redirect(self, scripted_adapter: type) -> None:
+        adapter = scripted_adapter(
+            {
+                "http://public.test/search": (307, {"Location": METADATA_URL}, b""),
+                METADATA_URL: (200, {}, b'{"results": [{"content": "internal-secret"}]}'),
+            }
+        )
+        skill = _make_skill()
+        skill.remote_base_url = "http://public.test"
+        skill.remote_auth = None
+        skill.index_name = "default"
+        skill.similarity_threshold = 0.0
+        skill.tags = []
+        session = skill._remote_http()
+        session.mount("http://public.test", adapter)
+        session.mount("http://169.254.169.254", adapter)
+
+        assert skill._search_remote("q", None, 3) == []
+        assert adapter.sent == ["http://public.test/search"]
+
+    def test_the_remote_session_refuses_private_addresses(self) -> None:
+        skill = _make_skill()
+        assert isinstance(skill._remote_http(), _PublicSession)
+        assert skill._remote_http() is skill._remote_http()

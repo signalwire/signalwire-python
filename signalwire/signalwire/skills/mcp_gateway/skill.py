@@ -14,6 +14,7 @@ from requests.auth import HTTPBasicAuth
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.function_result import FunctionResult
 from signalwire.core.logging_config import get_logger
+from signalwire.utils.url_validator import _PublicSession
 
 logger = get_logger(__name__)
 
@@ -145,7 +146,9 @@ class MCPGatewaySkill(SkillBase):
         self.request_timeout = self.params.get("request_timeout", 30)
         self.verify_ssl = self.params.get("verify_ssl", True)
 
-        # SSRF protection for gateway URL
+        # SSRF protection for gateway URL. Checked here so a bad URL fails
+        # setup at once; the session below checks every request again,
+        # redirects included, and the address each connection reaches.
         from signalwire.utils.url_validator import validate_url
 
         if not validate_url(self.gateway_url):
@@ -154,12 +157,15 @@ class MCPGatewaySkill(SkillBase):
             )
             return False
 
+        # Every request, the health check included, goes through this session
+        self.http = _PublicSession()
+
         # Session ID will be set from call_id when first tool is used
         self.session_id = None
 
         # Validate gateway connection
         try:
-            response = requests.get(
+            response = self.http.get(
                 f"{self.gateway_url}/health",
                 timeout=self.request_timeout,
                 verify=self.verify_ssl,
@@ -173,7 +179,11 @@ class MCPGatewaySkill(SkillBase):
         return True
 
     def _make_request(self, method: str, url: str, **kwargs: Any) -> requests.Response:
-        """Make HTTP request with appropriate authentication"""
+        """Make HTTP request with appropriate authentication.
+
+        Sent through the skill's ``_PublicSession``, which refuses a redirect
+        to, or a connection that reaches, a private or internal address.
+        """
         headers = kwargs.get("headers", {})
         if self.auth_token:
             headers["Authorization"] = f"Bearer {self.auth_token}"
@@ -185,7 +195,7 @@ class MCPGatewaySkill(SkillBase):
         kwargs["timeout"] = kwargs.get("timeout", self.request_timeout)
         kwargs["verify"] = kwargs.get("verify", self.verify_ssl)
 
-        return requests.request(method, url, **kwargs)  # noqa: S113  # timeout set above via kwargs["timeout"] (default self.request_timeout=30); ruff can't see it through **kwargs
+        return self.http.request(method, url, **kwargs)
 
     def register_tools(self) -> None:
         """Register SWAIG tools from MCP services"""

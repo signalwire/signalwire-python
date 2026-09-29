@@ -11,11 +11,13 @@ Unit tests for MCP Gateway skill module
 
 from typing import Any
 
+import pytest
 from unittest.mock import Mock, patch
 from requests.auth import HTTPBasicAuth
 
 from signalwire.skills.mcp_gateway.skill import MCPGatewaySkill
 from signalwire.core.function_result import FunctionResult
+from signalwire.utils.url_validator import _PublicAdapter, _PublicSession
 
 
 def _make_skill(
@@ -58,6 +60,7 @@ def _make_skill(
         skill.gateway_url = default_params["gateway_url"].rstrip("/")
         skill.services = default_params.get("services", [])
         skill.session_timeout = default_params.get("session_timeout", 300)
+        skill.http = _PublicSession()
         skill.tool_prefix = default_params.get("tool_prefix", "mcp_")
         skill.retry_attempts = default_params.get("retry_attempts", 3)
         skill.request_timeout = default_params.get("request_timeout", 30)
@@ -168,7 +171,7 @@ class TestSetup:
     """Test the setup() method."""
 
     @patch("signalwire.utils.url_validator.validate_url", return_value=True)
-    @patch("signalwire.skills.mcp_gateway.skill.requests.get")
+    @patch("signalwire.utils.url_validator._PublicSession.get")
     def test_setup_success_with_basic_auth(self, mock_get: Mock, mock_validate: Mock) -> None:
         """setup() should succeed when basic auth params are provided and health check passes."""
         mock_response = Mock()
@@ -185,7 +188,7 @@ class TestSetup:
         mock_get.assert_called_once()
 
     @patch("signalwire.utils.url_validator.validate_url", return_value=True)
-    @patch("signalwire.skills.mcp_gateway.skill.requests.get")
+    @patch("signalwire.utils.url_validator._PublicSession.get")
     def test_setup_success_with_token_auth(self, mock_get: Mock, mock_validate: Mock) -> None:
         """setup() should succeed with auth_token and gateway_url."""
         mock_response = Mock()
@@ -204,7 +207,7 @@ class TestSetup:
         # trailing slash should be stripped
         assert skill.gateway_url == "https://gw.test"
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.get")
+    @patch("signalwire.utils.url_validator._PublicSession.get")
     def test_setup_fails_missing_gateway_url_with_token(self, mock_get: Mock) -> None:
         """setup() should fail if auth_token is provided but gateway_url is missing."""
         skill, _ = _make_skill(
@@ -233,7 +236,7 @@ class TestSetup:
         assert result is False
 
     @patch("signalwire.utils.url_validator.validate_url", return_value=True)
-    @patch("signalwire.skills.mcp_gateway.skill.requests.get")
+    @patch("signalwire.utils.url_validator._PublicSession.get")
     def test_setup_fails_on_health_check_error(self, mock_get: Mock, mock_validate: Mock) -> None:
         """setup() should return False when the health check raises an exception."""
         mock_get.side_effect = ConnectionError("unreachable")
@@ -244,7 +247,7 @@ class TestSetup:
         assert result is False
 
     @patch("signalwire.utils.url_validator.validate_url", return_value=True)
-    @patch("signalwire.skills.mcp_gateway.skill.requests.get")
+    @patch("signalwire.utils.url_validator._PublicSession.get")
     def test_setup_fails_on_health_check_http_error(self, mock_get: Mock, mock_validate: Mock) -> None:
         """setup() should return False when health check returns non-200."""
         mock_response = Mock()
@@ -257,7 +260,7 @@ class TestSetup:
         assert result is False
 
     @patch("signalwire.utils.url_validator.validate_url", return_value=True)
-    @patch("signalwire.skills.mcp_gateway.skill.requests.get")
+    @patch("signalwire.utils.url_validator._PublicSession.get")
     def test_setup_stores_configuration_defaults(self, mock_get: Mock, mock_validate: Mock) -> None:
         """setup() should store default values for optional params."""
         mock_response = Mock()
@@ -276,7 +279,7 @@ class TestSetup:
         assert skill.session_id is None
 
     @patch("signalwire.utils.url_validator.validate_url", return_value=True)
-    @patch("signalwire.skills.mcp_gateway.skill.requests.get")
+    @patch("signalwire.utils.url_validator._PublicSession.get")
     def test_setup_stores_custom_configuration(self, mock_get: Mock, mock_validate: Mock) -> None:
         """setup() should store custom values for optional params."""
         mock_response = Mock()
@@ -304,7 +307,7 @@ class TestSetup:
         assert skill.verify_ssl is False
 
     @patch("signalwire.utils.url_validator.validate_url", return_value=True)
-    @patch("signalwire.skills.mcp_gateway.skill.requests.get")
+    @patch("signalwire.utils.url_validator._PublicSession.get")
     def test_setup_health_check_url(self, mock_get: Mock, mock_validate: Mock) -> None:
         """setup() should call /health on the gateway URL."""
         mock_response = Mock()
@@ -331,7 +334,7 @@ class TestSetup:
 class TestMakeRequest:
     """Test the _make_request helper."""
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_make_request_with_basic_auth(self, mock_request: Mock) -> None:
         """_make_request should attach HTTPBasicAuth when no token is set."""
         skill, _ = _make_skill()
@@ -342,7 +345,7 @@ class TestMakeRequest:
         assert isinstance(kwargs["auth"], HTTPBasicAuth)
         assert "Authorization" not in kwargs.get("headers", {})
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_make_request_with_bearer_token(self, mock_request: Mock) -> None:
         """_make_request should send Authorization header when token is set."""
         skill, _ = _make_skill(params={"auth_token": "mytoken"})
@@ -352,7 +355,7 @@ class TestMakeRequest:
         assert kwargs["headers"]["Authorization"] == "Bearer mytoken"
         assert "auth" not in kwargs
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_make_request_default_timeout(self, mock_request: Mock) -> None:
         """_make_request should use skill.request_timeout as default."""
         skill, _ = _make_skill()
@@ -361,7 +364,7 @@ class TestMakeRequest:
         _, kwargs = mock_request.call_args
         assert kwargs["timeout"] == 30
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_make_request_custom_timeout(self, mock_request: Mock) -> None:
         """_make_request should allow callers to override timeout."""
         skill, _ = _make_skill()
@@ -370,7 +373,7 @@ class TestMakeRequest:
         _, kwargs = mock_request.call_args
         assert kwargs["timeout"] == 5
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_make_request_verify_ssl(self, mock_request: Mock) -> None:
         """_make_request should pass verify_ssl setting."""
         skill, _ = _make_skill(params={"verify_ssl": False})
@@ -380,7 +383,7 @@ class TestMakeRequest:
         _, kwargs = mock_request.call_args
         assert kwargs["verify"] is False
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_make_request_preserves_existing_headers(self, mock_request: Mock) -> None:
         """_make_request should preserve caller-supplied headers."""
         skill, _ = _make_skill(params={"auth_token": "tok"})
@@ -398,7 +401,7 @@ class TestMakeRequest:
 class TestRegisterTools:
     """Test the register_tools() method."""
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_register_tools_fetches_all_services_when_none_specified(self, mock_request: Mock) -> None:
         """When services list is empty, register_tools should query /services."""
         skill, agent = _make_skill(params={"services": []})
@@ -427,7 +430,7 @@ class TestRegisterTools:
         # Should have populated services
         assert len(skill.services) == 2
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_register_tools_registers_mcp_tools(self, mock_request: Mock) -> None:
         """register_tools should call _register_mcp_tool for each discovered tool."""
         skill, _agent = _make_skill(params={"services": [{"name": "svc1"}]})
@@ -449,7 +452,7 @@ class TestRegisterTools:
             skill.register_tools()
             assert mock_register.call_count == 2
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_register_tools_filters_tools(self, mock_request: Mock) -> None:
         """register_tools should filter tools when a list is specified."""
         skill, _agent = _make_skill(
@@ -474,7 +477,7 @@ class TestRegisterTools:
             registered_tool = mock_register.call_args[0][1]
             assert registered_tool["name"] == "tool_a"
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_register_tools_wildcard_tools(self, mock_request: Mock) -> None:
         """When tools='*', all tools should be registered."""
         skill, _agent = _make_skill(
@@ -497,7 +500,7 @@ class TestRegisterTools:
             skill.register_tools()
             assert mock_register.call_count == 2
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_register_tools_registers_hangup_hook(self, mock_request: Mock) -> None:
         """register_tools should register a hangup hook for session cleanup."""
         skill, agent = _make_skill(params={"services": []})
@@ -520,7 +523,7 @@ class TestRegisterTools:
         assert hangup_call is not None
         assert hangup_call.kwargs.get("is_hangup_hook") is True
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_register_tools_skips_service_without_name(self, mock_request: Mock) -> None:
         """Services without a 'name' key should be skipped."""
         skill, agent = _make_skill()
@@ -537,7 +540,7 @@ class TestRegisterTools:
         # No MCP tool registrations expected
         assert agent.define_tool.call_count == 1
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_register_tools_handles_service_list_error(self, mock_request: Mock) -> None:
         """register_tools should log error when fetching service list fails."""
         skill, _agent = _make_skill()
@@ -548,7 +551,7 @@ class TestRegisterTools:
         skill.register_tools()
         # Should not raise; services list stays empty
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_register_tools_handles_tools_fetch_error(self, mock_request: Mock) -> None:
         """register_tools should log error when fetching tools fails."""
         skill, agent = _make_skill()
@@ -724,7 +727,7 @@ class TestRegisterMCPTool:
 class TestCallMCPTool:
     """Test the _call_mcp_tool method."""
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_successful_call(self, mock_request: Mock) -> None:
         """Should return FunctionResult with the result text on success."""
         skill, _ = _make_skill()
@@ -740,7 +743,7 @@ class TestCallMCPTool:
         assert isinstance(result, FunctionResult)
         assert result.response == "Hello from MCP"
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_successful_call_no_result_field(self, mock_request: Mock) -> None:
         """Should use 'No response' fallback when result field is missing."""
         skill, _ = _make_skill()
@@ -753,7 +756,7 @@ class TestCallMCPTool:
         result = skill._call_mcp_tool("svc", "echo", {}, {"call_id": "c1"})
         assert result.response == "No response"
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_uses_mcp_call_id_from_global_data(self, mock_request: Mock) -> None:
         """Should prefer global_data.mcp_call_id for session_id."""
         skill, _ = _make_skill()
@@ -774,7 +777,7 @@ class TestCallMCPTool:
         request_body = call_kwargs.kwargs.get("json") or call_kwargs[1].get("json")
         assert request_body["session_id"] == "custom_session_id"
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_falls_back_to_call_id(self, mock_request: Mock) -> None:
         """Should use call_id when mcp_call_id is not in global_data."""
         skill, _ = _make_skill()
@@ -791,7 +794,7 @@ class TestCallMCPTool:
         request_body = call_kwargs.kwargs.get("json") or call_kwargs[1].get("json")
         assert request_body["session_id"] == "fallback_id"
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_falls_back_to_unknown(self, mock_request: Mock) -> None:
         """Should use 'unknown' when call_id is missing from raw_data."""
         skill, _ = _make_skill()
@@ -807,7 +810,7 @@ class TestCallMCPTool:
         request_body = call_kwargs.kwargs.get("json") or call_kwargs[1].get("json")
         assert request_body["session_id"] == "unknown"
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_request_contains_metadata(self, mock_request: Mock) -> None:
         """The POST body should contain correct metadata."""
         skill, _ = _make_skill()
@@ -828,7 +831,7 @@ class TestCallMCPTool:
         assert request_body["metadata"]["call_id"] == "c1"
         assert request_body["metadata"]["timestamp"] == "ts1"
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_retries_on_server_error(self, mock_request: Mock) -> None:
         """Should retry on 5xx errors up to retry_attempts."""
         skill, _ = _make_skill()
@@ -845,7 +848,7 @@ class TestCallMCPTool:
         assert mock_request.call_count == 3
         assert "Failed to call" in result.response
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_no_retry_on_client_error(self, mock_request: Mock) -> None:
         """Should not retry on 4xx errors."""
         skill, _ = _make_skill()
@@ -862,7 +865,7 @@ class TestCallMCPTool:
         assert mock_request.call_count == 1
         assert "Failed to call" in result.response
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_handles_non_json_error_response(self, mock_request: Mock) -> None:
         """Should handle error responses that are not valid JSON."""
         skill, _ = _make_skill()
@@ -880,7 +883,7 @@ class TestCallMCPTool:
         result = skill._call_mcp_tool("svc", "tool", {}, {"call_id": "c1"})
         assert "Failed to call" in result.response
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_handles_timeout(self, mock_request: Mock) -> None:
         """Should handle request timeouts gracefully."""
         import requests as real_requests
@@ -895,7 +898,7 @@ class TestCallMCPTool:
         assert mock_request.call_count == 2
         assert "Failed to call" in result.response
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_handles_connection_error(self, mock_request: Mock) -> None:
         """Should handle connection errors gracefully."""
         import requests as real_requests
@@ -910,7 +913,7 @@ class TestCallMCPTool:
         assert mock_request.call_count == 2
         assert "Failed to call" in result.response
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_handles_unexpected_exception(self, mock_request: Mock) -> None:
         """Should handle unexpected exceptions and not retry."""
         skill, _ = _make_skill()
@@ -924,7 +927,7 @@ class TestCallMCPTool:
         assert mock_request.call_count == 1
         assert "Failed to call" in result.response
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_posts_to_correct_url(self, mock_request: Mock) -> None:
         """Should POST to /services/{service_name}/call."""
         skill, _ = _make_skill()
@@ -948,7 +951,7 @@ class TestCallMCPTool:
 class TestHangupHandler:
     """Test the _hangup_handler method."""
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_hangup_handler_success(self, mock_request: Mock) -> None:
         """Should send DELETE to /sessions/{session_id} and return result."""
         skill, _ = _make_skill()
@@ -967,7 +970,7 @@ class TestHangupHandler:
         assert args[0] == "DELETE"
         assert "sessions/session_abc" in args[1]
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_hangup_handler_uses_mcp_call_id(self, mock_request: Mock) -> None:
         """Should prefer global_data.mcp_call_id for session cleanup."""
         skill, _ = _make_skill()
@@ -985,7 +988,7 @@ class TestHangupHandler:
         args, _ = mock_request.call_args
         assert "sessions/mcp_session_xyz" in args[1]
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_hangup_handler_404_is_ok(self, mock_request: Mock) -> None:
         """A 404 response (session already gone) should not raise."""
         skill, _ = _make_skill()
@@ -997,7 +1000,7 @@ class TestHangupHandler:
         result = skill._hangup_handler({}, {"call_id": "gone"})
         assert result.response == "Session cleanup complete"
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_hangup_handler_server_error(self, mock_request: Mock) -> None:
         """Should handle non-200/404 responses without raising."""
         skill, _ = _make_skill()
@@ -1009,7 +1012,7 @@ class TestHangupHandler:
         result = skill._hangup_handler({}, {"call_id": "c1"})
         assert result.response == "Session cleanup complete"
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_hangup_handler_exception(self, mock_request: Mock) -> None:
         """Should handle exceptions during cleanup gracefully."""
         skill, _ = _make_skill()
@@ -1182,7 +1185,7 @@ class TestGetPromptSections:
 class TestIntegration:
     """Integration-style tests combining multiple methods."""
 
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
     def test_register_and_call_tool_end_to_end(self, mock_request: Mock) -> None:
         """Register a tool, then invoke its handler through the full call path."""
         skill, agent = _make_skill()
@@ -1242,8 +1245,8 @@ class TestIntegration:
         assert result.response == "The sum is 5"
 
     @patch("signalwire.utils.url_validator.validate_url", return_value=True)
-    @patch("signalwire.skills.mcp_gateway.skill.requests.request")
-    @patch("signalwire.skills.mcp_gateway.skill.requests.get")
+    @patch("signalwire.utils.url_validator._PublicSession.request")
+    @patch("signalwire.utils.url_validator._PublicSession.get")
     def test_full_lifecycle(self, mock_get: Mock, mock_request: Mock, mock_validate: Mock) -> None:
         """Test full skill lifecycle: setup -> register -> call -> hangup."""
         # Health check
@@ -1301,3 +1304,50 @@ class TestIntegration:
         # Verify prompt sections
         sections = skill.get_prompt_sections()
         assert len(sections) == 1
+
+
+# ---------------------------------------------------------------------------
+# Redirects to internal addresses
+# ---------------------------------------------------------------------------
+
+METADATA_URL = "http://169.254.169.254/latest/meta-data/"
+
+
+@pytest.mark.usefixtures("public_test_dns")
+class TestRedirectToInternalAddress:
+    """setup() checks the gateway URL once. Every request must also refuse a
+    redirect to an internal address, which that check can't see."""
+
+    @pytest.fixture(autouse=True)
+    def _no_private_urls(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("SWML_ALLOW_PRIVATE_URLS", raising=False)
+
+    def test_setup_refuses_a_redirected_health_check(self, scripted_adapter: type) -> None:
+        adapter = scripted_adapter(
+            {
+                "http://public.test/health": (307, {"Location": METADATA_URL}, b""),
+                METADATA_URL: (200, {}, b"internal-secret"),
+            }
+        )
+        skill, _ = _make_skill(params={"gateway_url": "http://public.test"}, skip_setup=False)
+        with patch.object(_PublicAdapter, "send", adapter.send):
+            assert skill.setup() is False
+        assert adapter.sent == ["http://public.test/health"]
+        assert isinstance(skill.http, _PublicSession)
+
+    def test_a_tool_call_refuses_the_redirect(self, scripted_adapter: type) -> None:
+        adapter = scripted_adapter(
+            {
+                "http://public.test/services/svc/call": (307, {"Location": METADATA_URL}, b""),
+                METADATA_URL: (200, {}, b'{"result": "internal-secret"}'),
+            }
+        )
+        skill, _ = _make_skill(params={"gateway_url": "http://public.test"})
+        skill.http.mount("http://public.test", adapter)
+        skill.http.mount("http://169.254.169.254", adapter)
+
+        result = skill._call_mcp_tool("svc", "tool", {}, {"call_id": "call-1"})
+
+        assert "internal-secret" not in result.response
+        assert result.response.startswith("Failed to call svc.tool")
+        assert adapter.sent == ["http://public.test/services/svc/call"]
