@@ -1466,7 +1466,11 @@ class DomainApplicationCreateStatusCode422(TypedDict, total=False):
 
 
 class DomainApplicationResponse(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """Response containing a single domain application.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     id: uuid
     name: str
@@ -1586,7 +1590,11 @@ class FabricAddressCall(TypedDict, total=False):
 
 
 class FabricAddressPaginationResponse(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """Pagination links for the response.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     self: str
     first: str
@@ -2798,7 +2806,11 @@ class SetMetaDataAction(TypedDict, total=False):
 
 
 class SipEndpoint(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """SIP endpoint model.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     id: uuid
     username: str
@@ -2853,7 +2865,11 @@ class SipEndpointCreateStatusCode422(TypedDict, total=False):
 
 
 class SipEndpointListResponse(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """Response containing a list of SIP endpoints.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     data: list[SipEndpointResponse]
     links: SipEndpointPaginationResponse
@@ -3362,7 +3378,11 @@ class Switch(TypedDict, total=False):
 
 
 class SwmlScript(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """A SWML Script — either a [Calling Script](#schema/CallingSwmlScript) for inbound or
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     id: uuid
     contents: str
@@ -3421,7 +3441,11 @@ class SwmlScriptResponse(TypedDict, total=False):
 
 
 class SwmlScriptUpdateRequest(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """Body shape for updating an existing SWML Script. All fields are optional — include only what you want to change. Choose a [Calling Script](#schema/CallingSwmlScriptUpdateRequest) for inbound or outbound calls or a [Messaging Script](#schema/MessagingSwmlScriptUpdateRequest) for inbound SMS or MMS messages.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     display_name: str
     contents: str | dict[str, Any]

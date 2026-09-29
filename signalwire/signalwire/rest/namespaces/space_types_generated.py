@@ -442,7 +442,11 @@ class SpaceUnverifiedError(TypedDict, total=False):
 
 
 class TopUpMessageError(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """A top-up with the same `Idempotency-Key` is still in progress. Wait for it to finish, then replay the request with the same key to read its result.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     message: str
 

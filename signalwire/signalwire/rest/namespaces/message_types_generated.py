@@ -306,7 +306,11 @@ class WhatsappStatusCode422(TypedDict, total=False):
 
 
 class WhatsappTemplateErrorItem(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """Details about a specific error.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     detail: str
     status: Literal["422"]
@@ -316,7 +320,11 @@ class WhatsappTemplateErrorItem(TypedDict, total=False):
 
 
 class WhatsappTemplateStatusCode422(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """The request contains invalid parameters. See errors for details.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     errors: list[WhatsappTemplateErrorItem]
 

@@ -1461,7 +1461,7 @@ class Types_StatusCodes_ValidationError(TypedDict, total=False):
 
 
 class UpdateCampaignRequest(TypedDict, total=False):
-    """Request body for updating a campaign.
+    """Request body for updating a campaign. Every field is optional; a field you omit keeps its current value.
 
     Open shape: extra server keys are permitted and partial payloads are valid;
     not validated at runtime (a TypedDict is a plain ``dict``).
