@@ -1619,7 +1619,10 @@ AI backend. It supports all standard agent features including:
 - Post-prompt functionality
 - Dynamic configuration</p>
 <p>The main difference from the standard agent is that it generates
-SWML with the "amazon_bedrock" verb instead of "ai".</p>
+SWML with the "amazon_bedrock" verb instead of "ai". Speech hints,
+languages, pronunciation rules, multilingual settings and contexts
+aren't part of that verb, so they're left out of the SWML, with one
+warning per agent for each.</p>
 
 
 
@@ -1741,7 +1744,7 @@ SWML with the "amazon_bedrock" verb instead of "ai".</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Generation temperature (0-1)</p>
+                <p>Generation temperature (0-2)</p>
               </div>
             </td>
             <td>
@@ -1773,7 +1776,8 @@ SWML with the "amazon_bedrock" verb instead of "ai".</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Maximum tokens to generate</p>
+                <p>Maximum tokens to generate. The platform's Bedrock
+session doesn't read it; it uses 1024</p>
               </div>
             </td>
             <td>
@@ -1794,6 +1798,30 @@ SWML with the "amazon_bedrock" verb instead of "ai".</p>
             </td>
             <td>
                   <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If temperature or top_p isn't a number, or max_tokens
+isn't an integer</p>
+              </div>
             </td>
           </tr>
       </tbody>
@@ -1865,6 +1893,9 @@ SWML with the "amazon_bedrock" verb instead of "ai".</p>
     <div class="doc doc-contents ">
 
         <p>Update Bedrock inference parameters</p>
+<p>Each value may be a number or a numeric string, which is converted.
+temperature and top_p may also be a SWML variable reference such as
+<code>${temperature}</code>.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -1887,7 +1918,7 @@ SWML with the "amazon_bedrock" verb instead of "ai".</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Generation temperature (0-1)</p>
+                <p>Generation temperature (0-2)</p>
               </div>
             </td>
             <td>
@@ -1919,11 +1950,36 @@ SWML with the "amazon_bedrock" verb instead of "ai".</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Maximum tokens to generate</p>
+                <p>Maximum tokens to generate. The platform's Bedrock
+session doesn't read it; it uses 1024</p>
               </div>
             </td>
             <td>
                   <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If temperature or top_p isn't a number, or max_tokens
+isn't an integer. Nothing is changed when a value is refused.</p>
+              </div>
             </td>
           </tr>
       </tbody>
@@ -2096,12 +2152,11 @@ parameters are configured in the C code.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Set the prompt settings that Bedrock's prompt object defines</p>
+        <p>Set the prompt's inference settings</p>
 <p>temperature, top_p and max_tokens update the inference settings, as
-set_inference_params() does. confidence, presence_penalty and
-frequency_penalty go into the prompt object. Anything else, such as
-barge_confidence, isn't part of the Bedrock prompt, so it's ignored
-with a warning.</p>
+set_inference_params() does. The platform's Bedrock session reads no
+other prompt setting, so anything else, such as confidence,
+presence_penalty or barge_confidence, is ignored with a warning.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2151,6 +2206,30 @@ with a warning.</p>
             <td>
               <div class="doc-md-description">
                 <p>self for method chaining</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If temperature or top_p isn't a number, or max_tokens
+isn't an integer</p>
               </div>
             </td>
           </tr>
@@ -2276,7 +2355,10 @@ AI backend. It supports all standard agent features including:
 - Post-prompt functionality
 - Dynamic configuration</p>
 <p>The main difference from the standard agent is that it generates
-SWML with the "amazon_bedrock" verb instead of "ai".</p>
+SWML with the "amazon_bedrock" verb instead of "ai". Speech hints,
+languages, pronunciation rules, multilingual settings and contexts
+aren't part of that verb, so they're left out of the SWML, with one
+warning per agent for each.</p>
 
 
 
@@ -2398,7 +2480,7 @@ SWML with the "amazon_bedrock" verb instead of "ai".</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Generation temperature (0-1)</p>
+                <p>Generation temperature (0-2)</p>
               </div>
             </td>
             <td>
@@ -2430,7 +2512,8 @@ SWML with the "amazon_bedrock" verb instead of "ai".</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Maximum tokens to generate</p>
+                <p>Maximum tokens to generate. The platform's Bedrock
+session doesn't read it; it uses 1024</p>
               </div>
             </td>
             <td>
@@ -2451,6 +2534,30 @@ SWML with the "amazon_bedrock" verb instead of "ai".</p>
             </td>
             <td>
                   <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If temperature or top_p isn't a number, or max_tokens
+isn't an integer</p>
+              </div>
             </td>
           </tr>
       </tbody>
@@ -2522,6 +2629,9 @@ SWML with the "amazon_bedrock" verb instead of "ai".</p>
     <div class="doc doc-contents ">
 
         <p>Update Bedrock inference parameters</p>
+<p>Each value may be a number or a numeric string, which is converted.
+temperature and top_p may also be a SWML variable reference such as
+<code>${temperature}</code>.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2544,7 +2654,7 @@ SWML with the "amazon_bedrock" verb instead of "ai".</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Generation temperature (0-1)</p>
+                <p>Generation temperature (0-2)</p>
               </div>
             </td>
             <td>
@@ -2576,11 +2686,36 @@ SWML with the "amazon_bedrock" verb instead of "ai".</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Maximum tokens to generate</p>
+                <p>Maximum tokens to generate. The platform's Bedrock
+session doesn't read it; it uses 1024</p>
               </div>
             </td>
             <td>
                   <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If temperature or top_p isn't a number, or max_tokens
+isn't an integer. Nothing is changed when a value is refused.</p>
+              </div>
             </td>
           </tr>
       </tbody>
@@ -2753,12 +2888,11 @@ parameters are configured in the C code.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Set the prompt settings that Bedrock's prompt object defines</p>
+        <p>Set the prompt's inference settings</p>
 <p>temperature, top_p and max_tokens update the inference settings, as
-set_inference_params() does. confidence, presence_penalty and
-frequency_penalty go into the prompt object. Anything else, such as
-barge_confidence, isn't part of the Bedrock prompt, so it's ignored
-with a warning.</p>
+set_inference_params() does. The platform's Bedrock session reads no
+other prompt setting, so anything else, such as confidence,
+presence_penalty or barge_confidence, is ignored with a warning.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2808,6 +2942,30 @@ with a warning.</p>
             <td>
               <div class="doc-md-description">
                 <p>self for method chaining</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If temperature or top_p isn't a number, or max_tokens
+isn't an integer</p>
               </div>
             </td>
           </tr>

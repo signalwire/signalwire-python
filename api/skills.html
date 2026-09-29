@@ -13281,7 +13281,9 @@ with the base schema.</p>
 - default: Default value if not provided (optional)
 - required: Whether the parameter is required (default: False)
 - hidden: Whether to hide this field in UIs (for secrets/keys)
-- env_var: Environment variable that can provide this value (optional)
+- env_var: Environment variable a configuration tool can read this
+  value from (optional). A hint for tools that read the schema; the
+  SDK doesn't read it, so the skill gets the value from its params.
 - enum: List of allowed values (optional)
 - min/max: Minimum/maximum values for numeric types (optional)</p>
               </div>

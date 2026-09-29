@@ -4421,7 +4421,12 @@ to the SignalWire platform.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Bind to an Agent and prepare the underlying SignalWire AgentBase.</p>
+        <p>Bind to an Agent.</p>
+<p>Inside :func:<code>run_app</code>, this also makes the session the one the job
+serves: once the entrypoint returns, <code>run_app()</code> builds the
+SignalWire agent from the last session started and runs it. The
+agent is built then, not here, so <code>say()</code>, <code>generate_reply()</code> and
+<code>update_agent()</code> calls that follow still apply.</p>
 
 
     </div>
@@ -4439,7 +4444,11 @@ to the SignalWire platform.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Queue text to be spoken by the agent.</p>
+        <p>Have the agent open the call with <code>text</code>, word for word.</p>
+<p>The text becomes the AI's <code>static_greeting</code>, which the platform
+speaks as the agent's first words; several calls are joined. Once the
+agent is built, SignalWire can't add speech from here, so a later
+call is ignored with a log message.</p>
 
 
     </div>
@@ -4457,8 +4466,10 @@ to the SignalWire platform.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Trigger the agent to generate a reply.  On SignalWire the prompt
-handles this; if <em>instructions</em> is provided they are noted.</p>
+        <p>Guide the agent's first reply.</p>
+<p><code>instructions</code> is added to the prompt, under "Initial Greeting".
+Without instructions there's nothing to add: the agent replies on its
+own. Once the agent is built, a call is ignored with a log message.</p>
 
 
     </div>
@@ -5536,8 +5547,11 @@ description when <em>description</em> is not provided explicitly.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Print banner, print a random tip, run the agent.</p>
-<p>This is the main entry point -- mirrors <code>livekit.agents.cli.run_app</code>.</p>
+        <p>Print banner, run the entrypoint, print a random tip, serve the agent.</p>
+<p>This is the main entry point -- mirrors <code>livekit.agents.cli.run_app</code>.
+The entrypoint runs with a :class:<code>JobContext</code>; when it returns, the
+SignalWire agent built from the last <code>AgentSession</code> it started is run,
+which serves HTTP until the process stops.</p>
 
 
     </div>

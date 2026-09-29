@@ -1997,6 +1997,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#signalwire.cli.execution.datamap_exec.PLATFORM_ERROR_RESPONSE" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PLATFORM_ERROR_RESPONSE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.cli.execution.datamap_exec.simple_template_expand" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3495,6 +3506,17 @@
     <span class="md-ellipsis">
       
         original_env
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signalwire.cli.simulation.mock_env.ServerlessSimulator.omit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        omit
       
     </span>
   </a>
@@ -6014,6 +6036,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#signalwire.cli.execution.datamap_exec.PLATFORM_ERROR_RESPONSE" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PLATFORM_ERROR_RESPONSE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.cli.execution.datamap_exec.simple_template_expand" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -7512,6 +7545,17 @@
     <span class="md-ellipsis">
       
         original_env
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signalwire.cli.simulation.mock_env.ServerlessSimulator.omit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        omit
       
     </span>
   </a>
@@ -11848,6 +11892,25 @@ See LICENSE file in the project root for full license information.</p>
 <p>Licensed under the MIT License.
 See LICENSE file in the project root for full license information.</p>
 <p>DataMap function execution and template expansion</p>
+<p>swaig-test runs a DataMap function locally the way SignalWire's platform
+runs it during a call:</p>
+<ol>
+<li>The top-level <code>expressions</code>, against the call data. The first one that
+   produces an output ends the function.</li>
+<li>The first webhook it requests. Webhooks are skipped, without a request,
+   only when none of their <code>require_args</code> are present or they have neither
+   <code>output</code> nor <code>expressions</code>. Once one is requested, no later webhook
+   runs. If it succeeds, its <code>foreach</code>, then its <code>expressions</code>, then its
+   <code>output</code> build the result from the response.</li>
+<li>The top-level <code>output</code>, when nothing above produced one.</li>
+<li>Otherwise the platform's generic error.</li>
+</ol>
+<p>Templates read one of two sets of data. The top-level <code>expressions</code> and
+<code>output</code>, and a webhook's <code>url</code> and <code>params</code>, read the call data, where
+the arguments are <code>${args.x}</code>. A webhook's <code>foreach</code>, <code>expressions</code> and
+<code>output</code> read the response, with <code>prompt_vars</code>, <code>global_data</code> and
+<code>input</code>, a copy of the call data, added to it; the arguments are
+<code>${input.args.x}</code> there.</p>
 
 
 
@@ -11866,6 +11929,26 @@ See LICENSE file in the project root for full license information.</p>
 
 
 
+<div class="doc doc-object doc-attribute">
+
+
+
+<h5 id="signalwire.cli.execution.datamap_exec.PLATFORM_ERROR_RESPONSE" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">PLATFORM_ERROR_RESPONSE</span> <span class="o">=</span> <span class="s1">'There was an error processing this request.'</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+<a href="#signalwire.cli.execution.datamap_exec.PLATFORM_ERROR_RESPONSE" class="headerlink" title="Permanent link">&para;</a></h5>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
 
 
 
@@ -11873,7 +11956,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h5 id="signalwire.cli.execution.datamap_exec.simple_template_expand" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">simple_template_expand</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">simple_template_expand</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">unresolved</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 <a href="#signalwire.cli.execution.datamap_exec.simple_template_expand" class="headerlink" title="Permanent link">&para;</a></h5>
 
@@ -11881,12 +11964,20 @@ See LICENSE file in the project root for full license information.</p>
     <div class="doc doc-contents ">
 
         <p>Expand DataMap templates as the platform does, for local testing.</p>
-<p><code>${path}</code> and <code>%{path}</code> read a value from <code>data</code> by a dotted path,
-with <code>[n]</code> for array elements. Prefix helpers transform it, left to
-right: <code>lc</code> lowercases and <code>enc</code> (or <code>enc:url</code>) URL-encodes, so
-<code>${lc:enc:args.city}</code> is the city, lowercased and URL-encoded. Nested
-templates expand from the inside out. A path that doesn't resolve becomes
-<code>&lt;MISSING:path&gt;</code>. <code>@{...}</code> functions are left as they are.</p>
+<p><code>${path}</code> and <code>%{path}</code> read a value from <code>data</code>. A path uses dots
+for names, matched without regard to case, and <code>[n]</code> for an array
+element, where a negative <code>n</code> counts from the end. A path that doesn't
+resolve expands to an empty string, and is added to <code>unresolved</code> when
+it's given, as a (template, path) pair.</p>
+<p>Prefix helpers before the path transform the value: <code>lc</code> lowercases,
+<code>enc</code> URL-encodes as FreeSWITCH does, and <code>fmt_ph</code> formats a phone
+number. They're matched without regard to case, and apply in a fixed
+order, <code>fmt_ph</code>, then <code>lc</code>, then <code>enc</code>, whatever order they're
+written in. There's no <code>enc:url</code>: that reads the path <code>url:...</code>.</p>
+<p>A template nested in a path expands first, one level deep, and its value
+becomes part of the path: <code>${meta_data.table.${lc:args.target}}</code>.
+A value that isn't a string is inserted as JSON. <code>@{...}</code> functions are
+left as they are.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -11932,6 +12023,22 @@ templates expand from the inside out. A path that doesn't resolve becomes
                 <em>required</em>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>unresolved</code>
+            </td>
+            <td>
+                  <code><span title="list">list</span>[<span title="tuple">tuple</span>[<span title="str">str</span>, <span title="str">str</span>]] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional list to collect templates that didn't resolve</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -11967,19 +12074,16 @@ templates expand from the inside out. A path that doesn't resolve becomes
 
 
 <h5 id="signalwire.cli.execution.datamap_exec.execute_datamap_function" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">execute_datamap_function</span><span class="p">(</span><span class="n">datamap_config</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">execute_datamap_function</span><span class="p">(</span><span class="n">datamap_config</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">call_data</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 <a href="#signalwire.cli.execution.datamap_exec.execute_datamap_function" class="headerlink" title="Permanent link">&para;</a></h5>
 
 
     <div class="doc doc-contents ">
 
-        <p>Execute a DataMap function following the actual DataMap processing pipeline:
-1. Expressions (pattern matching)
-2. Webhooks (try each sequentially until one succeeds)
-3. Foreach (within successful webhook)
-4. Output (from successful webhook)
-5. Fallback output (if all webhooks fail)</p>
+        <p>Execute a DataMap function as SignalWire's platform does.</p>
+<p>See the module docstring for the order. The platform's HTTP request is
+made for real; everything else is simulated.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -12041,6 +12145,25 @@ templates expand from the inside out. A path that doesn't resolve becomes
                   <code>False</code>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_data</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional call data the platform would add, merged into the
+root of the template data, such as <code>global_data</code>, <code>call_id</code> or
+<code>caller_id_num</code>. Its <code>prompt_vars</code>, if any, are merged into the
+root too, and are also <code>${prompt_vars.x}</code> in a webhook's output.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -12060,7 +12183,7 @@ templates expand from the inside out. A path that doesn't resolve becomes
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Function result (should be string or dict with 'response' key)</p>
+                <p>The function's result, normally a dict with a <code>response</code> key</p>
               </div>
             </td>
           </tr>
@@ -15698,7 +15821,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h6 id="signalwire.cli.simulation.mock_env.ServerlessSimulator.PLATFORM_PRESETS" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">PLATFORM_PRESETS</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'lambda'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'AWS_LAMBDA_FUNCTION_NAME'</span><span class="p">:</span> <span class="s1">'test-agent-function'</span><span class="p">,</span> <span class="s1">'AWS_LAMBDA_FUNCTION_URL'</span><span class="p">:</span> <span class="s1">'https://abc123.lambda-url.us-east-1.on.aws/'</span><span class="p">,</span> <span class="s1">'AWS_REGION'</span><span class="p">:</span> <span class="s1">'us-east-1'</span><span class="p">,</span> <span class="s1">'_HANDLER'</span><span class="p">:</span> <span class="s1">'lambda_function.lambda_handler'</span><span class="p">},</span> <span class="s1">'cgi'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'GATEWAY_INTERFACE'</span><span class="p">:</span> <span class="s1">'CGI/1.1'</span><span class="p">,</span> <span class="s1">'HTTP_HOST'</span><span class="p">:</span> <span class="s1">'example.com'</span><span class="p">,</span> <span class="s1">'SCRIPT_NAME'</span><span class="p">:</span> <span class="s1">'/cgi-bin/agent.cgi'</span><span class="p">,</span> <span class="s1">'HTTPS'</span><span class="p">:</span> <span class="s1">'on'</span><span class="p">,</span> <span class="s1">'SERVER_NAME'</span><span class="p">:</span> <span class="s1">'example.com'</span><span class="p">},</span> <span class="s1">'cloud_function'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'GOOGLE_CLOUD_PROJECT'</span><span class="p">:</span> <span class="s1">'test-project'</span><span class="p">,</span> <span class="s1">'FUNCTION_URL'</span><span class="p">:</span> <span class="s1">'https://my-function-abc123.cloudfunctions.net'</span><span class="p">,</span> <span class="s1">'GOOGLE_CLOUD_REGION'</span><span class="p">:</span> <span class="s1">'us-central1'</span><span class="p">,</span> <span class="s1">'K_SERVICE'</span><span class="p">:</span> <span class="s1">'agent'</span><span class="p">},</span> <span class="s1">'azure_function'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'AZURE_FUNCTIONS_ENVIRONMENT'</span><span class="p">:</span> <span class="s1">'Development'</span><span class="p">,</span> <span class="s1">'FUNCTIONS_WORKER_RUNTIME'</span><span class="p">:</span> <span class="s1">'python'</span><span class="p">,</span> <span class="s1">'WEBSITE_SITE_NAME'</span><span class="p">:</span> <span class="s1">'my-function-app'</span><span class="p">}}</span></code>
+            <code class="highlight language-python"><span class="n">PLATFORM_PRESETS</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'lambda'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'AWS_LAMBDA_FUNCTION_NAME'</span><span class="p">:</span> <span class="s1">'test-agent-function'</span><span class="p">,</span> <span class="s1">'AWS_LAMBDA_FUNCTION_URL'</span><span class="p">:</span> <span class="s1">'https://abc123.lambda-url.us-east-1.on.aws/'</span><span class="p">,</span> <span class="s1">'AWS_REGION'</span><span class="p">:</span> <span class="s1">'us-east-1'</span><span class="p">,</span> <span class="s1">'_HANDLER'</span><span class="p">:</span> <span class="s1">'lambda_function.lambda_handler'</span><span class="p">},</span> <span class="s1">'cgi'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'GATEWAY_INTERFACE'</span><span class="p">:</span> <span class="s1">'CGI/1.1'</span><span class="p">,</span> <span class="s1">'HTTP_HOST'</span><span class="p">:</span> <span class="s1">'example.com'</span><span class="p">,</span> <span class="s1">'SCRIPT_NAME'</span><span class="p">:</span> <span class="s1">'/cgi-bin/agent.cgi'</span><span class="p">,</span> <span class="s1">'HTTPS'</span><span class="p">:</span> <span class="s1">'on'</span><span class="p">,</span> <span class="s1">'SERVER_NAME'</span><span class="p">:</span> <span class="s1">'example.com'</span><span class="p">},</span> <span class="s1">'cloud_function'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'GOOGLE_CLOUD_PROJECT'</span><span class="p">:</span> <span class="s1">'test-project'</span><span class="p">,</span> <span class="s1">'FUNCTION_TARGET'</span><span class="p">:</span> <span class="s1">'agent'</span><span class="p">,</span> <span class="s1">'FUNCTION_URL'</span><span class="p">:</span> <span class="s1">'https://my-function-abc123.cloudfunctions.net'</span><span class="p">,</span> <span class="s1">'GOOGLE_CLOUD_REGION'</span><span class="p">:</span> <span class="s1">'us-central1'</span><span class="p">,</span> <span class="s1">'K_SERVICE'</span><span class="p">:</span> <span class="s1">'agent'</span><span class="p">},</span> <span class="s1">'azure_function'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'AZURE_FUNCTIONS_ENVIRONMENT'</span><span class="p">:</span> <span class="s1">'Development'</span><span class="p">,</span> <span class="s1">'FUNCTIONS_WORKER_RUNTIME'</span><span class="p">:</span> <span class="s1">'python'</span><span class="p">,</span> <span class="s1">'WEBSITE_SITE_NAME'</span><span class="p">:</span> <span class="s1">'my-function-app'</span><span class="p">,</span> <span class="s1">'AZURE_FUNCTION_NAME'</span><span class="p">:</span> <span class="s1">'agent'</span><span class="p">}}</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -15757,8 +15880,28 @@ See LICENSE file in the project root for full license information.</p>
 
 
 
+<h6 id="signalwire.cli.simulation.mock_env.ServerlessSimulator.omit" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">omit</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">omit</span> <span class="ow">or</span> <span class="p">[])</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#signalwire.cli.simulation.mock_env.ServerlessSimulator.omit" class="headerlink" title="Permanent link">&para;</a></h6>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
 <h6 id="signalwire.cli.simulation.mock_env.ServerlessSimulator.preset_env" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">preset_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">PLATFORM_PRESETS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">platform</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="n">preset_env</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">PLATFORM_PRESETS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">platform</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">omit</span><span class="p">}</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -15820,12 +15963,79 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h6 id="signalwire.cli.simulation.mock_env.ServerlessSimulator.__init__" class="doc doc-heading">
-            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">platform</span><span class="p">,</span> <span class="n">overrides</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">platform</span><span class="p">,</span> <span class="n">overrides</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">omit</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 <a href="#signalwire.cli.simulation.mock_env.ServerlessSimulator.__init__" class="headerlink" title="Permanent link">&para;</a></h6>
 
 
     <div class="doc doc-contents ">
+
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>platform</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>"lambda", "cgi", "cloud_function" or "azure_function"</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>overrides</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Variables to set over the preset</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>omit</code>
+            </td>
+            <td>
+                  <code><span title="list">list</span>[<span title="str">str</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Preset variables to leave out (and clear from the
+environment), so the SDK builds that value from the others.
+swaig-test omits the preset's function URL when the user
+gives the parts the URL is built from.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>

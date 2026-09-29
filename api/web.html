@@ -1871,7 +1871,13 @@ See LICENSE file in the project root for full license information.</p>
 
 
 
-        <p>Static file serving service with HTTP API</p>
+        <p>Static file serving service with HTTP API.</p>
+<p>Each mounted directory is served below its route, with basic auth. One
+route serves them all and looks the request path up in <code>directories</code>
+on every request, so <code>add_directory()</code> and <code>remove_directory()</code> take
+effect at once. A path is refused if any of its components starts with a
+dot (other than <code>.well-known</code>) or is a blocked name, or if it resolves,
+symbolic links followed, to somewhere outside its mounted directory.</p>
 
 
 
@@ -2204,7 +2210,11 @@ See LICENSE file in the project root for full license information.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>List of blocked extensions (e.g., ['.env', '.git'])</p>
+                <p>Blocked extensions and file names (e.g.,
+['.env', '.pem']). An entry is also refused as the name of
+any directory on the path. Whatever this holds, a path with a
+component that starts with a dot, other than <code>.well-known</code>,
+is never served.</p>
               </div>
             </td>
             <td>
@@ -2263,6 +2273,8 @@ See LICENSE file in the project root for full license information.</p>
     <div class="doc doc-contents ">
 
         <p>Add a new directory to serve</p>
+<p>Takes effect at once, on a running service too. Adding a route that
+is already mounted points it at the new directory.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2285,7 +2297,8 @@ See LICENSE file in the project root for full license information.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>URL path to mount at (e.g., "/docs")</p>
+                <p>URL path to mount at (e.g., "/docs"), with or without its
+leading or trailing slash</p>
               </div>
             </td>
             <td>
@@ -2328,6 +2341,8 @@ See LICENSE file in the project root for full license information.</p>
     <div class="doc doc-contents ">
 
         <p>Remove a directory from being served</p>
+<p>Takes effect at once: the route's files stop being served with the
+next request.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2350,7 +2365,8 @@ See LICENSE file in the project root for full license information.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>URL path to remove</p>
+                <p>URL path to remove, with or without its leading or
+trailing slash</p>
               </div>
             </td>
             <td>
@@ -2561,7 +2577,13 @@ See LICENSE file in the project root for full license information.</p>
 
 
 
-        <p>Static file serving service with HTTP API</p>
+        <p>Static file serving service with HTTP API.</p>
+<p>Each mounted directory is served below its route, with basic auth. One
+route serves them all and looks the request path up in <code>directories</code>
+on every request, so <code>add_directory()</code> and <code>remove_directory()</code> take
+effect at once. A path is refused if any of its components starts with a
+dot (other than <code>.well-known</code>) or is a blocked name, or if it resolves,
+symbolic links followed, to somewhere outside its mounted directory.</p>
 
 
 
@@ -2894,7 +2916,11 @@ See LICENSE file in the project root for full license information.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>List of blocked extensions (e.g., ['.env', '.git'])</p>
+                <p>Blocked extensions and file names (e.g.,
+['.env', '.pem']). An entry is also refused as the name of
+any directory on the path. Whatever this holds, a path with a
+component that starts with a dot, other than <code>.well-known</code>,
+is never served.</p>
               </div>
             </td>
             <td>
@@ -2953,6 +2979,8 @@ See LICENSE file in the project root for full license information.</p>
     <div class="doc doc-contents ">
 
         <p>Add a new directory to serve</p>
+<p>Takes effect at once, on a running service too. Adding a route that
+is already mounted points it at the new directory.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2975,7 +3003,8 @@ See LICENSE file in the project root for full license information.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>URL path to mount at (e.g., "/docs")</p>
+                <p>URL path to mount at (e.g., "/docs"), with or without its
+leading or trailing slash</p>
               </div>
             </td>
             <td>
@@ -3018,6 +3047,8 @@ See LICENSE file in the project root for full license information.</p>
     <div class="doc doc-contents ">
 
         <p>Remove a directory from being served</p>
+<p>Takes effect at once: the route's files stop being served with the
+next request.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -3040,7 +3071,8 @@ See LICENSE file in the project root for full license information.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>URL path to remove</p>
+                <p>URL path to remove, with or without its leading or
+trailing slash</p>
               </div>
             </td>
             <td>
