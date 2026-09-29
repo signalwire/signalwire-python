@@ -92,6 +92,8 @@ and `join_conference()`.
   for a category it doesn't have; it labelled the fact with that category's
   name. Its dated or wrong facts are replaced, and Fred's prompt tells it to
   search before saying Wikipedia has nothing on a topic.
+- Penny's `locked` step asks the caller before connecting them with a person;
+  it let the model call `request_human` without asking.
 
 ### Notes for upgraders
 - WebService needs credentials before `start()`: `SWML_BASIC_AUTH_USER` and
