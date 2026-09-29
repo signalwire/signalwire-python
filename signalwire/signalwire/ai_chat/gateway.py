@@ -71,6 +71,16 @@ at your prompt. The gateway bounds it (``MAX_USER_METADATA_BYTES``) and keeps
 it nested under its own key, so it cannot collide with the conversation id or
 ``config_url`` the gateway owns — but it cannot vouch for the contents, and
 neither can you.
+
+## Size limits
+
+Every field above is sized by whoever holds the key, so each is bounded and
+answered with ``413`` past its limit: the request body
+(``MAX_REQUEST_BODY_BYTES``, 64 KiB, refused before it is parsed), a chat
+message (``MAX_MESSAGE_BYTES``, 8 KiB of UTF-8, refused before a conversation
+is minted or a turn charged) and ``user_meta_data``
+(``MAX_USER_METADATA_BYTES``, 8 KiB serialized). ``HandoffRouter`` applies the
+same body and message limits to its routes.
 """
 
 import base64
@@ -86,7 +96,7 @@ from urllib.parse import urlparse
 from .client import AIChatClient
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
-    from fastapi import APIRouter
+    from fastapi import APIRouter, Request
 
 # A handle outlives a page refresh but not a session left open overnight.
 DEFAULT_HANDLE_TTL = 24 * 60 * 60
@@ -112,6 +122,18 @@ ALLOWED_METHODS = frozenset({"start", "chat", "log", "end"})
 # metered service on the project's tab.
 MAX_USER_METADATA_BYTES = 8 * 1024
 
+# Bound on one typed message, UTF-8 encoded: a chat turn here, and the text a
+# HandoffRouter's /say injects into a live call. 8 KiB is several pages of
+# typing, far past what a visitor types into a widget, and every byte of it
+# goes into a billed turn.
+MAX_MESSAGE_BYTES = 8 * 1024
+
+# Bound on a whole request body, checked before it is parsed. The largest
+# honest request is a chat turn carrying a full message and a full metadata
+# bag; JSON escaping can triple the size of non-ASCII text, and this leaves
+# room for that.
+MAX_REQUEST_BODY_BYTES = 64 * 1024
+
 # Roles a browser may see. `chat_log` returns the WHOLE conversation as the
 # service holds it — the substituted system prompt, tool calls, tool results.
 # The system prompt is the developer's own content and the tool traffic is
@@ -133,7 +155,8 @@ class GatewayRejection(Exception):
 
         Args:
             status: HTTP status to send back (401 bad key, 403 origin/handle,
-                400 disallowed method, 429 a cap was hit).
+                400 disallowed method, 413 a request, message or metadata
+                over its size limit, 429 a cap was hit).
             reason: Short, non-leaking explanation. It reaches the browser, so
                 it must not disclose why a handle failed to verify.
         """
@@ -474,6 +497,9 @@ class ChatGateway:
         The single exception is ``user_meta_data``, which is forwarded — see
         :meth:`read_user_metadata` and the module docstring for why that is
         narrow enough to be safe and what it still does not vouch for.
+
+        A chat message over :data:`MAX_MESSAGE_BYTES` (UTF-8) is refused with
+        413 before a conversation is minted or a turn charged.
         """
         self.check_key(key)
         self.check_origin(origin)
@@ -486,6 +512,15 @@ class ChatGateway:
         # rejecting after _charge_mint() would burn a conversation slot on a
         # request that never reaches the service.
         user_metadata = self.read_user_metadata(body)
+
+        # The message size is checked before minting for the same reason.
+        message = body.get("message")
+        if (
+            method == "chat"
+            and isinstance(message, str)
+            and _utf8_len(message) > MAX_MESSAGE_BYTES
+        ):
+            raise GatewayRejection(413, "message too large")
 
         handle = body.get("handle")
         minted = None
@@ -522,7 +557,6 @@ class ChatGateway:
                 params["user_meta_data"] = user_metadata
             return "create_conversation", params, minted
 
-        message = body.get("message")
         if not isinstance(message, str) or not message.strip():
             raise GatewayRejection(400, "message is required")
 
@@ -567,6 +601,9 @@ class ChatGateway:
         and recreate the timeout inside your own stack. A newly minted handle
         rides back in the ``X-Chat-Handle`` header, which is why it can be
         sent before the body has been produced.
+
+        A request body over :data:`MAX_REQUEST_BODY_BYTES` is answered with
+        413 without being parsed.
         """
         from fastapi import APIRouter, Request
         from fastapi.responses import JSONResponse, Response, StreamingResponse
@@ -604,7 +641,7 @@ class ChatGateway:
             cors = _cors(origin)
 
             try:
-                body = await request.json()
+                body = await _read_json_body(request)
                 if not isinstance(body, dict):
                     raise GatewayRejection(400, "body must be an object")
                 method, params, minted = self.prepare(body, origin=origin, key=key)
@@ -671,6 +708,36 @@ class ChatGateway:
             )
 
         return router
+
+
+def _utf8_len(text: str) -> int:
+    """Length of ``text`` in UTF-8 bytes. A lone surrogate counts, never raises."""
+    return len(text.encode("utf-8", "surrogatepass"))
+
+
+async def _read_json_body(
+    request: "Request", limit: int = MAX_REQUEST_BODY_BYTES
+) -> Any:
+    """Parse a request's JSON body, refusing one over ``limit`` bytes.
+
+    A declared ``Content-Length`` over the limit is refused before anything is
+    read. The body is then read in chunks and abandoned as soon as it passes
+    the limit, so a chunked or understated upload can't make the process hold
+    more than ``limit`` bytes of it.
+
+    Raises:
+        GatewayRejection: 413 if the body is over ``limit``.
+        ValueError: If the body isn't valid JSON.
+    """
+    declared = request.headers.get("content-length", "")
+    if declared.isdigit() and int(declared) > limit:
+        raise GatewayRejection(413, "request too large")
+    received = bytearray()
+    async for chunk in request.stream():
+        received += chunk
+        if len(received) > limit:
+            raise GatewayRejection(413, "request too large")
+    return json.loads(bytes(received))
 
 
 def _b64(raw: bytes) -> str:

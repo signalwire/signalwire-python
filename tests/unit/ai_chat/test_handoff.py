@@ -27,6 +27,7 @@ from fastapi.testclient import TestClient
 
 from signalwire.ai_chat import AIChatClient, ChatGateway, HandoffRouter
 from signalwire.ai_chat.client import _warn_if_id_will_be_altered
+from signalwire.ai_chat.gateway import MAX_MESSAGE_BYTES, MAX_REQUEST_BODY_BYTES
 
 SECRET = "s" * 32
 
@@ -323,6 +324,71 @@ class TestSay:
         router = HandoffRouter(gateway=gateway)
         router.register("n", conversation_id="c", call_id="call-1")
         assert not asyncio.run(router.say("n", "hello"))
+
+
+class TestSizeLimits:
+    """Every route is reachable by anyone who can load the page, and /say
+    text becomes a billed turn, so the body and the text are bounded."""
+
+    def test_say_refuses_text_over_the_message_limit(
+        self, handoff: HandoffRouter, client: TestClient, events: list[Any]
+    ) -> None:
+        handoff.register("n", conversation_id="conv-root", call_id="call-9")
+        response = client.post(
+            "/chat/say", json={"nonce": "n", "text": "x" * (MAX_MESSAGE_BYTES + 1)}
+        )
+        assert response.status_code == 413
+        assert response.json() == {"error": "message too large"}
+        assert events == []
+
+    def test_the_size_answer_does_not_depend_on_the_nonce(
+        self, client: TestClient
+    ) -> None:
+        """Checked before the lookup, so it can't be used to probe a nonce."""
+        response = client.post(
+            "/chat/say",
+            json={"nonce": "never-existed", "text": "x" * (MAX_MESSAGE_BYTES + 1)},
+        )
+        assert response.status_code == 413
+        assert response.json() == {"error": "message too large"}
+
+    def test_say_accepts_text_at_the_limit(
+        self, handoff: HandoffRouter, client: TestClient, events: list[Any]
+    ) -> None:
+        handoff.register("n", conversation_id="conv-root", call_id="call-9")
+        text = "x" * MAX_MESSAGE_BYTES
+        response = client.post("/chat/say", json={"nonce": "n", "text": text})
+        assert response.status_code == 200
+        assert events == [("say", "call-9", text)]
+
+    def test_say_called_directly_refuses_oversized_text(
+        self, gateway: ChatGateway, events: list[Any]
+    ) -> None:
+        router = HandoffRouter(gateway=gateway, send_message=_recording_sender(events))
+        router.register("n", conversation_id="c", call_id="call-1")
+        assert not asyncio.run(router.say("n", "x" * (MAX_MESSAGE_BYTES + 1)))
+        assert events == []
+
+    @pytest.mark.parametrize("path", ["/chat/handoff", "/chat/escalate", "/chat/say"])
+    def test_an_oversized_body_is_refused(self, client: TestClient, path: str) -> None:
+        response = client.post(
+            path,
+            content=b" " * (MAX_REQUEST_BODY_BYTES + 1),
+            headers={"Content-Type": "application/json"},
+        )
+        assert response.status_code == 413
+        assert response.json() == {"error": "request too large"}
+
+    def test_an_oversized_handoff_leaves_the_nonce_redeemable(
+        self, handoff: HandoffRouter, client: TestClient
+    ) -> None:
+        handoff.register("n", conversation_id="conv-root", call_id="call-9")
+        padded = b'{"nonce": "n", "pad": "' + b"x" * MAX_REQUEST_BODY_BYTES + b'"}'
+        refused = client.post(
+            "/chat/handoff", content=padded, headers={"Content-Type": "application/json"}
+        )
+        assert refused.status_code == 413
+        assert client.post("/chat/handoff", json={"nonce": "n"}).status_code == 200
 
 
 class TestCaptureFailures:

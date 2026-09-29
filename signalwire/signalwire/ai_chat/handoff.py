@@ -87,6 +87,12 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from signalwire.ai_chat.gateway import (
+    MAX_MESSAGE_BYTES,
+    GatewayRejection,
+    _read_json_body,
+    _utf8_len,
+)
 from signalwire.core.logging_config import get_logger
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -361,11 +367,14 @@ class HandoffRouter:
         and no other request field is forwarded: ``global_data`` in particular
         is trusted agent state that step logic branches on, and letting a page
         write it would be a far larger hole than injecting text.
+
+        Text over :data:`~signalwire.ai_chat.gateway.MAX_MESSAGE_BYTES`
+        (UTF-8), the gateway's limit for a chat message, is refused.
         """
         if self.send_message is None:
             return False
         cleaned = (text or "").strip()
-        if not cleaned:
+        if not cleaned or _utf8_len(cleaned) > MAX_MESSAGE_BYTES:
             return False
         entry = self._lookup(nonce)
         if entry is None or not entry.call_id:
@@ -391,6 +400,11 @@ class HandoffRouter:
 
             agent.mount(gateway.router(), prefix="/chat")
             agent.mount(handoff.router(), prefix="/chat")
+
+        Every route answers 413 for a body over the gateway's
+        ``MAX_REQUEST_BODY_BYTES``, and ``/say`` for text over its
+        ``MAX_MESSAGE_BYTES``. Both are checked before the nonce is looked up,
+        so the answer says nothing about whether the nonce is live.
         """
         from fastapi import APIRouter, Request
         from fastapi.responses import JSONResponse
@@ -405,18 +419,30 @@ class HandoffRouter:
             return None
 
         async def _body(request: Request) -> dict[str, Any]:
+            """The JSON object sent, or {} for anything else.
+
+            Raises GatewayRejection (413) for a body over the size limit.
+            """
             try:
-                data = await request.json()
+                data = await _read_json_body(request)
+            except GatewayRejection:
+                raise
             except Exception:
                 return {}
             return data if isinstance(data, dict) else {}
+
+        def _rejected(rej: GatewayRejection) -> JSONResponse:
+            return JSONResponse({"error": rej.reason}, status_code=rej.status)
 
         @router.post("/handoff")
         async def _handoff(request: Request) -> JSONResponse:
             denied = _forbidden_origin(request)
             if denied:
                 return denied
-            nonce = (await _body(request)).get("nonce")
+            try:
+                nonce = (await _body(request)).get("nonce")
+            except GatewayRejection as rej:
+                return _rejected(rej)
             if not isinstance(nonce, str):
                 return JSONResponse({"error": "not found"}, status_code=404)
             handle = await self.redeem(nonce)
@@ -430,7 +456,10 @@ class HandoffRouter:
             denied = _forbidden_origin(request)
             if denied:
                 return denied
-            handle = (await _body(request)).get("handle")
+            try:
+                handle = (await _body(request)).get("handle")
+            except GatewayRejection as rej:
+                return _rejected(rej)
             if not handle or not isinstance(handle, str):
                 return JSONResponse({"error": "bad request"}, status_code=400)
             if not await self.escalate(handle):
@@ -442,11 +471,16 @@ class HandoffRouter:
             denied = _forbidden_origin(request)
             if denied:
                 return denied
-            data = await _body(request)
+            try:
+                data = await _body(request)
+            except GatewayRejection as rej:
+                return _rejected(rej)
             nonce = data.get("nonce")
             text = data.get("text", "")
             if not isinstance(nonce, str) or not isinstance(text, str):
                 return JSONResponse({"error": "not found"}, status_code=404)
+            if _utf8_len(text) > MAX_MESSAGE_BYTES:
+                return JSONResponse({"error": "message too large"}, status_code=413)
             if not await self.say(nonce, text):
                 return JSONResponse({"error": "not found"}, status_code=404)
             return JSONResponse({"ok": True})
