@@ -7,6 +7,7 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
+import html
 import os
 import mimetypes
 from urllib.parse import quote
@@ -147,8 +148,8 @@ class WebService:
 
         # Set up authentication. The source is reported at startup, as
         # AgentBase does, and start() refuses to run on a generated password,
-        # which nothing would ever show.
-        if basic_auth:
+        # which nothing would ever show. An empty password isn't a password.
+        if basic_auth and basic_auth[1]:
             self._basic_auth = basic_auth
             self._basic_auth_source: Any = "provided"
         else:
@@ -441,12 +442,15 @@ class WebService:
             """Root endpoint showing available directories.
 
             With a directory mounted at ``/``, serves that directory instead.
+            The listing needs the same credentials as the files.
             """
+            credentials = await security(request) if security else None
             if self._match_mount("/") is not None:
-                credentials = await security(request) if security else None
                 return self._serve_request(request, credentials, "/")
+            if HTTPBasic is not None:
+                self._get_current_username(credentials)
 
-            html = """
+            page = """
             <!DOCTYPE html>
             <html>
             <head>
@@ -468,16 +472,19 @@ class WebService:
             """
 
             for route, local_path in self.directories.items():
-                html += f'<li>📁 <a href="{route}">{route}</a> <span class="path">→ {local_path}</span></li>'
+                shown_route = html.escape(route)
+                shown_path = html.escape(str(local_path))
+                page += (f'<li>📁 <a href="{shown_route}">{shown_route}</a> '
+                         f'<span class="path">→ {shown_path}</span></li>')
 
-            html += """
+            page += """
                 </ul>
             </body>
             </html>
             """
 
             if HTMLResponse is not None:
-                return HTMLResponse(content=html)
+                return HTMLResponse(content=page)
             return {"directories": list(self.directories.keys())}
 
     def _mount_directories(self) -> None:

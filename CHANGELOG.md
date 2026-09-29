@@ -13,7 +13,9 @@ and `join_conference()`.
   repository's `.git/config` and `.env.*` files are no longer served;
   `.well-known` is still served. An `index.html` that's a link to a file
   outside the mount is refused. With no credentials configured, `start()`
-  raises `RuntimeError` instead of generating a password nobody could see.
+  raises `RuntimeError` instead of generating a password nobody could see;
+  an empty password counts as none. The page at `/`, which lists each mount's
+  local directory, needs the credentials and escapes what it shows.
 - The per-request copy of an agent copies every tool. A configuration callback
   that changed a tool, such as turning off `secure`, adding a parameter or
   setting a DataMap webhook's header, changed it for every later call.

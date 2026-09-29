@@ -1090,7 +1090,7 @@ class TestRouteHandlers:
         from starlette.testclient import TestClient
         ws = self._make_testable_service(directories={"/docs": "/tmp"})
         client = TestClient(ws.app)
-        resp = client.get("/")
+        resp = client.get("/", auth=self._auth())
         assert resp.status_code == 200
         assert "SignalWire Web Service" in resp.text
         assert "/docs" in resp.text
@@ -1100,9 +1100,31 @@ class TestRouteHandlers:
         from starlette.testclient import TestClient
         ws = self._make_testable_service()
         client = TestClient(ws.app)
-        resp = client.get("/")
+        resp = client.get("/", auth=self._auth())
         assert resp.status_code == 200
         assert "Available Directories" in resp.text
+
+    def test_root_listing_needs_the_credentials(self) -> None:
+        """The listing shows each mount's local path, so it needs credentials."""
+        from starlette.testclient import TestClient
+        ws = self._make_testable_service(directories={"/docs": "/srv/private/docs"})
+        client = TestClient(ws.app)
+        assert client.get("/").status_code == 401
+        assert client.get("/", auth=("testuser", "wrong")).status_code == 401
+        resp = client.get("/", auth=self._auth())
+        assert resp.status_code == 200
+        assert "/srv/private/docs" in resp.text
+
+    def test_root_listing_escapes_routes_and_paths(self) -> None:
+        from starlette.testclient import TestClient
+        ws = self._make_testable_service(
+            directories={'/a"><script>x()</script>': "/srv/<b>docs</b>"})
+        client = TestClient(ws.app)
+        resp = client.get("/", auth=self._auth())
+        assert "<script>" not in resp.text
+        assert "<b>docs</b>" not in resp.text
+        assert "&lt;script&gt;" in resp.text
+        assert "/srv/&lt;b&gt;docs&lt;/b&gt;" in resp.text
 
     def _auth(self) -> tuple[str, str]:
         """Return basic auth tuple for TestClient requests."""
@@ -1792,6 +1814,24 @@ class TestCredentials:
 
             ws = WebService(directories={})
         assert ws._basic_auth_source == "generated"
+        with pytest.raises(RuntimeError, match="basic_auth"):
+            ws.start()
+
+    def test_an_empty_password_is_not_a_password(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("SWML_BASIC_AUTH_USER", raising=False)
+        monkeypatch.delenv("SWML_BASIC_AUTH_PASSWORD", raising=False)
+        with patch(
+            "signalwire.core.security_config.ConfigLoader.find_config_file",
+            return_value=None,
+        ), patch(
+            "signalwire.web.web_service.ConfigLoader.find_config_file",
+            return_value=None,
+        ):
+            from signalwire.web.web_service import WebService
+
+            ws = WebService(directories={}, basic_auth=("user", ""))
+        assert ws._basic_auth_source == "generated"
+        assert ws._basic_auth[1] != ""
         with pytest.raises(RuntimeError, match="basic_auth"):
             ws.start()
 

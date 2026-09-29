@@ -161,7 +161,7 @@ WebService implements HTTP Basic Authentication on every file it serves. Set the
 2. **Environment**: `SWML_BASIC_AUTH_USER` and `SWML_BASIC_AUTH_PASSWORD`
 3. **Config file**: the `security.auth.basic` section, with `user` and `password`
 
-`start()` raises `RuntimeError` when none of them is set. The SDK would otherwise generate a random password, and WebService, like `AgentBase`, never prints a password, so nobody could use it. At startup WebService prints the user name and where the credentials came from (`provided`, `environment` or `config file`), not the password.
+`start()` raises `RuntimeError` when none of them is set. A password must not be empty: `basic_auth=("admin", "")` counts as not set. The SDK would otherwise generate a random password, and WebService, like `AgentBase`, never prints a password, so nobody could use it. At startup WebService prints the user name and where the credentials came from (`provided`, `environment` or `config file`), not the password.
 
 ### File Security
 
@@ -273,7 +273,7 @@ Health check endpoint (no authentication required)
 ### GET /
 Root endpoint showing available directories
 
-**Response:** HTML page listing all mounted directories. With a directory mounted at `/`, it serves that directory instead, and needs authentication.
+**Response:** HTML page listing each mounted route and its local directory. It needs authentication, and returns 401 without valid credentials. With a directory mounted at `/`, it serves that directory instead.
 
 ### GET /{route}/{file_path}
 Serve files from mounted directories
