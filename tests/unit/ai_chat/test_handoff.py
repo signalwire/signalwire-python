@@ -18,6 +18,7 @@ Three properties matter more than the happy path:
 
 import asyncio
 import logging
+import threading
 from collections.abc import Iterator
 from typing import Any
 
@@ -246,6 +247,80 @@ class TestRegistration:
         router.register("n", conversation_id="c", call_id="call-1")
         assert asyncio.run(router.redeem("n")) is not None
         assert registry.assigned == [("n", False), ("n", True)]
+
+
+class TestConcurrency:
+    """The per-call config callback registers nonces in worker threads, and
+    /handoff and /say requests overlap, so the table's updates are atomic."""
+
+    def test_a_registration_racing_a_redemption_cant_revive_the_nonce(
+        self, gateway: ChatGateway
+    ) -> None:
+        router = HandoffRouter(gateway=gateway)
+        handles: list[str | None] = []
+
+        def register_and_redeem_elsewhere() -> None:
+            router.register("n", conversation_id="late", call_id="call-2")
+            handles.append(asyncio.run(router.redeem("n")))
+
+        class Racing(dict[str, Any]):
+            """Once the first registration has found the nonce absent, runs
+            another registration and redemption in another thread, before the
+            first one inserts its entry."""
+
+            raced = False
+
+            def get(self, key: Any, default: Any = None) -> Any:
+                found = super().get(key, default)
+                if not Racing.raced:
+                    Racing.raced = True
+                    other = threading.Thread(target=register_and_redeem_elsewhere)
+                    other.start()
+                    other.join(timeout=0.5)  # blocks on the lock if it's atomic
+                    racers.append(other)
+                return found
+
+        racers: list[threading.Thread] = []
+        router._nonces = Racing()
+        router.register("n", conversation_id="first", call_id="call-1")
+        racers[0].join(timeout=5)
+        # One registration stands, and the nonce redeems once
+        handles.append(asyncio.run(router.redeem("n")))
+        assert sum(handle is not None for handle in handles) == 1
+
+    def test_overlapping_says_cant_pass_the_cap(self, gateway: ChatGateway) -> None:
+        delivered: list[str] = []
+
+        async def send(call_id: str, text: str) -> bool:
+            await asyncio.sleep(0.01)  # delivery takes a moment
+            delivered.append(text)
+            return True
+
+        router = HandoffRouter(gateway=gateway, send_message=send, max_messages_per_call=1)
+        router.register("n", conversation_id="c", call_id="call-1")
+
+        async def three_at_once() -> list[bool]:
+            return list(await asyncio.gather(*(router.say("n", f"m{i}") for i in range(3))))
+
+        results = asyncio.run(three_at_once())
+        assert results.count(True) == 1
+        assert len(delivered) == 1
+
+    def test_a_failed_delivery_gives_its_slot_back(self, gateway: ChatGateway) -> None:
+        attempts: list[str] = []
+
+        def send(call_id: str, text: str) -> bool:
+            attempts.append(text)
+            if len(attempts) == 1:
+                raise ConnectionError("platform unavailable")
+            return True
+
+        router = HandoffRouter(gateway=gateway, send_message=send, max_messages_per_call=1)
+        router.register("n", conversation_id="c", call_id="call-1")
+        assert not asyncio.run(router.say("n", "first"))
+        assert asyncio.run(router.say("n", "again"))
+        assert not asyncio.run(router.say("n", "over the cap"))
+        assert attempts == ["first", "again"]
 
 
 class TestEscalate:

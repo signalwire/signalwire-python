@@ -76,6 +76,12 @@ DEPLOYMENT
 The nonce registry lives in this process, like ``ChatGateway``'s rate-limit
 counters. A redemption must reach the replica that served the dial. Run one
 replica, use sticky routing, or supply a shared ``registry``.
+
+Within the process, registration, redemption and the typing count are
+atomic: the per-call config callback that registers a nonce runs in a worker
+thread, and ``/handoff`` and ``/say`` requests can overlap. A lock in this
+object gives that atomicity; a shared ``registry`` used from several
+replicas needs atomic operations of its own.
 """
 
 # NOTE: deliberately no `from __future__ import annotations` -- FastAPI resolves
@@ -84,6 +90,7 @@ replica, use sticky routing, or supply a shared ``registry``.
 # FastAPI would silently treat `request` as a query parameter (422 on every
 # call). gateway.py avoids the future import for the same reason.
 import asyncio
+import threading
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
@@ -202,6 +209,10 @@ class HandoffRouter:
         self.max_messages_per_call = max_messages_per_call
         self.capture_timeout = capture_timeout
         self._nonces: dict[str, NonceEntry] = registry if registry is not None else {}
+        # Guards every read-modify-write of the nonce table: registration runs
+        # in worker threads, and requests overlap on the event loop. It's
+        # never held across an await.
+        self._lock = threading.Lock()
 
     # -- nonce lifecycle ---------------------------------------------------
 
@@ -239,8 +250,13 @@ class HandoffRouter:
         """
         if not nonce or not isinstance(nonce, str):
             return
-        self._prune()
-        existing = self._nonces.get(nonce)
+        with self._lock:
+            self._prune()
+            existing = self._nonces.get(nonce)
+            if existing is None:
+                self._nonces[nonce] = NonceEntry(
+                    conversation_id=conversation_id, call_id=call_id
+                )
         if existing is not None:
             if (
                 existing.redeemed
@@ -254,9 +270,6 @@ class HandoffRouter:
                     redeemed=existing.redeemed,
                 )
             return
-        self._nonces[nonce] = NonceEntry(
-            conversation_id=conversation_id, call_id=call_id
-        )
         logger.info(
             "handoff_nonce_registered",
             conversation_id=conversation_id,
@@ -264,13 +277,19 @@ class HandoffRouter:
         )
 
     def _prune(self) -> None:
-        """Drop entries, redeemed ones included, whose TTL has passed."""
+        """Drop entries, redeemed ones included, whose TTL has passed.
+
+        Call with the lock held.
+        """
         cutoff = time.monotonic() - self.nonce_ttl
         for nonce in [n for n, e in self._nonces.items() if e.issued_at < cutoff]:
             self._nonces.pop(nonce, None)
 
     def _lookup(self, nonce: Any) -> NonceEntry | None:
-        """The live entry for ``nonce``: None if unknown, expired or redeemed."""
+        """The live entry for ``nonce``: None if unknown, expired or redeemed.
+
+        Call with the lock held.
+        """
         if not nonce or not isinstance(nonce, str):
             return None
         self._prune()
@@ -317,15 +336,16 @@ class HandoffRouter:
             The signed handle, or None for an unknown, expired or already
             redeemed nonce -- deliberately indistinguishable from each other.
         """
-        entry = self._lookup(nonce)
-        if entry is None:
-            return None
-        # Consumed even if what follows fails: a nonce is one attempt. The
-        # entry stays, marked, until its TTL passes, so the nonce can't be
-        # registered and redeemed again. Written back so a shared registry
-        # stores the change.
-        entry.redeemed = True
-        self._nonces[nonce] = entry
+        with self._lock:
+            entry = self._lookup(nonce)
+            if entry is None:
+                return None
+            # Consumed even if what follows fails: a nonce is one attempt. The
+            # entry stays, marked, until its TTL passes, so the nonce can't be
+            # registered and redeemed again. Written back so a shared registry
+            # stores the change.
+            entry.redeemed = True
+            self._nonces[nonce] = entry
 
         if entry.call_id and self.end_call is not None:
             try:
@@ -378,18 +398,28 @@ class HandoffRouter:
         cleaned = (text or "").strip()
         if not cleaned or _utf8_len(cleaned) > MAX_MESSAGE_BYTES:
             return False
-        entry = self._lookup(nonce)
-        if entry is None or not entry.call_id:
-            return False
-        if entry.messages >= self.max_messages_per_call:
-            logger.warning("handoff_say_cap_reached", call_id=entry.call_id)
-            return False
+        with self._lock:
+            entry = self._lookup(nonce)
+            if entry is None or not entry.call_id:
+                return False
+            if entry.messages >= self.max_messages_per_call:
+                logger.warning("handoff_say_cap_reached", call_id=entry.call_id)
+                return False
+            # Take the message's slot before delivering, so overlapping
+            # requests can't all pass the cap. Written back so a shared
+            # registry stores the change.
+            entry.messages += 1
+            self._nonces[nonce] = entry
         try:
             await _maybe_await(self.send_message(entry.call_id, cleaned))
         except Exception as exc:
             logger.error("handoff_say_failed", error=str(exc))
+            with self._lock:
+                # Not delivered: give the slot back
+                entry.messages -= 1
+                if self._nonces.get(nonce) is entry:
+                    self._nonces[nonce] = entry
             return False
-        entry.messages += 1
         return True
 
     # -- transport ---------------------------------------------------------
