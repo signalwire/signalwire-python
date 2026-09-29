@@ -12,8 +12,10 @@ Unit tests for the LiveWire compatibility module.
 """
 
 import io
+import json
 import sys
 from collections.abc import Iterator
+from typing import Any
 import pytest
 from unittest.mock import patch, Mock
 
@@ -679,3 +681,161 @@ class TestBuildSwAgent:
         session = AgentSession()
         with pytest.raises(RuntimeError, match="No Agent bound"):
             session._build_sw_agent()
+
+
+# ---------------------------------------------------------------------------
+# run_app serves the agent of the session the entrypoint starts
+# ---------------------------------------------------------------------------
+
+
+def _ai_verb(sw: Any) -> dict[str, Any]:
+    """The ai verb of the SWML document ``sw`` renders."""
+    doc = json.loads(sw._render_swml())
+    return next(verb["ai"] for verb in doc["sections"]["main"] if "ai" in verb)
+
+
+class _Served:
+    """Records the AgentBase instances run_app() runs, instead of serving."""
+
+    def __init__(self) -> None:
+        self.agents: list[Any] = []
+
+    def __enter__(self) -> "_Served":
+        from signalwire.core.agent_base import AgentBase
+
+        def run(agent: Any, *args: Any, **kwargs: Any) -> None:
+            self.agents.append(agent)
+
+        self._patch = patch.object(AgentBase, "run", run)
+        self._patch.start()
+        return self
+
+    def __exit__(self, *exc: Any) -> None:
+        self._patch.stop()
+
+
+class TestRunAppServes:
+    def test_the_started_session_is_built_and_run(self) -> None:
+        @function_tool
+        def get_weather(location: str) -> str:
+            """Get the weather."""
+            return f"Sunny in {location}"
+
+        server = AgentServer()
+
+        @server.rtc_session(agent_name="weather")
+        async def entrypoint(ctx: JobContext) -> None:
+            await ctx.connect()
+            session = AgentSession(llm="openai/gpt-4o")
+            await session.start(
+                Agent(instructions="You are a weather assistant.", tools=[get_weather]),
+                room=ctx.room,
+            )
+
+        with _Served() as served, patch("sys.stderr", new_callable=io.StringIO):
+            run_app(server)
+
+        (sw,) = served.agents
+        ai = _ai_verb(sw)
+        assert ai["prompt"]["text"] == "You are a weather assistant."
+        assert ai["params"]["model"] == "gpt-4o"
+        assert [f["function"] for f in ai["SWAIG"]["functions"]] == ["get_weather"]
+
+    def test_the_agent_is_built_after_the_entrypoint_returns(self) -> None:
+        """So an update_agent() after start() still applies."""
+        server = AgentServer()
+
+        @server.rtc_session()
+        async def entrypoint(ctx: JobContext) -> None:
+            session = AgentSession()
+            await session.start(Agent(instructions="first"))
+            session.update_agent(Agent(instructions="second"))
+
+        with _Served() as served, patch("sys.stderr", new_callable=io.StringIO):
+            run_app(server)
+
+        (sw,) = served.agents
+        assert _ai_verb(sw)["prompt"]["text"] == "second"
+
+    def test_the_last_session_started_is_served(self) -> None:
+        server = AgentServer()
+
+        @server.rtc_session()
+        async def entrypoint(ctx: JobContext) -> None:
+            await AgentSession().start(Agent(instructions="one"))
+            await AgentSession().start(Agent(instructions="two"))
+
+        with _Served() as served, patch("sys.stderr", new_callable=io.StringIO):
+            run_app(server)
+
+        (sw,) = served.agents
+        assert _ai_verb(sw)["prompt"]["text"] == "two"
+
+    def test_an_agent_the_entrypoint_sets_is_run_as_is(self) -> None:
+        server = AgentServer()
+        own = Mock()
+
+        @server.rtc_session()
+        def entrypoint(ctx: JobContext) -> None:
+            ctx._agent = own
+
+        with patch("sys.stderr", new_callable=io.StringIO):
+            run_app(server)
+        own.run.assert_called_once_with()
+
+    def test_no_session_means_nothing_is_served(self) -> None:
+        server = AgentServer()
+
+        @server.rtc_session()
+        async def entrypoint(ctx: JobContext) -> None:
+            await ctx.connect()
+
+        with _Served() as served, patch("sys.stderr", new_callable=io.StringIO), \
+             patch("signalwire.livewire._logger") as logger:
+            run_app(server)
+
+        assert served.agents == []
+        (message,) = logger.error.call_args.args
+        assert "session.start(agent)" in message
+
+    @pytest.mark.asyncio
+    async def test_a_session_started_outside_run_app_belongs_to_no_job(self) -> None:
+        from signalwire.livewire import _current_job
+
+        session = AgentSession()
+        await session.start(Agent(instructions="standalone"))
+        assert _current_job.get() is None
+        assert session._agent is not None
+
+
+class TestLlmModel:
+    """The model param comes from a model name or a plugin's ``model``,
+    never from the plugin object's repr."""
+
+    @pytest.mark.parametrize(
+        ("llm", "model"),
+        [
+            ("openai/gpt-4o", "gpt-4o"),
+            ("gpt-4o-mini", "gpt-4o-mini"),
+            (OpenAILLM(model="gpt-4o"), "gpt-4o"),
+            (inference.LLM(model="openai/gpt-4.1-mini"), "gpt-4.1-mini"),
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_session_llm(self, llm: Any, model: str) -> None:
+        session = AgentSession(llm=llm)
+        await session.start(Agent(instructions="x"))
+        assert _ai_verb(session._build_sw_agent())["params"]["model"] == model
+
+    @pytest.mark.asyncio
+    async def test_agent_llm_hint(self) -> None:
+        session = AgentSession()
+        await session.start(Agent(instructions="x", llm=OpenAILLM(model="gpt-4o")))
+        assert _ai_verb(session._build_sw_agent())["params"]["model"] == "gpt-4o"
+
+    @pytest.mark.asyncio
+    async def test_a_plugin_without_a_model_sets_none(self) -> None:
+        session = AgentSession(llm=OpenAILLM())
+        await session.start(Agent(instructions="x"))
+        params = _ai_verb(session._build_sw_agent()).get("params", {})
+        assert "model" not in params

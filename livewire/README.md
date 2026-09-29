@@ -42,13 +42,15 @@ if __name__ == "__main__":
     run_app(server)
 ```
 
+`run_app(server)` runs the entrypoint. When the entrypoint returns, `run_app()` builds a SignalWire agent from the last `AgentSession` it started and serves it over HTTP until the process stops. Calls made after `session.start()`, such as `session.update_agent()`, still apply, because the agent is built after the entrypoint returns.
+
 ## What maps, what no-ops
 
 | LiveKit concept | LiveWire behaviour |
 |---|---|
 | `Agent(instructions=...)` | Mapped to SignalWire prompt |
 | `@function_tool` | Mapped to `define_tool()` on `AgentBase` |
-| `AgentSession(llm=...)` | LLM model mapped to SignalWire AI params |
+| `AgentSession(llm=...)` | LLM model mapped to SignalWire AI params: a model name, or a plugin's `model` |
 | `AgentSession(stt=...)` | No-op: SignalWire handles STT |
 | `AgentSession(tts=...)` | No-op: SignalWire handles TTS |
 | `AgentSession(vad=...)` | No-op: SignalWire handles VAD |

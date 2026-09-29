@@ -70,8 +70,8 @@ class OpenAILLM:
         self.model = kwargs.get("model", "")
         _log_once(
             "openai_llm",
-            "OpenAILLM(): model selection is mapped to SignalWire AI "
-            "params -- OpenAI plugin wrapper is a no-op",
+            "OpenAILLM(): its model is passed to SignalWire's AI params "
+            "-- the OpenAI plugin itself is a no-op",
         )
 
 
