@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [3.5.1] - 2026-09-29
 
 Fixes from a review of 3.5.0 made while porting it to the TypeScript SDK:
 security fixes in the web service, the per-request copy, three skills and the AI
