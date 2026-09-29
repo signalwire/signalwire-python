@@ -488,7 +488,7 @@ class TestVideoWire:
     def test_streams_update(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.video.streams.update("test-id", url="x")
+        signalwire_client.video.streams.update("test-id")
         last = mock.last_request()
         assert last.method == "PUT"
         assert last.matched_route == "video.update_stream"
@@ -498,5 +498,5 @@ class TestVideoWire:
     ) -> None:
         mock.push_scenario("video.update_stream", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.video.streams.update("test-id", url="x")
+            signalwire_client.video.streams.update("test-id")
         assert exc.value.status_code == 500

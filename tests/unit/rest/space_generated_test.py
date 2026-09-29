@@ -434,7 +434,7 @@ class TestSpaceWire:
     def test_settings_update(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.space.settings.update(name="x")
+        signalwire_client.space.settings.update()
         last = mock.last_request()
         assert last.method == "PUT"
         assert last.matched_route == "space.update_space"
@@ -444,7 +444,7 @@ class TestSpaceWire:
     ) -> None:
         mock.push_scenario("space.update_space", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.space.settings.update(name="x")
+            signalwire_client.space.settings.update()
         assert exc.value.status_code == 500
 
     def test_usage_get(self, signalwire_client: RestClient, mock: _MockHarness) -> None:

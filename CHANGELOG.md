@@ -16,8 +16,21 @@
     caller ID `update` bodies.
   - SWML script `contents` also accepts a dict.
   - SWML webhook `used_for` accepts `messaging`.
+  - `fabric.conference_rooms.create(enable_room_previews=)`, `video.streams.update(url=)`
+    and `space.settings.update(name=)` are optional (the server keeps the stored value).
+  - Video conference, room and room-token `join_from`/`join_until`/`remove_at` also accept
+    a Unix timestamp (`float`), as the server does.
+  - `messages.create(body=)` also accepts a dict or list (a WhatsApp content body).
 
 ### Added
+- `messages.create()`: WhatsApp `message_type`, `template_id` and
+  `header_template_parameters` / `body_template_parameters` / `button_template_parameters`.
+- `fabric.tokens.create_subscriber_token()`: `scope` (`sat:refresh`) and `fingerprint`.
+- Response types gain the fields the server renders: `AvailablePhoneNumber.e164`,
+  `national_number_formatted`, `international_number_formatted`, `country_code`;
+  `AssignedNumber.status_callback_url`; `CXMLScriptResponse.display_name`;
+  video `ActiveSession.sync_audio_video`; and `RelayConferenceRecording` joins the
+  `Recording` union.
 - `client.space`: the Space Administration API (`/api/space`) — space settings,
   geographic permissions, billing profile, billing statements (JSON, CSV text via
   `billing_statements.get_csv()`, and the PDF's signed URL via `get_pdf()`), usage,

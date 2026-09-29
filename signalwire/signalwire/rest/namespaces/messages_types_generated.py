@@ -5,18 +5,23 @@
 # aliases. TypedDicts are STATIC-ONLY: at runtime each is a plain dict, so a
 # differently-shaped server response is returned unchanged and never raises.
 from __future__ import annotations
-from typing import Literal, TypeAlias, TypedDict
+from typing import Any, Literal, TypeAlias, TypedDict
 
 CreateMessageRequest = TypedDict(
     "CreateMessageRequest",
     {
         "to": "str",
         "from": "str",
-        "body": "str",
+        "body": "str | dict[str, Any] | list[Any]",
         "media": "list[str]",
         "send_as_mms": "bool",
         "status_callback": "str",
         "custom_variables": "dict[str, str]",
+        "message_type": "Literal['whatsapp_media_text', 'whatsapp_media_contacts', 'whatsapp_media_audio', 'whatsapp_media_document', 'whatsapp_media_image', 'whatsapp_media_sticker', 'whatsapp_media_video', 'whatsapp_media_reaction', 'whatsapp_media_location', 'whatsapp_interactive_cta', 'whatsapp_interactive_flow', 'whatsapp_interactive_list', 'whatsapp_interactive_location_request_message', 'whatsapp_interactive_reply_button']",
+        "template_id": "str",
+        "header_template_parameters": "dict[str, Any] | list[Any] | str",
+        "body_template_parameters": "dict[str, Any] | list[Any]",
+        "button_template_parameters": "list[str]",
     },
     total=False,
 )

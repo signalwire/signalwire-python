@@ -54,7 +54,7 @@ class SpaceSettings(BaseResource):
     def update(
         self,
         *,
-        name: str,
+        name: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,

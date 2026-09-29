@@ -94,6 +94,7 @@ class AssignedNumber(TypedDict, total=False):
     state: str
     campaign_id: uuid
     phone_number: AssignedPhoneNumber
+    status_callback_url: str | None
     created_at: str
     updated_at: str
 
@@ -135,6 +136,10 @@ class AvailablePhoneNumber(TypedDict, total=False):
     rate_center: str
     lata: str
     capabilities: PhoneNumberCapabilities
+    e164: str
+    national_number_formatted: str | None
+    international_number_formatted: str | None
+    country_code: str | None
 
 
 class AvailablePhoneNumbersResponse(TypedDict, total=False):
@@ -1186,7 +1191,32 @@ class QueueResponse(TypedDict, total=False):
     date_updated: str
 
 
-Recording: TypeAlias = "PstnRecording | SipRecording | WebRtcRecording"
+Recording: TypeAlias = (
+    "PstnRecording | SipRecording | WebRtcRecording | RelayConferenceRecording"
+)
+
+
+class RelayConferenceRecording(TypedDict, total=False):
+    """Recording from a RELAY conference.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
+
+    id: uuid
+    project_id: uuid
+    created_at: str
+    updated_at: str
+    duration_in_seconds: int
+    error_code: str
+    price: float
+    price_unit: str
+    status: str
+    url: str
+    stereo: bool
+    byte_size: int
+    track: str
+    relay_conference_id: uuid
 
 
 class RecordingListResponse(TypedDict, total=False):

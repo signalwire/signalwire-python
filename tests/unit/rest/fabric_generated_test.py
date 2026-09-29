@@ -378,9 +378,7 @@ class TestFabricWire:
     def test_conference_rooms_create(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.fabric.conference_rooms.create(
-            name="x", enable_room_previews=True
-        )
+        signalwire_client.fabric.conference_rooms.create(name="x")
         last = mock.last_request()
         assert last.method == "POST"
         assert last.matched_route == "fabric.create_conference_room"
@@ -390,9 +388,7 @@ class TestFabricWire:
     ) -> None:
         mock.push_scenario("fabric.create_conference_room", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.fabric.conference_rooms.create(
-                name="x", enable_room_previews=True
-            )
+            signalwire_client.fabric.conference_rooms.create(name="x")
         assert exc.value.status_code == 500
 
     def test_conference_rooms_delete(

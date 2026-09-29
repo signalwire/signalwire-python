@@ -876,7 +876,6 @@ class ConferenceRooms(
         self,
         *,
         name: str,
-        enable_room_previews: bool,
         display_name: str | None = None,
         description: str | None = None,
         join_from: str | None = None,
@@ -887,6 +886,7 @@ class ConferenceRooms(
         remove_after_seconds_elapsed: int | None = None,
         layout: Layout | None = None,
         record_on_start: bool | None = None,
+        enable_room_previews: bool | None = None,
         meta: dict[str, Any] | None = None,
         sync_audio_video: bool | None = None,
         tone_on_entry_and_exit: bool | None = None,
@@ -2055,6 +2055,8 @@ class FabricTokens(BaseResource):
         country: str | None = None,
         region: str | None = None,
         company_name: str | None = None,
+        scope: str | None = None,
+        fingerprint: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -2074,6 +2076,8 @@ class FabricTokens(BaseResource):
                 "country": country,
                 "region": region,
                 "company_name": company_name,
+                "scope": scope,
+                "fingerprint": fingerprint,
             }.items()
             if v is not None
         }

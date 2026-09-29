@@ -35,6 +35,7 @@ class ActiveSession(TypedDict, total=False):
     enable_room_previews: bool
     preview_url: str
     audio_video_sync: bool
+    sync_audio_video: bool
 
 
 class ChargeDetail(TypedDict, total=False):
@@ -112,8 +113,8 @@ class CreateConferenceRequest(TypedDict, total=False):
     name: str
     display_name: str
     description: str
-    join_from: str
-    join_until: str
+    join_from: str | float
+    join_until: str | float
     quality: VideoQuality
     layout: VideoLayout
     size: ConferenceSize
@@ -144,9 +145,9 @@ class CreateRoomRequest(TypedDict, total=False):
     description: str
     max_members: int
     quality: VideoQuality
-    join_from: str
-    join_until: str
-    remove_at: str
+    join_from: str | float
+    join_until: str | float
+    remove_at: str | float
     remove_after_seconds_elapsed: int
     layout: RoomLayout
     record_on_start: bool
@@ -165,9 +166,9 @@ class CreateRoomTokenRequest(TypedDict, total=False):
     room_name: str
     user_name: str
     permissions: list[RoomTokenPermission]
-    join_from: str
-    join_until: str
-    remove_at: str
+    join_from: str | float
+    join_until: str | float
+    remove_at: str | float
     remove_after_seconds_elapsed: int
     join_audio_muted: bool
     join_video_muted: bool
@@ -646,8 +647,8 @@ class UpdateConferenceRequest(TypedDict, total=False):
 
     display_name: str
     description: str
-    join_from: str
-    join_until: str
+    join_from: str | float
+    join_until: str | float
     quality: VideoQuality
     layout: VideoLayout
     size: ConferenceSize
@@ -680,9 +681,9 @@ class UpdateRoomRequest(TypedDict, total=False):
     description: str
     max_members: int
     quality: VideoQuality
-    join_from: str
-    join_until: str
-    remove_at: str
+    join_from: str | float
+    join_until: str | float
+    remove_at: str | float
     remove_after_seconds_elapsed: int
     layout: RoomLayout
     record_on_start: bool

@@ -523,6 +523,7 @@ class CXMLScriptResponse(TypedDict, total=False):
     id: uuid
     project_id: uuid
     name: str
+    display_name: str
     type: Literal["cxml_script"]
     created_at: str
     updated_at: str
@@ -3308,6 +3309,8 @@ class SubscriberTokenRequest(TypedDict, total=False):
     country: str
     region: str
     company_name: str
+    scope: str
+    fingerprint: str
 
 
 class SubscriberTokenResponse(TypedDict, total=False):
@@ -3394,7 +3397,11 @@ class SwmlScript(TypedDict, total=False):
 
 
 class SwmlScriptCreateRequest(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
+    """Body shape for creating a SWML Script. Choose a [Calling Script](#schema/CallingSwmlScriptCreateRequest) for inbound or outbound calls or a [Messaging Script](#schema/MessagingSwmlScriptCreateRequest) for inbound SMS or MMS messages. `script_type` is optional and defaults to `"calling"` when omitted — set it explicitly to `"messaging"` to create a Messaging Script. The script kind determines whether the script can be assigned as a call handler or a message handler on a phone number.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
 
     name: str
     contents: str | dict[str, Any]

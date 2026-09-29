@@ -45,7 +45,18 @@ class ProjectCreate(TypedDict, total=False):
     force_https_requests: bool
 
 
-ProjectUpdate: TypeAlias = "ProjectCreate"
+class ProjectUpdate(TypedDict, total=False):
+    """Request body for updating a project's name and settings.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
+
+    name: str
+    protect_recordings: bool
+    protect_message_media: bool
+    protect_fax_media: bool
+    force_https_requests: bool
 
 
 class ProjectList(TypedDict, total=False):
