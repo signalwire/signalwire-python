@@ -88,6 +88,10 @@ and `join_conference()`.
   credentials. Without `SWML_BASIC_AUTH_PASSWORD`, each generated its own, and
   every transfer between them failed with 401. The lesson no longer says
   AgentServer shares authentication across agents.
+- The Fred tutorial's `share_fun_fact` gives a random fact, labelled as one,
+  for a category it doesn't have; it labelled the fact with that category's
+  name. Its dated or wrong facts are replaced, and Fred's prompt tells it to
+  search before saying Wikipedia has nothing on a topic.
 
 ### Notes for upgraders
 - WebService needs credentials before `start()`: `SWML_BASIC_AUTH_USER` and
