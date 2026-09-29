@@ -244,19 +244,42 @@ def _url_encode(value: str) -> str:
 
 
 def _format_phone_national(value: str) -> str:
-    """The ``fmt_ph`` helper, for North American numbers.
+    """The ``fmt_ph`` helper.
 
     The platform formats with libphonenumber in the national format, assuming
     the US for a number without a country code, and gives ``INVALID NUMBER``
-    for one it can't validate. The simulation formats a ten-digit North
-    American number, with or without its leading 1, as ``(NPA) NXX-XXXX``,
-    and leaves anything else as it is.
+    for one it can't validate. With the ``phonenumbers`` package, a port of
+    libphonenumber, the simulation does the same. Without it, a ten-digit
+    North American number, with or without its leading 1, becomes
+    ``(NPA) NXX-XXXX``, and anything else is left as it is, with a note on
+    stderr.
     """
+    try:
+        import phonenumbers
+    except ImportError:
+        return _format_nanp(value)
+    try:
+        number = phonenumbers.parse(value, "US")
+    except phonenumbers.NumberParseException:
+        return "INVALID NUMBER"
+    if not phonenumbers.is_valid_number(number):
+        return "INVALID NUMBER"
+    return str(phonenumbers.format_number(number, phonenumbers.PhoneNumberFormat.NATIONAL))
+
+
+def _format_nanp(value: str) -> str:
+    """``fmt_ph`` without libphonenumber: North American numbers only."""
     digits = re.sub(r"[^0-9]", "", value)
     if len(digits) == 11 and digits.startswith("1"):
         digits = digits[1:]
     if len(digits) == 10 and digits[0] in "23456789" and digits[3] in "23456789":
         return f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
+    print(
+        f"Note: fmt_ph left {value!r} as it is. The platform formats it with "
+        "libphonenumber, and gives INVALID NUMBER for a number it can't "
+        "validate; install the phonenumbers package to simulate that.",
+        file=sys.stderr,
+    )
     return value
 
 
@@ -600,11 +623,15 @@ def _send(
     body: str | None,
     headers: dict[str, str],
     auth: Any,
+    statuses: list[int],
 ) -> requests.Response:
     """Send the webhook's request, following redirects as the platform does.
 
-    The platform follows up to 15 redirects and sends a POST again, with its
-    body, after any of them (CURL_REDIR_POST_ALL); it follows none for a
+    Each status received is added to ``statuses``, so a failure can report
+    the last one, as curl does. Like curl, it follows the ``Location`` of any
+    3xx response. The platform follows up to 15 redirects and sends a POST
+    again, with its body, after any of them (CURL_REDIR_POST_ALL); it follows
+    none for a
     request it signs, which this doesn't simulate. Every request, redirects
     included, goes through the session that refuses private and internal
     addresses, as the SDK's other fetches of user-supplied URLs do. Like
@@ -641,8 +668,9 @@ def _send(
                 timeout=timeout,
                 allow_redirects=False,
             )
+            statuses.append(response.status_code)
             location = response.headers.get("location")
-            if not response.is_redirect or not location:
+            if not 300 <= response.status_code <= 399 or not location:
                 return response
             url = urljoin(url, location)
             run.log(f"Following redirect ({response.status_code}) to: {url}")
@@ -711,16 +739,19 @@ def _request(run: _Run, webhook: Any, call_data: dict[str, Any]) -> Any:
     if body is not None:
         run.log(f"Request body: {body}")
 
+    statuses: list[int] = []
     status = 0
     text = ""
     curl_error: int | None = None
     try:
-        response = _send(run, url, post, body, request_headers, auth)
+        response = _send(run, url, post, body, request_headers, auth, statuses)
         status = response.status_code
         text = response.text or ""
         run.log(f"Response status: {status}")
     except Exception as error:
         curl_error = _curl_error_code(error)
+        # Like curl, the last status received, or 0 when none was
+        status = statuses[-1] if statuses else 0
         run.log(f"Request failed: {error}")
 
     reply = _cjson_parse(text) if text else _MISSING
@@ -867,11 +898,19 @@ def _call_data(
     function_name = datamap_config.get("function")
     if isinstance(function_name, str):
         data["function"] = function_name
-    meta_data = datamap_config.get("meta_data", {})
-    data["meta_data"] = deepcopy(meta_data) if isinstance(meta_data, dict) else {}
     for key, value in extra.items():
         _delete_item(data, key)
         data[key] = value
+    # The platform merges the function's meta_data over the global_data, key
+    # by key, when it loads the function
+    meta_data: dict[str, Any] = {}
+    for source in (_object_item(data, "global_data"), datamap_config.get("meta_data")):
+        if isinstance(source, dict):
+            for key, value in source.items():
+                _delete_item(meta_data, str(key))
+                meta_data[key] = deepcopy(value)
+    _delete_item(data, "meta_data")
+    data["meta_data"] = meta_data
     for key, value in prompt_vars.items():
         _delete_item(data, key)
         data[key] = deepcopy(value)

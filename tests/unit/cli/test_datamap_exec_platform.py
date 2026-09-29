@@ -118,6 +118,18 @@ def test_meta_data_comes_from_the_function_definition() -> None:
     assert execute_datamap_function(config, {"dept": "Sales"}) == {"response": "Call +12025550143"}
 
 
+def test_meta_data_is_merged_over_the_global_data() -> None:
+    # The platform merges a function's meta_data over the AI's global_data,
+    # key by key, when it loads the function
+    config = _function(
+        {"output": {"response": "${meta_data.tenant}|${meta_data.region}|${global_data.region}"}},
+        meta_data={"region": "eu"},
+    )
+    result = execute_datamap_function(
+        config, {}, call_data={"global_data": {"tenant": "acme", "region": "us"}})
+    assert result == {"response": "acme|eu|us"}
+
+
 def test_headers_are_sent_unexpanded() -> None:
     config = _function({
         "webhooks": [{

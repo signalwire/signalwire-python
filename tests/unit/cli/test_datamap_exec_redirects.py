@@ -23,7 +23,7 @@ import pytest
 import requests
 from requests.adapters import BaseAdapter
 
-from signalwire.cli.execution.datamap_exec import execute_datamap_function
+from signalwire.cli.execution.datamap_exec import _request, _Run, execute_datamap_function
 from signalwire.utils.url_validator import _PublicSession
 
 PUBLIC_ADDRESS = "93.184.216.34"
@@ -195,3 +195,33 @@ def test_netrc_and_response_cookies_add_no_credentials(
     for request in adapter.sent:
         assert "Authorization" not in request.headers
         assert "Cookie" not in request.headers
+
+
+@pytest.mark.parametrize("status", [300, 304, 399])
+def test_any_3xx_with_a_location_is_followed(status: int) -> None:
+    # curl follows the Location of any 3xx, not only the statuses requests knows
+    routes = {
+        "https://api.example.com/w": (status, {"Location": "/final"}, ""),
+        "https://api.example.com/final": (200, {}, json.dumps({"answer": "moved"})),
+    }
+    webhook = {"url": "https://api.example.com/w", "method": "GET",
+               "output": {"response": "Answer: ${answer}"}}
+    with _scripted(routes):
+        result = execute_datamap_function(_function(webhook), {})
+    assert result == {"response": "Answer: moved"}
+
+
+def test_a_failed_request_reports_the_last_status_received() -> None:
+    # Like curl: after too many redirects, http_code is the last redirect's status
+    routes = {"https://api.example.com/w": (302, {"Location": "/w"}, "")}
+    with _scripted(routes):
+        reply = _request(_Run(False), {"url": "https://api.example.com/w", "method": "GET"}, {})
+    assert reply["http_code"] == 302
+    assert reply["http_req_result"] == 47
+
+
+def test_a_request_that_gets_no_response_reports_status_0() -> None:
+    routes = {"https://api.example.com/w": (302, {"Location": "http://127.0.0.1/x"}, "")}
+    with _scripted(routes):
+        reply = _request(_Run(False), {"url": "http://127.0.0.1/x", "method": "GET"}, {})
+    assert reply["http_code"] == 0

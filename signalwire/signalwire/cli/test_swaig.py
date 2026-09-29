@@ -899,14 +899,18 @@ def main() -> int:
                     print("-" * 60)
 
                 # Execute DataMap function (is_datamap implies func is a dict).
-                # --custom-data supplies the call data the platform would add,
-                # such as global_data.
-                call_data = json.loads(args.custom_data) if args.custom_data else None
+                # --custom-data supplies the call data the platform would add;
+                # without its global_data, the agent's global data applies, as
+                # on a call.
+                call_data = json.loads(args.custom_data) if args.custom_data else {}
+                agent_global_data = getattr(agent, "_global_data", None)
+                if "global_data" not in call_data and agent_global_data:
+                    call_data["global_data"] = dict(agent_global_data)
                 result = execute_datamap_function(
                     cast(dict[str, Any], func),
                     function_args,
                     args.verbose,
-                    call_data=call_data,
+                    call_data=call_data or None,
                 )
                 print("RESULT:")
                 print(format_result(result))

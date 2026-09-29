@@ -51,7 +51,12 @@ and `join_conference()`.
   patterns and `nomatch-output`, and `foreach`. An unresolved template expands
   to an empty string, as on the platform, with a note on stderr.
   `execute_datamap_function()` takes the call's data as `call_data`, and
-  swaig-test's `--custom-data` supplies it.
+  swaig-test's `--custom-data` supplies it; without its `global_data`, the
+  agent's global data applies. As on the platform, a function's `meta_data`
+  is merged over the global data, a redirect is followed from any 3xx
+  response, a failed request reports the last status received, and, with
+  the `phonenumbers` package installed, `fmt_ph` gives `INVALID NUMBER` for
+  a number it can't validate.
 - The DataMap guide, the API reference, the CLI guide, sw-pydocs and the
   DataMap examples describe DataMap as the platform runs it. They no longer
   show `${enc:url:x}`, helpers applied left to right, fallback webhook chains,
