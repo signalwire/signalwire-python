@@ -55,3 +55,13 @@ def test_without_custom_data_the_agents_global_data_applies(tmp_path: Path) -> N
     assert "Tenant house" in _run(tmp_path, agent=agent)
     assert "Tenant acme" in _run(
         tmp_path, "--custom-data", '{"global_data": {"tenant": "acme"}}', agent=agent)
+
+
+def test_global_data_set_per_call_applies(tmp_path: Path) -> None:
+    # A per-request configuration callback's global data is what a call gets
+    agent = AGENT + (
+        'agent.set_global_data({"tenant": "house"})\n'
+        'agent.add_per_call_config(\n'
+        '    lambda query, body, headers, copy: copy.update_global_data({"tenant": query["t"]}))\n'
+    )
+    assert "Tenant acme" in _run(tmp_path, "--query-params", '{"t": "acme"}', agent=agent)

@@ -264,7 +264,9 @@ def _format_phone_national(value: str) -> str:
         return "INVALID NUMBER"
     if not phonenumbers.is_valid_number(number):
         return "INVALID NUMBER"
-    return str(phonenumbers.format_number(number, phonenumbers.PhoneNumberFormat.NATIONAL))
+    return str(
+        phonenumbers.format_number(number, phonenumbers.PhoneNumberFormat.NATIONAL)
+    )
 
 
 def _format_nanp(value: str) -> str:
