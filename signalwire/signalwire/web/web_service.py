@@ -49,8 +49,19 @@ def _same_origin_redirect(request: Any) -> str:
     decoded into ``//example.org``, which a browser reads as another host.
     Leading slashes are collapsed to one for the same reason.
     """
-    raw = request.scope.get("raw_path")
-    path = raw.decode("latin-1") if raw else quote(request.url.path)
+    scope = request.scope
+    raw = scope.get("raw_path")
+    if raw:
+        path = raw.decode("latin-1")
+    else:
+        # A server that doesn't provide raw_path: quote the decoded path
+        # itself. request.url would read a decoded "#" or "?" as the end of
+        # the path.
+        decoded = scope.get("path", "")
+        root = scope.get("root_path", "")
+        if root and not decoded.startswith(root):
+            decoded = root + decoded
+        path = quote(decoded)
     return "/" + path.lstrip("/") + "/"
 
 

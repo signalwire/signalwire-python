@@ -1520,6 +1520,27 @@ class TestDirectoryRedirect:
         followed = client.get(resp.headers["location"], auth=AUTH)
         assert followed.text == "slash#name"
 
+    @pytest.mark.parametrize(
+        ("scope", "location"),
+        [
+            ({"path": "/files/a#b"}, "/files/a%23b/"),
+            ({"path": "/files/a?b"}, "/files/a%3Fb/"),
+            ({"path": "//example.org"}, "/example.org/"),
+            ({"path": "/docs", "root_path": "/files"}, "/files/docs/"),
+        ],
+    )
+    def test_without_raw_path_the_decoded_path_is_quoted(
+        self, scope: dict[str, str], location: str
+    ) -> None:
+        from signalwire.web.web_service import _same_origin_redirect
+
+        class Request:
+            pass
+
+        request = Request()
+        request.scope = scope  # type: ignore[attr-defined]  # a minimal stand-in
+        assert _same_origin_redirect(request) == location
+
     def test_a_mounted_directory_keeps_its_prefix(self, tmp_path: Path) -> None:
         _, client = _client({"/files": str(self._site(tmp_path))})
         resp = client.get("/files/docs", auth=AUTH, follow_redirects=False)
