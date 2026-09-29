@@ -41,16 +41,18 @@ LogRetrieveResponse = TypedDict(
         "id": "uuid",
         "from": "str",
         "to": "str",
-        "status": "Literal['queued', 'initiated', 'delivered', 'sent', 'received', 'undelivered', 'failed']",
+        "status": "Literal['queued', 'initiated', 'delivered', 'sent', 'received', 'undelivered', 'failed', 'read']",
         "direction": "Literal['inbound', 'outbound', 'outbound-api', 'outbound-call', 'outbound-reply']",
-        "kind": "Literal['sms', 'mms']",
-        "source": "Literal['realtime_api', 'laml']",
+        "kind": "Literal['sms', 'mms', 'whatsapp']",
+        "source": "Literal['realtime_api', 'laml', 'swml']",
         "type": "Literal['relay_message', 'laml_message']",
         "url": "str | None",
         "number_of_segments": "int",
         "charge": "float",
         "charge_details": "list[ChargeDetail]",
         "created_at": "str",
+        "error_code": "str | None",
+        "error_message": "str | None",
     },
     total=False,
 )
@@ -66,16 +68,18 @@ MessageLog = TypedDict(
         "id": "uuid",
         "from": "str",
         "to": "str",
-        "status": "Literal['queued', 'initiated', 'delivered', 'sent', 'received', 'undelivered', 'failed']",
+        "status": "Literal['queued', 'initiated', 'delivered', 'sent', 'received', 'undelivered', 'failed', 'read']",
         "direction": "Literal['inbound', 'outbound', 'outbound-api', 'outbound-call', 'outbound-reply']",
-        "kind": "Literal['sms', 'mms']",
-        "source": "Literal['realtime_api', 'laml']",
+        "kind": "Literal['sms', 'mms', 'whatsapp']",
+        "source": "Literal['realtime_api', 'laml', 'swml']",
         "type": "Literal['relay_message', 'laml_message']",
         "url": "str | None",
         "number_of_segments": "int",
         "charge": "float",
         "charge_details": "list[ChargeDetail]",
         "created_at": "str",
+        "error_code": "str | None",
+        "error_message": "str | None",
     },
     total=False,
 )
@@ -224,8 +228,6 @@ WhatsappTemplateParameterFormat: TypeAlias = "Literal['named', 'positional']"
 
 WhatsappTemplateStatus: TypeAlias = "Literal['approved', 'archived', 'deleted', 'disabled', 'flagged', 'in_appeal', 'limit_exceeded', 'locked', 'paused', 'pending', 'reinstated', 'pending_deletion', 'rejected']"
 
-WhatsappTemplateComponent: TypeAlias = "dict[str, Any]"
-
 
 class WhatsappTemplate(TypedDict, total=False):
     """A WhatsApp message template.
@@ -341,3 +343,9 @@ CreateWhatsappTemplateResponse: TypeAlias = "WhatsappTemplate"
 RetrieveWhatsappTemplateResponse: TypeAlias = "WhatsappTemplate"
 UpdateWhatsappTemplateResponse: TypeAlias = "WhatsappTemplate"
 DeleteWhatsappTemplateResponse: TypeAlias = "WhatsappTemplateDeleteResponse"
+
+
+# Aliases of one concrete ``dict`` type, emitted unquoted and last so the name stays
+# callable at runtime (``ConnectDeviceSingle(to=...)`` builds a dict, as it did when the
+# name was a TypedDict).
+WhatsappTemplateComponent: TypeAlias = dict[str, Any]

@@ -5934,7 +5934,7 @@
               ]
             },
             "ringback": {
-              "description": "Array of URIs to play as ringback tone. If not specified, plays audio from the provider.",
+              "description": "Ringback to play while the call is connecting: a URL, a list of URLs, or a play object (`url` / `urls` / `volume`). `false` turns the generated ringback off and passes the far end's early media through. If not specified, plays audio from the provider.",
               "examples": [
                 "#[\"https://example.com/ringback.mp3\"]"
               ],
@@ -7413,9 +7413,9 @@
                   ]
                 },
                 "wait_time": {
-                  "description": "Maximum time in seconds to wait in the queue before timeout. Default `3600`",
+                  "description": "Maximum time in seconds to wait in the queue before timeout. Default `180`",
                   "minimum": 1,
-                  "default": 3600,
+                  "default": 180,
                   "examples": [
                     "1800"
                   ],
@@ -7960,11 +7960,11 @@
           "anyOf": [
             {
               "title": "goto Method",
-              "description": "Jump to a label within the current section, optionally based on a condition.\nThe goto method will only navigate to a label within the same section.",
+              "description": "Jump to a label, optionally based on a condition.\nThe label is looked up in the current section first and then in each enclosing block, so a `goto` inside `switch`, `cond` or `execute.on_return` can target a label in the section that contains it. A section run with `execute` cannot jump back into its caller.",
               "type": "object",
               "properties": {
                 "label": {
-                  "description": "Label to jump to. Must reference a `label` step in the current section.",
+                  "description": "Label to jump to. Must reference a `label` step in the current section or in a section that encloses it.",
                   "examples": [
                     "greeting"
                   ],
@@ -8022,7 +8022,7 @@
               "type": "array",
               "prefixItems": [
                 {
-                  "description": "Label to jump to. Must reference a `label` step in the current section.",
+                  "description": "Label to jump to. Must reference a `label` step in the current section or in a section that encloses it.",
                   "examples": [
                     "greeting"
                   ],
@@ -10642,7 +10642,7 @@
                   ]
                 },
                 "payment_method": {
-                  "description": "Indicates the payment method which is going to be used in this payment request. Currently only `credit-card` is supported.",
+                  "description": "Indicates the payment method which is going to be used in this payment request, `credit-card` or `ach-debit`. Default is `credit-card`.",
                   "default": "credit-card",
                   "examples": [
                     "credit-card"
@@ -11627,7 +11627,7 @@
                   ]
                 },
                 "direction": {
-                  "description": "Direction of the audio to record: \"speak\" for what party says, \"listen\" for what party hears.\nDefault is `\"speak\"`.",
+                  "description": "Direction of the audio to record: \"speak\" for what party says, \"listen\" for what party hears, \"both\" for what the party hears and says.\nDefault is `\"speak\"`.",
                   "default": "speak",
                   "examples": [
                     "speak"
@@ -11836,7 +11836,7 @@
                   ]
                 },
                 "control_id": {
-                  "description": "Identifier for this recording, to use with `stop_call_record`.",
+                  "description": "Identifier for this recording, to use with `stop_record_call`.",
                   "examples": [
                     "recording_001"
                   ],
@@ -11870,10 +11870,10 @@
                   ]
                 },
                 "end_silence_timeout": {
-                  "description": "Time in seconds to wait in silence before ending the recording.\nDefault is `0.0` seconds.",
+                  "description": "Time in seconds to wait in silence before ending the recording. Must be at least `1`; `0` and fractional values below `1` are rejected.",
                   "exclusiveMinimum": 0.0,
                   "examples": [
-                    "0.0"
+                    "5"
                   ],
                   "anyOf": [
                     {
@@ -11885,10 +11885,10 @@
                   ]
                 },
                 "initial_timeout": {
-                  "description": "Time in seconds to wait for the start of speech.\nDefault is `0.0` seconds.",
+                  "description": "Time in seconds to wait for the start of speech. Must be at least `1`; `0` and fractional values below `1` are rejected.",
                   "exclusiveMinimum": 0.0,
                   "examples": [
-                    "0.0"
+                    "5"
                   ],
                   "anyOf": [
                     {

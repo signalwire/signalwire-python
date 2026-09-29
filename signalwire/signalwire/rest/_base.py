@@ -9,10 +9,12 @@ See LICENSE file in the project root for full license information.
 HTTP client infrastructure and base resource classes for the REST client.
 """
 
+import functools
 import os
 import time
+from collections.abc import Callable, Mapping
 from importlib.metadata import PackageNotFoundError, version
-from typing import Any, Generic, TypeVar, cast
+from typing import Any, Generic, ParamSpec, TypeVar, cast
 
 import requests
 from signalwire.core.logging_config import get_logger
@@ -24,6 +26,42 @@ from signalwire.rest._request_options import (
 )
 
 logger = get_logger("rest_client")
+
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+
+def _required_via_extras(
+    *names: str, **renamed: str
+) -> Callable[[Callable[_P, _R]], Callable[_P, _R]]:
+    """Let a REQUIRED keyword argument of a generated REST method be supplied through
+    ``extras={...}`` (or, for a reserved-word wire key, the ``**`` tail).
+
+    A field the spec marks required is a required keyword-only parameter, so omitting it
+    raises ``TypeError`` before the method body runs. A caller that already sends that field
+    through the ``extras`` door would otherwise start failing the moment the spec learns the
+    field is required; the owner ruled (2026-09-29) that such a call keeps working. ``names``
+    are parameters whose wire key is the same name; ``renamed`` maps a parameter to its wire
+    key (``from_="from"``). The static signature is unchanged.
+    """
+    pairs = [(n, n) for n in names] + list(renamed.items())
+
+    def _deco(fn: Callable[_P, _R]) -> Callable[_P, _R]:
+        @functools.wraps(fn)
+        def _wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
+            extras = kwargs.get("extras") or {}
+            for arg, key in pairs:
+                if arg in kwargs:
+                    continue
+                if isinstance(extras, Mapping) and key in extras:
+                    kwargs[arg] = extras[key]
+                elif key != arg and key in kwargs:
+                    kwargs[arg] = kwargs.pop(key)
+            return fn(*args, **kwargs)
+
+        return _wrapper
+
+    return _deco
 
 
 def _user_agent() -> str:

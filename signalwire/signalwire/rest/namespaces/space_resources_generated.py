@@ -6,15 +6,17 @@
 # unknown / reserved-word wire fields, bound to the resource's spec types.
 from __future__ import annotations
 
+import builtins
 from typing import TYPE_CHECKING, Any, Literal, cast
 from collections.abc import Mapping
 
-from .._base import BaseResource, CrudResource
+from .._base import BaseResource, CrudResource, _required_via_extras
 
 if TYPE_CHECKING:
     from .._request_options import RequestOptions
 
     from .space_types_generated import (
+        AddressCountryCode,
         Balance,
         BalanceAdjustment,
         BillingProfile,
@@ -87,6 +89,7 @@ class SpaceGeographicPermissions(BaseResource):
             ),
         )
 
+    @_required_via_extras("countries")
     def update(
         self,
         *,
@@ -123,6 +126,17 @@ class SpaceBillingProfile(BaseResource):
             ),
         )
 
+    @_required_via_extras(
+        "address_line1",
+        "address_city",
+        "address_state",
+        "address_zip",
+        "address_country",
+        "company_name",
+        "contact_name",
+        "contact_email",
+        "contact_phone",
+    )
     def update(
         self,
         *,
@@ -130,7 +144,7 @@ class SpaceBillingProfile(BaseResource):
         address_city: str,
         address_state: str,
         address_zip: str,
-        address_country: str,
+        address_country: AddressCountryCode,
         company_name: str,
         contact_name: str,
         contact_email: list[str],
@@ -261,6 +275,7 @@ class SpaceMembers(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/space/members")
 
+    @_required_via_extras("email", "role")
     def create(  # type: ignore[override]
         self,
         *,
@@ -378,6 +393,7 @@ class SpaceBalance(BaseResource):
             ),
         )
 
+    @_required_via_extras("amount_in_microdollars", "payment_method_id")
     def create_top_up(
         self,
         *,
@@ -472,9 +488,9 @@ class SpacePaymentMethods(BaseResource):
 
     def list(
         self, *, request_options: RequestOptions | None = None, **params: Any
-    ) -> PaymentMethod:
+    ) -> builtins.list[PaymentMethod]:
         return cast(
-            "PaymentMethod",
+            "builtins.list[PaymentMethod]",
             self._http.get(
                 self._base_path, params=params or None, request_options=request_options
             ),

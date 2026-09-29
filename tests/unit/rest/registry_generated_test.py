@@ -122,7 +122,9 @@ class TestRegistryWire:
     def test_campaigns_create_order(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.registry.campaigns.create_order("test-id")
+        signalwire_client.registry.campaigns.create_order(
+            "test-id", phone_numbers=["x"]
+        )
         last = mock.last_request()
         assert last.method == "POST"
         assert last.matched_route == "relay-rest.create_order"
@@ -132,7 +134,9 @@ class TestRegistryWire:
     ) -> None:
         mock.push_scenario("relay-rest.create_order", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.registry.campaigns.create_order("test-id")
+            signalwire_client.registry.campaigns.create_order(
+                "test-id", phone_numbers=["x"]
+            )
         assert exc.value.status_code == 500
 
     def test_campaigns_get(

@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, cast
 from collections.abc import Mapping
 
-from .._base import BaseResource
+from .._base import BaseResource, _required_via_extras
 
 if TYPE_CHECKING:
     from .._request_options import RequestOptions
@@ -25,12 +25,13 @@ class Messages(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/messaging/messages")
 
+    @_required_via_extras("to", from_="from")
     def create(
         self,
         *,
         to: str,
         from_: str,
-        body: str | dict[str, Any] | list[Any] | None = None,
+        body: str | dict[str, Any] | list[dict[str, Any]] | None = None,
         media: list[str] | None = None,
         send_as_mms: bool | None = None,
         status_callback: str | None = None,
@@ -88,6 +89,7 @@ class Messages(BaseResource):
             ),
         )
 
+    @_required_via_extras("body")
     def update(
         self,
         message_id: str,

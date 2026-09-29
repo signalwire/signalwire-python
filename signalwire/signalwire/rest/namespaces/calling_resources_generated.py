@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, cast
 from collections.abc import Mapping
 
-from .._base import BaseResource
+from .._base import BaseResource, _required_via_extras
 
 if TYPE_CHECKING:
     from .._request_options import RequestOptions
@@ -36,6 +36,7 @@ class Calling(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/calling/calls")
 
+    @_required_via_extras("to", from_="from")
     def dial(
         self,
         *,
@@ -49,6 +50,15 @@ class Calling(BaseResource):
         ]
         | None = None,
         url_method: str | None = None,
+        to_script: str | dict[str, Any] | None = None,
+        timeout: int | None = None,
+        max_price_per_minute: float | None = None,
+        send_digits: str | None = None,
+        region: str | list[str] | None = None,
+        username: str | None = None,
+        password: str | None = None,
+        headers: list[dict[str, Any]] | None = None,
+        custom_variables: dict[str, str] | None = None,
         url: str | None = None,
         codecs: list[str] | str | None = None,
         swml: SWMLObject | None = None,
@@ -65,6 +75,15 @@ class Calling(BaseResource):
                 "status_url": status_url,
                 "status_events": status_events,
                 "url_method": url_method,
+                "to_script": to_script,
+                "timeout": timeout,
+                "max_price_per_minute": max_price_per_minute,
+                "send_digits": send_digits,
+                "region": region,
+                "username": username,
+                "password": password,
+                "headers": headers,
+                "custom_variables": custom_variables,
                 "url": url,
                 "codecs": codecs,
                 "swml": swml,
@@ -81,6 +100,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("id")
     def update(
         self,
         *,
@@ -228,6 +248,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("action")
     def live_transcribe(
         self,
         call_id: str,
@@ -255,6 +276,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("action")
     def live_translate(
         self,
         call_id: str,
@@ -286,6 +308,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("dest")
     def transfer(
         self,
         call_id: str,
@@ -311,6 +334,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("event")
     def user_event(
         self,
         call_id: str,
@@ -356,6 +380,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("play")
     def play(
         self,
         call_id: str,
@@ -395,6 +420,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("control_id")
     def play_pause(
         self,
         call_id: str,
@@ -420,6 +446,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("control_id")
     def play_resume(
         self,
         call_id: str,
@@ -445,6 +472,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("control_id")
     def play_stop(
         self,
         call_id: str,
@@ -470,6 +498,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("control_id", "volume")
     def play_volume(
         self,
         call_id: str,
@@ -503,8 +532,9 @@ class Calling(BaseResource):
         call_id: str,
         *,
         control_id: str | None = None,
-        audio: dict[str, Any] | None = None,
+        record: dict[str, Any] | None = None,
         status_url: str | None = None,
+        audio: dict[str, Any] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
@@ -512,11 +542,13 @@ class Calling(BaseResource):
             k: v
             for k, v in {
                 "control_id": control_id,
-                "audio": audio,
+                "record": record,
                 "status_url": status_url,
             }.items()
             if v is not None
         }
+        if audio is not None:
+            params["record"] = {**params.get("record", {}), "audio": audio}
         if extras:
             params.update(extras)
         body: dict[str, Any] = {
@@ -531,6 +563,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("control_id")
     def record_pause(
         self,
         call_id: str,
@@ -556,6 +589,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("control_id")
     def record_resume(
         self,
         call_id: str,
@@ -581,6 +615,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("control_id")
     def record_stop(
         self,
         call_id: str,
@@ -645,6 +680,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("control_id")
     def collect_stop(
         self,
         call_id: str,
@@ -670,6 +706,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("control_id")
     def collect_start_input_timers(
         self,
         call_id: str,
@@ -695,6 +732,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("detect")
     def detect(
         self,
         call_id: str,
@@ -728,6 +766,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("control_id")
     def detect_stop(
         self,
         call_id: str,
@@ -753,6 +792,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("tap", "device")
     def tap(
         self,
         call_id: str,
@@ -782,6 +822,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("control_id")
     def tap_stop(
         self,
         call_id: str,
@@ -807,6 +848,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("url")
     def stream(
         self,
         call_id: str,
@@ -846,6 +888,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("control_id")
     def stream_stop(
         self,
         call_id: str,
@@ -939,6 +982,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("control_id")
     def transcribe_stop(
         self,
         call_id: str,
@@ -964,6 +1008,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("control_id")
     def ai_stop(
         self,
         call_id: str,
@@ -989,6 +1034,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("control_id")
     def send_fax_stop(
         self,
         call_id: str,
@@ -1014,6 +1060,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("control_id")
     def receive_fax_stop(
         self,
         call_id: str,
@@ -1039,6 +1086,7 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("device")
     def refer(
         self,
         call_id: str,

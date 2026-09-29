@@ -242,3 +242,17 @@ class SwmlRequestCallOther(TypedDict, total=False):
     address_id: str
     subscriber_id: str
     subscriber_name: str
+
+
+# Deprecated aliases: names this module exported before its types were re-derived
+# (signalwire-python 3.x at f870cc15). Kept so existing imports keep working; use the
+# new name. Names with no single replacement are listed in CHANGELOG.md instead.
+import signalwire.core.post_prompt_generated as _dep_m0  # noqa: E402
+import signalwire.core.swaig_request_generated as _dep_m1  # noqa: E402
+
+# deprecated: use signalwire.core.post_prompt_generated.PostPrompt
+PostPromptData = _dep_m0.PostPrompt
+# deprecated: use signalwire.core.swaig_request_generated.SwaigArgument
+SwaigArgument = _dep_m1.SwaigArgument
+# deprecated: use signalwire.core.swaig_request_generated.SwaigRequest
+SwaigRequestData = _dep_m1.SwaigRequest

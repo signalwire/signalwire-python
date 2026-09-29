@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 from collections.abc import Mapping
 
-from .._base import BaseResource
+from .._base import BaseResource, _required_via_extras
 
 if TYPE_CHECKING:
     from .._request_options import RequestOptions
@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from .project_types_generated import (
         TokenPermission,
         TokenResponse,
+        TokenUpdateResponse,
     )
 
 
@@ -26,12 +27,14 @@ class ProjectTokens(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/project/tokens")
 
+    @_required_via_extras("name", "permissions")
     def create(
         self,
         *,
         name: str,
         permissions: list[TokenPermission],
         subproject_id: str | None = None,
+        project_id: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -42,6 +45,7 @@ class ProjectTokens(BaseResource):
                 "name": name,
                 "permissions": permissions,
                 "subproject_id": subproject_id,
+                "project_id": project_id,
             }.items()
             if v is not None
         }
@@ -64,7 +68,7 @@ class ProjectTokens(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
-    ) -> TokenResponse:
+    ) -> TokenUpdateResponse:
         body: dict[str, Any] = {
             k: v
             for k, v in {"name": name, "permissions": permissions}.items()
@@ -74,7 +78,7 @@ class ProjectTokens(BaseResource):
             body.update(extras)
         body.update(_reserved_kw)
         return cast(
-            "TokenResponse",
+            "TokenUpdateResponse",
             self._http.patch(
                 self._path(token_id), body=body, request_options=request_options
             ),

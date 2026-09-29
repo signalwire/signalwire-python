@@ -18,12 +18,12 @@ class ActiveSession(TypedDict, total=False):
     id: str
     room_id: str
     name: str
-    display_name: str
-    join_from: str
-    join_until: str
-    remove_at: str
-    remove_after_seconds_elapsed: int
-    layout: str
+    display_name: str | None
+    join_from: str | None
+    join_until: str | None
+    remove_at: str | None
+    remove_after_seconds_elapsed: int | None
+    layout: str | None
     max_members: int
     fps: VideoFps
     quality: VideoQuality
@@ -33,9 +33,17 @@ class ActiveSession(TypedDict, total=False):
     status: RoomSessionStatus
     record_on_start: bool
     enable_room_previews: bool
-    preview_url: str
-    audio_video_sync: bool
+    preview_url: str | None
     sync_audio_video: bool
+    tone_on_entry_and_exit: bool
+    room_join_video_off: bool
+    user_join_video_off: bool
+    locked: bool
+    cost_in_dollars: float
+    created_at: str
+    updated_at: str
+    locked_cover: str
+    prioritize_handraise: bool | None
 
 
 class ChargeDetail(TypedDict, total=False):
@@ -84,7 +92,44 @@ class Conference(TypedDict, total=False):
     meta: dict[str, Any] | None
     created_at: str
     updated_at: str
-    active_session: ActiveSession
+    active_session: ActiveSession | None
+
+
+class ConferenceMutationResponse(TypedDict, total=False):
+    """Video conference returned by create and update (no `active_session`).
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
+
+    id: str
+    name: str
+    display_name: str | None
+    description: str | None
+    join_from: str | None
+    join_until: str | None
+    quality: VideoQuality
+    layout: VideoLayout
+    size: ConferenceSize | None
+    record_on_start: bool
+    tone_on_entry_and_exit: bool
+    user_join_video_off: bool
+    room_join_video_off: bool
+    enable_chat: bool
+    enable_room_previews: bool | None
+    dark_primary: str | None
+    dark_background: str | None
+    dark_foreground: str | None
+    dark_success: str | None
+    dark_negative: str | None
+    light_primary: str | None
+    light_background: str | None
+    light_foreground: str | None
+    light_success: str | None
+    light_negative: str | None
+    meta: dict[str, Any] | None
+    created_at: str
+    updated_at: str
 
 
 ConferenceSize: TypeAlias = "Literal['small', 'medium', 'large']"
@@ -428,7 +473,38 @@ class RoomResponse(TypedDict, total=False):
     sync_audio_video: bool | None
     meta: dict[str, Any] | None
     prioritize_handraise: bool
-    active_session: ActiveSession
+    active_session: ActiveSession | None
+    created_at: str
+    updated_at: str
+
+
+class RoomMutationResponse(TypedDict, total=False):
+    """Room returned by create and update (no `active_session`).
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
+
+    id: str
+    name: str
+    display_name: str | None
+    description: str | None
+    max_members: int
+    quality: VideoQuality
+    fps: int
+    join_from: str | None
+    join_until: str | None
+    remove_at: str | None
+    remove_after_seconds_elapsed: int | None
+    layout: RoomLayout
+    record_on_start: bool
+    tone_on_entry_and_exit: bool
+    room_join_video_off: bool
+    user_join_video_off: bool
+    enable_room_previews: bool | None
+    sync_audio_video: bool | None
+    meta: dict[str, Any] | None
+    prioritize_handraise: bool
     created_at: str
     updated_at: str
 
@@ -540,7 +616,7 @@ class RoomSessionSummary(TypedDict, total=False):
     created_at: str
     updated_at: str
     preview_url: str | None
-    prioritize_handraise: bool | None
+    prioritize_handraise: bool
     sync_audio_video: bool | None
 
 
@@ -724,11 +800,11 @@ class VideoStatusCode422(TypedDict, total=False):
 GetConferenceTokenResponse: TypeAlias = "ConferenceToken"
 ResetConferenceTokenResponse: TypeAlias = "ConferenceToken"
 CreateVideoConferenceRequest: TypeAlias = "CreateConferenceRequest"
-CreateVideoConferenceResponse: TypeAlias = "Conference"
+CreateVideoConferenceResponse: TypeAlias = "ConferenceMutationResponse"
 ListVideoConferencesResponse: TypeAlias = "ListConferencesResponse"
 GetVideoConferenceResponse: TypeAlias = "Conference"
 UpdateVideoConferenceRequest: TypeAlias = "UpdateConferenceRequest"
-UpdateVideoConferenceResponse: TypeAlias = "Conference"
+UpdateVideoConferenceResponse: TypeAlias = "ConferenceMutationResponse"
 ListConferenceStreamsResponse: TypeAlias = "ListStreamsResponse"
 CreateConferenceStreamRequest: TypeAlias = "CreateStreamRequest"
 CreateConferenceStreamResponse: TypeAlias = "Stream"
@@ -736,9 +812,9 @@ GetLogResponse: TypeAlias = "VideoLog"
 GetRoomRecordingResponse: TypeAlias = "RoomRecording"
 GetRoomSessionResponse: TypeAlias = "RoomSessionSummary"
 CreateRoomTokenResponse: TypeAlias = "RoomTokenResponse"
-CreateRoomResponse: TypeAlias = "RoomResponse"
+CreateRoomResponse: TypeAlias = "RoomMutationResponse"
 GetRoomResponse: TypeAlias = "RoomResponse"
-UpdateRoomResponse: TypeAlias = "RoomResponse"
+UpdateRoomResponse: TypeAlias = "RoomMutationResponse"
 ListRoomStreamsResponse: TypeAlias = "ListStreamsResponse"
 CreateRoomStreamRequest: TypeAlias = "CreateStreamRequest"
 CreateRoomStreamResponse: TypeAlias = "Stream"

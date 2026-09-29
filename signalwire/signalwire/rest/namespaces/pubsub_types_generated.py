@@ -17,9 +17,6 @@ class NewPubSubToken(TypedDict, total=False):
     state: PubSubState
 
 
-PubSubChannels: TypeAlias = "dict[str, Any]"
-
-
 class PubSubPermissionWithRead(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
@@ -32,9 +29,6 @@ class PubSubPermissionWithWrite(TypedDict, total=False):
 
     read: bool
     write: bool
-
-
-PubSubState: TypeAlias = "dict[str, Any]"
 
 
 class PubSubToken(TypedDict, total=False):
@@ -99,3 +93,10 @@ class Types_StatusCodes_StatusCode500(TypedDict, total=False):
 
 CreateTokenRequest: TypeAlias = "NewPubSubToken"
 CreateTokenResponse: TypeAlias = "PubSubToken"
+
+
+# Aliases of one concrete ``dict`` type, emitted unquoted and last so the name stays
+# callable at runtime (``ConnectDeviceSingle(to=...)`` builds a dict, as it did when the
+# name was a TypedDict).
+PubSubChannels: TypeAlias = dict[str, Any]
+PubSubState: TypeAlias = dict[str, Any]

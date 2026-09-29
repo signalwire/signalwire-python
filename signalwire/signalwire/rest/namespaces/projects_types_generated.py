@@ -28,9 +28,6 @@ class Project(TypedDict, total=False):
     updated_at: str
 
 
-ProjectWithSigningKey: TypeAlias = "dict[str, Any]"
-
-
 class ProjectCreate(TypedDict, total=False):
     """Request body for creating a subproject.
 
@@ -43,6 +40,7 @@ class ProjectCreate(TypedDict, total=False):
     protect_message_media: bool
     protect_fax_media: bool
     force_https_requests: bool
+    parent_project_id: str
 
 
 class ProjectUpdate(TypedDict, total=False):
@@ -131,3 +129,9 @@ GetProjectResponse: TypeAlias = "Project"
 UpdateProjectRequest: TypeAlias = "ProjectUpdate"
 UpdateProjectResponse: TypeAlias = "Project"
 RotateSigningKeyResponse: TypeAlias = "ProjectWithSigningKey"
+
+
+# Aliases of one concrete ``dict`` type, emitted unquoted and last so the name stays
+# callable at runtime (``ConnectDeviceSingle(to=...)`` builds a dict, as it did when the
+# name was a TypedDict).
+ProjectWithSigningKey: TypeAlias = dict[str, Any]

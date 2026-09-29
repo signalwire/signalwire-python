@@ -81,7 +81,7 @@ class TestFabricCallFlows:
         client.fabric.call_flows.list_versions("cf-1")
         mock_session.request.assert_called_with(
             "GET",
-            "https://test.signalwire.com/api/fabric/resources/call_flow/cf-1/versions",
+            "https://test.signalwire.com/api/fabric/resources/call_flows/cf-1/versions",
             json=None,
             params=None,
             timeout=30.0,
@@ -92,7 +92,7 @@ class TestFabricCallFlows:
         client.fabric.call_flows.deploy_version("cf-1", {"document_version": 2})
         mock_session.request.assert_called_with(
             "POST",
-            "https://test.signalwire.com/api/fabric/resources/call_flow/cf-1/versions",
+            "https://test.signalwire.com/api/fabric/resources/call_flows/cf-1/versions",
             json={"document_version": 2},
             params=None,
             timeout=30.0,

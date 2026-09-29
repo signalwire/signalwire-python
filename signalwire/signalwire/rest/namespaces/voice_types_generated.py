@@ -112,7 +112,7 @@ class LogListResponse(TypedDict, total=False):
     """
 
     links: LogPaginationResponse
-    data: list[VoiceLog]
+    data: list[VoiceLogListItem]
 
 
 class LogPaginationResponse(TypedDict, total=False):
@@ -146,6 +146,25 @@ RelayVoiceLog = TypedDict(
         "duration_ms": "int | None",
         "billing_ms": "int | None",
         "parent_id": "str | None",
+        "audio_in_mos": "str | None",
+        "audio_in_jitter_min": "float | str | None",
+        "audio_in_jitter_max": "float | str | None",
+        "audio_out_jitter_min": "float | str | None",
+        "audio_out_jitter_max": "float | str | None",
+        "audio_out_jitter_avg": "float | str | None",
+        "audio_rtt_avg": "float | str | None",
+        "audio_rtt_min": "float | str | None",
+        "audio_rtt_max": "float | str | None",
+        "audio_in_media_packet_count": "float | str | None",
+        "audio_out_packet_count": "float | str | None",
+        "audio_out_media_packet_count": "float | str | None",
+        "audio_out_lost": "float | str | None",
+        "audio_in_mean_interval": "float | str | None",
+        "audio_in_dtmf_packet_count": "float | str | None",
+        "audio_out_dtmf_packet_count": "float | str | None",
+        "audio_in_skip_packet_count": "float | str | None",
+        "audio_in_flush_packet_count": "float | str | None",
+        "audio_in_largest_jb_size": "float | str | None",
     },
     total=False,
 )
@@ -256,6 +275,10 @@ VoiceDirection: TypeAlias = (
 )
 
 VoiceLog: TypeAlias = "RelayVoiceLog | VideoRoomVoiceLog | DialogflowVoiceLog | FabricVoiceLog | DiscardedVoiceLog"
+
+VoiceLogListItem: TypeAlias = (
+    "RelayVoiceLog | VideoRoomVoiceLog | DialogflowVoiceLog | FabricVoiceLog"
+)
 
 VoiceLogStatus: TypeAlias = "Literal['queued', 'initiated', 'ringing', 'in-progress', 'busy', 'failed', 'no-answer', 'canceled', 'completed', 'ended', 'answered', 'created', 'ending', 'joined']"
 

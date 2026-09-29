@@ -74,7 +74,7 @@ class TestFabricWire:
     def test_ai_agents_create(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.fabric.ai_agents.create(prompt={}, name="x")
+        signalwire_client.fabric.ai_agents.create(name="x")
         last = mock.last_request()
         assert last.method == "POST"
         assert last.matched_route == "fabric.create_ai_agent"
@@ -84,7 +84,7 @@ class TestFabricWire:
     ) -> None:
         mock.push_scenario("fabric.create_ai_agent", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.fabric.ai_agents.create(prompt={}, name="x")
+            signalwire_client.fabric.ai_agents.create(name="x")
         assert exc.value.status_code == 500
 
     def test_ai_agents_delete(
@@ -149,6 +149,40 @@ class TestFabricWire:
         mock.push_scenario("fabric.list_ai_agent_addresses", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
             signalwire_client.fabric.ai_agents.list_addresses("test-id")
+        assert exc.value.status_code == 500
+
+    def test_ai_agents_list_conversation_logs(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.fabric.ai_agents.list_conversation_logs("test-id")
+        last = mock.last_request()
+        assert last.method == "GET"
+        assert last.matched_route == "fabric.list_ai_agent_conversation_logs"
+
+    def test_ai_agents_list_conversation_logs_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario(
+            "fabric.list_ai_agent_conversation_logs", 500, {"error": "x"}
+        )
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.fabric.ai_agents.list_conversation_logs("test-id")
+        assert exc.value.status_code == 500
+
+    def test_ai_agents_list_voices(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.fabric.ai_agents.list_voices()
+        last = mock.last_request()
+        assert last.method == "GET"
+        assert last.matched_route == "fabric.list_ai_agent_voices"
+
+    def test_ai_agents_list_voices_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("fabric.list_ai_agent_voices", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.fabric.ai_agents.list_voices()
         assert exc.value.status_code == 500
 
     def test_ai_agents_update(
@@ -556,7 +590,7 @@ class TestFabricWire:
     def test_cxml_scripts_create(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.fabric.cxml_scripts.create(contents="x")
+        signalwire_client.fabric.cxml_scripts.create(contents="x", name="x")
         last = mock.last_request()
         assert last.method == "POST"
         assert last.matched_route == "fabric.create_cxml_script"
@@ -566,7 +600,7 @@ class TestFabricWire:
     ) -> None:
         mock.push_scenario("fabric.create_cxml_script", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.fabric.cxml_scripts.create(contents="x")
+            signalwire_client.fabric.cxml_scripts.create(contents="x", name="x")
         assert exc.value.status_code == 500
 
     def test_cxml_scripts_delete(
@@ -1260,7 +1294,7 @@ class TestFabricWire:
     def test_sip_endpoints_create(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.fabric.sip_endpoints.create(username="x")
+        signalwire_client.fabric.sip_endpoints.create(username="x", password="x")
         last = mock.last_request()
         assert last.method == "POST"
         assert last.matched_route == "fabric.create_sip_endpoint"
@@ -1270,7 +1304,7 @@ class TestFabricWire:
     ) -> None:
         mock.push_scenario("fabric.create_sip_endpoint", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.fabric.sip_endpoints.create(username="x")
+            signalwire_client.fabric.sip_endpoints.create(username="x", password="x")
         assert exc.value.status_code == 500
 
     def test_sip_endpoints_delete(
@@ -1357,7 +1391,11 @@ class TestFabricWire:
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
         signalwire_client.fabric.sip_gateways.create(
-            name="x", uri="x", encryption="required"
+            name="x",
+            uri="x",
+            encryption="required",
+            ciphers=["AEAD_AES_256_GCM_8"],
+            codecs=["PCMU"],
         )
         last = mock.last_request()
         assert last.method == "POST"
@@ -1369,7 +1407,11 @@ class TestFabricWire:
         mock.push_scenario("fabric.create_sip_gateway", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
             signalwire_client.fabric.sip_gateways.create(
-                name="x", uri="x", encryption="required"
+                name="x",
+                uri="x",
+                encryption="required",
+                ciphers=["AEAD_AES_256_GCM_8"],
+                codecs=["PCMU"],
             )
         assert exc.value.status_code == 500
 

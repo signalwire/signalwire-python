@@ -12,7 +12,7 @@ CreateMessageRequest = TypedDict(
     {
         "to": "str",
         "from": "str",
-        "body": "str | dict[str, Any] | list[Any]",
+        "body": "str | dict[str, Any] | list[dict[str, Any]]",
         "media": "list[str]",
         "send_as_mms": "bool",
         "status_callback": "str",
@@ -69,11 +69,11 @@ Open shape: extra server keys are permitted and partial payloads are valid;
 not validated at runtime (a TypedDict is a plain ``dict``).
 """
 
-MessageStatus: TypeAlias = "Literal['queued', 'initiated', 'sent', 'delivered', 'undelivered', 'failed', 'read']"
+MessageStatus: TypeAlias = "Literal['queued', 'initiated', 'sent', 'delivered', 'undelivered', 'failed', 'read', 'received']"
 
 MessageDirection: TypeAlias = "Literal['inbound', 'outbound']"
 
-MessageKind: TypeAlias = "Literal['sms', 'mms']"
+MessageKind: TypeAlias = "Literal['sms', 'mms', 'whatsapp']"
 
 
 class MessagesCreateStatusCode422(TypedDict, total=False):

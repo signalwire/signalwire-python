@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 from collections.abc import Mapping
 
-from .._base import BaseResource, CrudResource, ReadResource
+from .._base import BaseResource, CrudResource, ReadResource, _required_via_extras
 
 if TYPE_CHECKING:
     from .._request_options import RequestOptions
@@ -86,6 +86,7 @@ class VideoConferences(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/video/conferences")
 
+    @_required_via_extras("display_name")
     def create(  # type: ignore[override]
         self,
         *,
@@ -244,6 +245,7 @@ class VideoConferences(
             ),
         )
 
+    @_required_via_extras("url")
     def create_stream(
         self,
         id: str,
@@ -361,6 +363,7 @@ class VideoRoomTokens(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/video/room_tokens")
 
+    @_required_via_extras("room_name")
     def create(
         self,
         *,
@@ -433,6 +436,7 @@ class VideoRooms(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/video/rooms")
 
+    @_required_via_extras("name")
     def create(  # type: ignore[override]
         self,
         *,
@@ -545,6 +549,7 @@ class VideoRooms(
             ),
         )
 
+    @_required_via_extras("url")
     def create_stream(
         self,
         id: str,

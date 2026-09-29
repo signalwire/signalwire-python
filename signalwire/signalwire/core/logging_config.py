@@ -30,8 +30,17 @@ from typing import Any
 _CONTROL_CHAR_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]")
 
 
-def strip_control_chars(event_dict: dict[str, Any]) -> dict[str, Any]:
-    """Strip control characters from log event values to prevent log injection."""
+def strip_control_chars(*args: Any) -> dict[str, Any]:
+    """Strip control characters from log event values to prevent log injection.
+
+    Accepts either the event dict alone (``strip_control_chars(event_dict)``) or
+    structlog's processor call ``(logger, method_name, event_dict)``: the LAST
+    positional argument is the event dict, so the function can also be placed
+    directly in a structlog processor chain.
+    """
+    if not args:
+        raise TypeError("strip_control_chars() requires the event dict")
+    event_dict: dict[str, Any] = args[-1]
     for key, value in event_dict.items():
         if isinstance(value, str):
             event_dict[key] = _CONTROL_CHAR_RE.sub("", value)

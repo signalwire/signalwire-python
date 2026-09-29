@@ -487,12 +487,23 @@ class TestStripControlChars:
     so that a broken adapter at either registration site is caught.
     """
 
-    def test_public_function_takes_only_the_event_dict(self) -> None:
-        """The public contract is one parameter: the event dict."""
-        import inspect
+    def test_one_argument_form(self) -> None:
+        """``strip_control_chars(event_dict)`` scrubs and returns the event dict."""
+        event_dict = {"event": "a\x00b"}
+        assert strip_control_chars(event_dict) is event_dict
+        assert event_dict["event"] == "ab"
 
-        params = list(inspect.signature(strip_control_chars).parameters)
-        assert params == ["event_dict"]
+    def test_structlog_three_argument_form(self) -> None:
+        """The structlog processor call ``(logger, method_name, event_dict)`` also works
+        (the pre-3.x signature; a user chain that lists the bare function keeps working)."""
+        event_dict = {"event": "a\x07b", "n": 1}
+        result = strip_control_chars(None, "info", event_dict)
+        assert result is event_dict
+        assert result == {"event": "ab", "n": 1}
+
+    def test_no_arguments_is_a_type_error(self) -> None:
+        with pytest.raises(TypeError):
+            strip_control_chars()
 
     def test_strips_control_chars_from_values(self) -> None:
         event_dict = {"event": "hello\x00world", "field": "a\x07b\x1fc", "n": 42}

@@ -1864,7 +1864,7 @@ class ExecuteRpcConfig(TypedDict, total=False):
 
 
 class GotoConfig(TypedDict, total=False):
-    """Jump to a label within the current section, optionally based on a condition.
+    """Jump to a label, optionally based on a condition.
 
     Open shape: extra server keys are permitted and partial payloads are valid;
     not validated at runtime (a TypedDict is a plain ``dict``).
@@ -2625,3 +2625,56 @@ class _SwmlVerbs:
     def user_event(self: _Self, config: UserEventConfig | None = None) -> _Self:
         """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911. (api_state: experimental)"""
         raise NotImplementedError  # installed dynamically at runtime
+
+
+# Deprecated aliases: names this module exported before its types were re-derived
+# (signalwire-python 3.x at f870cc15). Kept so existing imports keep working; use the
+# new name. Names with no single replacement are listed in CHANGELOG.md instead.
+# deprecated: use AiConfig
+AIObject = AiConfig
+# deprecated: use AiParams
+AIParams = AiParams
+# deprecated: use AiPostPrompt
+AIPostPrompt = AiPostPrompt
+# deprecated: use AiPrompt
+AIPrompt = AiPrompt
+# deprecated: use AmazonBedrockConfig
+AmazonBedrockObject = AmazonBedrockConfig
+# deprecated: use AmazonBedrockParams
+BedrockParams = AmazonBedrockParams
+# deprecated: use AmazonBedrockPostPrompt
+BedrockPostPrompt = AmazonBedrockPostPrompt
+# deprecated: use AmazonBedrockPrompt
+BedrockPrompt = AmazonBedrockPrompt
+# deprecated: use AmazonBedrockSWAIG
+BedrockSWAIG = AmazonBedrockSWAIG
+# deprecated: use AmazonBedrockSWAIGFunctionsItem
+BedrockSWAIGFunction = AmazonBedrockSWAIGFunctionsItem
+# deprecated: use CondItem
+CondParams = CondItem
+# deprecated: use AiParamsConvoItem
+ConversationMessage = AiParamsConvoItem
+# deprecated: use EnterQueueConfig
+EnterQueueObject = EnterQueueConfig
+# deprecated: use ExecuteResult
+ExecuteSwitch = ExecuteResult
+# deprecated: use AiHintsItem
+Hint = AiHintsItem
+# deprecated: use JoinConferenceConfig
+JoinConferenceObject = JoinConferenceConfig
+# deprecated: use AiLanguagesItem
+Languages = AiLanguagesItem
+# deprecated: use CallPayParameters
+PayParameters = CallPayParameters
+# deprecated: use CallPayPrompts
+PayPrompts = CallPayPrompts
+# deprecated: use AiPronounceItem
+Pronounce = AiPronounceItem
+# deprecated: use AiSWAIGIncludesItem
+SWAIGIncludes = AiSWAIGIncludesItem
+# deprecated: use AiSWAIGInternalFillers
+SWAIGInternalFiller = AiSWAIGInternalFillers
+# deprecated: use LiveTranscribeAction
+TranscribeAction = LiveTranscribeAction
+# deprecated: use LiveTranslateAction
+TranslateAction = LiveTranslateAction

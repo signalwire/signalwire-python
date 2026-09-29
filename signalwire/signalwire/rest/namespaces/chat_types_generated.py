@@ -7,8 +7,6 @@
 from __future__ import annotations
 from typing import Any, Literal, TypeAlias, TypedDict
 
-ChatChannel: TypeAlias = "dict[str, Any]"
-
 
 class ChatPermissionWithRead(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
@@ -22,9 +20,6 @@ class ChatPermissionWithWrite(TypedDict, total=False):
 
     read: bool
     write: bool
-
-
-ChatState: TypeAlias = "dict[str, Any]"
 
 
 class ChatToken(TypedDict, total=False):
@@ -88,3 +83,10 @@ class Types_StatusCodes_StatusCode401(TypedDict, total=False):
 
 CreateChatTokenRequest: TypeAlias = "NewChatToken"
 CreateChatTokenResponse: TypeAlias = "ChatToken"
+
+
+# Aliases of one concrete ``dict`` type, emitted unquoted and last so the name stays
+# callable at runtime (``ConnectDeviceSingle(to=...)`` builds a dict, as it did when the
+# name was a TypedDict).
+ChatChannel: TypeAlias = dict[str, Any]
+ChatState: TypeAlias = dict[str, Any]

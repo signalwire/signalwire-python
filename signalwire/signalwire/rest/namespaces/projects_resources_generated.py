@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 from collections.abc import Mapping
 
-from .._base import CrudResource
+from .._base import CrudResource, _required_via_extras
 
 if TYPE_CHECKING:
     from .._request_options import RequestOptions
@@ -31,6 +31,7 @@ class Projects(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/projects")
 
+    @_required_via_extras("name")
     def create(  # type: ignore[override]
         self,
         *,
@@ -39,6 +40,7 @@ class Projects(
         protect_message_media: bool | None = None,
         protect_fax_media: bool | None = None,
         force_https_requests: bool | None = None,
+        parent_project_id: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -51,6 +53,7 @@ class Projects(
                 "protect_message_media": protect_message_media,
                 "protect_fax_media": protect_fax_media,
                 "force_https_requests": force_https_requests,
+                "parent_project_id": parent_project_id,
             }.items()
             if v is not None
         }

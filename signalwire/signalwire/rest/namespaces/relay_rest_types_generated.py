@@ -44,6 +44,9 @@ class Address(TypedDict, total=False):
     validated_at: str | None
 
 
+AddressCountryCode: TypeAlias = "Literal['AD', 'AE', 'AF', 'AG', 'AI', 'AL', 'AM', 'AO', 'AQ', 'AR', 'AS', 'AT', 'AU', 'AW', 'AX', 'AZ', 'BA', 'BB', 'BD', 'BE', 'BF', 'BG', 'BH', 'BI', 'BJ', 'BL', 'BM', 'BN', 'BO', 'BQ', 'BR', 'BS', 'BT', 'BV', 'BW', 'BY', 'BZ', 'CA', 'CC', 'CD', 'CF', 'CG', 'CH', 'CI', 'CK', 'CL', 'CM', 'CN', 'CO', 'CR', 'CU', 'CV', 'CW', 'CX', 'CY', 'CZ', 'DE', 'DJ', 'DK', 'DM', 'DO', 'DZ', 'EC', 'EE', 'EG', 'EH', 'ER', 'ES', 'ET', 'FI', 'FJ', 'FK', 'FM', 'FO', 'FR', 'GA', 'GB', 'GD', 'GE', 'GF', 'GG', 'GH', 'GI', 'GL', 'GM', 'GN', 'GP', 'GQ', 'GR', 'GS', 'GT', 'GU', 'GW', 'GY', 'HK', 'HM', 'HN', 'HR', 'HT', 'HU', 'ID', 'IE', 'IL', 'IM', 'IN', 'IO', 'IQ', 'IR', 'IS', 'IT', 'JE', 'JM', 'JO', 'JP', 'KE', 'KG', 'KH', 'KI', 'KM', 'KN', 'KP', 'KR', 'KW', 'KY', 'KZ', 'LA', 'LB', 'LC', 'LI', 'LK', 'LR', 'LS', 'LT', 'LU', 'LV', 'LY', 'MA', 'MC', 'MD', 'ME', 'MF', 'MG', 'MH', 'MK', 'ML', 'MM', 'MN', 'MO', 'MP', 'MQ', 'MR', 'MS', 'MT', 'MU', 'MV', 'MW', 'MX', 'MY', 'MZ', 'NA', 'NC', 'NE', 'NF', 'NG', 'NI', 'NL', 'NO', 'NP', 'NR', 'NU', 'NZ', 'OM', 'PA', 'PE', 'PF', 'PG', 'PH', 'PK', 'PL', 'PM', 'PN', 'PR', 'PS', 'PT', 'PW', 'PY', 'QA', 'RE', 'RO', 'RS', 'RU', 'RW', 'SA', 'SB', 'SC', 'SD', 'SE', 'SG', 'SH', 'SI', 'SJ', 'SK', 'SL', 'SM', 'SN', 'SO', 'SR', 'SS', 'ST', 'SV', 'SX', 'SY', 'SZ', 'TC', 'TD', 'TF', 'TG', 'TH', 'TJ', 'TK', 'TL', 'TM', 'TN', 'TO', 'TR', 'TT', 'TV', 'TW', 'TZ', 'UA', 'UG', 'UM', 'US', 'UY', 'UZ', 'VA', 'VC', 'VE', 'VG', 'VI', 'VN', 'VU', 'WF', 'WS', 'YE', 'YT', 'ZA', 'ZM', 'ZW']"
+
+
 class AddressListResponse(TypedDict, total=False):
     """Response containing a list of addresses.
 
@@ -120,7 +123,6 @@ class AssignedPhoneNumber(TypedDict, total=False):
     id: uuid
     name: str
     number: str
-    status_callback_url: str
 
 
 class AvailablePhoneNumber(TypedDict, total=False):
@@ -130,12 +132,9 @@ class AvailablePhoneNumber(TypedDict, total=False):
     not validated at runtime (a TypedDict is a plain ``dict``).
     """
 
-    number: str
     region: str
-    city: str
     rate_center: str
-    lata: str
-    capabilities: PhoneNumberCapabilities
+    capabilities: list[PhoneNumberCapability]
     e164: str
     national_number_formatted: str | None
     international_number_formatted: str | None
@@ -149,7 +148,7 @@ class AvailablePhoneNumbersResponse(TypedDict, total=False):
     not validated at runtime (a TypedDict is a plain ``dict``).
     """
 
-    links: PaginationLinks
+    links: dict[str, Any]
     data: list[AvailablePhoneNumber]
 
 
@@ -163,18 +162,17 @@ class Brand(TypedDict, total=False):
     id: uuid
     state: str
     name: str
-    company_name: str
-    contact_email: str
-    contact_phone: str
-    ein_issuing_country: str
-    legal_entity_type: str
-    ein: str
-    company_address: str
-    company_vertical: str
-    company_website: str
-    csp_brand_reference: str
+    company_name: str | None
+    contact_email: str | None
+    contact_phone: str | None
+    ein_issuing_country: str | None
+    legal_entity_type: str | None
+    ein: str | None
+    company_address: str | None
+    company_vertical: str | None
+    csp_brand_reference: str | None
     csp_self_registered: bool
-    status_callback_url: str
+    status_callback_url: str | None
     created_at: str
     updated_at: str
     signalwire_contact_emails: list[str]
@@ -203,18 +201,17 @@ class BrandResponse(TypedDict, total=False):
     id: uuid
     state: str
     name: str
-    company_name: str
-    contact_email: str
-    contact_phone: str
-    ein_issuing_country: str
-    legal_entity_type: str
-    ein: str
-    company_address: str
-    company_vertical: str
-    company_website: str
-    csp_brand_reference: str
+    company_name: str | None
+    contact_email: str | None
+    contact_phone: str | None
+    ein_issuing_country: str | None
+    legal_entity_type: str | None
+    ein: str | None
+    company_address: str | None
+    company_vertical: str | None
+    csp_brand_reference: str | None
     csp_self_registered: bool
-    status_callback_url: str
+    status_callback_url: str | None
     created_at: str
     updated_at: str
     signalwire_contact_emails: list[str]
@@ -222,7 +219,7 @@ class BrandResponse(TypedDict, total=False):
     number_pooling_for_company: str | None
 
 
-CallReceiveMode: TypeAlias = "Literal['voice', 'fax']"
+CallReceiveMode: TypeAlias = "Literal['voice', 'fax', 'none']"
 
 
 class Campaign(TypedDict, total=False):
@@ -235,32 +232,30 @@ class Campaign(TypedDict, total=False):
     id: uuid
     name: str
     state: str
-    sms_use_case: str
+    sms_use_case: str | None
     sub_use_cases: list[str]
-    campaign_verify_token: str
-    description: str
-    sample1: str
-    sample2: str
-    sample3: str
-    sample4: str
-    sample5: str
-    dynamic_templates: str
-    message_flow: str
-    opt_in_message: str
-    opt_out_message: str
-    help_message: str
-    opt_in_keywords: str
-    opt_out_keywords: str
-    help_keywords: str
-    number_pooling_required: bool
-    number_pooling_per_campaign: str
-    direct_lending: bool
-    embedded_link: bool
-    embedded_phone: bool
-    age_gated_content: bool
-    lead_generation: bool
-    csp_campaign_reference: str
-    status_callback_url: str
+    campaign_verify_token: str | None
+    description: str | None
+    sample1: str | None
+    sample2: str | None
+    sample3: str | None
+    sample4: str | None
+    sample5: str | None
+    message_flow: str | None
+    opt_in_message: str | None
+    opt_out_message: str | None
+    help_message: str | None
+    opt_in_keywords: str | None
+    opt_out_keywords: str | None
+    help_keywords: str | None
+    number_pooling_per_campaign: str | None
+    direct_lending: bool | None
+    embedded_link: bool | None
+    embedded_phone: bool | None
+    age_gated_content: bool | None
+    lead_generation: bool | None
+    csp_campaign_reference: str | None
+    status_callback_url: str | None
     created_at: str
     updated_at: str
     dynamic_messages: str | None
@@ -292,32 +287,30 @@ class CampaignResponse(TypedDict, total=False):
     id: uuid
     name: str
     state: str
-    sms_use_case: str
+    sms_use_case: str | None
     sub_use_cases: list[str]
-    campaign_verify_token: str
-    description: str
-    sample1: str
-    sample2: str
-    sample3: str
-    sample4: str
-    sample5: str
-    dynamic_templates: str
-    message_flow: str
-    opt_in_message: str
-    opt_out_message: str
-    help_message: str
-    opt_in_keywords: str
-    opt_out_keywords: str
-    help_keywords: str
-    number_pooling_required: bool
-    number_pooling_per_campaign: str
-    direct_lending: bool
-    embedded_link: bool
-    embedded_phone: bool
-    age_gated_content: bool
-    lead_generation: bool
-    csp_campaign_reference: str
-    status_callback_url: str
+    campaign_verify_token: str | None
+    description: str | None
+    sample1: str | None
+    sample2: str | None
+    sample3: str | None
+    sample4: str | None
+    sample5: str | None
+    message_flow: str | None
+    opt_in_message: str | None
+    opt_out_message: str | None
+    help_message: str | None
+    opt_in_keywords: str | None
+    opt_out_keywords: str | None
+    help_keywords: str | None
+    number_pooling_per_campaign: str | None
+    direct_lending: bool | None
+    embedded_link: bool | None
+    embedded_phone: bool | None
+    age_gated_content: bool | None
+    lead_generation: bool | None
+    csp_campaign_reference: str | None
+    status_callback_url: str | None
     created_at: str
     updated_at: str
     dynamic_messages: str | None
@@ -344,6 +337,7 @@ class CarrierLookupInfo(TypedDict, total=False):
     jurisdiction: str
     lec: str
     linetype: str
+    dnc: str | None
 
 
 class CnamInfo(TypedDict, total=False):
@@ -367,7 +361,7 @@ class CreateAddressRequest(TypedDict, total=False):
     """
 
     label: str
-    country: str
+    country: AddressCountryCode
     first_name: str
     last_name: str
     street_number: str
@@ -423,6 +417,7 @@ class CreateDomainApplicationRequest(TypedDict, total=False):
     call_laml_application_id: str
     call_video_room_id: uuid
     call_relay_script_url: str
+    call_relay_script_url_method: str
     call_dialogflow_agent_id: uuid
     call_ai_agent_id: uuid
     call_flow_id: uuid
@@ -461,8 +456,33 @@ class CreateManagedCampaignRequest(TypedDict, total=False):
     """
 
     name: str
-    brand_id: uuid
-    sms_use_case: str
+    sms_use_case: Literal[
+        "2FA",
+        "ACCOUNT_NOTIFICATION",
+        "AGENTS_FRANCHISES",
+        "CARRIER_EXEMPT",
+        "CHARITY",
+        "CUSTOMER_CARE",
+        "DELIVERY_NOTIFICATION",
+        "EMERGENCY",
+        "FRAUD_ALERT",
+        "HIGHER_EDUCATION",
+        "K12_EDUCATION",
+        "LOW_VOLUME_MIXED",
+        "MARKETING",
+        "MIXED",
+        "POLITICAL",
+        "POLITICAL_SECTION_527",
+        "POLLING_VOTING",
+        "PROXY",
+        "PUBLIC_SERVICE_ANNOUNCEMENT",
+        "SECURITY_ALERT",
+        "SOCIAL",
+        "SWEEPSTAKE",
+        "TRIAL",
+        "UCAAS_HIGH",
+        "UCAAS_LOW",
+    ]
     sub_use_cases: list[str]
     campaign_verify_token: str
     description: str
@@ -522,7 +542,6 @@ class CreatePartnerCampaignRequest(TypedDict, total=False):
     """
 
     name: str
-    brand_id: uuid
     csp_campaign_reference: str
     status_callback_url: str
     signalwire_contact_emails: list[str] | str
@@ -554,6 +573,9 @@ class CreateSipEndpointRequest(TypedDict, total=False):
     codecs: list[str]
     encryption: Literal["default", "required", "optional"]
     call_handler: Literal[
+        "default",
+        "passthrough",
+        "block-pstn",
         "relay_context",
         "relay_topic",
         "relay_application",
@@ -584,6 +606,7 @@ class CreateSipEndpointRequest(TypedDict, total=False):
     call_flow_version: str
     call_ai_agent_id: str
     call_relay_script_url: str
+    call_relay_script_url_method: str
 
 
 class CreateVerifiedCallerIDRequest(TypedDict, total=False):
@@ -625,11 +648,11 @@ class DomainApplication(TypedDict, total=False):
     call_relay_context: str | None
     call_relay_context_status_callback_url: str | None
     call_request_url: str | None
-    call_request_method: Literal["GET", "POST"] | None
+    call_request_method: str | None
     call_fallback_url: str | None
-    call_fallback_method: Literal["GET", "POST"] | None
+    call_fallback_method: str | None
     call_status_callback_url: str | None
-    call_status_callback_method: Literal["GET", "POST"] | None
+    call_status_callback_method: str | None
     call_laml_application_id: str | None
     call_video_room_id: uuid | None
     call_relay_script_url: str | None
@@ -671,11 +694,11 @@ class DomainApplicationResponse(TypedDict, total=False):
     call_relay_context: str | None
     call_relay_context_status_callback_url: str | None
     call_request_url: str | None
-    call_request_method: Literal["GET", "POST"] | None
+    call_request_method: str | None
     call_fallback_url: str | None
-    call_fallback_method: Literal["GET", "POST"] | None
+    call_fallback_method: str | None
     call_status_callback_url: str | None
-    call_status_callback_method: Literal["GET", "POST"] | None
+    call_status_callback_method: str | None
     call_laml_application_id: str | None
     call_video_room_id: uuid | None
     call_relay_script_url: str | None
@@ -858,7 +881,7 @@ class Order(TypedDict, total=False):
     processed_at: str
     created_at: str
     updated_at: str
-    status_callback_url: str
+    status_callback_url: str | None
     campaign_id: str
     brand_id: str
     phone_numbers: list[dict[str, Any]]
@@ -887,7 +910,7 @@ class OrderResponse(TypedDict, total=False):
     processed_at: str
     created_at: str
     updated_at: str
-    status_callback_url: str
+    status_callback_url: str | None
     campaign_id: str
     brand_id: str
     phone_numbers: list[dict[str, Any]]
@@ -924,15 +947,15 @@ class PhoneNumber(TypedDict, total=False):
     created_at: str
     updated_at: str
     next_billed_at: str | None
-    call_handler: PhoneNumberCallHandler | None
+    call_handler: PhoneNumberCallHandler
     calling_handler_resource_id: uuid | None
     call_receive_mode: CallReceiveMode
     call_request_url: str | None
-    call_request_method: HttpMethod | None
+    call_request_method: str | None
     call_fallback_url: str | None
-    call_fallback_method: HttpMethod | None
+    call_fallback_method: str | None
     call_status_callback_url: str | None
-    call_status_callback_method: HttpMethod | None
+    call_status_callback_method: str | None
     call_laml_application_id: str | None
     call_dialogflow_agent_id: str | None
     call_relay_topic: str | None
@@ -945,12 +968,12 @@ class PhoneNumber(TypedDict, total=False):
     call_sip_endpoint_id: uuid | None
     call_verto_resource: str | None
     call_video_room_id: uuid | None
-    message_handler: PhoneNumberMessageHandler | None
+    message_handler: PhoneNumberMessageHandler
     messaging_handler_resource_id: uuid | None
     message_request_url: str | None
-    message_request_method: HttpMethod | None
+    message_request_method: str | None
     message_fallback_url: str | None
-    message_fallback_method: HttpMethod | None
+    message_fallback_method: str | None
     message_laml_application_id: str | None
     message_relay_topic: str | None
     message_relay_context: str | None
@@ -1032,15 +1055,15 @@ class PhoneNumberResponse(TypedDict, total=False):
     created_at: str
     updated_at: str
     next_billed_at: str | None
-    call_handler: PhoneNumberCallHandler | None
+    call_handler: PhoneNumberCallHandler
     calling_handler_resource_id: uuid | None
     call_receive_mode: CallReceiveMode
     call_request_url: str | None
-    call_request_method: HttpMethod | None
+    call_request_method: str | None
     call_fallback_url: str | None
-    call_fallback_method: HttpMethod | None
+    call_fallback_method: str | None
     call_status_callback_url: str | None
-    call_status_callback_method: HttpMethod | None
+    call_status_callback_method: str | None
     call_laml_application_id: str | None
     call_dialogflow_agent_id: str | None
     call_relay_topic: str | None
@@ -1053,19 +1076,19 @@ class PhoneNumberResponse(TypedDict, total=False):
     call_sip_endpoint_id: uuid | None
     call_verto_resource: str | None
     call_video_room_id: uuid | None
-    message_handler: PhoneNumberMessageHandler | None
+    message_handler: PhoneNumberMessageHandler
     messaging_handler_resource_id: uuid | None
     message_request_url: str | None
-    message_request_method: HttpMethod | None
+    message_request_method: str | None
     message_fallback_url: str | None
-    message_fallback_method: HttpMethod | None
+    message_fallback_method: str | None
     message_laml_application_id: str | None
     message_relay_topic: str | None
     message_relay_context: str | None
     country_code: str | None
 
 
-PhoneNumberType: TypeAlias = "Literal['toll-free', 'longcode']"
+PhoneNumberType: TypeAlias = "Literal['tollfree', 'longcode']"
 
 
 class PstnRecording(TypedDict, total=False):
@@ -1080,13 +1103,13 @@ class PstnRecording(TypedDict, total=False):
     created_at: str
     updated_at: str
     duration_in_seconds: int
-    error_code: str
+    error_code: str | None
     price: float
     price_unit: str
-    status: str
+    status: Literal["recording", "paused", "finished", "no_input"]
     url: str
     stereo: bool
-    byte_size: int
+    byte_size: int | None
     track: str
     relay_pstn_leg_id: uuid
 
@@ -1099,6 +1122,7 @@ class PurchasePhoneNumberRequest(TypedDict, total=False):
     """
 
     number: str
+    number_type: Literal["local", "tollfree"]
 
 
 class Queue(TypedDict, total=False):
@@ -1211,7 +1235,7 @@ class RelayConferenceRecording(TypedDict, total=False):
     error_code: str
     price: float
     price_unit: str
-    status: str
+    status: Literal["recording", "paused", "finished", "no_input"]
     url: str
     stereo: bool
     byte_size: int
@@ -1250,9 +1274,9 @@ class ShortCode(TypedDict, total=False):
     lease_duration: str | None
     message_handler: ShortCodeMessageHandler | None
     message_request_url: str | None
-    message_request_method: HttpMethod | None
+    message_request_method: str | None
     message_fallback_url: str | None
-    message_fallback_method: HttpMethod | None
+    message_fallback_method: str | None
     message_laml_application_id: uuid | None
     message_relay_context: str | None
 
@@ -1296,9 +1320,9 @@ class ShortCodeResponse(TypedDict, total=False):
     lease_duration: str | None
     message_handler: ShortCodeMessageHandler | None
     message_request_url: str | None
-    message_request_method: HttpMethod | None
+    message_request_method: str | None
     message_fallback_url: str | None
-    message_fallback_method: HttpMethod | None
+    message_fallback_method: str | None
     message_laml_application_id: uuid | None
     message_relay_context: str | None
 
@@ -1324,11 +1348,11 @@ class SipEndpoint(TypedDict, total=False):
     call_handler: SipEndpointCallHandler | None
     calling_handler_resource_id: uuid | None
     call_request_url: str | None
-    call_request_method: Literal["GET", "POST"] | None
+    call_request_method: str | None
     call_fallback_url: str | None
-    call_fallback_method: Literal["GET", "POST"] | None
+    call_fallback_method: str | None
     call_status_callback_url: str | None
-    call_status_callback_method: Literal["GET", "POST"] | None
+    call_status_callback_method: str | None
     call_laml_application_id: str | None
     call_dialogflow_agent_id: str | None
     call_relay_topic: str | None
@@ -1340,7 +1364,7 @@ class SipEndpoint(TypedDict, total=False):
     call_relay_script_url: str | None
 
 
-SipEndpointCallHandler: TypeAlias = "Literal['relay_context', 'relay_topic', 'relay_application', 'relay_connector', 'relay_script', 'laml_webhooks', 'laml_application', 'dialogflow', 'video_room', 'call_flow', 'ai_agent']"
+SipEndpointCallHandler: TypeAlias = "Literal['default', 'passthrough', 'block-pstn', 'laml_webhook', 'laml_application', 'dialogflow', 'relay_context', 'relay_application', 'relay_connector', 'video_room', 'ai_agent', 'relay_script', 'call_flow']"
 
 
 class SipEndpointListResponse(TypedDict, total=False):
@@ -1372,11 +1396,11 @@ class SipEndpointResponse(TypedDict, total=False):
     call_handler: SipEndpointCallHandler | None
     calling_handler_resource_id: uuid | None
     call_request_url: str | None
-    call_request_method: Literal["GET", "POST"] | None
+    call_request_method: str | None
     call_fallback_url: str | None
-    call_fallback_method: Literal["GET", "POST"] | None
+    call_fallback_method: str | None
     call_status_callback_url: str | None
-    call_status_callback_method: Literal["GET", "POST"] | None
+    call_status_callback_method: str | None
     call_laml_application_id: str | None
     call_dialogflow_agent_id: str | None
     call_relay_topic: str | None
@@ -1419,7 +1443,7 @@ class SipRecording(TypedDict, total=False):
     error_code: str
     price: float
     price_unit: str
-    status: str
+    status: Literal["recording", "paused", "finished", "no_input"]
     url: str
     stereo: bool
     byte_size: int
@@ -1530,6 +1554,7 @@ class UpdateDomainApplicationRequest(TypedDict, total=False):
     call_laml_application_id: str
     call_video_room_id: uuid
     call_relay_script_url: str
+    call_relay_script_url_method: str
     call_dialogflow_agent_id: uuid
     call_ai_agent_id: uuid
     call_flow_id: uuid
@@ -1558,7 +1583,7 @@ class UpdatePhoneNumberRequest(TypedDict, total=False):
 
     name: str
     call_handler: PhoneNumberCallHandlerRequest
-    call_receive_mode: str
+    call_receive_mode: Literal["voice", "fax"]
     call_request_url: str
     call_request_method: Literal["GET", "POST"]
     call_fallback_url: str
@@ -1570,6 +1595,7 @@ class UpdatePhoneNumberRequest(TypedDict, total=False):
     call_relay_topic: str
     call_relay_topic_status_callback_url: str
     call_relay_script_url: str
+    call_relay_script_url_method: str
     call_relay_context: str
     call_relay_context_status_callback_url: str
     call_relay_application: str
@@ -1634,6 +1660,9 @@ class UpdateSipEndpointRequest(TypedDict, total=False):
     codecs: list[str]
     encryption: Literal["default", "required", "optional"]
     call_handler: Literal[
+        "default",
+        "passthrough",
+        "block-pstn",
         "relay_context",
         "relay_topic",
         "relay_application",
@@ -1664,6 +1693,7 @@ class UpdateSipEndpointRequest(TypedDict, total=False):
     call_flow_version: str
     call_ai_agent_id: str
     call_relay_script_url: str
+    call_relay_script_url_method: str
 
 
 class UpdateSipProfileRequest(TypedDict, total=False):
@@ -1701,10 +1731,10 @@ class VerifiedCallerID(TypedDict, total=False):
     type: str
     id: uuid
     number: str
-    name: str
-    extension: str
+    name: str | None
+    extension: str | None
     verified: bool
-    verified_at: str
+    verified_at: str | None
     status: Literal["Verified", "Awaiting Verification"]
 
 
@@ -1729,10 +1759,10 @@ class VerifiedCallerIDResponse(TypedDict, total=False):
     type: str
     id: uuid
     number: str
-    name: str
-    extension: str
+    name: str | None
+    extension: str | None
     verified: bool
-    verified_at: str
+    verified_at: str | None
     status: Literal["Verified", "Awaiting Verification"]
 
 
@@ -1761,7 +1791,7 @@ class WebRtcRecording(TypedDict, total=False):
     error_code: str
     price: float
     price_unit: str
-    status: str
+    status: Literal["recording", "paused", "finished", "no_input"]
     url: str
     stereo: bool
     byte_size: int
@@ -1777,7 +1807,7 @@ class UpdateAddressRequest(TypedDict, total=False):
     """
 
     label: str
-    country: str
+    country: AddressCountryCode
     first_name: str
     last_name: str
     street_number: str

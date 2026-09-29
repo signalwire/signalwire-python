@@ -83,18 +83,18 @@ class TestCxmlApplicationsCreate:
 
 
 # ---------------------------------------------------------------------------
-# CallFlows.list_addresses — singular 'call_flow' subpath
+# CallFlows.list_addresses — the plural 'call_flows' subpath the server routes
 # ---------------------------------------------------------------------------
 
 
 class TestCallFlowsAddresses:
-    """``call_flows.list_addresses`` walks a different (singular) URL.
+    """``call_flows.list_addresses`` walks ``/resources/call_flows/{id}/addresses``.
 
-    The SDK rewrites ``/call_flows`` to ``/call_flow`` for sub-collection
-    paths because that's what the API spec uses.
+    prime-rails config/routes.rb:1360-1363 routes only the plural path; the singular
+    ``/call_flow/{id}/...`` the SDK used before routed nowhere (404).
     """
 
-    def test_list_addresses_uses_singular_path(
+    def test_list_addresses_uses_plural_path(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
         body = signalwire_client.fabric.call_flows.list_addresses("cf-1")
@@ -103,21 +103,20 @@ class TestCallFlowsAddresses:
 
         last = mock.last_request()
         assert last.method == "GET"
-        # singular 'call_flow' (NOT 'call_flows') in the addresses sub-path.
-        assert last.path == "/api/fabric/resources/call_flow/cf-1/addresses"
+        assert last.path == "/api/fabric/resources/call_flows/cf-1/addresses"
         assert last.matched_route is not None, "spec gap: call-flow addresses sub-path"
 
 
 # ---------------------------------------------------------------------------
-# ConferenceRooms.list_addresses — singular 'conference_room' subpath
+# ConferenceRooms.list_addresses — the plural 'conference_rooms' subpath
 # ---------------------------------------------------------------------------
 
 
 class TestConferenceRoomsAddresses:
-    """``conference_rooms.list_addresses`` rewrites ``/conference_rooms``
-    to ``/conference_room`` for sub-collections, mirroring call_flows."""
+    """``conference_rooms.list_addresses`` walks the plural path the server routes
+    (prime-rails config/routes.rb:1352-1354), mirroring call_flows."""
 
-    def test_list_addresses_uses_singular_path(
+    def test_list_addresses_uses_plural_path(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
         body = signalwire_client.fabric.conference_rooms.list_addresses("cr-1")
@@ -126,8 +125,7 @@ class TestConferenceRoomsAddresses:
 
         last = mock.last_request()
         assert last.method == "GET"
-        # singular 'conference_room'.
-        assert last.path == "/api/fabric/resources/conference_room/cr-1/addresses"
+        assert last.path == "/api/fabric/resources/conference_rooms/cr-1/addresses"
         assert last.matched_route is not None
 
 

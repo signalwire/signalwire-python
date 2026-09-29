@@ -28,7 +28,7 @@ class TestAddressesWire:
     ) -> None:
         signalwire_client.addresses.create(
             label="x",
-            country="x",
+            country="AD",
             first_name="x",
             last_name="x",
             street_number="x",
@@ -48,7 +48,7 @@ class TestAddressesWire:
         with pytest.raises(SignalWireRestError) as exc:
             signalwire_client.addresses.create(
                 label="x",
-                country="x",
+                country="AD",
                 first_name="x",
                 last_name="x",
                 street_number="x",

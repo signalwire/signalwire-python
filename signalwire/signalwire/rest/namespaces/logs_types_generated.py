@@ -12,7 +12,7 @@ class ChargeDetails(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
     description: str
-    charge: str
+    charge: float
 
 
 class ConferenceLogPaginationLinks(TypedDict, total=False):
@@ -138,10 +138,10 @@ class VideoRoomSessionConference(TypedDict, total=False):
     url: str
     room_name: str | None
     status: str | None
-    locked: bool
+    locked: bool | None
     started_at: str | None
     ended_at: str | None
-    charge: str
+    charge: float
     charge_details: list[ChargeDetails]
 
 

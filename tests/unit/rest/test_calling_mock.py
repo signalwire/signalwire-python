@@ -179,7 +179,29 @@ class TestCallingRecord:
         assert last.path == CALLS_PATH
         assert last.body.get("command") == "calling.record"
         assert last.body.get("id") == "call-1"
-        assert last.body.get("params", {}).get("audio") == {"format": "mp3"}
+        # The engine reads the audio settings at params.record.audio (mod_infrastructure
+        # relay_apis.c call_record); `audio=` is kept and sent there.
+        assert last.body.get("params") == {"record": {"audio": {"format": "mp3"}}}
+
+    def test_record_with_record_param(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.calling.record("call-1", record={"audio": {"format": "wav"}})
+        assert mock.last_request().body.get("params") == {
+            "record": {"audio": {"format": "wav"}}
+        }
+
+    def test_record_audio_merges_into_record(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.calling.record(
+            "call-1",
+            record={"audio": {"format": "wav"}},
+            audio={"format": "mp3", "beep": True},
+        )
+        assert mock.last_request().body.get("params") == {
+            "record": {"audio": {"format": "mp3", "beep": True}}
+        }
 
     def test_record_pause(
         self, signalwire_client: RestClient, mock: _MockHarness

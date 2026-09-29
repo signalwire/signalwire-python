@@ -2,6 +2,46 @@
 
 ## [Unreleased]
 
+### Deprecated
+- Generated type names that were renamed when the SWML verb and SWML webhook types were
+  re-derived from the engine specs keep their old name as a deprecated alias of the new one
+  (one per 1:1 rename against 3.x):
+  - `signalwire.core.swml_verbs_generated`: `AIObject` -> `AiConfig`, `AIParams` -> `AiParams`, `AIPostPrompt` -> `AiPostPrompt`, `AIPrompt` -> `AiPrompt`, `AmazonBedrockObject` -> `AmazonBedrockConfig`, `BedrockParams` -> `AmazonBedrockParams`, `BedrockPostPrompt` -> `AmazonBedrockPostPrompt`, `BedrockPrompt` -> `AmazonBedrockPrompt`, `BedrockSWAIG` -> `AmazonBedrockSWAIG`, `BedrockSWAIGFunction` -> `AmazonBedrockSWAIGFunctionsItem`, `CondParams` -> `CondItem`, `ConversationMessage` -> `AiParamsConvoItem`, `EnterQueueObject` -> `EnterQueueConfig`, `ExecuteSwitch` -> `ExecuteResult`, `Hint` -> `AiHintsItem`, `JoinConferenceObject` -> `JoinConferenceConfig`, `Languages` -> `AiLanguagesItem`, `PayParameters` -> `CallPayParameters`, `PayPrompts` -> `CallPayPrompts`, `Pronounce` -> `AiPronounceItem`, `SWAIGIncludes` -> `AiSWAIGIncludesItem`, `SWAIGInternalFiller` -> `AiSWAIGInternalFillers`, `TranscribeAction` -> `LiveTranscribeAction`, `TranslateAction` -> `LiveTranslateAction`.
+  - `signalwire.rest.namespaces.swml_webhooks_types_generated`: `SwaigRequestData` ->
+    `signalwire.core.swaig_request_generated.SwaigRequest`, `SwaigArgument` ->
+    `signalwire.core.swaig_request_generated.SwaigArgument`, `PostPromptData` ->
+    `signalwire.core.post_prompt_generated.PostPrompt`.
+  - `signalwire.cli.types.PostData` -> `SwmlRequestData`.
+
+### Removed
+- Generated type names with no single replacement (their shapes were merged into, or split
+  across, the engine-derived types). These are static typing helpers; the dicts you pass are
+  unchanged:
+  - `signalwire.core.swml_verbs_generated`: `AIPostPromptPom`, `AIPostPromptText`, `AIPromptPom`, `AIPromptText`, `Action`, `AllOfProperty`, `AnyOfProperty`, `ArrayProperty`, `AttentionTimeout`, `BooleanProperty`, `CallStatus`, `ChangeContextAction`, `ChangeStepAction`, `CondElse`, `CondReg`, `ConnectDeviceParallel`, `ConnectDeviceSerial`, `ConnectDeviceSerialParallel`, `ConnectDeviceSingle`, `ConnectHeaders`, `ConnectSwitch`, `ConstProperty`, `ContextPOMSteps`, `ContextSteps`, `ContextSwitchAction`, `ContextTextSteps`, `Contexts`, `ContextsObject`, `ContextsPOMObject`, `ContextsTextObject`, `ConversationRole`, `CustomTranslationFilter`, `Direction`, `FunctionFillers`, `FunctionParameters`, `HangUpHookSWAIGFunction`, `HangupAction`, `HoldAction`, `InjectAction`, `IntegerProperty`, `LanguageParams`, `LanguagesWithFillers`, `LanguagesWithSoloFillers`, `NullProperty`, `NumberProperty`, `ObjectProperty`, `OmitPropertiesBedrockPostPomptTextOmittedPromptProps`, `OmitPropertiesBedrockPostPromptPomOmittedPromptProps`, `OmitPropertiesBedrockPromptPomOmittedPromptProps`, `OmitPropertiesBedrockPromptTextOmittedPromptProps`, `OneOfProperty`, `Output`, `POM`, `PayPromptAction`, `PayPromptPlayAction`, `PayPromptSayAction`, `PickPropertiesHangUpHookSWAIGFunctionPickedSWAIGFunctionProps`, `PickPropertiesStartUpHookSWAIGFunctionPickedSWAIGFunctionProps`, `PickPropertiesSummarizeConversationSWAIGFunctionPickedSWAIGFunctionProps`, `PickPropertiesUserSWAIGFunctionPickedSWAIGFunctionProps`, `PlayWithURL`, `PlayWithURLS`, `PlaybackBGAction`, `PomSectionBodyContent`, `PomSectionBulletsContent`, `SMSWithBody`, `SMSWithMedia`, `SWAIG`, `SWAIGDefaults`, `SWAIGFunction`, `SWAIGNativeFunction`, `SWMLAction`, `SayAction`, `SchemaType`, `SetGlobalDataAction`, `SetMetaDataAction`, `SpeechEngine`, `StartAction`, `StartUpHookSWAIGFunction`, `StopAction`, `StopPlaybackBGAction`, `StringFormat`, `StringProperty`, `SummarizeAction`, `SummarizeActionUnion`, `SummarizeConversationSWAIGFunction`, `ToggleFunctionsAction`, `TranscribeDirection`, `TranscribeStartAction`, `TranscribeSummarizeAction`, `TranscribeSummarizeActionUnion`, `TranslateDirection`, `TranslationFilterPreset`, `UnsetGlobalDataAction`, `UnsetMetaDataAction`, `UserInputAction`, `UserSWAIGFunction`, `ValidConfirmMethods`, `play_url`.
+  - `signalwire.rest.namespaces.swml_webhooks_types_generated`: `PostPromptParams`,
+    `PostPromptConversationTurn`, `PostPromptFunctionCall` (see
+    `signalwire.core.post_prompt_generated`) and `SignalWireErrorBody`.
+  - `signalwire.cli.types`: `CallData` and `VarsData`.
+- `SwmlRequestCall` is now a union of the per-call-type variants (`SwmlRequestCallPhone`,
+  `...Sip`, `...Webrtc`, `...Other`); it can no longer be called as a constructor.
+
+### Changed
+- `calling.record(audio=...)` sends the settings as `params.record.audio`, where the engine reads
+  them (the old top-level `params.audio` was rejected). `record=` is a new optional argument.
+  `calling.play` media type `ring` is `ringtone`; `calling.tap` device params have no `rate`.
+- A required REST argument supplied through `extras={...}` satisfies the requirement instead of
+  raising `TypeError`.
+- `core.logging_config.strip_control_chars` accepts both `(event_dict)` and structlog's
+  `(logger, method_name, event_dict)`.
+- `ConnectDevice*` and `Contexts` in the calling/fabric REST types are plain `dict` aliases that
+  can still be called to build a dict.
+- REST request and response types follow the platform code (prime-rails), for example:
+  fabric `/resources/call_flows/{id}/...` and `/resources/conference_rooms/{id}/addresses`
+  use the plural paths the server routes; list responses that are one `{links, data}` object
+  are typed so; fields the server never renders are gone from response types; enums match
+  what the server accepts (`tollfree`, SIP gateway `encryption`, address `country`, ...).
+  Response types are plain dicts at runtime, so reading code is unaffected.
+
 ### Changed
 - REST params that were declared required but that the server does not require are now
   optional. This is a widening: every call that worked before still works.

@@ -10,12 +10,13 @@ import builtins
 from typing import TYPE_CHECKING, Any, Literal, cast
 from collections.abc import Mapping
 
-from .._base import BaseResource, CrudResource
+from .._base import BaseResource, CrudResource, _required_via_extras
 
 if TYPE_CHECKING:
     from .._request_options import RequestOptions
 
     from .relay_rest_types_generated import (
+        AddressCountryCode,
         AddressListResponse,
         AddressResponse,
         AddressType,
@@ -85,11 +86,22 @@ class Addresses(BaseResource):
             ),
         )
 
+    @_required_via_extras(
+        "label",
+        "country",
+        "first_name",
+        "last_name",
+        "street_number",
+        "street_name",
+        "city",
+        "state",
+        "postal_code",
+    )
     def create(
         self,
         *,
         label: str,
-        country: str,
+        country: AddressCountryCode,
         first_name: str,
         last_name: str,
         street_number: str,
@@ -149,7 +161,7 @@ class Addresses(BaseResource):
         id: str,
         *,
         label: str | None = None,
-        country: str | None = None,
+        country: AddressCountryCode | None = None,
         first_name: str | None = None,
         last_name: str | None = None,
         street_number: str | None = None,
@@ -207,6 +219,7 @@ class ImportedNumbers(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/relay/rest/imported_phone_numbers")
 
+    @_required_via_extras("number", "number_type")
     def create(
         self,
         *,
@@ -266,6 +279,7 @@ class Mfa(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/relay/rest/mfa")
 
+    @_required_via_extras("to")
     def sms(
         self,
         *,
@@ -303,6 +317,7 @@ class Mfa(BaseResource):
             ),
         )
 
+    @_required_via_extras("to")
     def call(
         self,
         *,
@@ -340,6 +355,7 @@ class Mfa(BaseResource):
             ),
         )
 
+    @_required_via_extras("token")
     def verify(
         self,
         mfa_request_id: str,
@@ -380,6 +396,7 @@ class NumberGroups(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/relay/rest/number_groups")
 
+    @_required_via_extras("name")
     def create(  # type: ignore[override]
         self,
         *,
@@ -444,6 +461,7 @@ class NumberGroups(
             ),
         )
 
+    @_required_via_extras("phone_number_id")
     def add_membership(
         self,
         number_group_id: str,
@@ -509,16 +527,20 @@ class PhoneNumbers(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/relay/rest/phone_numbers")
 
+    @_required_via_extras("number")
     def create(  # type: ignore[override]
         self,
         *,
         number: str,
+        number_type: Literal["local", "tollfree"] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> PhoneNumberResponse:
         body: dict[str, Any] = {
-            k: v for k, v in {"number": number}.items() if v is not None
+            k: v
+            for k, v in {"number": number, "number_type": number_type}.items()
+            if v is not None
         }
         if extras:
             body.update(extras)
@@ -537,7 +559,7 @@ class PhoneNumbers(
         *,
         name: str | None = None,
         call_handler: PhoneNumberCallHandlerRequest | None = None,
-        call_receive_mode: str | None = None,
+        call_receive_mode: Literal["voice", "fax"] | None = None,
         call_request_url: str | None = None,
         call_request_method: Literal["GET", "POST"] | None = None,
         call_fallback_url: str | None = None,
@@ -549,6 +571,7 @@ class PhoneNumbers(
         call_relay_topic: str | None = None,
         call_relay_topic_status_callback_url: str | None = None,
         call_relay_script_url: str | None = None,
+        call_relay_script_url_method: str | None = None,
         call_relay_context: str | None = None,
         call_relay_context_status_callback_url: str | None = None,
         call_relay_application: str | None = None,
@@ -589,6 +612,7 @@ class PhoneNumbers(
                 "call_relay_topic": call_relay_topic,
                 "call_relay_topic_status_callback_url": call_relay_topic_status_callback_url,
                 "call_relay_script_url": call_relay_script_url,
+                "call_relay_script_url_method": call_relay_script_url_method,
                 "call_relay_context": call_relay_context,
                 "call_relay_context_status_callback_url": call_relay_context_status_callback_url,
                 "call_relay_application": call_relay_application,
@@ -631,6 +655,7 @@ class PhoneNumbers(
             ),
         )
 
+    @_required_via_extras("e911_address_id")
     def assign_e911_address(
         self,
         id: str,
@@ -679,6 +704,7 @@ class PhoneNumbers(
             ),
         )
 
+    @_required_via_extras("name")
     def request_cnam(
         self,
         id: str,
@@ -825,10 +851,11 @@ class Queues(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/relay/rest/queues")
 
-    def create(
+    @_required_via_extras("name")
+    def create(  # type: ignore[override]
         self,
         *,
-        name: str | None = None,
+        name: str,
         max_size: int | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
@@ -1140,11 +1167,12 @@ class RegistryCampaigns(BaseResource):
             ),
         )
 
+    @_required_via_extras("phone_numbers")
     def create_order(
         self,
         id: str,
         *,
-        phone_numbers: list[str] | None = None,
+        phone_numbers: list[str],
         status_callback_url: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
@@ -1331,6 +1359,7 @@ class VerifiedCallers(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/relay/rest/verified_caller_ids")
 
+    @_required_via_extras("number")
     def create(  # type: ignore[override]
         self,
         *,
@@ -1387,6 +1416,7 @@ class VerifiedCallers(
             ),
         )
 
+    @_required_via_extras("verification_code")
     def submit_verification(
         self,
         id: str,

@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 from collections.abc import Mapping
 
-from .._base import BaseResource, CrudResource, ReadResource
+from .._base import BaseResource, CrudResource, ReadResource, _required_via_extras
 
 if TYPE_CHECKING:
     from .._request_options import RequestOptions
@@ -75,6 +75,14 @@ class WhatsappTemplates(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/messaging/whatsapp/templates")
 
+    @_required_via_extras(
+        "whatsapp_business_id",
+        "name",
+        "language",
+        "category",
+        "parameter_format",
+        "components",
+    )
     def create(  # type: ignore[override]
         self,
         *,
