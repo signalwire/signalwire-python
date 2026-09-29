@@ -1348,6 +1348,7 @@ class TestRedirectToInternalAddress:
 
         result = skill._call_mcp_tool("svc", "tool", {}, {"call_id": "call-1"})
 
+        assert isinstance(result.response, str)
         assert "internal-secret" not in result.response
         assert result.response.startswith("Failed to call svc.tool")
         assert adapter.sent == ["http://public.test/services/svc/call"]
