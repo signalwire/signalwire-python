@@ -56,9 +56,11 @@ def test_a_conversation_id_ending_in_such_a_digit_gets_a_suffix() -> None:
 def test_cgi_ignores_such_a_content_length(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CONTENT_LENGTH", SUPERSCRIPT_TWO)
     monkeypatch.setenv("REQUEST_METHOD", "POST")
-    with patch("sys.stdin", io.StringIO("")):
+    with patch("sys.stdin", io.StringIO('{"a": 1}')):
         request = _cgi_request()
-    assert request is not None
+    # Not a length, so nothing is read, as with no CONTENT_LENGTH at all
+    assert request.body == ""
+    assert request.method == "POST"
 
 
 def test_config_substitution_keeps_such_a_value_as_text(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -474,8 +474,10 @@ class WebService:
             for route, local_path in self.directories.items():
                 shown_route = html.escape(route)
                 shown_path = html.escape(str(local_path))
-                page += (f'<li>📁 <a href="{shown_route}">{shown_route}</a> '
-                         f'<span class="path">→ {shown_path}</span></li>')
+                page += (
+                    f'<li>📁 <a href="{shown_route}">{shown_route}</a> '
+                    f'<span class="path">→ {shown_path}</span></li>'
+                )
 
             page += """
                 </ul>
