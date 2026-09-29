@@ -170,7 +170,6 @@ class ServerlessSimulator:
             "SERVER_NAME": "example.com",
         },
         "cloud_function": {
-            "FUNCTION_TARGET": "main",
             "GOOGLE_CLOUD_PROJECT": "test-project",
             # Set by the Functions Framework on a real Cloud Function
             "FUNCTION_TARGET": "agent",

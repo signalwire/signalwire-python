@@ -142,6 +142,7 @@ class TestAgentFunctionUrlVariables:
         url = _agent_url(
             monkeypatch,
             {
+                "FUNCTION_TARGET": "main",
                 "K_SERVICE": "svc",
                 "GOOGLE_CLOUD_PROJECT": "p1",
                 "FUNCTION_URL": "https://europe-west1-p1.cloudfunctions.net/fn/",
@@ -155,6 +156,7 @@ class TestAgentFunctionUrlVariables:
         url = _agent_url(
             monkeypatch,
             {
+                "FUNCTION_TARGET": "main",
                 "K_SERVICE": "svc",
                 "GOOGLE_CLOUD_PROJECT": "p1",
                 "GOOGLE_CLOUD_REGION": "europe-west1",
