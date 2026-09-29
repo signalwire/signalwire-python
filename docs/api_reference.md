@@ -2012,7 +2012,7 @@ Join a SignalWire room.
 result.join_room("support_room_1")
 ```
 
-##### `join_conference(name: str, muted: bool = False, beep: str = "true", start_on_enter: bool = True, end_on_exit: bool = False, wait_url: Optional[str] = None, max_participants: int = 250, record: str = "do-not-record", region: Optional[str] = None, trim: str = "trim-silence", coach: Optional[str] = None, status_callback_event: Optional[str] = None, status_callback: Optional[str] = None, status_callback_method: str = "POST", recording_status_callback: Optional[str] = None, recording_status_callback_method: str = "POST", recording_status_callback_event: str = "completed", result: Optional[Any] = None) -> FunctionResult`
+##### `join_conference(name: str, muted: bool = False, beep: str = "true", start_on_enter: bool = True, end_on_exit: bool = False, wait_url: Optional[str] = None, max_participants: Optional[int] = None, record: str = "do-not-record", region: Optional[str] = None, trim: str = "trim-silence", coach: Optional[str] = None, status_callback_event: Optional[str] = None, status_callback: Optional[str] = None, status_callback_method: str = "POST", recording_status_callback: Optional[str] = None, recording_status_callback_method: str = "POST", recording_status_callback_event: str = "completed", result: Optional[Any] = None) -> FunctionResult`
 Join a conference call.
 
 **Parameters:**
@@ -2022,7 +2022,7 @@ Join a conference call.
 - `start_on_enter` (bool): Start conference when this participant enters (default: True)
 - `end_on_exit` (bool): End conference when this participant exits (default: False)
 - `wait_url` (Optional[str]): URL for hold music/content
-- `max_participants` (int): Maximum participants (default: 250)
+- `max_participants` (int): Maximum participants, from 2 to 100000 (default: None, which leaves it out so the platform's default of 100000 applies)
 - `record` (str): Recording setting (default: "do-not-record")
 - `region` (Optional[str]): SignalWire region
 - `trim` (str): Trim setting for recordings (default: "trim-silence")
@@ -2086,7 +2086,6 @@ result.pay(
 # Payment with custom settings
 result.pay(
     payment_connector_url="https://payment-processor.com/webhook",
-    input_method="speech",
     timeout=10,
     max_attempts=3,
     security_code=True,

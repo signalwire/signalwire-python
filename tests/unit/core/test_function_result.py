@@ -797,11 +797,12 @@ class TestPay:
         assert pay_params["payment_connector_url"] == "https://pay.example.com/connector"
         assert pay_params["input"] == "dtmf"
         assert pay_params["payment_method"] == "credit-card"
-        assert pay_params["timeout"] == "5"
-        assert pay_params["max_attempts"] == "1"
-        assert pay_params["security_code"] == "true"
-        assert pay_params["postal_code"] == "true"
-        assert pay_params["min_postal_code_length"] == "0"
+        # Integers and booleans, as the SWML schema types them
+        assert pay_params["timeout"] == 5
+        assert pay_params["max_attempts"] == 1
+        assert pay_params["security_code"] is True
+        assert pay_params["postal_code"] is True
+        assert pay_params["min_postal_code_length"] == 0
         assert pay_params["token_type"] == "reusable"
         assert pay_params["currency"] == "usd"
         assert pay_params["language"] == "en-US"
@@ -833,11 +834,11 @@ class TestPay:
         pay_params = result.action[0]["SWML"]["sections"]["main"][1]["pay"]
         assert pay_params["input"] == "voice"
         assert pay_params["status_url"] == "https://status.example.com"
-        assert pay_params["timeout"] == "10"
-        assert pay_params["max_attempts"] == "3"
-        assert pay_params["security_code"] == "false"
+        assert pay_params["timeout"] == 10
+        assert pay_params["max_attempts"] == 3
+        assert pay_params["security_code"] is False
         assert pay_params["postal_code"] == "90210"
-        assert pay_params["min_postal_code_length"] == "5"
+        assert pay_params["min_postal_code_length"] == 5
         assert pay_params["token_type"] == "one-time"
         assert pay_params["charge_amount"] == "49.99"
         assert pay_params["currency"] == "eur"
@@ -870,7 +871,7 @@ class TestPay:
             postal_code=False
         )
         pay_params = result.action[0]["SWML"]["sections"]["main"][1]["pay"]
-        assert pay_params["postal_code"] == "false"
+        assert pay_params["postal_code"] is False
 
     def test_pay_chaining(self) -> None:
         """Test pay returns self for chaining"""
@@ -942,19 +943,19 @@ class TestJoinConference:
             FunctionResult().join_conference("conf", beep="invalid")
 
     def test_join_conference_max_participants_too_high(self) -> None:
-        """Test join_conference with max_participants > 250 raises ValueError"""
-        with pytest.raises(ValueError, match="max_participants must be a positive integer <= 250"):
-            FunctionResult().join_conference("conf", max_participants=300)
+        """max_participants above the schema's 100000 raises ValueError"""
+        with pytest.raises(
+            ValueError, match="max_participants must be an integer from 2 to 100000"
+        ):
+            FunctionResult().join_conference("conf", max_participants=100001)
 
-    def test_join_conference_max_participants_zero(self) -> None:
-        """Test join_conference with max_participants=0 raises ValueError"""
-        with pytest.raises(ValueError, match="max_participants must be a positive integer <= 250"):
-            FunctionResult().join_conference("conf", max_participants=0)
-
-    def test_join_conference_max_participants_negative(self) -> None:
-        """Test join_conference with negative max_participants raises ValueError"""
-        with pytest.raises(ValueError, match="max_participants must be a positive integer <= 250"):
-            FunctionResult().join_conference("conf", max_participants=-5)
+    def test_join_conference_max_participants_below_two(self) -> None:
+        """The schema's minimum is 2"""
+        for value in (1, 0, -5):
+            with pytest.raises(
+                ValueError, match="max_participants must be an integer from 2 to 100000"
+            ):
+                FunctionResult().join_conference("conf", max_participants=value)
 
     def test_join_conference_invalid_record(self) -> None:
         """Test join_conference with invalid record raises ValueError"""
