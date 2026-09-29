@@ -574,6 +574,14 @@ _MAX_REDIRECTS = 15
 _DEFAULT_PORTS = {"http": 80, "https": 443}
 
 
+class _NoAuth(requests.auth.AuthBase):
+    """No authentication. Given as ``auth``, it stops Requests adding
+    credentials from ``.netrc``, which the platform doesn't read."""
+
+    def __call__(self, request: requests.PreparedRequest) -> requests.PreparedRequest:
+        return request
+
+
 def _origin(url: str) -> tuple[str, str, int | None]:
     """The URL's scheme, host (lowercased) and port, the default filled in."""
     parts = urlsplit(url)
@@ -602,6 +610,8 @@ def _send(
     addresses, as the SDK's other fetches of user-supplied URLs do. Like
     curl, it sends credentials only to the origin they were given for (the
     same scheme, host and port), so never over a redirect to plain HTTP.
+    Like the platform, it reads no ``.netrc`` and keeps no cookies between
+    requests, so neither can add credentials.
     """
     from signalwire.utils.url_validator import _PublicSession
 
@@ -620,12 +630,14 @@ def _send(
                     if name.lower() not in ("authorization", "cookie")
                 }
             )
+            # No cookie jar between requests, as on the platform
+            session.cookies.clear()
             response = session.request(
                 method,
                 url,
                 data=body if post else None,
                 headers=send_headers,
-                auth=auth if same_host else None,
+                auth=(auth if same_host else None) or _NoAuth(),
                 timeout=timeout,
                 allow_redirects=False,
             )

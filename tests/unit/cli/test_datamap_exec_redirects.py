@@ -7,13 +7,18 @@ that redirected to one reached it. And like the platform, it sends a POST
 again, with its body, after a redirect, where it used to send a GET.
 """
 
+import http.client
 import ipaddress
 import json
 import socket
 from collections.abc import Iterator
 from contextlib import contextmanager
+from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import patch
+
+import pytest
 
 import requests
 from requests.adapters import BaseAdapter
@@ -46,6 +51,11 @@ class Scripted(BaseAdapter):
         response = requests.Response()
         response.status_code = status
         response.headers.update(headers)
+        if "Set-Cookie" in headers:
+            # Where Requests reads a response's cookies from
+            message = http.client.HTTPMessage()
+            message["Set-Cookie"] = headers["Set-Cookie"]
+            response.raw = SimpleNamespace(_original_response=SimpleNamespace(msg=message))
         response._content = body.encode()
         response.url = request.url or ""
         response.request = request
@@ -162,3 +172,26 @@ def test_the_same_origin_written_differently_keeps_its_credentials() -> None:
         result = execute_datamap_function(_function(webhook), {})
     assert result == {"response": "Answer: same"}
     assert adapter.sent[1].headers["Authorization"] == "Bearer secret-key"
+
+
+def test_netrc_and_response_cookies_add_no_credentials(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The platform reads no .netrc and keeps no cookie jar
+    netrc = tmp_path / "netrc"
+    netrc.write_text("machine api.example.com login user password secret\n")
+    netrc.chmod(0o600)
+    monkeypatch.setenv("NETRC", str(netrc))
+    routes = {
+        "https://api.example.com/w": (
+            302, {"Location": "http://api.example.com/final", "Set-Cookie": "sid=abc; Path=/"}, ""),
+        "http://api.example.com/final": (200, {}, json.dumps({"answer": "plain"})),
+    }
+    webhook = {"url": "https://api.example.com/w", "method": "GET",
+               "output": {"response": "Answer: ${answer}"}}
+    with _scripted(routes) as adapter:
+        result = execute_datamap_function(_function(webhook), {})
+    assert result == {"response": "Answer: plain"}
+    for request in adapter.sent:
+        assert "Authorization" not in request.headers
+        assert "Cookie" not in request.headers
