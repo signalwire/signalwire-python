@@ -839,3 +839,12 @@ class TestLlmModel:
         await session.start(Agent(instructions="x"))
         params = _ai_verb(session._build_sw_agent()).get("params", {})
         assert "model" not in params
+
+    @pytest.mark.asyncio
+    async def test_disallowing_interruptions_turns_barge_off(self) -> None:
+        # barge_confidence isn't in the schema and the platform ignores it
+        session = AgentSession(allow_interruptions=False)
+        await session.start(Agent(instructions="x"))
+        params = _ai_verb(session._build_sw_agent())["params"]
+        assert params["enable_barge"] is False
+        assert "barge_confidence" not in params

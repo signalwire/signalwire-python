@@ -618,7 +618,8 @@ class AgentSession:
         if agent_allow is not NOT_GIVEN:
             allow = agent_allow
         if not allow:
-            sw.set_param("barge_confidence", 1.0)
+            # The platform's switch for barge-in; barge_confidence does nothing
+            sw.set_param("enable_barge", False)
 
         # Endpointing delays
         min_ep: Any = self._min_endpointing_delay
