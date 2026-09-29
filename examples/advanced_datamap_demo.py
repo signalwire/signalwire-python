@@ -16,7 +16,7 @@ This example demonstrates all the comprehensive DataMap features including:
 - Advanced webhook features (form_param, input_args_as_params, require_args)
 - Post-webhook expressions
 - Form parameter encoding
-- Fallback chains
+- Choosing a webhook with require_args, and a fallback output
 """
 
 from signalwire.core.data_map import DataMap
@@ -61,26 +61,29 @@ def create_expression_demo():
 
 
 def create_advanced_webhook_demo():
-    """Demonstrate advanced webhook features"""
+    """Demonstrate advanced webhook features
+
+    The platform requests one webhook per call: the first whose require_args
+    are met. Here the first webhook runs when the AI supplies data to send,
+    and the second when it supplies only the action. When the webhook that
+    ran fails, the fallback output runs; the platform doesn't try the other.
+    """
     return (
         DataMap("advanced_api_tool")
         .description("API tool with advanced webhook features")
         .parameter("action", "string", "Action to perform", required=True)
         .parameter("data", "string", "Data to send", required=False)
         .parameter("format", "string", "Response format", required=False)
-        # Primary API with all advanced features
+        # Requested when there's data to send
         .webhook(
             "POST",
             "https://api.example.com/advanced",
-            headers={
-                "Authorization": "Bearer YOUR_TOKEN",
-                "User-Agent": "SignalWire-Agent/1.0",
-            },
-            input_args_as_params=True,  # Merge function args into params
-            require_args=["action"],  # Only execute if action is provided
-            form_param="payload",
-        )  # Send as form data
-        # Add post-webhook expressions
+            headers={"Authorization": "Bearer YOUR_TOKEN"},
+            input_args_as_params=True,  # The arguments become the body
+            require_args=["data"],  # Only when data is provided
+            form_param="payload",  # Send the body as one form field
+        )
+        # Post-webhook expressions pick a reply from the response
         .webhook_expressions(
             [
                 {
@@ -95,17 +98,19 @@ def create_advanced_webhook_demo():
                 },
             ]
         )
-        # Fallback API without form encoding
+        # Used when neither expression matches
+        .output(FunctionResult("The API returned ${status} for ${input.args.action}"))
+        .error_keys(["fault", "exception"])
+        # Requested when there's no data: the action goes in the URL
         .webhook(
             "GET",
-            "https://backup-api.example.com/simple",
+            "https://api.example.com/simple?q=${enc:args.action}",
             headers={"Accept": "application/json"},
         )
-        .params({"q": "${args.action}"})
-        .output(FunctionResult("Backup result: ${data}"))
-        # Global fallback
-        .fallback_output(FunctionResult("All APIs are currently unavailable"))
-        .global_error_keys(["error", "fault", "exception"])
+        .output(FunctionResult("Result: ${data}"))
+        .error_keys(["error", "fault", "exception"])
+        # Used when the webhook that ran fails
+        .fallback_output(FunctionResult("The API is unavailable right now"))
     )
 
 
@@ -120,10 +125,8 @@ def create_form_encoding_demo():
         .webhook(
             "POST",
             "https://forms.example.com/submit",
-            headers={
-                "Content-Type": "application/x-www-form-urlencoded",
-                "X-API-Key": "YOUR_API_KEY",
-            },
+            # With form_param, the platform sets the form Content-Type itself
+            headers={"X-API-Key": "YOUR_API_KEY"},
             form_param="form_data",
         )  # Sends entire JSON as form_data parameter
         .params(
@@ -134,7 +137,7 @@ def create_form_encoding_demo():
                 "timestamp": "@{strftime_tz UTC %Y-%m-%d %H:%M:%S}",
             }
         )
-        .output(FunctionResult("Form submitted successfully for ${args.name}"))
+        .output(FunctionResult("Form submitted successfully for ${input.args.name}"))
         .error_keys(["error", "validation_errors"])
     )
 
@@ -146,16 +149,12 @@ def create_array_processing_demo():
         .description("Search and format results from API")
         .parameter("query", "string", "Search query", required=True)
         .parameter("limit", "string", "Maximum results", required=False)
+        # A GET's query goes in the URL: params would be a JSON body, and
+        # make the request a POST
         .webhook(
             "GET",
-            "https://search-api.example.com/search",
+            "https://search-api.example.com/search?q=${enc:args.query}&max_results=${enc:args.limit}",
             headers={"Authorization": "Bearer YOUR_SEARCH_TOKEN"},
-        )
-        .params(
-            {
-                "q": "${args.query}",
-                "max_results": "${args.limit}",
-            }
         )
         .foreach(
             {
@@ -167,7 +166,7 @@ def create_array_processing_demo():
         )
         .output(
             FunctionResult(
-                'Found ${total} results for "${args.query}":\n\n${formatted_results}'
+                'Found ${total} results for "${input.args.query}":\n\n${formatted_results}'
             )
         )
         .error_keys(["error"])
