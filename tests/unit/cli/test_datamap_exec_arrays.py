@@ -6,6 +6,7 @@ shape ${array[0].field} templates expect, raised AttributeError, and the
 simulator fell back to the error output even without error_keys (B15).
 """
 
+import json
 from typing import Any
 from unittest.mock import Mock, patch
 
@@ -32,9 +33,7 @@ def _config(error_keys: Any = None) -> dict[str, Any]:
 
 
 def _response(payload: Any) -> Mock:
-    response = Mock(status_code=200, text="[]")
-    response.json.return_value = payload
-    return response
+    return Mock(status_code=200, text=json.dumps(payload))
 
 
 @pytest.mark.parametrize("error_keys", [None, ["error"], "error"])
