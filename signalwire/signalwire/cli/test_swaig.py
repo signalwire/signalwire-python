@@ -57,6 +57,45 @@ from .output.swml_dump import handle_dump_swml, setup_output_suppression
 from .output.output_formatter import display_agent_tools, format_result
 
 
+# The variables each platform's function URL is built from, when the URL
+# variable itself isn't set
+_URL_PARTS: dict[str, tuple[str, tuple[str, ...]]] = {
+    "lambda": (
+        "AWS_LAMBDA_FUNCTION_URL",
+        ("AWS_LAMBDA_FUNCTION_NAME", "AWS_REGION"),
+    ),
+    "cloud_function": (
+        "FUNCTION_URL",
+        (
+            "GOOGLE_CLOUD_PROJECT",
+            "GCP_PROJECT",
+            "GOOGLE_CLOUD_REGION",
+            "FUNCTION_REGION",
+            "K_SERVICE",
+            "FUNCTION_TARGET",
+        ),
+    ),
+}
+
+
+def _preset_urls_to_omit(platform: str, env_overrides: dict[str, str]) -> list[str]:
+    """The preset variables to leave out of a serverless simulation.
+
+    The SDK uses a platform's function URL variable before it builds the URL
+    from the parts, so the preset's URL would hide the parts the user gave
+    (by flag, --env or --env-file). When the user sets a part without the
+    URL, the preset's URL is left out.
+    """
+    if platform not in _URL_PARTS:
+        return []
+    url_var, parts = _URL_PARTS[platform]
+    if url_var in env_overrides:
+        return []
+    if any(part in env_overrides for part in parts):
+        return [url_var]
+    return []
+
+
 def print_help_platforms() -> None:
     """Print detailed help for serverless platform options"""
     print("""
@@ -574,7 +613,9 @@ def main() -> int:
 
         # Create and activate simulator
         serverless_simulator = ServerlessSimulator(
-            args.simulate_serverless, env_overrides
+            args.simulate_serverless,
+            env_overrides,
+            _preset_urls_to_omit(args.simulate_serverless, env_overrides),
         )
         serverless_simulator.activate(args.verbose and not args.raw)
 

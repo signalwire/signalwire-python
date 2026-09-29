@@ -172,6 +172,8 @@ class ServerlessSimulator:
         "cloud_function": {
             "FUNCTION_TARGET": "main",
             "GOOGLE_CLOUD_PROJECT": "test-project",
+            # Set by the Functions Framework on a real Cloud Function
+            "FUNCTION_TARGET": "agent",
             "FUNCTION_URL": "https://my-function-abc123.cloudfunctions.net",
             "GOOGLE_CLOUD_REGION": "us-central1",
             "K_SERVICE": "agent",
@@ -180,13 +182,35 @@ class ServerlessSimulator:
             "AZURE_FUNCTIONS_ENVIRONMENT": "Development",
             "FUNCTIONS_WORKER_RUNTIME": "python",
             "WEBSITE_SITE_NAME": "my-function-app",
+            # The SDK builds the URL as https://APP.azurewebsites.net/api/NAME,
+            # with "unknown" for a missing name
+            "AZURE_FUNCTION_NAME": "agent",
         },
     }
 
-    def __init__(self, platform: str, overrides: dict[str, str] | None = None):
+    def __init__(
+        self,
+        platform: str,
+        overrides: dict[str, str] | None = None,
+        omit: list[str] | None = None,
+    ):
+        """
+        Args:
+            platform: "lambda", "cgi", "cloud_function" or "azure_function"
+            overrides: Variables to set over the preset
+            omit: Preset variables to leave out (and clear from the
+                environment), so the SDK builds that value from the others.
+                swaig-test omits the preset's function URL when the user
+                gives the parts the URL is built from.
+        """
         self.platform = platform
         self.original_env = dict(os.environ)
-        self.preset_env = self.PLATFORM_PRESETS.get(platform, {}).copy()
+        self.omit = list(omit or [])
+        self.preset_env = {
+            key: value
+            for key, value in self.PLATFORM_PRESETS.get(platform, {}).items()
+            if key not in self.omit
+        }
         self.overrides = overrides or {}
         self.active = False
         self._cleared_vars: dict[str, str] = {}
@@ -241,6 +265,8 @@ class ServerlessSimulator:
                     f"  AZURE_FUNCTIONS_ENVIRONMENT: {os.environ.get('AZURE_FUNCTIONS_ENVIRONMENT')}"
                 )
                 print(f"  WEBSITE_SITE_NAME: {os.environ.get('WEBSITE_SITE_NAME')}")
+                print(f"  AZURE_FUNCTION_NAME: {os.environ.get('AZURE_FUNCTION_NAME')}")
+                print(f"  AZURE_FUNCTION_URL: {os.environ.get('AZURE_FUNCTION_URL')}")
 
             # Debug: Confirm SWML_PROXY_URL_BASE is cleared
             proxy_url = os.environ.get("SWML_PROXY_URL_BASE")
@@ -272,6 +298,9 @@ class ServerlessSimulator:
         # Always clear SWML_PROXY_URL_BASE during serverless simulation
         # so that platform-specific URL generation takes precedence
         conflicting_vars.append("SWML_PROXY_URL_BASE")
+
+        # An omitted preset variable must not come from the real environment
+        conflicting_vars.extend(self.omit)
 
         for var in conflicting_vars:
             if var in os.environ:

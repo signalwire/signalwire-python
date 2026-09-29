@@ -566,6 +566,10 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
                 region = os.getenv("AWS_REGION", "us-east-1")
                 function_name = os.getenv("AWS_LAMBDA_FUNCTION_NAME", "unknown")
                 base_url = f"https://{function_name}.lambda-url.{region}.on.aws"
+        elif mode == "google_cloud_function" and os.getenv("FUNCTION_URL"):
+            # The function's URL, when the deployment (or swaig-test's
+            # --gcp-function-url) sets it
+            base_url = os.environ["FUNCTION_URL"].rstrip("/")
         elif mode == "google_cloud_function":
             # Google Cloud Functions URL format
             project_id = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("GCP_PROJECT")
@@ -585,6 +589,10 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
             else:
                 # Fallback for local testing or incomplete environment
                 base_url = "https://localhost:8080"
+        elif mode == "azure_function" and os.getenv("AZURE_FUNCTION_URL"):
+            # The function's URL, when the deployment (or swaig-test's
+            # --azure-function-url) sets it
+            base_url = os.environ["AZURE_FUNCTION_URL"].rstrip("/")
         elif mode == "azure_function":
             # Azure Functions URL format
             function_app_name = os.getenv("WEBSITE_SITE_NAME") or os.getenv(

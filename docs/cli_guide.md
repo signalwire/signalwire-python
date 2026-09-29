@@ -278,6 +278,8 @@ swaig-test examples/my_agent.py --simulate-serverless lambda \
 - `AWS_REGION`
 - `_HANDLER`
 
+The SDK uses `AWS_LAMBDA_FUNCTION_URL` when it's set, and otherwise builds `https://NAME.lambda-url.REGION.on.aws` from the function name and region. When you set the function name or region (with `--aws-function-name`, `--aws-region`, `--env` or `--env-file`) without a function URL, the preset's function URL is left out, so the URL is built from the values you gave.
+
 With `--aws-api-gateway-id`, the simulated `AWS_LAMBDA_FUNCTION_URL` is the API Gateway URL, `https://ID.execute-api.REGION.amazonaws.com/STAGE`. The region defaults to `us-east-1` and the stage to `prod`. `--aws-function-url` takes precedence over it.
 
 #### CGI Simulation
@@ -313,7 +315,7 @@ swaig-test examples/my_agent.py --simulate-serverless cgi \
 
 #### Google Cloud Functions Simulation
 
-The webhook host comes from the region and project, not from `--gcp-function-url`:
+The SDK uses `FUNCTION_URL` when it's set, and otherwise builds `https://REGION-PROJECT.cloudfunctions.net/SERVICE`. `--gcp-function-url` sets `FUNCTION_URL`. When you set the project, region or service (with `--gcp-project`, `--gcp-region`, `--gcp-service`, `--env` or `--env-file`) without a function URL, the preset's function URL is left out, so the URL is built from the values you gave:
 
 ```bash
 # Basic Cloud Function simulation
@@ -331,13 +333,14 @@ swaig-test examples/my_agent.py --simulate-serverless cloud_function \
 **Cloud Function Environment Variables Set:**
 - `FUNCTION_TARGET` (what marks a Cloud Function; `main`)
 - `GOOGLE_CLOUD_PROJECT`
-- `FUNCTION_URL` (if provided)
+- `FUNCTION_TARGET`
+- `FUNCTION_URL`
 - `GOOGLE_CLOUD_REGION`
 - `K_SERVICE` (Knative service name)
 
 #### Azure Functions Simulation
 
-The webhook host comes from the `WEBSITE_SITE_NAME` preset; `--azure-env` only sets the reported environment name:
+The SDK uses `AZURE_FUNCTION_URL` when it's set, and otherwise builds `https://APP.azurewebsites.net/api/NAME` from `WEBSITE_SITE_NAME` and `AZURE_FUNCTION_NAME`. `--azure-function-url` sets `AZURE_FUNCTION_URL`; `--azure-env` only sets the reported environment name:
 
 ```bash
 # Basic Azure Functions simulation
@@ -352,8 +355,10 @@ swaig-test examples/my_agent.py --simulate-serverless azure_function \
 
 **Azure Functions Environment Variables Set:**
 - `AZURE_FUNCTIONS_ENVIRONMENT`
+- `FUNCTIONS_WORKER_RUNTIME`
 - `WEBSITE_SITE_NAME`
-- Custom function URL (if provided)
+- `AZURE_FUNCTION_NAME`
+- `AZURE_FUNCTION_URL` (from `--azure-function-url`)
 
 ### Environment Variable Management
 

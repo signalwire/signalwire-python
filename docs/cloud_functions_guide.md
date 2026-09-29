@@ -86,6 +86,8 @@ With authentication:
 https://username:password@{region}-{project-id}.cloudfunctions.net/{function-name}
 ```
 
+The agent builds this URL from `FUNCTION_REGION` (or `GOOGLE_CLOUD_REGION`), `GOOGLE_CLOUD_PROJECT` and `K_SERVICE` (or `FUNCTION_TARGET`). If the function is served on another URL, set `FUNCTION_URL` to it and the agent uses that instead.
+
 ## Azure Functions
 
 ### Environment Detection
@@ -195,6 +197,8 @@ With authentication:
 ```
 https://username:password@{function-app-name}.azurewebsites.net/api/{function-name}
 ```
+
+The agent builds this URL from `WEBSITE_SITE_NAME` and `AZURE_FUNCTION_NAME`, which Azure doesn't set, so set `AZURE_FUNCTION_NAME` to your function's name, or set `AZURE_FUNCTION_URL` to the function's full URL and the agent uses that instead.
 
 ## Authentication
 
