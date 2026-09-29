@@ -75,6 +75,10 @@ _URL_PARTS: dict[str, tuple[str, tuple[str, ...]]] = {
             "FUNCTION_TARGET",
         ),
     ),
+    "azure_function": (
+        "AZURE_FUNCTION_URL",
+        ("WEBSITE_SITE_NAME", "AZURE_FUNCTIONS_APP_NAME", "AZURE_FUNCTION_NAME"),
+    ),
 }
 
 

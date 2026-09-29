@@ -106,10 +106,16 @@ class TestPresetUrlOmission:
         ) == ["FUNCTION_URL", "K_SERVICE"]
         assert _preset_vars_to_omit(
             "azure_function", {"AZURE_FUNCTIONS_APP_NAME": "billing"}
-        ) == ["WEBSITE_SITE_NAME"]
+        ) == ["AZURE_FUNCTION_URL", "WEBSITE_SITE_NAME"]
 
-    def test_the_preferred_name_given_omits_nothing_more(self) -> None:
-        assert _preset_vars_to_omit("azure_function", {"WEBSITE_SITE_NAME": "a"}) == []
+    def test_the_preferred_name_given_omits_only_the_url(self) -> None:
+        assert _preset_vars_to_omit("azure_function", {"WEBSITE_SITE_NAME": "a"}) == [
+            "AZURE_FUNCTION_URL"
+        ]
+        assert _preset_vars_to_omit(
+            "azure_function",
+            {"WEBSITE_SITE_NAME": "a", "AZURE_FUNCTION_URL": "https://a.example/api/x"},
+        ) == []
         assert _preset_vars_to_omit("cgi", {"HTTP_HOST": "example.com"}) == []
 
 
@@ -226,6 +232,15 @@ class TestSwaigTestSimulatedUrls:
     def test_azure_app_given_as_azure_functions_app_name(self) -> None:
         out = _swaig_test("azure_function", "--env", "AZURE_FUNCTIONS_APP_NAME=billing")
         assert "@billing.azurewebsites.net/api/agent/simple/swaig/" in out
+
+    def test_an_inherited_azure_url_yields_to_the_parts_given(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The subprocess inherits this process's environment
+        monkeypatch.setenv("AZURE_FUNCTION_URL", "https://old-app.azurewebsites.net/api/agent")
+        out = _swaig_test("azure_function", "--env", "AZURE_FUNCTIONS_APP_NAME=billing")
+        assert "@billing.azurewebsites.net/api/agent/simple/swaig/" in out
+        assert "old-app" not in out
 
     def test_azure_default_names_the_function(self) -> None:
         out = _swaig_test("azure_function")
