@@ -214,9 +214,9 @@ DataMap tools support these features:
 
 - **Dynamic URLs**: Use `${args.param}` for user inputs
 - **Headers**: Add authentication and other headers
-- **Response Processing**: Read the API's JSON response from the root, as `${field}`
+- **Response Processing**: Read the API's JSON response from the root, as `${field}`, and the tool's arguments as `${input.args.param}`
 - **Error Handling**: Specify error keys to watch for
-- **Defaults**: Use `${args.param || "default"}` for fallbacks
+- **Fallbacks**: Set a fallback output for when the request fails; templates have no default-value syntax, and a missing value expands to an empty string
 
 ## Package Configuration
 
