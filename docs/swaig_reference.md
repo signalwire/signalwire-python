@@ -365,7 +365,7 @@ result.say("Joining you to the team conference") \
 - `end_on_exit`: Conference ends when this participant exits (default: False)
 
 **Capacity & Region:**
-- `max_participants`: Maximum participants, from 2 to 100000 (default: not sent, so the platform's default of 100000 applies)
+- `max_participants`: Maximum participants, 2 or more (default: not sent, so the platform's default applies)
 - `region`: Conference region for optimization
 - `wait_url`: SWML URL for custom hold music
 

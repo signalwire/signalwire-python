@@ -2022,7 +2022,7 @@ Join a conference call.
 - `start_on_enter` (bool): Start conference when this participant enters (default: True)
 - `end_on_exit` (bool): End conference when this participant exits (default: False)
 - `wait_url` (Optional[str]): URL for hold music/content
-- `max_participants` (int): Maximum participants, from 2 to 100000 (default: None, which leaves it out so the platform's default of 100000 applies)
+- `max_participants` (int): Maximum participants, 2 or more (default: None, which leaves it out so the platform's default applies)
 - `record` (str): Recording setting (default: "do-not-record")
 - `region` (Optional[str]): SignalWire region
 - `trim` (str): Trim setting for recordings (default: "trim-silence")

@@ -49,6 +49,10 @@ def _swml_int(
     if not in_range:
         if minimum is not None and maximum is not None:
             expected = f"an integer from {minimum} to {maximum}"
+        elif minimum is not None:
+            expected = f"an integer of at least {minimum}"
+        elif maximum is not None:
+            expected = f"an integer of at most {maximum}"
         else:
             expected = "an integer"
         raise ValueError(f"{name} must be {expected}, got {value!r}")
@@ -1062,7 +1066,8 @@ class FunctionResult:
             prompts: Array of custom prompt configurations
 
         timeout, max_attempts and min_postal_code_length are sent as integers
-        and security_code as a boolean, as the SWML schema types them. Each
+        and security_code as a boolean: the platform reads them only as JSON
+        numbers and booleans, and treats a string as unset or false. Each
         also accepts a SWML variable reference such as ``${timeout}``.
 
         Returns:
@@ -1072,8 +1077,9 @@ class FunctionResult:
             ValueError: If timeout, max_attempts or min_postal_code_length
                 isn't an integer, or security_code isn't a boolean
         """
-        # Build the pay parameters. The schema types timeout, max_attempts and
-        # min_postal_code_length as integers and security_code as a boolean.
+        # Build the pay parameters. The platform reads timeout, max_attempts and
+        # min_postal_code_length only as JSON numbers, and security_code only as
+        # a JSON boolean.
         pay_params: dict[str, Any] = {
             "payment_connector_url": payment_connector_url,
             "input": input_method,
@@ -1308,9 +1314,9 @@ class FunctionResult:
             start_on_enter: Whether conference starts when this participant enters (default: True)
             end_on_exit: Whether conference ends when this participant exits (default: False)
             wait_url: SWML URL for hold music (default: None for default hold music)
-            max_participants: Maximum participants, from 2 to 100000, or a SWML
+            max_participants: Maximum participants, 2 or more, or a SWML
                 variable reference (default: None, which leaves it out so the
-                platform's default of 100000 applies)
+                platform's default applies)
             record: Recording mode - "do-not-record", "record-from-start" (default: "do-not-record")
             region: Conference region (default: None)
             trim: Trim silence - "trim-silence", "do-not-trim" (default: "trim-silence")
@@ -1328,17 +1334,18 @@ class FunctionResult:
 
         Raises:
             ValueError: If beep value is invalid or max_participants isn't an
-                integer from 2 to 100000
+                integer of at least 2
         """
         # Validate beep parameter
         valid_beep_values = ["true", "false", "onEnter", "onExit"]
         if beep not in valid_beep_values:
             raise ValueError(f"beep must be one of {valid_beep_values}")
 
-        # Validate max_participants against the schema's range
+        # The platform requires a positive number, and its conference refuses
+        # fewer than 2; it sets no upper limit
         if max_participants is not None:
             max_participants = _swml_int(
-                "max_participants", max_participants, minimum=2, maximum=100000
+                "max_participants", max_participants, minimum=2
             )
 
         # Validate record parameter

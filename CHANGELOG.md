@@ -71,9 +71,12 @@ and `join_conference()`.
   doesn't support it (hints, languages, pronunciations, multilingual settings
   and contexts), and raises `ValueError` for a non-numeric temperature, top_p
   or max_tokens.
-- `pay()` sends integers and booleans, as the schema requires.
+- `pay()` sends integers and booleans. The platform reads `timeout`,
+  `max_attempts`, `min_postal_code_length` and `security_code` only as JSON
+  numbers and booleans, so the strings it sent were ignored or read as false.
   `join_conference()`'s `max_participants` defaults to None, is sent whenever
-  given, and accepts the schema's range, 2 to 100000.
+  given, and accepts any integer of at least 2, as the platform does; it
+  refused anything over 250.
 - The examples no longer pass `barge_confidence`, which isn't in the schema,
   and `mcp_gateway_demo.py` reads the gateway's URL and credentials from the
   environment.
@@ -88,7 +91,7 @@ and `join_conference()`.
   `${input.args.x}`. Replace `${enc:url:x}` with `${enc:x}`, and a chain of
   fallback webhooks with a fallback output.
 - `join_conference(max_participants=250)` now sends 250. Before, it sent
-  nothing, and the platform's default of 100000 applied.
+  nothing, and the platform's default applied.
 
 ## [3.5.0] - 2026-09-24
 

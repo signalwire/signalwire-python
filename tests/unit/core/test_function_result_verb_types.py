@@ -3,9 +3,10 @@ pay() and join_conference() send the types and ranges the SWML schema defines.
 
 pay() sent timeout, max_attempts, min_postal_code_length and security_code
 (and a boolean postal_code) as strings, which the schema's integer and
-boolean types reject. join_conference() defaulted max_participants to 250
-and left out an explicit 250, so the platform's default of 100000 applied,
-and it refused values above 250 that the schema allows (2 to 100000).
+boolean types reject, and which the platform reads as unset or false.
+join_conference() defaulted max_participants to 250, left out an explicit
+250 so the platform's default applied, and refused values above 250, which
+the platform accepts: it requires 2 or more and sets no upper limit.
 """
 
 from typing import Any
@@ -89,9 +90,16 @@ class TestJoinConferenceMaxParticipants:
         }
 
     @pytest.mark.parametrize("value", [2, 251, 1000, 100000])
-    def test_schema_range_is_accepted(self, value: int) -> None:
+    def test_two_or_more_is_accepted(self, value: int) -> None:
         result = FunctionResult().join_conference("room", max_participants=value)
         assert _verb(result, "join_conference")["max_participants"] == value
+
+    def test_there_is_no_upper_limit(self) -> None:
+        # The bundled schema caps max_participants at 100000, but the platform
+        # sets no upper limit, so this isn't checked against the schema
+        result = FunctionResult().join_conference("room", max_participants=250000)
+        verb = result.action[0]["SWML"]["sections"]["main"][0]["join_conference"]
+        assert verb["max_participants"] == 250000
 
     def test_left_out_by_default(self) -> None:
         result = FunctionResult().join_conference("room", muted=True)
@@ -106,10 +114,10 @@ class TestJoinConferenceMaxParticipants:
         result = FunctionResult().join_conference("room", max_participants=room_size)
         assert _verb(result, "join_conference")["max_participants"] == "${room_size}"
 
-    @pytest.mark.parametrize("value", [1, 100001, "many", 2.5])
-    def test_outside_the_schema_is_refused(self, value: Any) -> None:
+    @pytest.mark.parametrize("value", [1, 0, "many", 2.5])
+    def test_fewer_than_two_or_not_an_integer_is_refused(self, value: Any) -> None:
         with pytest.raises(ValueError) as excinfo:
             FunctionResult().join_conference("room", max_participants=value)
         assert str(excinfo.value) == (
-            f"max_participants must be an integer from 2 to 100000, got {value!r}"
+            f"max_participants must be an integer of at least 2, got {value!r}"
         )

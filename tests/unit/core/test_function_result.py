@@ -942,18 +942,17 @@ class TestJoinConference:
         with pytest.raises(ValueError, match="beep must be one of"):
             FunctionResult().join_conference("conf", beep="invalid")
 
-    def test_join_conference_max_participants_too_high(self) -> None:
-        """max_participants above the schema's 100000 raises ValueError"""
-        with pytest.raises(
-            ValueError, match="max_participants must be an integer from 2 to 100000"
-        ):
-            FunctionResult().join_conference("conf", max_participants=100001)
+    def test_join_conference_max_participants_has_no_upper_limit(self) -> None:
+        """The platform sets no upper limit"""
+        result = FunctionResult().join_conference("conf", max_participants=100001)
+        verb = result.action[0]["SWML"]["sections"]["main"][0]["join_conference"]
+        assert verb["max_participants"] == 100001
 
     def test_join_conference_max_participants_below_two(self) -> None:
-        """The schema's minimum is 2"""
+        """The platform's conference refuses fewer than 2"""
         for value in (1, 0, -5):
             with pytest.raises(
-                ValueError, match="max_participants must be an integer from 2 to 100000"
+                ValueError, match="max_participants must be an integer of at least 2"
             ):
                 FunctionResult().join_conference("conf", max_participants=value)
 
