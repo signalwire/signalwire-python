@@ -12,6 +12,8 @@ the in-process ``mock_signalwire`` server.  Each test:
 """
 
 from __future__ import annotations
+
+import uuid
 from signalwire.rest.client import RestClient
 from .conftest import _MockHarness
 
@@ -181,14 +183,20 @@ class TestCallingRecord:
         assert last.body.get("id") == "call-1"
         # The engine reads the audio settings at params.record.audio (mod_infrastructure
         # relay_apis.c call_record); `audio=` is kept and sent there.
-        assert last.body.get("params") == {"record": {"audio": {"format": "mp3"}}}
+        params = dict(last.body.get("params") or {})
+        # relay_apis.c requires a non-empty control_id; the SDK generates one when omitted.
+        assert uuid.UUID(params.pop("control_id"))
+        assert params == {"record": {"audio": {"format": "mp3"}}}
 
     def test_record_with_record_param(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.calling.record("call-1", record={"audio": {"format": "wav"}})
+        signalwire_client.calling.record(
+            "call-1", record={"audio": {"format": "wav"}}, control_id="rec-9"
+        )
         assert mock.last_request().body.get("params") == {
-            "record": {"audio": {"format": "wav"}}
+            "control_id": "rec-9",
+            "record": {"audio": {"format": "wav"}},
         }
 
     def test_record_audio_merges_into_record(
@@ -198,9 +206,11 @@ class TestCallingRecord:
             "call-1",
             record={"audio": {"format": "wav"}},
             audio={"format": "mp3", "beep": True},
+            control_id="rec-9",
         )
         assert mock.last_request().body.get("params") == {
-            "record": {"audio": {"format": "mp3", "beep": True}}
+            "control_id": "rec-9",
+            "record": {"audio": {"format": "mp3", "beep": True}},
         }
 
     def test_record_pause(

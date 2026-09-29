@@ -6,6 +6,7 @@
 # unknown / reserved-word wire fields, bound to the resource's spec types.
 from __future__ import annotations
 
+import uuid as _uuid
 from typing import TYPE_CHECKING, Any, Literal, cast
 from collections.abc import Mapping
 
@@ -15,16 +16,17 @@ if TYPE_CHECKING:
     from .._request_options import RequestOptions
 
     from .calling_types_generated import (
-        CallAIMessageResetParams,
         CallResponse,
-        HangupReason,
-        LiveTranscribeStartAction,
-        LiveTranscribeStopAction,
-        LiveTranscribeSummarizeAction,
-        LiveTranslateInjectAction,
-        LiveTranslateStartAction,
-        LiveTranslateStopAction,
-        LiveTranslateSummarizeAction,
+        RelayCallCollectDigitsInner,
+        RelayCallCollectSpeechInner,
+        RelayCallDetectInner,
+        RelayCallPlayInner,
+        RelayCallRecordAudio,
+        RelayCallRecordInner,
+        RelayCallReferDevice,
+        RelayCallTapDevice,
+        RelayIsReset,
+        RelayTap,
         SWMLObject,
         uuid,
     )
@@ -61,7 +63,7 @@ class Calling(BaseResource):
         custom_variables: dict[str, str] | None = None,
         url: str | None = None,
         codecs: list[str] | str | None = None,
-        swml: SWMLObject | None = None,
+        swml: str | dict[str, Any] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
@@ -109,7 +111,7 @@ class Calling(BaseResource):
         status: Literal["canceled", "completed"] | None = None,
         status_url: str | None = None,
         url: str | None = None,
-        swml: SWMLObject | None = None,
+        swml: str | dict[str, Any] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
@@ -139,7 +141,8 @@ class Calling(BaseResource):
         self,
         call_id: str,
         *,
-        reason: HangupReason | None = None,
+        reason: Literal["hangup", "cancel", "busy", "noAnswer", "decline", "error"]
+        | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
@@ -164,14 +167,14 @@ class Calling(BaseResource):
         self,
         call_id: str,
         *,
-        timeout: int | None = None,
         prompt: str | None = None,
+        timeout: str | float | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v
-            for k, v in {"timeout": timeout, "prompt": prompt}.items()
+            for k, v in {"prompt": prompt, "timeout": timeout}.items()
             if v is not None
         }
         if extras:
@@ -217,20 +220,20 @@ class Calling(BaseResource):
         self,
         call_id: str,
         *,
-        role: Literal["system", "user", "assistant"] | None = None,
-        message_text: str | None = None,
-        reset: CallAIMessageResetParams | None = None,
         global_data: dict[str, Any] | None = None,
+        message_text: str | None = None,
+        reset: RelayIsReset | None = None,
+        role: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v
             for k, v in {
-                "role": role,
+                "global_data": global_data,
                 "message_text": message_text,
                 "reset": reset,
-                "global_data": global_data,
+                "role": role,
             }.items()
             if v is not None
         }
@@ -253,14 +256,13 @@ class Calling(BaseResource):
         self,
         call_id: str,
         *,
-        action: LiveTranscribeStartAction
-        | LiveTranscribeSummarizeAction
-        | LiveTranscribeStopAction,
+        action: Literal["start", "stop", "summarize"] | dict[str, Any],
+        hints: list[Any] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
-            k: v for k, v in {"action": action}.items() if v is not None
+            k: v for k, v in {"action": action, "hints": hints}.items() if v is not None
         }
         if extras:
             params.update(extras)
@@ -281,10 +283,7 @@ class Calling(BaseResource):
         self,
         call_id: str,
         *,
-        action: LiveTranslateStartAction
-        | LiveTranslateSummarizeAction
-        | LiveTranslateInjectAction
-        | LiveTranslateStopAction,
+        action: Literal["start", "stop", "summarize", "inject"] | dict[str, Any],
         status_url: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
@@ -385,12 +384,15 @@ class Calling(BaseResource):
         self,
         call_id: str,
         *,
-        play: list[dict[str, Any]],
+        play: list[RelayCallPlayInner],
         control_id: str | None = None,
-        volume: float | None = None,
         direction: Literal["listen", "speak", "both"] | None = None,
+        gender: Literal["male", "female"] | None = None,
+        language: str | None = None,
         loop: int | None = None,
         status_url: str | None = None,
+        voice: str | None = None,
+        volume: float | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
@@ -398,16 +400,20 @@ class Calling(BaseResource):
             k: v
             for k, v in {
                 "control_id": control_id,
-                "play": play,
-                "volume": volume,
                 "direction": direction,
+                "gender": gender,
+                "language": language,
                 "loop": loop,
+                "play": play,
                 "status_url": status_url,
+                "voice": voice,
+                "volume": volume,
             }.items()
             if v is not None
         }
         if extras:
             params.update(extras)
+        params.setdefault("control_id", str(_uuid.uuid4()))
         body: dict[str, Any] = {
             "command": "calling.play",
             "params": params,
@@ -532,9 +538,9 @@ class Calling(BaseResource):
         call_id: str,
         *,
         control_id: str | None = None,
-        record: dict[str, Any] | None = None,
+        record: RelayCallRecordInner | None = None,
         status_url: str | None = None,
-        audio: dict[str, Any] | None = None,
+        audio: RelayCallRecordAudio | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
@@ -551,6 +557,7 @@ class Calling(BaseResource):
             params["record"] = {**params.get("record", {}), "audio": audio}
         if extras:
             params.update(extras)
+        params.setdefault("control_id", str(_uuid.uuid4()))
         body: dict[str, Any] = {
             "command": "calling.record",
             "params": params,
@@ -569,11 +576,14 @@ class Calling(BaseResource):
         call_id: str,
         *,
         control_id: str,
+        behavior: Literal["skip", "silence"] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
-            k: v for k, v in {"control_id": control_id}.items() if v is not None
+            k: v
+            for k, v in {"behavior": behavior, "control_id": control_id}.items()
+            if v is not None
         }
         if extras:
             params.update(extras)
@@ -645,29 +655,38 @@ class Calling(BaseResource):
         self,
         call_id: str,
         *,
-        control_id: str | None = None,
-        initial_timeout: float | None = None,
-        digits: dict[str, Any] | None = None,
-        speech: dict[str, Any] | None = None,
+        continue_: bool | None = None,
         continuous: bool | None = None,
+        control_id: str | None = None,
+        digits: RelayCallCollectDigitsInner | None = None,
+        initial_timeout: float | None = None,
         partial_results: bool | None = None,
+        send_start_of_input: bool | None = None,
+        speech: RelayCallCollectSpeechInner | None = None,
+        start_input_timers: bool | None = None,
+        status_url: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v
             for k, v in {
-                "control_id": control_id,
-                "initial_timeout": initial_timeout,
-                "digits": digits,
-                "speech": speech,
+                "continue": continue_,
                 "continuous": continuous,
+                "control_id": control_id,
+                "digits": digits,
+                "initial_timeout": initial_timeout,
                 "partial_results": partial_results,
+                "send_start_of_input": send_start_of_input,
+                "speech": speech,
+                "start_input_timers": start_input_timers,
+                "status_url": status_url,
             }.items()
             if v is not None
         }
         if extras:
             params.update(extras)
+        params.setdefault("control_id", str(_uuid.uuid4()))
         body: dict[str, Any] = {
             "command": "calling.collect",
             "params": params,
@@ -737,8 +756,9 @@ class Calling(BaseResource):
         self,
         call_id: str,
         *,
-        detect: dict[str, Any],
+        detect: RelayCallDetectInner,
         control_id: str | None = None,
+        status_url: str | None = None,
         timeout: float | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
@@ -748,12 +768,14 @@ class Calling(BaseResource):
             for k, v in {
                 "control_id": control_id,
                 "detect": detect,
+                "status_url": status_url,
                 "timeout": timeout,
             }.items()
             if v is not None
         }
         if extras:
             params.update(extras)
+        params.setdefault("control_id", str(_uuid.uuid4()))
         body: dict[str, Any] = {
             "command": "calling.detect",
             "params": params,
@@ -792,24 +814,31 @@ class Calling(BaseResource):
             ),
         )
 
-    @_required_via_extras("tap", "device")
+    @_required_via_extras("device", "tap")
     def tap(
         self,
         call_id: str,
         *,
-        tap: dict[str, Any],
-        device: dict[str, Any],
+        device: RelayCallTapDevice,
+        tap: RelayTap,
         control_id: str | None = None,
+        status_url: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v
-            for k, v in {"control_id": control_id, "tap": tap, "device": device}.items()
+            for k, v in {
+                "control_id": control_id,
+                "device": device,
+                "status_url": status_url,
+                "tap": tap,
+            }.items()
             if v is not None
         }
         if extras:
             params.update(extras)
+        params.setdefault("control_id", str(_uuid.uuid4()))
         body: dict[str, Any] = {
             "command": "calling.tap",
             "params": params,
@@ -854,28 +883,35 @@ class Calling(BaseResource):
         call_id: str,
         *,
         url: str,
-        control_id: str | None = None,
-        codec: str | None = None,
-        track: Literal["inbound_track", "outbound_track", "both_tracks"] | None = None,
         authorization_bearer_token: str | None = None,
+        codec: str | None = None,
+        control_id: str | None = None,
         custom_parameters: dict[str, Any] | None = None,
+        name: str | None = None,
+        status_url: str | None = None,
+        status_url_method: Literal["GET", "POST"] | None = None,
+        track: Literal["inbound_track", "outbound_track", "both_tracks"] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v
             for k, v in {
-                "control_id": control_id,
-                "url": url,
-                "codec": codec,
-                "track": track,
                 "authorization_bearer_token": authorization_bearer_token,
+                "codec": codec,
+                "control_id": control_id,
                 "custom_parameters": custom_parameters,
+                "name": name,
+                "status_url": status_url,
+                "status_url_method": status_url_method,
+                "track": track,
+                "url": url,
             }.items()
             if v is not None
         }
         if extras:
             params.update(extras)
+        params.setdefault("control_id", str(_uuid.uuid4()))
         body: dict[str, Any] = {
             "command": "calling.stream",
             "params": params,
@@ -970,6 +1006,7 @@ class Calling(BaseResource):
         }
         if extras:
             params.update(extras)
+        params.setdefault("control_id", str(_uuid.uuid4()))
         body: dict[str, Any] = {
             "command": "calling.transcribe",
             "params": params,
@@ -1008,12 +1045,11 @@ class Calling(BaseResource):
             ),
         )
 
-    @_required_via_extras("control_id")
     def ai_stop(
         self,
         call_id: str,
         *,
-        control_id: str,
+        control_id: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
@@ -1091,7 +1127,7 @@ class Calling(BaseResource):
         self,
         call_id: str,
         *,
-        device: dict[str, Any],
+        device: RelayCallReferDevice,
         status_url: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,

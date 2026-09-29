@@ -586,7 +586,7 @@ CallCreateParamsSWML = TypedDict(
         "password": "str",
         "headers": "list[dict[str, Any]]",
         "custom_variables": "dict[str, str]",
-        "swml": "SWMLObject",
+        "swml": "str | dict[str, Any]",
     },
     total=False,
 )
@@ -999,7 +999,7 @@ class CallUpdateParamsSWML(TypedDict, total=False):
     fallback_url: str
     status: Literal["canceled", "completed"]
     status_url: str
-    swml: SWMLObject
+    swml: str | dict[str, Any]
 
 
 class CallUpdateParamsURL(TypedDict, total=False):
@@ -3119,6 +3119,206 @@ class AiSidecar(TypedDict, total=False):
     ai_sidecar: dict[str, Any] | list[Any] | float | str
 
 
+class RelayIsReset(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    full_reset: Any
+    system_prompt: Any
+    user_prompt: Any
+
+
+class RelayCallPlayAudio(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    url: str
+
+
+class RelayCallPlayTts(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    gender: Literal["male", "female"]
+    language: str
+    text: str
+    voice: str
+
+
+class RelayCallPlaySilence(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    duration: float
+
+
+class RelayCallPlayRingtone(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    duration: float
+    name: Literal[
+        "au",
+        "be",
+        "ca",
+        "cn",
+        "cy",
+        "cz",
+        "de",
+        "dk",
+        "dz",
+        "eg",
+        "es",
+        "fi",
+        "fr",
+        "hu",
+        "il",
+        "in",
+        "jp",
+        "ko",
+        "pk",
+        "pl",
+        "ro",
+        "rs",
+        "ru",
+        "sa",
+        "tr",
+        "uk",
+        "us",
+        "at",
+        "bg",
+        "br",
+        "ch",
+        "cl",
+        "ee",
+        "gr",
+        "it",
+        "lt",
+        "mx",
+        "my",
+        "nl",
+        "no",
+        "nz",
+        "ph",
+        "pt",
+        "se",
+        "sg",
+        "th",
+        "za",
+        "tw",
+        "ve",
+        "bong",
+    ]
+
+
+class RelayCallRecordInner(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    audio: RelayCallRecordAudio
+
+
+class RelayCallRecordAudio(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    beep: bool
+    direction: Literal["listen", "speak", "both"]
+    end_silence_timeout: float
+    format: Literal["mp3", "wav", "mp4"]
+    initial_timeout: float
+    input_sensitivity: float
+    max_length: int
+    stereo: bool
+    terminators: str
+
+
+class RelayCallCollectDigitsInner(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    digit_timeout: float
+    max: int
+    terminators: str
+
+
+class RelayCallCollectSpeechInner(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    end_silence_timeout: float
+    engine: Literal["Google", "Google.V2", "Deepgram"]
+    hints: list[str]
+    language: str
+    model: str
+    speech_timeout: float
+
+
+class RelayCallDetectFax(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    tone: Literal["CNG", "CED", "cng", "ced"]
+
+
+class RelayCallDetectMachine(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    detect_interruptions: bool
+    detect_message_end: bool
+    end_silence_timeout: float
+    initial_timeout: float
+    machine_ready_timeout: float
+    machine_voice_threshold: float
+    machine_words_threshold: int
+
+
+class RelayCallDetectDigit(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    digits: str
+
+
+class RelayCallTapDeviceRtp(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    addr: str
+    codec: Literal["PCMA", "PCMU", "pcma", "pcmu", "OPUS", "opus"]
+    port: int
+    ptime: int
+
+
+class RelayCallTapDeviceWs(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    codec: Literal["PCMA", "PCMU", "pcma", "pcmu", "OPUS", "opus"]
+    uri: str
+
+
+class RelayTap(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    params: RelayAudioTapParams
+    type: Literal["audio"]
+
+
+class RelayAudioTapParams(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    direction: Literal["listen", "speak", "both"]
+
+
+class RelayCallReferDevice(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    params: RelayCallReferDeviceSip
+    type: Literal["sip"]
+
+
+RelayCallReferDeviceSip = TypedDict(
+    "RelayCallReferDeviceSip",
+    {
+        "from": "str",
+        "password": "str",
+        "to": "str",
+        "username": "str",
+    },
+    total=False,
+)
+RelayCallReferDeviceSip.__doc__ = (
+    """Open shape: extra server keys permitted; not validated at runtime."""
+)
+
 CallCommandsRequest: TypeAlias = "CallRequest"
 CallCommandsResponse: TypeAlias = "CallResponse"
 
@@ -3131,3 +3331,6 @@ ConnectDeviceSerial: TypeAlias = dict[str, Any]
 ConnectDeviceSerialParallel: TypeAlias = dict[str, Any]
 ConnectDeviceSingle: TypeAlias = dict[str, Any]
 Contexts: TypeAlias = dict[str, Context]
+RelayCallPlayInner: TypeAlias = dict[str, Any]
+RelayCallDetectInner: TypeAlias = dict[str, Any]
+RelayCallTapDevice: TypeAlias = dict[str, Any]

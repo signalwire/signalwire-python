@@ -12,6 +12,13 @@
     `signalwire.core.swaig_request_generated.SwaigArgument`, `PostPromptData` ->
     `signalwire.core.post_prompt_generated.PostPrompt`.
   - `signalwire.cli.types.PostData` -> `SwmlRequestData`.
+  - `signalwire.rest.namespaces.fabric_types_generated`: the SWML verb types no fabric operation
+    uses (`SWMLObject`, `Play`, `Connect`, ... 142 names) are aliases of the same names in
+    `signalwire.rest.namespaces.calling_types_generated`; `AIPromptUpdate` -> `AIAgentPrompt`,
+    `AIPostPromptUpdate` -> `AIAgentPostPrompt`, `SWAIGUpdate` -> `AIAgentSWAIG`,
+    `SWAIGInternalFillerUpdate` -> `SWAIGInternalFiller`, `FunctionFillersUpdate` ->
+    `FunctionFillers`, `ContextsUpdate` -> `Contexts`, and the `*Pom`/`*Text`/`Contexts*Object`
+    `...Update` variants -> the calling module's names without `Update`.
 
 ### Removed
 - Generated type names with no single replacement (their shapes were merged into, or split
@@ -22,10 +29,22 @@
     `PostPromptConversationTurn`, `PostPromptFunctionCall` (see
     `signalwire.core.post_prompt_generated`) and `SignalWireErrorBody`.
   - `signalwire.cli.types`: `CallData` and `VarsData`.
+  - `signalwire.rest.namespaces.fabric_types_generated`: `FabricAddressesResponse` and
+    `ResourceSipEndpointResponse` (no operation returned either shape).
 - `SwmlRequestCall` is now a union of the per-call-type variants (`SwmlRequestCallPhone`,
   `...Sip`, `...Webrtc`, `...Other`); it can no longer be called as a constructor.
 
 ### Changed
+- REST fields the platform stores or forwards without checking them take their shape from the
+  engine spec that does check them: fabric AI agent `prompt`, `post_prompt`, `languages`,
+  `SWAIG`, `pronounce`, `hints`, `params` (the SWML `ai` verb) and the `calling.*` command
+  params (the RELAY calling methods). New optional arguments where the engine accepts more
+  (`calling.play` `gender`/`language`/`voice`, `calling.collect` `continue`/`start_input_timers`/
+  `send_start_of_input`/`status_url`, `calling.stream` `name`/`status_url`/`status_url_method`,
+  `calling.record_pause` `behavior`, `calling.detect`/`calling.tap` `status_url`,
+  `calling.live_transcribe` `hints`).
+- `calling.play`, `record`, `collect`, `detect`, `tap`, `stream` and `transcribe` generate a
+  `control_id` when you omit it; the engine rejects these commands without one.
 - `calling.record(audio=...)` sends the settings as `params.record.audio`, where the engine reads
   them (the old top-level `params.audio` was rejected). `record=` is a new optional argument.
   `calling.play` media type `ring` is `ringtone`; `calling.tap` device params have no `rate`.
