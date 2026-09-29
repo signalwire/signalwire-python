@@ -32,14 +32,21 @@ jobs:
         with:
           path: signalwire-python
 
+      - name: Resolve coordinated refs (branch-local .porting-sdk-ref pin; no pin = main)
+        # See porting-sdk/COORDINATED_PASS.md. Every foreign coordinated-set
+        # checkout below takes its ref from this step's outputs.
+        id: coord
+        shell: bash
+        run: bash signalwire-python/.github/coordinated-ref.sh signalwire-python
+
       - name: Check out porting-sdk (provides audit scripts + surface JSON)
         uses: actions/checkout@v7
         with:
           repository: signalwire/porting-sdk
-          # Coordinated-pass pin: `main` normally; set the PORTING_SDK_REF repo variable
-          # to a wave branch to test a coordinated porting-sdk change, declared on the PR
-          # (see porting-sdk/COORDINATED_PASS.md). No revert commit.
-          ref: ${{ vars.PORTING_SDK_REF || 'main' }}
+          # Coordinated-pass pin: resolved by the `coord` step from the branch-local
+          # .porting-sdk-ref pin file; main when the file is absent, so only a branch
+          # that commits the pin is affected (see porting-sdk/COORDINATED_PASS.md).
+          ref: ${{ steps.coord.outputs.ref }}
           path: porting-sdk
           token: ${{ secrets.PORTING_SDK_TOKEN }}
 
