@@ -99,6 +99,10 @@ and `join_conference()`.
   search before saying Wikipedia has nothing on a topic.
 - Penny's `locked` step asks the caller before connecting them with a person;
   it let the model call `request_human` without asking.
+- A digit such as "²" in a `Content-Length` header, a CGI `CONTENT_LENGTH`, a
+  `FunctionResult` integer argument, a handoff conversation id or a config
+  value no longer raises `int()`'s `ValueError`. `str.isdigit()` accepts such
+  digits, and `int()` refuses them.
 
 ### Notes for upgraders
 - WebService needs credentials before `start()`: `SWML_BASIC_AUTH_USER` and

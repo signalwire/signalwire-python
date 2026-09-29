@@ -36,7 +36,9 @@ def _swml_int(
         text = value.strip()
         if _SWML_VAR.match(text):
             return text
-        if text.lstrip("-").isdigit():
+        digits = text.lstrip("-")
+        # isdigit() also accepts digits such as "²", which int() refuses
+        if digits.isascii() and digits.isdigit():
             number = int(text)
     elif isinstance(value, int) and not isinstance(value, bool):
         number = value

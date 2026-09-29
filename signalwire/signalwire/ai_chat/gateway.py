@@ -733,7 +733,8 @@ async def _read_json_body(
         ValueError: If the body isn't valid JSON.
     """
     declared = request.headers.get("content-length", "")
-    if declared.isdigit() and int(declared) > limit:
+    # isdigit() also accepts digits such as "²", which int() refuses
+    if declared.isascii() and declared.isdigit() and int(declared) > limit:
         raise GatewayRejection(413, "request too large")
     received = bytearray()
     async for chunk in request.stream():

@@ -230,7 +230,7 @@ class HandoffRouter:
         the gateway's handle delimiter.
         """
         root, _, tail = conversation_id.rpartition(".")
-        if root and tail.isdigit():
+        if root and tail.isascii() and tail.isdigit():
             return f"{root}.{int(tail) + 1}"
         return f"{conversation_id}.1"
 
