@@ -51,6 +51,7 @@ def _same_origin_redirect(request: Any) -> str:
     """
     scope = request.scope
     raw = scope.get("raw_path")
+    path: str
     if raw:
         path = raw.decode("latin-1")
     else:
