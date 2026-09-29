@@ -1,5 +1,91 @@
 # Changelog
 
+## [Unreleased]
+
+Fixes from a review of 3.5.0 made while porting it to the TypeScript SDK:
+security fixes in the web service, the per-request copy, two skills and the AI
+Chat routers; DataMap tools, the swaig-test simulator and their docs now follow
+the platform's rules; and fixes for Cloud Run, LiveWire, BedrockAgent, `pay()`
+and `join_conference()`.
+
+### Security
+- WebService refuses any path component that starts with a dot, so a mounted
+  repository's `.git/config` and `.env.*` files are no longer served;
+  `.well-known` is still served. An `index.html` that's a link to a file
+  outside the mount is refused. With no credentials configured, `start()`
+  raises `RuntimeError` instead of generating a password nobody could see.
+- The per-request copy of an agent copies every tool. A configuration callback
+  that changed a tool, such as turning off `secure`, adding a parameter or
+  setting a DataMap webhook's header, changed it for every later call.
+- The mcp_gateway skill, and the native_vector_search skill in remote mode,
+  send every request through the session that refuses redirects and
+  connections to private addresses, as web_search and spider do.
+- ChatGateway and HandoffRouter cap the request body at 64 KiB and a message at
+  8 KiB, and answer 413 over either.
+- HandoffRouter keeps a nonce's first registration. Registering it again no
+  longer resets its typing cap or moves it to another call, and a redeemed
+  nonce can't be registered again.
+
+### Fixed
+- DataMap: `body()` sets `params`, the only field the platform sends as the
+  request body. Before, `body()` and `create_simple_api_tool(body=)` sent a
+  POST with no body.
+- swaig-test's DataMap simulator follows the platform: the template data for
+  each stage (a webhook's output reads the arguments as `${input.args.x}`),
+  the `lc:`, `enc:` and `fmt_ph:` helpers in the platform's fixed order and
+  encoding, one webhook request with no fallback to the next webhook,
+  `error_keys` by presence, non-2xx responses, GET and POST only, unexpanded
+  headers, `require_args` as any-of, `input_args_as_params`, expression
+  patterns and `nomatch-output`, and `foreach`. An unresolved template expands
+  to an empty string, as on the platform, with a note on stderr.
+  `execute_datamap_function()` takes the call's data as `call_data`, and
+  swaig-test's `--custom-data` supplies it.
+- The DataMap guide, the API reference, the CLI guide, sw-pydocs and the
+  DataMap examples describe DataMap as the platform runs it. They no longer
+  show `${enc:url:x}`, helpers applied left to right, fallback webhook chains,
+  templated headers, `${response.x}`, `${match.N}`, `${args.x || default}` or
+  `@{strftime}`, and a webhook's output reads `${input.args.x}`.
+- datasphere_serverless results name the query. They said
+  `I found results for ""`.
+- `run()` on Cloud Run, or anywhere `GOOGLE_CLOUD_PROJECT` is set, serves
+  instead of handling one request and exiting: Google Cloud Functions mode
+  needs `FUNCTION_TARGET`, which the Functions Framework sets.
+- LiveWire: `run_app()` serves the agent a session starts; it logged "no agent
+  was started". The model is the plugin's `.model`, not its repr, and
+  `allow_interruptions=False` sets `enable_barge`, which the platform reads,
+  instead of `barge_confidence`.
+- WebService: removing a directory stops serving it, adding one doesn't
+  register every mount again, and a `/` mount works.
+- swaig-test's serverless simulation follows `--aws-function-name`,
+  `--aws-region` and the other flags given, and the Azure preset names its
+  function. `--azure-function-url` and `--gcp-function-url` work: the SDK reads
+  `AZURE_FUNCTION_URL` and `FUNCTION_URL`.
+- Skills' `tool_name` schema defaults match the tools they register, such as
+  `search_knowledge` for native_vector_search. The schema's `env_var` is
+  documented as a hint for configuration tools; the SDK doesn't read it.
+- BedrockAgent warns once for each feature it leaves out because Bedrock
+  doesn't support it (hints, languages, pronunciations, multilingual settings
+  and contexts), and raises `ValueError` for a non-numeric temperature, top_p
+  or max_tokens.
+- `pay()` sends integers and booleans, as the schema requires.
+  `join_conference()`'s `max_participants` defaults to None, is sent whenever
+  given, and accepts the schema's range, 2 to 100000.
+- The examples no longer pass `barge_confidence`, which isn't in the schema,
+  and `mcp_gateway_demo.py` reads the gateway's URL and credentials from the
+  environment.
+
+### Notes for upgraders
+- WebService needs credentials before `start()`: `SWML_BASIC_AUTH_USER` and
+  `SWML_BASIC_AUTH_PASSWORD`, `basic_auth=(user, password)`, or the config
+  file. Hidden directories other than `.well-known` are no longer served.
+- mcp_gateway and remote native_vector_search ignore `HTTP_PROXY` and
+  `HTTPS_PROXY` unless `SWML_URL_FETCH_USE_PROXY` is set.
+- DataMap: in a webhook's output or expressions, replace `${args.x}` with
+  `${input.args.x}`. Replace `${enc:url:x}` with `${enc:x}`, and a chain of
+  fallback webhooks with a fallback output.
+- `join_conference(max_participants=250)` now sends 250. Before, it sent
+  nothing, and the platform's default of 100000 applied.
+
 ## [3.5.0] - 2026-09-24
 
 Webhook signatures and SWAIG tokens are now enforced on every path, including
