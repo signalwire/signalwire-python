@@ -206,6 +206,10 @@ Check:
 3. Network connectivity
 4. Firewall rules
 
+### Gateway URL Rejected
+
+SSRF protection refuses a `gateway_url` that resolves to a private or internal address, and setup fails. The skill also checks each request, each redirect and each connection, so a gateway that redirects to an internal address, or whose hostname later resolves to one, gets an error instead of a response. To run a gateway on `localhost` or a private network, set `SWML_ALLOW_PRIVATE_URLS=true`. The skill connects directly, ignoring `HTTP_PROXY` and `HTTPS_PROXY`, so that the check applies to each connection. To send requests through a proxy that blocks private destinations itself, set `SWML_URL_FETCH_USE_PROXY=true`.
+
 ### SSL Certificate Errors
 
 For self-signed certificates:

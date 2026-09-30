@@ -24,24 +24,39 @@ class DataMap:
     on the SignalWire server without requiring webhook endpoints. Works similar
     to FunctionResult but for building data_map structures.
 
+    The platform runs a data_map in this order. The top-level expressions
+    come first, and the first one that produces an output ends the function.
+    Then the platform requests the first webhook whose ``require_args`` are
+    met, and no other: if that webhook fails, it doesn't try later webhooks,
+    and the fallback output runs. The fallback output also runs when no
+    webhook produced a result. Without one, the AI gets a generic error.
+
+    Templates read two different sets of data. A webhook's url and params,
+    the top-level expressions and the fallback output read the call data,
+    where an argument is ``${args.location}``. A webhook's foreach,
+    expressions and output read its JSON response, whose fields are at the
+    root (``${current.temp_f}``, or ``${array[0].x}`` for an array), with
+    the call data under ``input``: an argument is ``${input.args.location}``
+    there, and ``${args.location}`` is empty. Header values are sent as
+    written, without template expansion.
+
     Example usage:
         # Simple API call - output goes inside webhook
         data_map = (DataMap('get_weather')
             .purpose('Get current weather information')
             .parameter('location', 'string', 'City name', required=True)
             .webhook('GET', 'https://api.weather.com/v1/current?key=API_KEY&q=${enc:args.location}')
-            .output(FunctionResult('Weather in ${args.location}: ${current.condition.text}, ${current.temp_f}°F'))
+            .output(FunctionResult('Weather in ${input.args.location}: ${current.condition.text}, ${current.temp_f}°F'))
         )
 
-        # Multiple webhooks with fallback
-        data_map = (DataMap('search_multi')
-            .purpose('Search with fallback APIs')
+        # A webhook with a fallback output, used when the webhook fails
+        data_map = (DataMap('search')
+            .purpose('Search the catalog')
             .parameter('query', 'string', 'Search query', required=True)
-            .webhook('GET', 'https://api.primary.com/search?q=${enc:args.query}')
-            .output(FunctionResult('Primary result: ${title}'))
-            .webhook('GET', 'https://api.fallback.com/search?q=${enc:args.query}')
-            .output(FunctionResult('Fallback result: ${title}'))
-            .fallback_output(FunctionResult('Sorry, all search APIs are unavailable'))
+            .webhook('GET', 'https://api.example.com/search?q=${enc:args.query}')
+            .output(FunctionResult('Top result: ${title}'))
+            .error_keys(['error'])
+            .fallback_output(FunctionResult('Sorry, search is unavailable right now'))
         )
 
         # Expression-based responses (no API calls)
@@ -49,7 +64,7 @@ class DataMap:
             .purpose('Control file playback')
             .parameter('command', 'string', 'Playback command')
             .parameter('filename', 'string', 'File to control', required=False)
-            .expression('${args.command}', r'start.*', FunctionResult().add_action('start_playbook', {'file': '${args.filename}'}))
+            .expression('${args.command}', r'start.*', FunctionResult().add_action('start_playback', {'file': '${args.filename}'}))
             .expression('${args.command}', r'stop.*', FunctionResult().add_action('stop_playback', True))
         )
 
@@ -59,13 +74,13 @@ class DataMap:
             .parameter('query', 'string', 'Search query', required=True)
             .webhook('POST', 'https://api.docs.com/search', headers={'Authorization': 'Bearer TOKEN'})
             .params({'query': '${args.query}', 'limit': 3})
-            .output(FunctionResult('Found: ${results[0].title} - ${results[0].summary}'))
             .foreach({
                 'input_key': 'results',
                 'output_key': 'formatted_results',
                 'max': 3,
                 'append': 'Result: ${this.title} - ${this.summary}\n'
             })
+            .output(FunctionResult('Found:\n${formatted_results}'))
         )
     """
 
@@ -188,6 +203,15 @@ class DataMap:
         """
         Add an expression pattern for pattern-based responses
 
+        The platform expands ``test_value`` against the call data, where an
+        argument is ``${args.command}``, and searches it for ``pattern``: a
+        regular expression that can match anywhere in the value, without
+        regard to case. Write it as ``/pattern/flags`` to set the flags
+        yourself (``i`` ignores case, ``s`` lets ``.`` match a newline).
+        Expressions run in order, and the first that produces an output ends
+        the function. An expression with ``nomatch_output`` always produces
+        one, so no expression after it runs.
+
         Args:
             test_value: Template string to test (e.g., "${args.command}")
             pattern: Regex pattern string or compiled Pattern object to match against
@@ -223,13 +247,27 @@ class DataMap:
         """
         Add a webhook API call
 
+        The platform sends GET and POST requests only. A webhook is sent as a
+        POST when ``method`` is ``"POST"`` or when it has params (see
+        ``params()``), and as a GET otherwise, so PUT, PATCH and DELETE are
+        sent as GET.
+
+        The platform requests the first webhook whose ``require_args`` are
+        met and no other. A later webhook is useful only when the earlier
+        ones can be skipped by their ``require_args``; it doesn't run when an
+        earlier one fails.
+
         Args:
-            method: HTTP method (GET, POST, PUT, DELETE, etc.)
-            url: API endpoint URL (can include ${variable} substitutions)
-            headers: Optional HTTP headers
-            form_param: Send JSON body as single form parameter with this name
-            input_args_as_params: Merge function arguments into params
-            require_args: Only execute if these arguments are present
+            method: HTTP method: "GET" or "POST"
+            url: API endpoint URL. Templates in it are expanded against the
+                call data, such as ``${enc:args.location}``.
+            headers: Optional HTTP headers, sent as written. The platform
+                doesn't expand templates in header values.
+            form_param: Send the JSON params as one form field with this name
+            input_args_as_params: Merge the function's arguments into params,
+                which makes the request a POST
+            require_args: Skip this webhook, without a request, unless at
+                least one of these arguments is present
 
         Returns:
             Self for method chaining
@@ -252,6 +290,11 @@ class DataMap:
         """
         Add expressions that run after the most recent webhook completes
 
+        They run after the webhook's foreach, against its response, and the
+        first one that produces an output replaces the webhook's own output.
+        Their templates read the response's fields from the root, and the
+        call data under ``input``, such as ``${input.args.query}``.
+
         Args:
             expressions: List of expression definitions to check post-webhook
 
@@ -264,16 +307,33 @@ class DataMap:
         self._webhooks[-1]["expressions"] = expressions
         return self
 
+    def body(self, data: dict[str, Any]) -> "DataMap":
+        """
+        Set the JSON request body for the last added webhook; the same as params()
+
+        The platform reads a webhook's body from its ``params`` field, and
+        has no ``body`` field, so this sets ``params``. See ``params()``.
+
+        Args:
+            data: Request body data (can include ${variable} substitutions)
+
+        Returns:
+            Self for method chaining
+        """
+        if not self._webhooks:
+            raise ValueError("Must add webhook before setting body")
+
+        self._webhooks[-1]["params"] = data
+        return self
+
     def params(self, data: dict[str, Any]) -> "DataMap":
         """
-        Set request params for the last added webhook.
+        Set the JSON request body for the last added webhook
 
-        This is NOT an alias for body(): the two write different webhook keys
-        (``params`` vs ``body``), and only ``params`` is part of the webhook
-        contract — schema.json ``$defs/Webhook`` lists ``params`` among its ten
-        permitted properties and forbids everything else, and the engine's
-        webhook readers look up ``params`` and never ``body``. Use this method
-        for POST/PUT request data.
+        The platform sends ``params`` as the request's JSON body, not as URL
+        query parameters, so a webhook with params is sent as a POST whatever
+        its method. Put query parameters in the URL instead. Templates in the
+        values are expanded against the call data, such as ``${args.query}``.
 
         Args:
             data: Request params data (can include ${variable} substitutions)
@@ -291,13 +351,20 @@ class DataMap:
         """
         Process an array from the webhook response using foreach mechanism
 
+        The platform runs the foreach before the webhook's expressions and
+        output, and stores the text it builds under ``output_key``, so the
+        output reads it as ``${formatted_results}``.
+
         Args:
             foreach_config: Either:
                 - Dict: Foreach configuration with keys:
-                    - input_key: Key in API response containing the array
+                    - input_key: Path to the array in the API response, such
+                      as ``results`` or ``data.items``
                     - output_key: Name for the built string variable
                     - max: Maximum number of items to process (optional)
-                    - append: Template string to append for each item
+                    - append: Template string to append for each item, where
+                      ``${this}`` is the current item and ``${this.title}``
+                      its field; the rest of the response stays readable
 
         Returns:
             Self for method chaining
@@ -333,6 +400,11 @@ class DataMap:
         """
         Set the output result for the most recent webhook
 
+        Its templates read the webhook's JSON response: an object's fields
+        from the root, such as ``${current.temp_f}``, or ``${array[0].x}``
+        for an array. The call data is under ``input``, so an argument is
+        ``${input.args.location}``; ``${args.location}`` is empty here.
+
         Args:
             result: FunctionResult defining the response for this webhook
 
@@ -347,7 +419,13 @@ class DataMap:
 
     def fallback_output(self, result: FunctionResult) -> "DataMap":
         """
-        Set a fallback output result at the top level (used when all webhooks fail)
+        Set a fallback output result at the top level
+
+        The platform uses it when no top-level expression produced an output
+        and the webhook stage produced no result: the webhook it requested
+        failed, or no webhook was eligible. It doesn't try a later webhook
+        first. Its templates read the call data, so an argument is
+        ``${args.location}``.
 
         Args:
             result: FunctionResult defining the fallback response
@@ -361,6 +439,14 @@ class DataMap:
     def error_keys(self, keys: list[str]) -> "DataMap":
         """
         Set error keys for the most recent webhook (if webhooks exist) or top-level
+
+        The webhook fails when its JSON response has any of these keys at the
+        top level, whatever the value, even ``false`` or ``null``. An HTTP
+        status outside 200-299 isn't a failure by itself: the platform adds
+        an ``http_code`` key to such a response, so ``"http_code"`` in this
+        list fails the webhook on any such status. The platform reads error
+        keys only on a webhook; called before any webhook, this sets a
+        top-level ``error_keys`` field, which the platform ignores.
 
         Args:
             keys: List of JSON keys whose presence indicates an error
@@ -378,7 +464,10 @@ class DataMap:
 
     def global_error_keys(self, keys: list[str]) -> "DataMap":
         """
-        Set top-level error keys (applies to all webhooks)
+        Set top-level error keys
+
+        The platform ignores a top-level ``error_keys`` field: it checks only
+        each webhook's own. Call ``error_keys()`` after the webhook instead.
 
         Args:
             keys: List of JSON keys whose presence indicates an error
@@ -445,6 +534,7 @@ def create_simple_api_tool(
     parameters: dict[str, dict[str, Any]] | None = None,
     method: str = "GET",
     headers: dict[str, str] | None = None,
+    body: dict[str, Any] | None = None,
     error_keys: list[str] | None = None,
 ) -> DataMap:
     """
@@ -452,11 +542,15 @@ def create_simple_api_tool(
 
     Args:
         name: Function name
-        url: API endpoint URL
-        response_template: Template for formatting the response
+        url: API endpoint URL. Templates read the arguments as ``${args.x}``.
+        response_template: Template for formatting the response. It reads the
+            response's fields from the root, such as ``${current.temp_f}``, and
+            the arguments as ``${input.args.x}``.
         parameters: Optional parameter definitions
-        method: HTTP method (default: GET)
-        headers: Optional HTTP headers
+        method: HTTP method (default: GET). A webhook with a body is sent as a
+            POST.
+        headers: Optional HTTP headers, sent as written
+        body: Optional JSON request body, set as the webhook's params
         error_keys: Optional list of error indicator keys
 
     Returns:
@@ -477,6 +571,10 @@ def create_simple_api_tool(
 
     # Add webhook
     data_map.webhook(method, url, headers)
+
+    # Add body if provided; the platform sends params as the body
+    if body:
+        data_map.params(body)
 
     # Add error keys if provided
     if error_keys:

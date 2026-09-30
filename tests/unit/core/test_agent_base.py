@@ -1312,6 +1312,7 @@ class TestUrlBuilding:
     def test_gcf_mode_url(self) -> None:
         agent = self._make(route="/")
         env = {
+            "FUNCTION_TARGET": "main",
             "K_SERVICE": "my-service",
             "GOOGLE_CLOUD_PROJECT": "my-project",
             "FUNCTION_REGION": "us-central1",
@@ -1329,6 +1330,7 @@ class TestUrlBuilding:
     def test_gcf_mode_no_project(self) -> None:
         agent = self._make(route="/")
         env = {
+            "FUNCTION_TARGET": "main",
             "K_SERVICE": "my-service",
         }
         with patch.dict(os.environ, env, clear=False):

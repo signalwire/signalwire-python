@@ -121,12 +121,11 @@ def get_execution_mode() -> str:
     if os.getenv("AWS_LAMBDA_FUNCTION_NAME") or os.getenv("LAMBDA_TASK_ROOT"):
         return "lambda"
 
-    # Check for Google Cloud Functions environment
-    if (
-        os.getenv("FUNCTION_TARGET")
-        or os.getenv("K_SERVICE")
-        or os.getenv("GOOGLE_CLOUD_PROJECT")
-    ):
+    # Check for Google Cloud Functions environment. The Functions Framework
+    # that hosts a function sets FUNCTION_TARGET. K_SERVICE alone means Cloud
+    # Run, which sets it for every service, and GOOGLE_CLOUD_PROJECT is set on
+    # many machines; in both cases the agent serves HTTP itself.
+    if os.getenv("FUNCTION_TARGET"):
         return "google_cloud_function"
 
     # Check for Azure Functions environment

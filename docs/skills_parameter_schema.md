@@ -188,7 +188,7 @@ Each parameter in the schema can have the following properties:
 | `default` | any | Default value if not provided |
 | `required` | boolean | Whether the parameter is required (default: false) |
 | `hidden` | boolean | Whether to hide this field in UIs (for secrets/API keys) |
-| `env_var` | string | Environment variable that can provide this value |
+| `env_var` | string | Environment variable a configuration tool can read this value from. The SDK doesn't read it: the skill gets the value from its params |
 | `enum` | array | List of allowed values (for string types) |
 | `min` | number | Minimum value (for numeric types) |
 | `max` | number | Maximum value (for numeric types) |
@@ -227,7 +227,7 @@ class MyCustomSkill(SkillBase):
                 "description": "API authentication key",
                 "required": True,
                 "hidden": True,  # Mark as sensitive
-                "env_var": "MY_API_KEY"  # Can be set via environment
+                "env_var": "MY_API_KEY"  # Where a configuration tool can find it
             },
             "timeout": {
                 "type": "integer",
@@ -276,7 +276,7 @@ class MyCustomSkill(SkillBase):
 
 ### API Keys and Secrets
 
-Always mark sensitive parameters as `hidden` and provide an `env_var` option:
+Always mark sensitive parameters as `hidden`, and name the usual environment variable in `env_var` so configuration tools can fill the value in (the skill itself reads only its params):
 
 <!-- snippet: no-compile config-excerpt -->
 ```python

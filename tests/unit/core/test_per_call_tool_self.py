@@ -132,8 +132,9 @@ def test_the_copy_rebinds_only_handlers_bound_to_the_agent() -> None:
     for name in ("plain", "typed", "typed_async", "registered"):
         assert copied[name] is not functions[name]
         assert copied[name].handler is not functions[name].handler  # type: ignore[union-attr]  # SWAIGFunction entries
-    # A closure can't be rebound, so the copy shares it
-    assert copied["closure"] is functions["closure"]
+    # A closure can't be rebound, so the copy's entry shares its handler
+    assert copied["closure"] is not functions["closure"]
+    assert copied["closure"].handler is functions["closure"].handler  # type: ignore[union-attr]  # SWAIGFunction entries
     # The original's entries still run on the original
     assert functions["plain"].handler.__self__ is agent  # type: ignore[union-attr]  # a bound method
 

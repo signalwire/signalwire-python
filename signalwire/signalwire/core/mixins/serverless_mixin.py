@@ -202,7 +202,11 @@ def _cgi_request() -> _ServerlessRequest:
     """
     body = ""
     content_length = os.environ.get("CONTENT_LENGTH", "")
-    if content_length.isdigit() and int(content_length) > 0:
+    if (
+        content_length.isascii()
+        and content_length.isdigit()
+        and int(content_length) > 0
+    ):
         size = int(content_length)
         if size > MAX_CGI_BODY_SIZE:
             raise _RequestTooLarge(f"{size} bytes")

@@ -199,6 +199,135 @@
 - The `return` verb is available as `return_()`, the name the type stubs
   declare. It still emits the `return` key.
 
+## [3.5.1] - 2026-09-29
+
+Fixes from a review of 3.5.0 made while porting it to the TypeScript SDK:
+security fixes in the web service, the per-request copy, three skills and the AI
+Chat routers; DataMap tools, the swaig-test simulator and their docs now follow
+the platform's rules; and fixes for Cloud Run, LiveWire, BedrockAgent, `pay()`
+and `join_conference()`.
+
+### Security
+- WebService refuses any path component that starts with a dot, so a mounted
+  repository's `.git/config` and `.env.*` files are no longer served;
+  `.well-known` is still served. An `index.html` that's a link to a file
+  outside the mount is refused. With no credentials configured, `start()`
+  raises `RuntimeError` instead of generating a password nobody could see;
+  an empty password counts as none. The page at `/`, which lists each mount's
+  local directory, needs the credentials and escapes what it shows.
+- The per-request copy of an agent copies every tool. A configuration callback
+  that changed a tool, such as turning off `secure`, adding a parameter or
+  setting a DataMap webhook's header, changed it for every later call.
+- The mcp_gateway skill, and the native_vector_search skill in remote mode,
+  send every request through the session that refuses redirects and
+  connections to private addresses, as web_search and spider do. The
+  mcp_gateway skill's health check sends the configured credentials, as its
+  other requests do.
+- ChatGateway and HandoffRouter cap the request body at 64 KiB and a message at
+  8 KiB, and answer 413 over either.
+- HandoffRouter keeps a nonce's first registration until its `nonce_ttl`
+  passes. Registering it again no longer resets its typing cap or moves it to
+  another call, and a redeemed nonce can't be registered again before then.
+  Within one router, registration, redemption and the typing count are
+  atomic, so overlapping requests can't redeem a nonce twice or pass the
+  typing cap. Routers that share a `registry` can't be made atomic this way;
+  the module documentation says what to do instead.
+- swml_transfer lists its destinations in the prompt without the credentials
+  a URL carries. A transfer to another agent's URL holds that agent's basic
+  auth, which the model could repeat to a caller. The transfer still uses the
+  full URL.
+
+### Fixed
+- DataMap: `body()` sets `params`, the only field the platform sends as the
+  request body. Before, `body()` and `create_simple_api_tool(body=)` sent a
+  POST with no body.
+- swaig-test's DataMap simulator follows the platform: the template data for
+  each stage (a webhook's output reads the arguments as `${input.args.x}`),
+  the `lc:`, `enc:` and `fmt_ph:` helpers in the platform's fixed order and
+  encoding, one webhook request with no fallback to the next webhook,
+  `error_keys` by presence, non-2xx responses, GET and POST only, unexpanded
+  headers, `require_args` as any-of, `input_args_as_params`, expression
+  patterns and `nomatch-output`, and `foreach`. An unresolved template expands
+  to an empty string, as on the platform, with a note on stderr.
+  `execute_datamap_function()` takes the call's data as `call_data`, and
+  swaig-test's `--custom-data` supplies it; without its `global_data`, the
+  agent's global data applies. As on the platform, a function's `meta_data`
+  is merged over the global data, a redirect is followed from any 3xx
+  response, a failed request reports the last status received, and, with
+  the `phonenumbers` package installed, `fmt_ph` gives `INVALID NUMBER` for
+  a number it can't validate.
+- The DataMap guide, the API reference, the CLI guide, sw-pydocs and the
+  DataMap examples describe DataMap as the platform runs it. They no longer
+  show `${enc:url:x}`, helpers applied left to right, fallback webhook chains,
+  templated headers, `${response.x}`, `${match.N}`, `${args.x || default}` or
+  `@{strftime}`, and a webhook's output reads `${input.args.x}`.
+- datasphere_serverless results name the query. They said
+  `I found results for ""`.
+- `run()` on Cloud Run, or anywhere `GOOGLE_CLOUD_PROJECT` is set, serves
+  instead of handling one request and exiting: Google Cloud Functions mode
+  needs `FUNCTION_TARGET`, which the Functions Framework sets.
+- LiveWire: `run_app()` serves the agent a session starts; it logged "no agent
+  was started". The model is the plugin's `.model`, not its repr, and
+  `allow_interruptions=False` sets `enable_barge`, which the platform reads,
+  instead of `barge_confidence`. `session.generate_reply(instructions=...)`
+  adds its instructions to the prompt, and `session.say(text)` sets the AI's
+  `static_greeting`, which the platform speaks word for word when the call
+  starts. Both were added as a POM section that a text prompt leaves out, so
+  neither reached the agent.
+- WebService: removing a directory stops serving it, adding one doesn't
+  register every mount again, and a `/` mount works.
+- swaig-test's serverless simulation follows `--aws-function-name`,
+  `--aws-region` and the other flags given, and the Azure preset names its
+  function. `--azure-function-url` and `--gcp-function-url` work: the SDK reads
+  `AZURE_FUNCTION_URL` and `FUNCTION_URL`.
+- Skills' `tool_name` schema defaults match the tools they register, such as
+  `search_knowledge` for native_vector_search. The schema's `env_var` is
+  documented as a hint for configuration tools; the SDK doesn't read it.
+- BedrockAgent warns once for each feature it leaves out because Bedrock
+  doesn't support it (hints, languages, pronunciations, multilingual settings
+  and contexts), and raises `ValueError` for a non-numeric temperature, top_p
+  or max_tokens. `set_prompt_llm_params()` ignores `confidence`,
+  `presence_penalty` and `frequency_penalty` with a warning, as the platform's
+  Bedrock session does; it reads only `temperature` and `top_p`, and uses
+  1024 for `max_tokens`.
+- `pay()` raises `ValueError` when `timeout`, `max_attempts` or
+  `min_postal_code_length` isn't an integer, or `security_code` isn't a
+  boolean. It still sends them, and a boolean `postal_code`, as strings: the
+  platform's pay verb refuses a `security_code` or `postal_code` that isn't a
+  string, and reads all five as strings, whatever the bundled schema says.
+  `join_conference()`'s `max_participants` defaults to None, is sent whenever
+  given, and accepts any integer of at least 2, as the platform does; it
+  refused anything over 250.
+- The examples and docs no longer pass `barge_confidence`, which the platform
+  accepts but never applies, and `mcp_gateway_demo.py` reads the gateway's URL and credentials from the
+  environment.
+- The multi-agent tutorial's PC Builder Pro gives its three agents one set of
+  credentials. Without `SWML_BASIC_AUTH_PASSWORD`, each generated its own, and
+  every transfer between them failed with 401. The lesson no longer says
+  AgentServer shares authentication across agents.
+- The Fred tutorial's `share_fun_fact` gives a random fact, labelled as one,
+  for a category it doesn't have; it labelled the fact with that category's
+  name. Its dated or wrong facts are replaced, and Fred's prompt tells it to
+  search before saying Wikipedia has nothing on a topic.
+- Penny's `locked` step asks the caller before connecting them with a person;
+  it let the model call `request_human` without asking.
+- A digit such as "²" in a `Content-Length` header, a CGI `CONTENT_LENGTH`, a
+  `FunctionResult` integer argument, a handoff conversation id or a config
+  value no longer raises `int()`'s `ValueError`. `str.isdigit()` accepts such
+  digits, and `int()` refuses them.
+
+### Notes for upgraders
+- WebService needs credentials before `start()`: `SWML_BASIC_AUTH_USER` and
+  `SWML_BASIC_AUTH_PASSWORD`, `basic_auth=(user, password)`, or the config
+  file. Hidden directories other than `.well-known` are no longer served.
+- mcp_gateway and remote native_vector_search ignore `HTTP_PROXY` and
+  `HTTPS_PROXY` unless `SWML_URL_FETCH_USE_PROXY` is set.
+- DataMap: in a webhook's output or expressions, replace `${args.x}` with
+  `${input.args.x}`. Replace `${enc:url:x}` with `${enc:x}`, and a chain of
+  fallback webhooks with a fallback output.
+- `join_conference(max_participants=250)` now sends 250. Before, it sent
+  nothing, and the platform's default applied.
+
 ## [3.5.0] - 2026-09-24
 
 Webhook signatures and SWAIG tokens are now enforced on every path, including

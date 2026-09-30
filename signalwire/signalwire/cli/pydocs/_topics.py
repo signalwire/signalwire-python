@@ -319,22 +319,29 @@ weather = (
     DataMap("get_weather")
     .description("Get the current weather for a city")
     .parameter("city", "string", "City name", required=True)
-    .webhook("GET", "https://api.example.com/weather?city=${enc:url:args.city}")
-    .output(FunctionResult("Weather in ${args.city}: ${current.summary}"))
+    .webhook("GET", "https://api.example.com/weather?city=${enc:args.city}")
+    .output(FunctionResult("Weather in ${input.args.city}: ${current.summary}"))
 )
 self.register_swaig_function(weather.to_swaig_function())
 ```
 
-- A template reads a path from the root of the call's data: `${args.city}`
-  for an argument, `${global_data.x}`, `${meta_data.x}`, and call details
-  such as `${call_id}`. When a webhook responds, its JSON object's fields join
-  the root, so an API that returns `{"current": {...}}` is read as
-  `${current.summary}`, with no `response.` prefix. An array response is
-  `${array[0].x}`. The platform expands templates, not the SDK.
-- Prefix helpers transform a value, left to right: `${lc:enc:args.city}` takes
-  `args.city`, lowercases it, then URL-encodes it. `@{...}` functions format
-  dates and phone numbers, and more; the guide's section 4 lists them all.
-- A webhook's `params` are its JSON request body, set with `.params()`.
+- A webhook's URL and params read the call's data: `${args.city}` for an
+  argument, `${global_data.x}`, `${meta_data.x}`, and call details such as
+  `${call_id}`. Its output reads its JSON response instead: an API that
+  returns `{"current": {...}}` is read as `${current.summary}`, with no
+  `response.` prefix, and an array response is `${array[0].x}`. The call's
+  data is under `input` there, so an argument is `${input.args.city}`, and
+  `${args.city}` is empty. Header values aren't templated. The platform
+  expands templates, not the SDK.
+- Prefix helpers transform a value: `lc` lowercases, `enc` URL-encodes and
+  `fmt_ph` formats a phone number. They apply in a fixed order, `fmt_ph`,
+  then `lc`, then `enc`, whatever order they're written in, and there's no
+  `enc:url`. `@{...}` functions format dates and phone numbers, and more;
+  the guide's section 4 lists them all.
+- A webhook's `params` are its JSON request body, set with `.params()`, and
+  make the request a POST.
+- The platform requests the first webhook whose `require_args` are met, and
+  no other. When it fails, the `fallback_output()` runs.
 - `swaig-test --exec` simulates a DataMap tool locally, including its HTTP
   request.
 - Use DataMap for simple lookups. Use a Python tool when the result depends on
@@ -763,9 +770,12 @@ _BEDROCK = Topic(
     summary="Agents that use Amazon Bedrock's speech-to-speech model",
     body="""\
 `BedrockAgent` is an `AgentBase` that renders an Amazon Bedrock prompt
-instead of the standard AI verb. Prompts, tools, skills and contexts work the
-same way. `set_inference_params()` sets `temperature`, `top_p` and
-`max_tokens`, and `set_voice()` takes one of the voices Bedrock offers.
+instead of the standard AI verb. Prompts, tools and skills work the same way.
+Speech hints, languages, pronunciation rules, multilingual settings and
+contexts aren't part of the Bedrock verb, so they're left out of the SWML
+with a warning. `set_inference_params()` sets `temperature`, `top_p` and
+`max_tokens`, which must be numbers, and `set_voice()` takes one of the
+voices Bedrock offers.
 """,
     docs=(("docs/bedrock_agent.md", "BedrockAgent's options and differences"),),
     examples=(

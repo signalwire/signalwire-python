@@ -18,7 +18,6 @@ Sets LLM parameters for the main agent prompt. Accepts any parameters that will 
 agent.set_prompt_llm_params(
     temperature=0.7,
     top_p=0.9,
-    barge_confidence=0.6,
     presence_penalty=0.0,
     frequency_penalty=0.0
 )
@@ -37,8 +36,6 @@ agent.set_post_prompt_llm_params(
 )
 ```
 
-Note: barge_confidence is not applicable to post-prompt as interruption doesn't apply to summaries.
-
 ## Common Parameter Descriptions
 
 These are commonly used parameters, but any parameter accepted by your model can be used. The actual ranges and defaults are model-specific and handled by the server.
@@ -55,11 +52,16 @@ Nucleus sampling parameter that controls the cumulative probability of token sel
 - **Medium values (e.g., 0.6-0.9)**: Balanced token selection
 - **Higher values (e.g., 0.95-1.0)**: Considers a wider range of tokens
 
-### barge_confidence
-ASR (Automatic Speech Recognition) confidence threshold to interrupt the AI while it's speaking (main prompt only). This parameter isn't in the SWML schema; it passes through to the model unvalidated, so its range and default depend on the model in use.
-- **Lower values (e.g., 0.0-0.4)**: Easier to interrupt, more sensitive to user speech
-- **Medium values (e.g., 0.5-0.7)**: Balanced interruption sensitivity
-- **Higher values (e.g., 0.8-1.0)**: Harder to interrupt, requires clear user speech
+### Interruption
+
+How easily the caller can interrupt the AI isn't an LLM parameter. The platform accepts `barge_confidence` in the prompt but never applies it: the confidence a caller's speech needs to interrupt is fixed. Tune interruption with these AI params, through `set_param()`:
+- **`barge_min_words`** (1-99): how many words the caller must say before the AI stops speaking. Higher values make the AI harder to interrupt.
+- **`enable_barge`**: which barge modes are on: `"complete"`, `"partial"`, `"all"`, or a boolean.
+- **`barge_match_string`**: a string or regular expression that interrupts the AI when the caller says it.
+
+```python
+agent.set_param("barge_min_words", 3)  # Let the AI finish unless the caller says 3+ words
+```
 
 ### presence_penalty
 Topic diversity control. Penalizes tokens based on whether they appear in the conversation so far. The SWML schema allows -2.0 to 2.0, with a default of 0.
@@ -79,7 +81,7 @@ Repetition control. Penalizes tokens based on their frequency in the conversatio
 
 ### Customer Service Agent
 
-Low temperature and a moderate interruption threshold keep responses consistent.
+Low temperature keeps responses consistent.
 
 ```python
 class CustomerServiceAgent(AgentBase):
@@ -92,7 +94,6 @@ class CustomerServiceAgent(AgentBase):
         self.set_prompt_llm_params(
             temperature=0.3,        # Low randomness for consistency
             top_p=0.9,             # Focused token selection
-            barge_confidence=0.6,  # Moderate interruption threshold
             presence_penalty=0.1,  # Slight penalty to avoid repetition
             frequency_penalty=0.1  # Encourage varied language
         )
@@ -100,7 +101,7 @@ class CustomerServiceAgent(AgentBase):
 
 ### Creative Writing Assistant
 
-Higher temperature and an easier interruption threshold suit a collaborative, creative agent.
+Higher temperature suits a collaborative, creative agent.
 
 ```python
 class CreativeWritingAgent(AgentBase):
@@ -113,7 +114,6 @@ class CreativeWritingAgent(AgentBase):
         self.set_prompt_llm_params(
             temperature=0.8,        # High randomness for creativity
             top_p=0.95,            # Wide token selection
-            barge_confidence=0.3,  # Easy to interrupt, for collaboration
             presence_penalty=-0.1, # Allow topic revisiting
             frequency_penalty=0.3  # Encourage vocabulary diversity
         )
@@ -134,7 +134,6 @@ class TechnicalDocsAgent(AgentBase):
         self.set_prompt_llm_params(
             temperature=0.2,        # Very low randomness
             top_p=0.8,             # More focused token selection
-            barge_confidence=0.8,  # Hard to interrupt - let it finish
             presence_penalty=0.0,  # Neutral on repetition
             frequency_penalty=0.2  # Some vocabulary variety
         )
@@ -147,7 +146,7 @@ class TechnicalDocsAgent(AgentBase):
 
 ### Legal Advisor Bot
 
-A high interruption threshold and low temperature favor accuracy over speed.
+Low temperature favors accuracy, and requiring a few words before the AI stops lets it finish its caveats.
 
 ```python
 class LegalAdvisorAgent(AgentBase):
@@ -161,10 +160,12 @@ class LegalAdvisorAgent(AgentBase):
         self.set_prompt_llm_params(
             temperature=0.2,        # Very consistent
             top_p=0.85,            # Focused selection
-            barge_confidence=0.9,  # Very hard to interrupt - legal accuracy important
             presence_penalty=0.0,  # Allow legal term repetition
             frequency_penalty=0.0  # Legal language often repeats
         )
+
+        # Harder to interrupt: the caller must say 3 words to stop the AI
+        self.set_param("barge_min_words", 3)
 ```
 
 ## Best Practices
@@ -176,15 +177,16 @@ Begin with the default values and adjust based on observed behavior.
 Make small adjustments and test thoroughly to understand the impact.
 
 ### 3. Consider the Use Case
-- **Customer Service**: Low temperature (0.2-0.4), moderate barge_confidence (0.6-0.7)
-- **Creative Tasks**: Higher temperature (0.7-0.9), low barge_confidence (0.4-0.6)
-- **Technical/Legal**: Very low temperature (0.1-0.3), high barge_confidence (0.8-0.9)
-- **General Assistant**: Medium temperature (0.5-0.7), medium barge_confidence (0.6-0.7)
+- **Customer Service**: Low temperature (0.2-0.4)
+- **Creative Tasks**: Higher temperature (0.7-0.9)
+- **Technical/Legal**: Very low temperature (0.1-0.3)
+- **General Assistant**: Medium temperature (0.5-0.7)
 
 ### 4. Match Post-Prompt Parameters
 Post-prompt parameters should typically be lower temperature than main prompt for consistent summaries.
 
-### 5. Monitor Barge Confidence Levels
+### 5. Tune Interruption Separately
+Interruption is set with the `barge_min_words` param, not an LLM parameter:
 - Too high: Users have difficulty interrupting the AI
 - Too low: Background noise interrupts the AI
 
@@ -215,12 +217,12 @@ Presence and frequency penalties can be used together:
 - Decrease `top_p` (try 0.7-0.85)
 
 ### AI gets interrupted by background noise
-- Increase `barge_confidence` threshold
+- Raise the `barge_min_words` param, as in `set_param("barge_min_words", 3)`
 - Check for background noise in the environment
 - Consider the user's speaking clarity
 
 ### Users can't interrupt the AI
-- Decrease `barge_confidence` threshold
+- Lower the `barge_min_words` param, and check that `enable_barge` isn't turned off
 - Train users to speak more clearly when interrupting
 - Consider the use case (e.g., legal/medical may need higher thresholds)
 
@@ -241,7 +243,7 @@ agent.set_prompt_llm_params(temperature=0.7)
 # Or set multiple specific parameters
 agent.set_prompt_llm_params(
     temperature=0.5,
-    barge_confidence=0.6
+    top_p=0.9
 )
 ```
 

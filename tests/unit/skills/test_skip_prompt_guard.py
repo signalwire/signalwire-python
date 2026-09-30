@@ -148,7 +148,7 @@ def _offline(skill_cls: type[SkillBase]) -> Iterator[None]:
         yield
         return
     with (
-        patch(f"{skill_cls.__module__}.requests.get") as get,
+        patch("signalwire.utils.url_validator._PublicSession.get") as get,
         patch("signalwire.utils.url_validator.validate_url", return_value=True),
     ):
         get.return_value = Mock(raise_for_status=Mock(return_value=None))

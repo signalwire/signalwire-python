@@ -55,8 +55,8 @@ Add this inside Fred's `__init__` method, after the skill configuration:
                 "Wikipedia has over 6 million articles in English alone!",
                 "Wikipedia is available in more than 300 languages!",
                 "Wikipedia was launched on January 15, 2001!",
-                "The most edited Wikipedia page is about George W. Bush!",
-                "Wikipedia is the 7th most visited website in the world!"
+                "English Wikipedia's one billionth edit was made on January 13, 2021!",
+                "Wikipedia is one of the most visited websites in the world!"
             ]
             fact = random.choice(facts)
             return SwaigFunctionResult(f"Here's a fun Wikipedia fact: {fact}")
@@ -172,10 +172,10 @@ Replace the first version with this one:
         )
         def share_fun_fact(args, raw_data):
             import random
-            
-            # Get the requested category
+
+            # The model may leave the category out, so default to random
             category = args.get("category", "random")
-            
+
             # Define facts by category
             facts = {
                 "statistics": [
@@ -186,57 +186,52 @@ Replace the first version with this one:
                 ],
                 "history": [
                     "Wikipedia was launched on January 15, 2001!",
-                    "The first Wikipedia article was about the letter 'U'!",
+                    "Wikipedia started as a side project of Nupedia, an encyclopedia written by experts!",
                     "Wikipedia's name comes from 'wiki' (Hawaiian for 'quick') and 'encyclopedia'!",
                     "Jimmy Wales and Larry Sanger founded Wikipedia!"
                 ],
                 "records": [
-                    "The most edited Wikipedia page is about George W. Bush!",
-                    "The longest Wikipedia article is about California Proposition 8!",
-                    "Wikipedia is the 7th most visited website in the world!",
-                    "The Wikipedia article on 'List of Pokemon' is one of the most viewed!"
-                ],
-                "random": []  # Will be filled with all facts
+                    "English Wikipedia's one billionth edit was made on January 13, 2021!",
+                    "Steven Pruitt has made more edits to English Wikipedia than anyone else, over three million!",
+                    "Wikipedia is one of the most visited websites in the world!"
+                ]
             }
-            
-            # Combine all facts for random selection
-            all_facts = []
-            for fact_list in facts.values():
-                if fact_list:  # Skip empty random list
-                    all_facts.extend(fact_list)
-            facts["random"] = all_facts
-            
-            # Select appropriate fact
-            fact_list = facts.get(category, facts["random"])
-            if not fact_list:
-                return SwaigFunctionResult("I don't have any facts in that category.")
-            
-            fact = random.choice(fact_list)
-            
-            # Add category context to response
-            if category != "random":
+
+            # The enum guides the model but doesn't bind it: random, or any
+            # category Fred doesn't have, draws from every fact
+            if category in facts:
+                fact = random.choice(facts[category])
+                # Say what kind of fact it is, so the model can introduce it
                 return SwaigFunctionResult(f"Here's a {category} fact about Wikipedia: {fact}")
-            else:
-                return SwaigFunctionResult(f"Here's a fun Wikipedia fact: {fact}")
+
+            all_facts = [fact for fact_list in facts.values() for fact in fact_list]
+            fact = random.choice(all_facts)
+            return SwaigFunctionResult(f"Here's a fun Wikipedia fact: {fact}")
 ```
 
 ### Practices for Function Implementation
 
 Three habits keep functions reliable.
 
-1. **Give every argument a default.** The model may leave an optional argument out.
+1. **Give every optional argument a default.** The model may leave it out.
 
    <!-- snippet: no-compile method-body-excerpt (indented statement lifted from inside the function) -->
    ```python
    category = args.get("category", "random")  # Always provide defaults
    ```
 
-2. **Handle the empty case.** Return a message the model can pass on, instead of raising an error.
+2. **Don't rely on the schema alone.** The `enum` describes what the model should send, not what it sends. The SDK checks each request's arguments against the schema, logs a warning when they don't match, and runs the function anyway. Fred handles a category it doesn't have like `random`. `swaig-test`, which [Lesson 6](06-running-testing.md) covers, shows it:
 
-   <!-- snippet: no-compile method-body-excerpt (indented statement lifted from inside the function) -->
-   ```python
-   if not fact_list:
-       return SwaigFunctionResult("I don't have any facts in that category.")
+   ```bash
+   swaig-test fred.py --verbose --exec share_fun_fact --category science
+   ```
+
+   Among the log lines, the warning and the result appear:
+
+   ```text
+   Argument validation failed for function 'share_fun_fact': 'science' is not one of ['statistics', 'history', 'records', 'random']
+   RESULT:
+   FunctionResult: Here's a fun Wikipedia fact: Wikipedia is available in more than 300 languages!
    ```
 
 3. **Say what the result is.** Context in the response helps the model use it.

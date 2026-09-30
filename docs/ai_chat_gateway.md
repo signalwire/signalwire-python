@@ -224,6 +224,28 @@ Counters live in the serving process. Behind several replicas each keeps its
 own, so the effective cap multiplies by replica count. Set them with that in
 mind, or put a shared limiter in front.
 
+## Size limits
+
+Whoever holds the key chooses how large each request is, so the gateway
+bounds every part of it and answers `413` past the limit:
+
+| limit | constant in `signalwire.ai_chat.gateway` | when it is checked |
+|---|---|---|
+| 64 KiB request body | `MAX_REQUEST_BODY_BYTES` | before the body is parsed |
+| 8 KiB chat message, UTF-8 | `MAX_MESSAGE_BYTES` | before a conversation is minted or a turn charged |
+| 8 KiB `user_meta_data`, serialized | `MAX_USER_METADATA_BYTES` | before a conversation is minted |
+
+The body limit leaves room for a full message and a full metadata bag, even
+when JSON escaping triples the size of non-ASCII text. A body sent without a
+`Content-Length` is counted as it arrives and dropped once it passes the
+limit. The error names the limit that was hit: `request too large`,
+`message too large` or `user_meta_data too large`.
+
+`HandoffRouter` applies the same limits to its routes. `/handoff`,
+`/escalate` and `/say` refuse a body over 64 KiB, and `/say` refuses text
+over 8 KiB. Both checks come before the nonce is looked up, so the answer
+says nothing about whether a nonce is live.
+
 ## Origins
 
 `allowed_origins` is a list; **localhost is always allowed** so local

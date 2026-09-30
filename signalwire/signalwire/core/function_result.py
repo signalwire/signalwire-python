@@ -11,7 +11,78 @@ FunctionResult class for handling the response format of SWAIG function calls
 The SDK's installed documentation covers this module: run ``sw-pydocs tools``, or ``sw-pydocs`` for the index.
 """
 
+import re
 from typing import Any, Literal
+
+# A SWML variable reference, such as ${timeout}, which the schema accepts
+# wherever it accepts an integer or a boolean
+_SWML_VAR = re.compile(r"^[$%]\{.*\}$")
+
+
+def _swml_int(
+    name: str,
+    value: Any,
+    minimum: int | None = None,
+    maximum: int | None = None,
+) -> Any:
+    """Return ``value`` as an int for a SWML verb, or raise ValueError.
+
+    Accepts an int, an integral float, a string of digits, or a SWML variable
+    reference, which is passed through as written. An int must be within
+    ``minimum`` and ``maximum`` when they are given.
+    """
+    number: int | None = None
+    if isinstance(value, str):
+        text = value.strip()
+        if _SWML_VAR.match(text):
+            return text
+        digits = text.lstrip("-")
+        # isdigit() also accepts digits such as "²", which int() refuses
+        if digits.isascii() and digits.isdigit():
+            number = int(text)
+    elif isinstance(value, int) and not isinstance(value, bool):
+        number = value
+    elif isinstance(value, float) and value.is_integer():
+        number = int(value)
+    in_range = number is not None and (
+        (minimum is None or number >= minimum)
+        and (maximum is None or number <= maximum)
+    )
+    if not in_range:
+        if minimum is not None and maximum is not None:
+            expected = f"an integer from {minimum} to {maximum}"
+        elif minimum is not None:
+            expected = f"an integer of at least {minimum}"
+        elif maximum is not None:
+            expected = f"an integer of at most {maximum}"
+        else:
+            expected = "an integer"
+        raise ValueError(f"{name} must be {expected}, got {value!r}")
+    return number
+
+
+def _swml_text(value: Any) -> str:
+    """A checked int or bool as the string a SWML verb reads: "true", "30"."""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)
+
+
+def _swml_bool(name: str, value: Any) -> Any:
+    """Return ``value`` as a bool for a SWML verb, or raise ValueError.
+
+    Accepts a bool, the strings "true" and "false" in any case, or a SWML
+    variable reference, which is passed through as written.
+    """
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        text = value.strip()
+        if text.lower() in ("true", "false"):
+            return text.lower() == "true"
+        if _SWML_VAR.match(text):
+            return text
+    raise ValueError(f"{name} must be a boolean, got {value!r}")
 
 
 class FunctionResult:
@@ -1027,18 +1098,33 @@ class FunctionResult:
             parameters: Array of name/value pairs for payment connector
             prompts: Array of custom prompt configurations
 
+        timeout, max_attempts and min_postal_code_length must be integers,
+        and security_code a boolean; each also accepts a SWML variable
+        reference such as ``${timeout}``. They're sent as strings, as is a
+        boolean postal_code: the platform's pay verb requires security_code
+        and postal_code to be strings, and reads all five as strings.
+
         Returns:
             self for method chaining
+
+        Raises:
+            ValueError: If timeout, max_attempts or min_postal_code_length
+                isn't an integer, or security_code isn't a boolean
         """
-        # Build the pay parameters
+        # Build the pay parameters. The platform reads timeout, max_attempts,
+        # min_postal_code_length, security_code and postal_code as strings, and
+        # its SWML validation refuses a security_code or postal_code that isn't
+        # one, so each is checked, then sent as a string.
         pay_params: dict[str, Any] = {
             "payment_connector_url": payment_connector_url,
             "input": input_method,
             "payment_method": payment_method,
-            "timeout": str(timeout),
-            "max_attempts": str(max_attempts),
-            "security_code": str(security_code).lower(),
-            "min_postal_code_length": str(min_postal_code_length),
+            "timeout": _swml_text(_swml_int("timeout", timeout)),
+            "max_attempts": _swml_text(_swml_int("max_attempts", max_attempts)),
+            "security_code": _swml_text(_swml_bool("security_code", security_code)),
+            "min_postal_code_length": _swml_text(
+                _swml_int("min_postal_code_length", min_postal_code_length)
+            ),
             "token_type": token_type,
             "currency": currency,
             "language": language,
@@ -1046,11 +1132,11 @@ class FunctionResult:
             "valid_card_types": valid_card_types,
         }
 
-        # Handle postal_code (can be boolean or string)
-        if isinstance(postal_code, bool):
-            pay_params["postal_code"] = str(postal_code).lower()
-        else:
-            pay_params["postal_code"] = postal_code
+        # postal_code is a boolean (whether to ask for it) or the postal code
+        # itself; either way it's sent as a string
+        pay_params["postal_code"] = (
+            _swml_text(postal_code) if isinstance(postal_code, bool) else postal_code
+        )
 
         # Add optional parameters
         if status_url:
@@ -1239,7 +1325,7 @@ class FunctionResult:
         start_on_enter: bool = True,
         end_on_exit: bool = False,
         wait_url: str | None = None,
-        max_participants: int = 250,
+        max_participants: int | None = None,
         record: str = "do-not-record",
         region: str | None = None,
         trim: str = "trim-silence",
@@ -1265,7 +1351,9 @@ class FunctionResult:
             start_on_enter: Whether conference starts when this participant enters (default: True)
             end_on_exit: Whether conference ends when this participant exits (default: False)
             wait_url: SWML URL for hold music (default: None for default hold music)
-            max_participants: Maximum participants <= 250 (default: 250)
+            max_participants: Maximum participants, 2 or more, or a SWML
+                variable reference (default: None, which leaves it out so the
+                platform's default applies)
             record: Recording mode - "do-not-record", "record-from-start" (default: "do-not-record")
             region: Conference region (default: None)
             trim: Trim silence - "trim-silence", "do-not-trim" (default: "trim-silence")
@@ -1282,16 +1370,20 @@ class FunctionResult:
             self for method chaining
 
         Raises:
-            ValueError: If beep value is invalid or max_participants exceeds 250
+            ValueError: If beep value is invalid or max_participants isn't an
+                integer of at least 2
         """
         # Validate beep parameter
         valid_beep_values = ["true", "false", "onEnter", "onExit"]
         if beep not in valid_beep_values:
             raise ValueError(f"beep must be one of {valid_beep_values}")
 
-        # Validate max_participants
-        if max_participants <= 0 or max_participants > 250:
-            raise ValueError("max_participants must be a positive integer <= 250")
+        # The platform requires a positive number, and its conference refuses
+        # fewer than 2; it sets no upper limit
+        if max_participants is not None:
+            max_participants = _swml_int(
+                "max_participants", max_participants, minimum=2
+            )
 
         # Validate record parameter
         valid_record_values = ["do-not-record", "record-from-start"]
@@ -1323,7 +1415,7 @@ class FunctionResult:
             and start_on_enter
             and not end_on_exit
             and wait_url is None
-            and max_participants == 250
+            and max_participants is None
             and record == "do-not-record"
             and region is None
             and trim == "trim-silence"
@@ -1353,7 +1445,7 @@ class FunctionResult:
                 join_params["end_on_exit"] = end_on_exit
             if wait_url:
                 join_params["wait_url"] = wait_url
-            if max_participants != 250:
+            if max_participants is not None:
                 join_params["max_participants"] = max_participants
             if record != "do-not-record":
                 join_params["record"] = record

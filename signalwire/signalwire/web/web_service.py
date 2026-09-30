@@ -7,8 +7,10 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
+import html
 import os
 import mimetypes
+from urllib.parse import quote
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any, Optional, TYPE_CHECKING
@@ -18,7 +20,7 @@ if TYPE_CHECKING:
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.security import HTTPBasic, HTTPBasicCredentials
     from fastapi.staticfiles import StaticFiles
-    from fastapi.responses import FileResponse, HTMLResponse
+    from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 else:
     # Optional-dep shim: FastAPI is an optional dependency; these names are
     # types when imported and None when absent.
@@ -27,11 +29,11 @@ else:
         from fastapi.middleware.cors import CORSMiddleware
         from fastapi.security import HTTPBasic, HTTPBasicCredentials
         from fastapi.staticfiles import StaticFiles
-        from fastapi.responses import FileResponse, HTMLResponse
+        from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
     except ImportError:
         FastAPI = HTTPException = Request = Response = Depends = None
         CORSMiddleware = HTTPBasic = HTTPBasicCredentials = None
-        StaticFiles = FileResponse = HTMLResponse = None
+        StaticFiles = FileResponse = HTMLResponse = RedirectResponse = None
 
 from signalwire.core.security_config import SecurityConfig
 from signalwire.core.config_loader import ConfigLoader
@@ -40,8 +42,41 @@ from signalwire.core.logging_config import get_logger
 logger = get_logger("web_service")
 
 
+def _same_origin_redirect(request: Any) -> str:
+    """The request's path with a trailing slash, as a redirect on this host.
+
+    It's built from the path as the client sent it, still percent-encoded, so
+    a directory named ``a#b`` keeps its name and ``/%2fexample.org`` isn't
+    decoded into ``//example.org``, which a browser reads as another host.
+    Leading slashes are collapsed to one for the same reason.
+    """
+    scope = request.scope
+    raw = scope.get("raw_path")
+    path: str
+    if raw:
+        path = raw.decode("latin-1")
+    else:
+        # A server that doesn't provide raw_path: quote the decoded path
+        # itself. request.url would read a decoded "#" or "?" as the end of
+        # the path.
+        decoded = scope.get("path", "")
+        root = scope.get("root_path", "")
+        if root and not (decoded == root or decoded.startswith(root + "/")):
+            decoded = root + decoded
+        path = quote(decoded)
+    return "/" + path.lstrip("/") + "/"
+
+
 class WebService:
-    """Static file serving service with HTTP API"""
+    """Static file serving service with HTTP API.
+
+    Each mounted directory is served below its route, with basic auth. One
+    route serves them all and looks the request path up in ``directories``
+    on every request, so ``add_directory()`` and ``remove_directory()`` take
+    effect at once. A path is refused if any of its components starts with a
+    dot (other than ``.well-known``) or is a blocked name, or if it resolves,
+    symbolic links followed, to somewhere outside its mounted directory.
+    """
 
     def __init__(
         self,
@@ -65,7 +100,11 @@ class WebService:
             config_file: Optional configuration file path
             enable_directory_browsing: Allow directory listing
             allowed_extensions: List of allowed file extensions (e.g., ['.html', '.css'])
-            blocked_extensions: List of blocked extensions (e.g., ['.env', '.git'])
+            blocked_extensions: Blocked extensions and file names (e.g.,
+                ['.env', '.pem']). An entry is also refused as the name of
+                any directory on the path. Whatever this holds, a path with a
+                component that starts with a dot, other than ``.well-known``,
+                is never served.
             max_file_size: Maximum file size in bytes to serve
             enable_cors: Enable CORS support
         """
@@ -107,8 +146,18 @@ class WebService:
         self.security = SecurityConfig(config_file=config_file, service_name="web")
         self.security.log_config("WebService")
 
-        # Set up authentication
-        self._basic_auth = basic_auth or self.security.get_basic_auth()
+        # Set up authentication. The source is reported at startup, as
+        # AgentBase does, and start() refuses to run on a generated password,
+        # which nothing would ever show. An empty password isn't a password.
+        if basic_auth and basic_auth[1]:
+            self._basic_auth = basic_auth
+            self._basic_auth_source: Any = "provided"
+        else:
+            self._basic_auth = self.security.get_basic_auth()
+            self._basic_auth_source = self.security.basic_auth_source or "provided"
+
+        # Set once the route that serves the mounted directories is registered
+        self._files_route_registered = False
 
         self.app: FastAPI | None = None
         if FastAPI is not None:
@@ -208,7 +257,8 @@ class WebService:
                 response.headers[header] = value
 
             # Add cache headers for static files
-            if request.url.path.startswith(tuple(self.directories.keys())):
+            path = request.url.path
+            if path != "/health" and self._match_mount(path) is not None:
                 # Cache static files for 1 hour
                 response.headers["Cache-Control"] = "public, max-age=3600"
 
@@ -268,6 +318,45 @@ class WebService:
 
         return credentials.username
 
+    def _is_path_allowed(self, parts: tuple[str, ...]) -> bool:
+        """Check the components of a path below a mounted directory.
+
+        A component that starts with a dot is refused wherever it appears, so
+        nothing under ``.git`` or ``.ssh`` is served and neither is a file
+        such as ``.env.production``. The exception is ``.well-known``, the
+        standard public location for ACME challenges and ``security.txt``.
+        Directory listings hide dot entries. A component equal to a blocked
+        entry is refused too, so a blocked name covers a directory as well as
+        a file.
+        """
+        blocked = set(self.blocked_extensions)
+        return not any(
+            (part.startswith(".") and part != ".well-known") or part in blocked
+            for part in parts
+        )
+
+    def _match_mount(self, path: str) -> tuple[str, str, str] | None:
+        """The mounted directory that serves ``path``, or None.
+
+        Returns ``(route, directory, rest)``, where ``rest`` is the part of
+        the path below the route. A route matches at a path-segment boundary,
+        so ``/docs`` serves ``/docs`` and ``/docs/a.html`` but not
+        ``/docsx``, and the longest matching route wins. A route of ``/``
+        matches every path.
+        """
+        best: tuple[str, str, str] | None = None
+        for route, directory in list(self.directories.items()):
+            prefix = "/" + route.strip("/")
+            if prefix == "/":
+                rest = path.lstrip("/")
+            elif path == prefix or path.startswith(prefix + "/"):
+                rest = path[len(prefix) :].lstrip("/")
+            else:
+                continue
+            if best is None or len(prefix) > len(best[0]):
+                best = (prefix, directory, rest)
+        return best
+
     def _is_file_allowed(self, file_path: Path) -> bool:
         """Check if file is allowed to be served"""
         # Check file size
@@ -310,7 +399,7 @@ class WebService:
             if item.name.startswith("."):
                 continue  # Skip hidden files
 
-            if item.is_dir():
+            if item.is_dir() and self._is_path_allowed((item.name,)):
                 from html import escape
 
                 safe_name = escape(item.name, quote=True)
@@ -396,9 +485,19 @@ class WebService:
             }
 
         @self.app.get("/", response_model=None)
-        async def root() -> "Response | dict[str, Any]":
-            """Root endpoint showing available directories"""
-            html = """
+        async def root(request: "Request") -> "Response | dict[str, Any]":
+            """Root endpoint showing available directories.
+
+            With a directory mounted at ``/``, serves that directory instead.
+            The listing needs the same credentials as the files.
+            """
+            credentials = await security(request) if security else None
+            if self._match_mount("/") is not None:
+                return self._serve_request(request, credentials, "/")
+            if HTTPBasic is not None:
+                self._get_current_username(credentials)
+
+            page = """
             <!DOCTYPE html>
             <html>
             <head>
@@ -420,143 +519,176 @@ class WebService:
             """
 
             for route, local_path in self.directories.items():
-                html += f'<li>📁 <a href="{route}">{route}</a> <span class="path">→ {local_path}</span></li>'
+                shown_route = html.escape(route)
+                shown_path = html.escape(str(local_path))
+                page += (
+                    f'<li>📁 <a href="{shown_route}">{shown_route}</a> '
+                    f'<span class="path">→ {shown_path}</span></li>'
+                )
 
-            html += """
+            page += """
                 </ul>
             </body>
             </html>
             """
 
             if HTMLResponse is not None:
-                return HTMLResponse(content=html)
+                return HTMLResponse(content=page)
             return {"directories": list(self.directories.keys())}
 
     def _mount_directories(self) -> None:
-        """Mount static file directories"""
+        """Register the route that serves every mounted directory.
+
+        The route reads ``directories`` on every request, so it is registered
+        once; a later call only logs mounted directories that can't be
+        served.
+        """
         if not self.app or StaticFiles is None:
             return
+
+        for route, directory in self.directories.items():
+            dir_path = Path(directory)
+            if not dir_path.exists():
+                logger.warning(f"Directory does not exist: {directory}")
+            elif not dir_path.is_dir():
+                logger.warning(f"Path is not a directory: {directory}")
+            else:
+                logger.info(f"Mounting directory {directory} at route {route}")
+
+        if self._files_route_registered:
+            return
+        self._files_route_registered = True
 
         # Create security dependency if HTTPBasic is available
         security = HTTPBasic() if HTTPBasic is not None else None
 
-        for route, directory in self.directories.items():
-            # Ensure directory exists
-            dir_path = Path(directory)
-            if not dir_path.exists():
-                logger.warning(f"Directory does not exist: {directory}")
-                continue
+        @self.app.get("/{request_path:path}", response_model=None)
+        async def serve_file(
+            request_path: str,
+            request: "Request",
+            credentials: Optional["HTTPBasicCredentials"] = (
+                None if not security else Depends(security)  # noqa: B008  # FastAPI DI: Depends() in default is the intended idiom
+            ),
+        ) -> "Response":
+            """Serve a file from the mounted directory the path falls under"""
+            return self._serve_request(request, credentials, "/" + request_path)
 
-            if not dir_path.is_dir():
-                logger.warning(f"Path is not a directory: {directory}")
-                continue
+    def _serve_request(
+        self,
+        request: "Request",
+        credentials: Optional["HTTPBasicCredentials"],
+        path: str,
+    ) -> "Response":
+        """Serve ``path`` from the mounted directory it falls under.
 
-            # Normalize route
-            if not route.startswith("/"):
-                route = "/" + route
+        ``path`` is the request path as routed, without any prefix the app
+        is mounted under.
 
-            logger.info(f"Mounting directory {directory} at route {route}")
+        Raises:
+            HTTPException: 401 for bad credentials, 403 for a refused path,
+                404 when nothing is mounted there or the file doesn't exist.
+        """
+        if HTTPBasic is not None:
+            self._get_current_username(credentials)
 
-            # Create custom static file handler with our security checks
-            @self.app.get(f"{route}/{{file_path:path}}")
-            async def serve_file(
-                file_path: str,
-                request: "Request",
-                credentials: Optional["HTTPBasicCredentials"] = (
-                    None if not security else Depends(security)  # noqa: B008  # FastAPI DI: Depends() in default is the intended idiom
-                ),
-                route: str = route,
-                directory: str = directory,
-            ) -> "Response":
-                """Serve files with security checks"""
-                if security:
-                    self._get_current_username(credentials)
+        match = self._match_mount(path)
+        if match is None:
+            raise HTTPException(status_code=404, detail="Not Found")
+        _route, directory, rest = match
 
-                # Build full file path
-                full_path = Path(directory) / file_path
+        # Security: refuse hidden and blocked components, then anything that
+        # resolves outside the mounted directory, symbolic links followed
+        if not self._is_path_allowed(Path(rest).parts):
+            raise HTTPException(status_code=403, detail="Access denied")
+        try:
+            dir_path = Path(directory).resolve()
+            full_path = (dir_path / rest).resolve()
+        except Exception:
+            raise HTTPException(status_code=403, detail="Invalid path") from None
+        if not self._is_inside(full_path, dir_path):
+            raise HTTPException(status_code=403, detail="Access denied")
 
-                # Security: Prevent path traversal
-                try:
-                    full_path = full_path.resolve()
-                    dir_path = Path(directory).resolve()
-                    if (
-                        not str(full_path).startswith(str(dir_path) + os.sep)
-                        and full_path != dir_path
-                    ):
-                        raise HTTPException(status_code=403, detail="Access denied")
-                except HTTPException:
-                    raise
-                except Exception:
-                    raise HTTPException(
-                        status_code=403, detail="Invalid path"
-                    ) from None
+        # Check if path exists
+        if not full_path.exists():
+            raise HTTPException(status_code=404, detail="File not found")
 
-                # Check if path exists
-                if not full_path.exists():
-                    raise HTTPException(status_code=404, detail="File not found")
-
-                # Handle directory requests
-                if full_path.is_dir():
-                    if not self.enable_directory_browsing:
-                        # Try to serve index.html if it exists
-                        index_path = full_path / "index.html"
-                        if index_path.exists() and self._is_file_allowed(index_path):
-                            return FileResponse(index_path)
-                        raise HTTPException(
-                            status_code=403, detail="Directory browsing disabled"
-                        )
-                    # Generate directory listing
-                    html = self._generate_directory_listing(full_path, request.url.path)
-                    if HTMLResponse is not None:
-                        return HTMLResponse(content=html)
-                    raise HTTPException(
-                        status_code=403,
-                        detail="Directory browsing not available",
-                    )
-
-                # Check if file is allowed
-                if not self._is_file_allowed(full_path):
-                    raise HTTPException(status_code=403, detail="File type not allowed")
-
-                # Serve the file
-                mime_type = (
-                    mimetypes.guess_type(str(full_path))[0]
-                    or "application/octet-stream"
+        # Handle directory requests
+        if full_path.is_dir():
+            # Relative links in a listing or an index page need the slash
+            if not path.endswith("/") and RedirectResponse is not None:
+                return RedirectResponse(
+                    url=_same_origin_redirect(request), status_code=307
                 )
-
-                if FileResponse is not None:
-                    return FileResponse(
-                        full_path,
-                        media_type=mime_type,
-                        headers={
-                            "Cache-Control": "public, max-age=3600",
-                            "X-Content-Type-Options": "nosniff",
-                        },
-                    )
-                # Fallback if FileResponse not available
-                with full_path.open("rb") as f:
-                    content = f.read()
-                return Response(
-                    content=content,
-                    media_type=mime_type,
-                    headers={
-                        "Cache-Control": "public, max-age=3600",
-                        "X-Content-Type-Options": "nosniff",
-                    },
+            if not self.enable_directory_browsing:
+                # Try to serve index.html if it exists
+                index_path = (full_path / "index.html").resolve()
+                if (
+                    self._is_inside(index_path, dir_path)
+                    and index_path.is_file()
+                    and self._is_file_allowed(index_path)
+                ):
+                    return FileResponse(index_path)
+                raise HTTPException(
+                    status_code=403, detail="Directory browsing disabled"
                 )
+            # Generate directory listing
+            html = self._generate_directory_listing(full_path, request.url.path)
+            if HTMLResponse is not None:
+                return HTMLResponse(content=html)
+            raise HTTPException(
+                status_code=403,
+                detail="Directory browsing not available",
+            )
+
+        # Check if file is allowed
+        if not self._is_file_allowed(full_path):
+            raise HTTPException(status_code=403, detail="File type not allowed")
+
+        # Serve the file
+        mime_type = (
+            mimetypes.guess_type(str(full_path))[0] or "application/octet-stream"
+        )
+
+        if FileResponse is not None:
+            return FileResponse(
+                full_path,
+                media_type=mime_type,
+                headers={
+                    "Cache-Control": "public, max-age=3600",
+                    "X-Content-Type-Options": "nosniff",
+                },
+            )
+        # Fallback if FileResponse not available
+        with full_path.open("rb") as f:
+            content = f.read()
+        return Response(
+            content=content,
+            media_type=mime_type,
+            headers={
+                "Cache-Control": "public, max-age=3600",
+                "X-Content-Type-Options": "nosniff",
+            },
+        )
+
+    def _is_inside(self, path: Path, dir_path: Path) -> bool:
+        """True if resolved ``path`` is resolved ``dir_path`` or below it,
+        and its components below it pass :meth:`_is_path_allowed`."""
+        if path != dir_path and not str(path).startswith(str(dir_path) + os.sep):
+            return False
+        return self._is_path_allowed(path.relative_to(dir_path).parts)
 
     def add_directory(self, route: str, directory: str) -> None:
         """
         Add a new directory to serve
 
+        Takes effect at once, on a running service too. Adding a route that
+        is already mounted points it at the new directory.
+
         Args:
-            route: URL path to mount at (e.g., "/docs")
+            route: URL path to mount at (e.g., "/docs"), with or without its
+                leading or trailing slash
             directory: Local directory path to serve
         """
-        # Normalize route
-        if not route.startswith("/"):
-            route = "/" + route
-
         # Verify directory exists
         dir_path = Path(directory)
         if not dir_path.exists():
@@ -565,25 +697,26 @@ class WebService:
         if not dir_path.is_dir():
             raise ValueError(f"Path is not a directory: {directory}")
 
-        self.directories[route] = directory
-
-        # If app is already running, mount the new directory
-        if self.app:
-            self._mount_directories()
+        self.remove_directory(route)
+        self.directories["/" + route.strip("/")] = directory
+        logger.info(f"Mounting directory {directory} at route {route}")
 
     def remove_directory(self, route: str) -> None:
         """
         Remove a directory from being served
 
-        Args:
-            route: URL path to remove
-        """
-        # Normalize route
-        if not route.startswith("/"):
-            route = "/" + route
+        Takes effect at once: the route's files stop being served with the
+        next request.
 
-        if route in self.directories:
-            del self.directories[route]
+        Args:
+            route: URL path to remove, with or without its leading or
+                trailing slash
+        """
+        normalized = "/" + route.strip("/")
+        for existing in [
+            r for r in self.directories if "/" + r.strip("/") == normalized
+        ]:
+            del self.directories[existing]
 
     def start(
         self,
@@ -605,6 +738,15 @@ class WebService:
             raise RuntimeError("FastAPI not available. Cannot start HTTP service.")
 
         port = port or self.port
+
+        if self._basic_auth_source == "generated":
+            raise RuntimeError(
+                "WebService needs basic-auth credentials: set "
+                "SWML_BASIC_AUTH_USER and SWML_BASIC_AUTH_PASSWORD, pass "
+                "basic_auth=(user, password), or set security.auth.basic in "
+                "the config file. A generated password is never shown, so "
+                "every file request would be refused."
+            )
 
         # Get SSL configuration
         ssl_kwargs: dict[str, Any] = {}
@@ -637,7 +779,10 @@ class WebService:
         print(
             f"Directories: {', '.join(self.directories.keys()) if self.directories else 'None'}"
         )
-        print(f"Basic Auth: {username}:(credentials configured)")
+        print(
+            f"Basic Auth: {username}:(credentials configured) "
+            f"(source: {self._basic_auth_source})"
+        )
         print(
             f"Directory Browsing: {'Enabled' if self.enable_directory_browsing else 'Disabled'}"
         )

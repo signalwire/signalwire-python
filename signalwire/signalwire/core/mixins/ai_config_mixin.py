@@ -647,7 +647,6 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
             model: The AI model to use (gpt-4o-mini, gpt-4.1-mini, gpt-4.1-nano, nova-micro, nova-lite, qwen3-235b-A22b-instruct)
             temperature: Randomness setting. Lower values make output more deterministic.
             top_p: Alternative to temperature. Controls nucleus sampling.
-            barge_confidence: ASR confidence to interrupt. Higher values make it harder to interrupt.
             presence_penalty: Topic diversity. Positive values encourage new topics.
             frequency_penalty: Repetition control. Positive values reduce repetition.
 
@@ -661,8 +660,7 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
             agent.set_prompt_llm_params(
                 model="nova-micro",  # Using Amazon's nova-micro model
                 temperature=0.7,
-                top_p=0.9,
-                barge_confidence=0.6
+                top_p=0.9
             )
         """
         # Accept any parameters without validation
@@ -687,7 +685,6 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
 
         Note: Parameters are model-specific and will be validated by the server.
         Invalid parameters for the selected model will be handled/ignored by the server.
-        barge_confidence is not applicable to post-prompt.
 
         Returns:
             Self for method chaining

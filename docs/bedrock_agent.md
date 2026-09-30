@@ -95,9 +95,9 @@ BedrockAgent(
     route: str = "/bedrock",          # HTTP route for the agent
     system_prompt: Optional[str] = None,  # Initial system prompt
     voice_id: str = "matthew",        # tiffany, matthew, amy, lupe or carlos
-    temperature: float = 0.7,         # Generation temperature (0-1)
+    temperature: float = 0.7,         # Generation temperature (0-2)
     top_p: float = 0.9,              # Nucleus sampling parameter (0-1)
-    max_tokens: int = 1024,          # Maximum tokens to generate
+    max_tokens: int = 1024,          # Maximum tokens (the platform uses 1024; see Troubleshooting)
     **kwargs                         # Additional arguments passed to AgentBase
 )
 ```
@@ -135,8 +135,6 @@ BedrockAgent inherits all methods from AgentBase, including:
 - `register_swaig_function(function_dict)` - Register a raw SWAIG function
 
 #### Configuration
-- `add_hint(hint)` - Add hints for the AI
-- `add_language(name, code, voice)` - Add language configuration
 - `set_params(params)` - Set AI parameters
 - `set_global_data(data)` - Set global data available to AI
 
@@ -158,7 +156,7 @@ agent.set_voice("amy")  # Change the Bedrock voice
 
 #### Inference Parameters
 
-Call `set_inference_params()` to change temperature, top_p, or max_tokens after construction:
+Call `set_inference_params()` to change temperature, top_p, or max_tokens after construction. Each must be a number; a numeric string is converted, and anything else raises `ValueError`. temperature and top_p also accept a SWML variable reference such as `${temperature}`:
 
 ```python
 # Update inference parameters
@@ -176,7 +174,7 @@ The following methods have modified behavior in BedrockAgent:
 1. **`set_llm_model(model)`** - Logs warning and does nothing (Bedrock uses fixed model)
 2. **`set_llm_temperature(temperature)`** - Redirects to `set_inference_params()`
 3. **`set_post_prompt_llm_params(**params)`** - Logs warning (post-prompt uses OpenAI)
-4. **`set_prompt_llm_params(**params)`** - Accepts the settings the Bedrock `prompt` object defines. `temperature`, `top_p` and `max_tokens` update the inference settings, as `set_inference_params()` does. `confidence`, `presence_penalty` and `frequency_penalty` go into the prompt. Other settings, such as `barge_confidence`, log a warning and are ignored
+4. **`set_prompt_llm_params(**params)`** - `temperature`, `top_p` and `max_tokens` update the inference settings, as `set_inference_params()` does. The platform's Bedrock session reads no other prompt setting, so others, such as `confidence`, `presence_penalty` and `barge_confidence`, log a warning and are ignored
 
 ## SWML Output Structure
 
@@ -241,7 +239,7 @@ swaig-test examples/bedrock_with_skills.py --exec get_current_time
 
 ## Complete Example
 
-This example combines a POM prompt, a language, two skills, two custom tools, and SIP routing in one agent.
+This example combines a POM prompt, two skills, two custom tools, and SIP routing in one agent.
 
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
@@ -269,13 +267,6 @@ agent.prompt_add_section(
         "Provide accurate information",
         "Ask clarifying questions when needed"
     ]
-)
-
-# Add languages
-agent.add_language(
-    name="Spanish",
-    code="es",
-    voice="miguel"  # Bedrock will map this appropriately
 )
 
 # Add skills
@@ -345,7 +336,7 @@ Most code will work without modification. Only adjust:
 These issues come up most often:
 
 1. **Voice not changing**: Ensure you're using valid Bedrock voice IDs
-2. **Parameters not applying**: Bedrock's prompt defines `temperature`, `top_p`, `max_tokens`, `confidence`, `presence_penalty` and `frequency_penalty`. Other settings, such as `barge_confidence`, are ignored with a warning
+2. **Parameters not applying**: the platform's Bedrock session applies `temperature` (0 to 2) and `top_p` (0 to 1) from the prompt. It doesn't read `max_tokens`, and uses 1024. `set_prompt_llm_params()` ignores other settings, such as `confidence` and `presence_penalty`, with a warning
 3. **Skills not loading**: Check API keys are properly configured
 4. **SWML not generating**: Verify the agent is running and accessible
 
@@ -377,7 +368,7 @@ BedrockAgent carries these limits:
 
 - Cannot change the underlying AI model (Bedrock uses a fixed voice-to-voice model)
 - Post-prompt summarization uses OpenAI for compatibility with existing integrations
-- Text-specific features like hints and pronunciation rules don't apply to voice models
+- Speech hints, languages, pronunciation rules, multilingual settings and contexts aren't part of the `amazon_bedrock` verb. `BedrockAgent` leaves them out of the SWML and logs one warning per agent for each
 - Voice options limited to Bedrock's available voices
 
 ## See Also
@@ -402,14 +393,16 @@ The `amazon_bedrock` verb in SWML supports the following keys:
 - `post_prompt_url` - URL for posting conversation summaries
 
 **Within nested objects:**
-- **prompt**: `text` or `pom`, `voice_id`, `temperature`, `top_p`, `max_tokens`, `confidence`, `presence_penalty`, `frequency_penalty`
+- **prompt**: `text` or `pom`, `voice_id`, `temperature`, `top_p`, `max_tokens`. The platform's Bedrock session reads all but `max_tokens`
 - **SWAIG**: `functions`, `defaults`
 - **params**: session settings such as `attention_timeout`, `inactivity_timeout`, and `hard_stop_time`, not the inference settings in `prompt`
 - **global_data**: (any custom key-value pairs)
 
-**Features not applicable to voice-to-voice models:**
-- `languages` - Language configuration (voice models handle languages natively through voice)
-- `hints` - AI hints (voice models process audio directly without text hints)
-- `pronounce` - Pronunciation rules (not needed as voice input preserves pronunciation)
+**`ai` verb features the `amazon_bedrock` verb doesn't have:**
+- `languages` - Language configuration (`add_language()`)
+- `hints` - Speech hints (`add_hint()`, `add_hints()`, and hints that skills add)
+- `pronounce` - Pronunciation rules (`add_pronunciation()`)
+- `multilingual` - Multilingual settings (`set_multilingual()`)
+- `contexts` in the prompt - Contexts and steps (`define_contexts()`)
 
-These features are designed for text-based AI models and don't apply to Bedrock's voice-to-voice architecture. `BedrockAgent` passes `confidence`, `presence_penalty` and `frequency_penalty` through from `set_prompt_llm_params()`, and leaves out `barge_confidence`, which the Bedrock `prompt` object doesn't define.
+`BedrockAgent` leaves these out of the SWML and logs a warning, once per agent, for each one the agent uses. It also leaves out prompt settings the platform's Bedrock session doesn't read, such as `confidence`, `presence_penalty`, `frequency_penalty` and `barge_confidence`.

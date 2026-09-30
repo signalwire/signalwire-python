@@ -14,10 +14,11 @@ SignalWire AI Agents now support deployment to major cloud function platforms:
 
 ### Environment Detection
 
-The agent automatically detects Google Cloud Functions environment using these variables:
-- `FUNCTION_TARGET` - The function entry point
+The agent detects a Google Cloud Functions environment from `FUNCTION_TARGET`, the function entry point, which the Functions Framework sets. It then reads these variables to build webhook URLs:
 - `K_SERVICE` - Knative service name (Cloud Run/Functions)
 - `GOOGLE_CLOUD_PROJECT` - Google Cloud project ID
+
+`K_SERVICE` or `GOOGLE_CLOUD_PROJECT` without `FUNCTION_TARGET` doesn't mean a function. Cloud Run sets `K_SERVICE` for every service, so on Cloud Run `run()` starts the HTTP server, as it does on any other host.
 
 ### Deployment Steps
 
@@ -84,6 +85,8 @@ With authentication:
 ```
 https://username:password@{region}-{project-id}.cloudfunctions.net/{function-name}
 ```
+
+The agent builds this URL from `FUNCTION_REGION` (or `GOOGLE_CLOUD_REGION`), `GOOGLE_CLOUD_PROJECT` and `K_SERVICE` (or `FUNCTION_TARGET`). If the function is served on another URL, set `FUNCTION_URL` to it and the agent uses that instead.
 
 ## Azure Functions
 
@@ -194,6 +197,8 @@ With authentication:
 ```
 https://username:password@{function-app-name}.azurewebsites.net/api/{function-name}
 ```
+
+The agent builds this URL from `WEBSITE_SITE_NAME` and `AZURE_FUNCTION_NAME`, which Azure doesn't set, so set `AZURE_FUNCTION_NAME` to your function's name, or set `AZURE_FUNCTION_URL` to the function's full URL and the agent uses that instead.
 
 ## Authentication
 

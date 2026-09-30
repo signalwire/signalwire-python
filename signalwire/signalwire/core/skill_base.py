@@ -227,7 +227,9 @@ class SkillBase(ABC):
                 - default: Default value if not provided (optional)
                 - required: Whether the parameter is required (default: False)
                 - hidden: Whether to hide this field in UIs (for secrets/keys)
-                - env_var: Environment variable that can provide this value (optional)
+                - env_var: Environment variable a configuration tool can read this
+                  value from (optional). A hint for tools that read the schema; the
+                  SDK doesn't read it, so the skill gets the value from its params.
                 - enum: List of allowed values (optional)
                 - min/max: Minimum/maximum values for numeric types (optional)
 
@@ -266,7 +268,9 @@ class SkillBase(ABC):
             "required": False,
         }
 
-        # Add tool_name for multi-instance skills
+        # Add tool_name for multi-instance skills. Its default is the skill
+        # name; a skill whose tool is named otherwise, or that doesn't use
+        # tool_name, redeclares or removes this entry.
         if cls.SUPPORTS_MULTIPLE_INSTANCES:
             schema["tool_name"] = {
                 "type": "string",

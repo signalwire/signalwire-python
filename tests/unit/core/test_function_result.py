@@ -908,6 +908,7 @@ class TestPay:
         )
         assert pay_params["input"] == "dtmf"
         assert pay_params["payment_method"] == "credit-card"
+        # Integers and booleans, as the SWML schema types them
         assert pay_params["timeout"] == "5"
         assert pay_params["max_attempts"] == "1"
         assert pay_params["security_code"] == "true"
@@ -1061,26 +1062,19 @@ class TestJoinConference:
         with pytest.raises(ValueError, match="beep must be one of"):
             FunctionResult().join_conference("conf", beep="invalid")
 
-    def test_join_conference_max_participants_too_high(self) -> None:
-        """Test join_conference with max_participants > 250 raises ValueError"""
-        with pytest.raises(
-            ValueError, match="max_participants must be a positive integer <= 250"
-        ):
-            FunctionResult().join_conference("conf", max_participants=300)
+    def test_join_conference_max_participants_has_no_upper_limit(self) -> None:
+        """The platform sets no upper limit"""
+        result = FunctionResult().join_conference("conf", max_participants=100001)
+        verb = result.action[0]["SWML"]["sections"]["main"][0]["join_conference"]
+        assert verb["max_participants"] == 100001
 
-    def test_join_conference_max_participants_zero(self) -> None:
-        """Test join_conference with max_participants=0 raises ValueError"""
-        with pytest.raises(
-            ValueError, match="max_participants must be a positive integer <= 250"
-        ):
-            FunctionResult().join_conference("conf", max_participants=0)
-
-    def test_join_conference_max_participants_negative(self) -> None:
-        """Test join_conference with negative max_participants raises ValueError"""
-        with pytest.raises(
-            ValueError, match="max_participants must be a positive integer <= 250"
-        ):
-            FunctionResult().join_conference("conf", max_participants=-5)
+    def test_join_conference_max_participants_below_two(self) -> None:
+        """The platform's conference refuses fewer than 2"""
+        for value in (1, 0, -5):
+            with pytest.raises(
+                ValueError, match="max_participants must be an integer of at least 2"
+            ):
+                FunctionResult().join_conference("conf", max_participants=value)
 
     def test_join_conference_invalid_record(self) -> None:
         """Test join_conference with invalid record raises ValueError"""

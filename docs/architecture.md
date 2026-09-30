@@ -106,12 +106,12 @@ DataMap has three parts:
    - **Output**: Final response generation using FunctionResult
 
 3. **Variable Expansion**: Dynamic substitution using `${variable}` syntax
-   - Function arguments: `${args.parameter_name}`
+   - Function arguments: `${args.parameter_name}` in a webhook's URL and params, and `${input.args.parameter_name}` in its output
    - API responses, read from the root: `${field.nested_field}`, or `${array[0].field}` for an array response
    - The current element in a `foreach`: `${this.item_field}`
    - Global data: `${global_data.key}`
-   - Function metadata: `${meta_data.key}`, and call details such as `${call_id}`
-   - Prefix helpers, applied left to right: `${lc:enc:args.city}` lowercases, then URL-encodes
+   - Function metadata: `${meta_data.key}`, and call details such as `${call_id}`; a webhook's output reads them under `input`
+   - Prefix helpers, applied in a fixed order whatever order they're written in, `fmt_ph`, then `lc`, then `enc`: `${lc:enc:args.city}` lowercases, then URL-encodes
 
 ### Tool Types
 

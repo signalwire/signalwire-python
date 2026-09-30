@@ -15,7 +15,11 @@ from aiohttp import web
 from aiohttp.test_utils import TestServer
 
 from signalwire.ai_chat import AIChatClient, ChatGateway, GatewayRejection
-from signalwire.ai_chat.gateway import MAX_USER_METADATA_BYTES
+from signalwire.ai_chat.gateway import (
+    MAX_MESSAGE_BYTES,
+    MAX_REQUEST_BODY_BYTES,
+    MAX_USER_METADATA_BYTES,
+)
 
 CONFIG_URL = "https://agent.example.com/swml"
 KEY = "pk_test_key"
@@ -785,3 +789,118 @@ async def test_a_malformed_bag_is_a_clean_rejection_not_a_500(
         )
         assert r.status_code == 400
         assert r.json()["error"] == "user_meta_data must be an object"
+
+
+# ── Size limits ──────────────────────────────────────────────────────
+
+
+def test_a_message_over_the_limit_is_refused(gateway: ChatGateway) -> None:
+    with pytest.raises(GatewayRejection) as err:
+        prep(gateway, {"message": "x" * (MAX_MESSAGE_BYTES + 1)})
+    assert err.value.status == 413
+    assert err.value.reason == "message too large"
+
+
+def test_a_message_at_the_limit_passes(gateway: ChatGateway) -> None:
+    at_limit = "x" * MAX_MESSAGE_BYTES
+    _, params, _ = prep(gateway, {"message": at_limit})
+    assert params["message"] == at_limit
+
+
+def test_the_message_limit_counts_utf8_bytes_not_characters(
+    gateway: ChatGateway,
+) -> None:
+    """Two bytes each, so this is under the limit in characters but over it
+    in what the service is sent."""
+    wide = "\u00e9" * (MAX_MESSAGE_BYTES // 2 + 1)
+    assert len(wide) < MAX_MESSAGE_BYTES
+    with pytest.raises(GatewayRejection) as err:
+        prep(gateway, {"message": wide})
+    assert err.value.status == 413
+
+
+def test_an_oversized_message_mints_nothing(service: Any) -> None:
+    """Checked before minting, so a refused message can't use up the
+    new-conversation allowance."""
+    gw = make_gateway(service, max_new_conversations=1)
+    with pytest.raises(GatewayRejection):
+        gw.prepare({"message": "x" * (MAX_MESSAGE_BYTES + 1)}, origin=None, key=KEY)
+    _, _, minted = gw.prepare({"message": "hi"}, origin=None, key=KEY)
+    assert minted is not None
+
+
+def test_an_oversized_message_charges_no_turn(service: Any) -> None:
+    gw = make_gateway(service, max_turns=1)
+    handle = gw.mint_handle()
+    with pytest.raises(GatewayRejection) as err:
+        gw.prepare(
+            {"message": "x" * (MAX_MESSAGE_BYTES + 1), "handle": handle},
+            origin=None,
+            key=KEY,
+        )
+    assert err.value.status == 413
+    _, params, _ = gw.prepare({"message": "hi", "handle": handle}, origin=None, key=KEY)
+    assert params["message"] == "hi"
+
+
+async def test_http_refuses_an_oversized_body_before_parsing(
+    gateway: ChatGateway, service: Any
+) -> None:
+    """The body isn't valid JSON, so a 413 rather than a 400 shows the size
+    was checked first."""
+    async with asgi(gateway) as http:
+        r = await http.post(
+            "/chat/",
+            content=b"{" * (MAX_REQUEST_BODY_BYTES + 1),
+            headers={**HEADERS, "Content-Type": "application/json"},
+        )
+    assert r.status_code == 413
+    assert r.json() == {"error": "request too large"}
+    assert r.headers["access-control-allow-origin"] == "https://shop.example.com"
+    assert service.seen == []
+
+
+async def test_http_refuses_an_oversized_chunked_body(
+    gateway: ChatGateway, service: Any
+) -> None:
+    """With no Content-Length the body is counted as it arrives."""
+
+    async def chunks() -> AsyncIterator[bytes]:
+        for _ in range(MAX_REQUEST_BODY_BYTES // 1024 + 2):
+            yield b" " * 1024
+
+    async with asgi(gateway) as http:
+        r = await http.post("/chat/", content=chunks(), headers=HEADERS)
+    assert r.status_code == 413
+    assert r.json() == {"error": "request too large"}
+    assert service.seen == []
+
+
+async def test_http_refuses_an_oversized_message(
+    gateway: ChatGateway, service: Any
+) -> None:
+    async with asgi(gateway) as http:
+        r = await http.post(
+            "/chat/",
+            json={"message": "x" * (MAX_MESSAGE_BYTES + 1)},
+            headers=HEADERS,
+        )
+    assert r.status_code == 413
+    assert r.json() == {"error": "message too large"}
+    assert "x-chat-handle" not in r.headers
+    assert service.seen == []
+
+
+async def test_http_accepts_a_body_under_the_limit(
+    gateway: ChatGateway, service: Any
+) -> None:
+    """A full message and a full metadata bag fit together."""
+    bag = {"junk": "y" * (MAX_USER_METADATA_BYTES - 20)}
+    async with asgi(gateway) as http:
+        r = await http.post(
+            "/chat/",
+            json={"message": "x" * MAX_MESSAGE_BYTES, "user_meta_data": bag},
+            headers=HEADERS,
+        )
+    assert r.status_code == 200
+    assert service.seen[-1]["params"]["message"] == "x" * MAX_MESSAGE_BYTES

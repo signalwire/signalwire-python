@@ -14,11 +14,74 @@ with all SignalWire agent features like skills, POM, and SWAIG functions.
 """
 
 import json
+import math
+import re
 from typing import Any
 from signalwire.core.agent_base import AgentBase
 from signalwire.core.logging_config import get_logger
 
 logger = get_logger("bedrock_agent")
+
+# A SWML variable reference, such as ${temperature}, which the schema accepts
+# for temperature and top_p
+_SWML_VAR = re.compile(r"^[$%]\{.*\}$")
+
+# The keys the amazon_bedrock verb defines
+_BEDROCK_VERB_KEYS = (
+    "prompt",
+    "SWAIG",
+    "params",
+    "global_data",
+    "post_prompt",
+    "post_prompt_url",
+)
+
+# The prompt keys copied from the ai verb's prompt. The platform's Bedrock
+# session reads only these, voice_id, temperature and top_p; the last three
+# are set from the agent's own settings, as is max_tokens.
+_BEDROCK_PROMPT_KEYS = ("text", "pom")
+
+# The prompt keys set from the agent's own settings
+_AGENT_PROMPT_KEYS = ("voice_id", "temperature", "top_p", "max_tokens")
+
+# What the ai verb keys the Bedrock verb or prompt leaves out are, for the
+# warning
+_FEATURE_NAMES = {
+    "hints": "speech hints (add_hint(), add_hints() and skills' hints)",
+    "languages": "languages (add_language())",
+    "pronounce": "pronunciation rules (add_pronunciation())",
+    "multilingual": "multilingual settings (set_multilingual())",
+    "contexts": "contexts and steps (define_contexts())",
+}
+
+
+def _to_number(name: str, value: Any, *, integer: bool = False) -> Any:
+    """Return ``value`` as a number for the Bedrock prompt, or raise.
+
+    Accepts an int, a float or a numeric string. temperature and top_p may
+    also be a SWML variable reference such as ``${temperature}``, which the
+    schema allows and which is passed through as written.
+
+    Raises:
+        ValueError: If the value isn't a finite number (or an integer, for
+            max_tokens).
+    """
+    if not integer and isinstance(value, str) and _SWML_VAR.match(value.strip()):
+        return value.strip()
+    kind = "an integer" if integer else "a number"
+    if isinstance(value, bool):
+        raise ValueError(f"BedrockAgent {name} must be {kind}, got {value!r}")
+    try:
+        number = float(value.strip() if isinstance(value, str) else value)
+    except (TypeError, ValueError):
+        raise ValueError(f"BedrockAgent {name} must be {kind}, got {value!r}") from None
+    if not math.isfinite(number):
+        raise ValueError(f"BedrockAgent {name} must be {kind}, got {value!r}")
+    if integer:
+        if not number.is_integer():
+            raise ValueError(f"BedrockAgent {name} must be {kind}, got {value!r}")
+        return int(number)
+    return number
 
 
 class BedrockAgent(AgentBase):
@@ -34,7 +97,10 @@ class BedrockAgent(AgentBase):
     - Dynamic configuration
 
     The main difference from the standard agent is that it generates
-    SWML with the "amazon_bedrock" verb instead of "ai".
+    SWML with the "amazon_bedrock" verb instead of "ai". Speech hints,
+    languages, pronunciation rules, multilingual settings and contexts
+    aren't part of that verb, so they're left out of the SWML, with one
+    warning per agent for each.
     """
 
     def __init__(
@@ -57,16 +123,24 @@ class BedrockAgent(AgentBase):
             system_prompt: Initial system prompt (can be overridden with set_prompt)
             voice_id: Bedrock voice: tiffany, matthew, amy, lupe or carlos
                 (default: matthew)
-            temperature: Generation temperature (0-1)
+            temperature: Generation temperature (0-2)
             top_p: Nucleus sampling parameter (0-1)
-            max_tokens: Maximum tokens to generate
+            max_tokens: Maximum tokens to generate. The platform's Bedrock
+                session doesn't read it; it uses 1024
             **kwargs: Additional arguments passed to AgentBase
+
+        Raises:
+            ValueError: If temperature or top_p isn't a number, or max_tokens
+                isn't an integer
         """
         # Store Bedrock-specific parameters first
         self._voice_id = voice_id
-        self._temperature = temperature
-        self._top_p = top_p
-        self._max_tokens = max_tokens
+        self._temperature = _to_number("temperature", temperature)
+        self._top_p = _to_number("top_p", top_p)
+        self._max_tokens = _to_number("max_tokens", max_tokens, integer=True)
+        # Features already reported as left out of the amazon_bedrock verb,
+        # so each is reported once per agent
+        self._bedrock_dropped_warned: set[str] = set()
 
         # Initialize base class
         super().__init__(name=name, route=route, **kwargs)
@@ -131,6 +205,13 @@ class BedrockAgent(AgentBase):
                     }
                 }
 
+                # The ai verb's other keys (hints, languages, pronounce,
+                # multilingual) have no place in the amazon_bedrock verb
+                self._warn_dropped(
+                    [key for key in ai_config if key not in _BEDROCK_VERB_KEYS],
+                    "the amazon_bedrock verb has no",
+                )
+
                 # Remove None values
                 bedrock_config = bedrock_verb["amazon_bedrock"]
                 bedrock_verb["amazon_bedrock"] = {
@@ -143,6 +224,20 @@ class BedrockAgent(AgentBase):
 
         # Convert back to JSON string
         return json.dumps(swml)
+
+    def _warn_dropped(self, keys: list[str], reason: str) -> None:
+        """Log a warning, once per agent, for each feature left out of the SWML."""
+        for key in keys:
+            if key in self._bedrock_dropped_warned:
+                continue
+            self._bedrock_dropped_warned.add(key)
+            if key in _FEATURE_NAMES:
+                what = f"the agent's {_FEATURE_NAMES[key]} are"
+            else:
+                what = "it's"
+            logger.warning(
+                f"BedrockAgent: {reason} {key}, so {what} left out of the SWML"
+            )
 
     def _add_voice_to_prompt(self, prompt_config: dict[str, Any]) -> dict[str, Any]:
         """
@@ -157,14 +252,24 @@ class BedrockAgent(AgentBase):
         Returns:
             Updated prompt configuration with voice
         """
-        # Copy the prompt, leaving out barge_confidence, which the Bedrock
-        # prompt object doesn't define. Everything else it defines passes
-        # through, including presence_penalty and frequency_penalty.
+        # Copy the prompt text. Anything else, such as confidence or
+        # contexts, is left out: the platform's Bedrock session doesn't
+        # read it.
         filtered_config = {
             key: value
             for key, value in prompt_config.items()
-            if key != "barge_confidence"
+            if key in _BEDROCK_PROMPT_KEYS
         }
+        # voice_id and the inference settings are replaced below, so only the
+        # other keys are features the Bedrock prompt leaves out
+        self._warn_dropped(
+            [
+                key
+                for key in prompt_config
+                if key not in _BEDROCK_PROMPT_KEYS and key not in _AGENT_PROMPT_KEYS
+            ],
+            "Bedrock's prompt has no",
+        )
 
         # Add voice_id to the prompt configuration
         filtered_config["voice_id"] = self._voice_id
@@ -195,17 +300,37 @@ class BedrockAgent(AgentBase):
         """
         Update Bedrock inference parameters
 
+        Each value may be a number or a numeric string, which is converted.
+        temperature and top_p may also be a SWML variable reference such as
+        ``${temperature}``.
+
         Args:
-            temperature: Generation temperature (0-1)
+            temperature: Generation temperature (0-2)
             top_p: Nucleus sampling parameter (0-1)
-            max_tokens: Maximum tokens to generate
+            max_tokens: Maximum tokens to generate. The platform's Bedrock
+                session doesn't read it; it uses 1024
+
+        Raises:
+            ValueError: If temperature or top_p isn't a number, or max_tokens
+                isn't an integer. Nothing is changed when a value is refused.
         """
-        if temperature is not None:
-            self._temperature = temperature
-        if top_p is not None:
-            self._top_p = top_p
-        if max_tokens is not None:
-            self._max_tokens = max_tokens
+        # Convert all three before changing any, so a refused value leaves
+        # the settings as they were
+        new_temperature = (
+            _to_number("temperature", temperature) if temperature is not None else None
+        )
+        new_top_p = _to_number("top_p", top_p) if top_p is not None else None
+        new_max_tokens = (
+            _to_number("max_tokens", max_tokens, integer=True)
+            if max_tokens is not None
+            else None
+        )
+        if new_temperature is not None:
+            self._temperature = new_temperature
+        if new_top_p is not None:
+            self._top_p = new_top_p
+        if new_max_tokens is not None:
+            self._max_tokens = new_max_tokens
 
         logger.debug(
             f"Inference params updated: temp={self._temperature}, "
@@ -252,38 +377,36 @@ class BedrockAgent(AgentBase):
             "set_post_prompt_llm_params() called but Bedrock post-prompt uses OpenAI configured in C code"
         )
 
-    # Prompt settings the Bedrock prompt object defines, besides the
-    # inference settings that set_inference_params() owns
-    _BEDROCK_PROMPT_PARAMS = ("confidence", "presence_penalty", "frequency_penalty")
-
     def set_prompt_llm_params(self, **params: Any) -> "BedrockAgent":
         """
-        Set the prompt settings that Bedrock's prompt object defines
+        Set the prompt's inference settings
 
         temperature, top_p and max_tokens update the inference settings, as
-        set_inference_params() does. confidence, presence_penalty and
-        frequency_penalty go into the prompt object. Anything else, such as
-        barge_confidence, isn't part of the Bedrock prompt, so it's ignored
-        with a warning.
+        set_inference_params() does. The platform's Bedrock session reads no
+        other prompt setting, so anything else, such as confidence,
+        presence_penalty or barge_confidence, is ignored with a warning.
 
         Args:
             **params: Prompt settings
 
         Returns:
             self for method chaining
+
+        Raises:
+            ValueError: If temperature or top_p isn't a number, or max_tokens
+                isn't an integer
         """
         self.set_inference_params(
             temperature=params.pop("temperature", None),
             top_p=params.pop("top_p", None),
             max_tokens=params.pop("max_tokens", None),
         )
-        for key in self._BEDROCK_PROMPT_PARAMS:
-            if key in params:
-                self._prompt_llm_params[key] = params.pop(key)
         if params:
+            names = ", ".join(sorted(params))
+            ignored = "it's" if len(params) == 1 else "they're"
             logger.warning(
-                f"set_prompt_llm_params(): Bedrock's prompt doesn't define "
-                f"{', '.join(sorted(params))}, so they're ignored"
+                f"set_prompt_llm_params(): the platform's Bedrock session doesn't "
+                f"use {names}, so {ignored} ignored"
             )
         return self
 

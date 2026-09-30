@@ -10,7 +10,10 @@ See LICENSE file in the project root for full license information.
 import contextlib
 import os
 import shutil
-from typing import Any, ClassVar
+from typing import Any, ClassVar, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from signalwire.utils.url_validator import _PublicSession
 from pathlib import Path
 
 from signalwire.core.skill_base import SkillBase
@@ -226,6 +229,14 @@ class NativeVectorSearchSkill(SkillBase):
                 },
             }
         )
+        # The base schema's tool_name default is the skill name, but the tool
+        # is named search_knowledge when tool_name isn't set
+        schema["tool_name"] = {
+            "type": "string",
+            "description": "Name of the search tool. A different name lets you add a second instance.",
+            "default": "search_knowledge",
+            "required": False,
+        }
         return schema
 
     def get_instance_key(self) -> str:
@@ -299,7 +310,8 @@ class NativeVectorSearchSkill(SkillBase):
         # **EARLY REMOTE CHECK - Option 1**
         # If remote URL is configured, skip all heavy local imports and just validate remote connectivity
         if self.remote_url:
-            # SSRF protection for remote URL
+            # SSRF protection for remote URL. Checked here so a bad URL fails
+            # setup at once; _remote_http() checks every request again.
             from signalwire.utils.url_validator import validate_url
 
             if not validate_url(self.remote_url):
@@ -314,10 +326,8 @@ class NativeVectorSearchSkill(SkillBase):
 
             # Test remote connection (lightweight check)
             try:
-                import requests
-
                 # Use parsed base URL and auth
-                response = requests.get(
+                response = self._remote_http().get(
                     f"{self.remote_base_url}/health", auth=self.remote_auth, timeout=5
                 )
                 if response.status_code == 200:
@@ -881,13 +891,27 @@ class NativeVectorSearchSkill(SkillBase):
 
             return FunctionResult(user_msg)
 
+    def _remote_http(self) -> "_PublicSession":
+        """The session for requests to the remote search server.
+
+        ``validate_url()`` in ``setup()`` checks the URL once. This session
+        checks every request, redirects included, and the address each
+        connection reaches, so a redirect or a DNS change can't send the
+        request to a private or internal address. ``SWML_ALLOW_PRIVATE_URLS``
+        turns both checks off. Made on first use.
+        """
+        session = getattr(self, "_remote_session", None)
+        if session is None:
+            from signalwire.utils.url_validator import _PublicSession
+
+            session = self._remote_session = _PublicSession()
+        return session
+
     def _search_remote(
         self, query: str, enhanced: dict[str, Any] | None, count: int
     ) -> list[dict[str, Any]]:
         """Perform search using remote search server"""
         try:
-            import requests
-
             search_request = {
                 "query": query,
                 "index_name": self.index_name,
@@ -901,7 +925,7 @@ class NativeVectorSearchSkill(SkillBase):
                 "Sending POST to %s with request: %s", url, search_request
             )
 
-            response = requests.post(
+            response = self._remote_http().post(
                 url, json=search_request, auth=self.remote_auth, timeout=30
             )
 

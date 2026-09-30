@@ -19,6 +19,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 from typing import Any
 import json
+import requests
 import uuid
 
 # Add the project root to Python path
@@ -415,4 +416,29 @@ def public_test_dns() -> Iterator[None]:
         return [(family, socket.SOCK_STREAM, 6, "", (ip, 0))]
 
     with patch("socket.getaddrinfo", side_effect=resolve):
+        yield
+
+
+@pytest.fixture
+def route_public_session_to_requests() -> Iterator[None]:
+    """Send the DataMap simulator's requests to ``requests.get`` and ``requests.post``.
+
+    The simulator sends through the SDK's ``_PublicSession``. Tests that stub
+    ``requests.get`` and ``requests.post`` use this to have the session call
+    those stubs, with the same arguments they'd get when called directly.
+    """
+
+    def request(self: Any, method: str, url: str, **kwargs: Any) -> Any:
+        kwargs.pop("allow_redirects", None)
+        timeout = kwargs.pop("timeout", None)
+        if method == "POST":
+            response = requests.post(url, timeout=timeout, **kwargs)
+        else:
+            kwargs.pop("data", None)
+            response = requests.get(url, timeout=timeout, **kwargs)
+        if isinstance(response, Mock) and not isinstance(response.is_redirect, bool):
+            response.is_redirect = False
+        return response
+
+    with patch("signalwire.utils.url_validator._PublicSession.request", request):
         yield

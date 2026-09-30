@@ -85,9 +85,12 @@ class TestParameterSchema:
         schema = InfoGathererSkill.get_parameter_schema()
         assert "completion_message" in schema
 
-    def test_schema_has_tool_name(self) -> None:
+    def test_schema_omits_tool_name(self) -> None:
+        # Instances are told apart by prefix, so the base tool_name entry
+        # (added for multi-instance skills) is removed
         schema = InfoGathererSkill.get_parameter_schema()
-        assert "tool_name" in schema  # from SUPPORTS_MULTIPLE_INSTANCES
+        assert "tool_name" not in schema
+        assert "prefix" in schema
 
 
 # ===========================================================================

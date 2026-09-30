@@ -31,12 +31,12 @@ The tool provides these capabilities:
 - **Agent Auto-Selection**: Automatically chooses agent when only one exists in file
 - **Agent Discovery**: Lists available agents when no arguments provided
 - **Auto-Detection**: Automatically detects webhook vs DataMap functions - no manual flags needed
-- **Complete DataMap Simulation**: Full processing including URL templates, responses, and fallbacks
+- **Complete DataMap Simulation**: Processing as the platform does it, including URL templates, responses, and the fallback output
 - **SWML Testing**: Generate and test SWML documents with realistic fake call data
 - **Dynamic Agent Support**: Test request-dependent SWML generation with mock request objects
 - **Real HTTP Execution**: DataMap functions make actual HTTP requests to real APIs
 - **Comprehensive Simulation**: Generate realistic post_data with all SignalWire metadata
-- **Advanced Template Engine**: Supports all DataMap variable syntax (`${args.param}`, response fields from the root such as `${field}`, `${array[0].property}`, and helpers such as `${lc:enc:args.city}`)
+- **Advanced Template Engine**: Supports the platform's DataMap template syntax (`${args.param}`, response fields from the root such as `${field}`, `${input.args.param}` in a webhook's output, `${array[0].property}`, and helpers such as `${lc:enc:args.city}`)
 - **Flexible CLI Syntax**: Support both `--exec` and JSON argument styles
 - **Override System**: Precise control over test data with dot notation paths
 - **Mock Request Objects**: Complete FastAPI Request simulation for dynamic agents
@@ -278,6 +278,8 @@ swaig-test examples/my_agent.py --simulate-serverless lambda \
 - `AWS_REGION`
 - `_HANDLER`
 
+The SDK uses `AWS_LAMBDA_FUNCTION_URL` when it's set, and otherwise builds `https://NAME.lambda-url.REGION.on.aws` from the function name and region. When you set the function name or region (with `--aws-function-name`, `--aws-region`, `--env` or `--env-file`) without a function URL, the preset's function URL is left out, so the URL is built from the values you gave.
+
 With `--aws-api-gateway-id`, the simulated `AWS_LAMBDA_FUNCTION_URL` is the API Gateway URL, `https://ID.execute-api.REGION.amazonaws.com/STAGE`. The region defaults to `us-east-1` and the stage to `prod`. `--aws-function-url` takes precedence over it.
 
 #### CGI Simulation
@@ -313,7 +315,7 @@ swaig-test examples/my_agent.py --simulate-serverless cgi \
 
 #### Google Cloud Functions Simulation
 
-The webhook host comes from the region and project, not from `--gcp-function-url`:
+The SDK uses `FUNCTION_URL` when it's set, and otherwise builds `https://REGION-PROJECT.cloudfunctions.net/SERVICE`. `--gcp-function-url` sets `FUNCTION_URL`. When you set the project, region or service (with `--gcp-project`, `--gcp-region`, `--gcp-service`, `--env` or `--env-file`) without a function URL, the preset's function URL is left out, so the URL is built from the values you gave:
 
 ```bash
 # Basic Cloud Function simulation
@@ -329,14 +331,16 @@ swaig-test examples/my_agent.py --simulate-serverless cloud_function \
 ```
 
 **Cloud Function Environment Variables Set:**
+- `FUNCTION_TARGET` (what marks a Cloud Function; `main`)
 - `GOOGLE_CLOUD_PROJECT`
-- `FUNCTION_URL` (if provided)
+- `FUNCTION_TARGET`
+- `FUNCTION_URL`
 - `GOOGLE_CLOUD_REGION`
 - `K_SERVICE` (Knative service name)
 
 #### Azure Functions Simulation
 
-The webhook host comes from the `WEBSITE_SITE_NAME` preset; `--azure-env` only sets the reported environment name:
+The SDK uses `AZURE_FUNCTION_URL` when it's set, and otherwise builds `https://APP.azurewebsites.net/api/NAME` from `WEBSITE_SITE_NAME` and `AZURE_FUNCTION_NAME`. `--azure-function-url` sets `AZURE_FUNCTION_URL`; `--azure-env` only sets the reported environment name:
 
 ```bash
 # Basic Azure Functions simulation
@@ -351,8 +355,10 @@ swaig-test examples/my_agent.py --simulate-serverless azure_function \
 
 **Azure Functions Environment Variables Set:**
 - `AZURE_FUNCTIONS_ENVIRONMENT`
+- `FUNCTIONS_WORKER_RUNTIME`
 - `WEBSITE_SITE_NAME`
-- Custom function URL (if provided)
+- `AZURE_FUNCTION_NAME`
+- `AZURE_FUNCTION_URL` (from `--azure-function-url`)
 
 ### Environment Variable Management
 
@@ -746,64 +752,84 @@ swaig-test examples/joke_skill_demo.py --verbose --exec get_joke --type dadjokes
 **Complete DataMap Processing Pipeline:**
 1. **URL Template Expansion**: `${args.type}` becomes `dadjokes`
 2. **HTTP Request**: GET to `https://api.api-ninjas.com/v1/dadjokes`
-3. **Response Processing**: Extract joke from API response array
+3. **Response Processing**: The API returns an array, which the output reads under `array`
 4. **Output Template**: `${array[0].joke}` becomes the joke text
-5. **Fallback Handling**: If API fails, use fallback message
+5. **Fallback Handling**: If the request fails, the DataMap-level fallback output is used
 
-**Example Output:**
+**Example Output**, with the arguments, call data and request headers left out:
 ```
 Calling DataMap function: get_joke
-Arguments: {"type": "dadjokes"}
 Function type: DataMap (serverless)
 ------------------------------------------------------------
 === DataMap Function Execution ===
+
 --- Processing Webhooks ---
+
+=== Webhook 1/1 ===
 Making GET request to: https://api.api-ninjas.com/v1/dadjokes
 Response status: 200
-Webhook 1 succeeded!
-Array response: 1 items
+Response data: [
+  {
+    "joke": "Why don't scientists trust atoms? Because they make up everything!"
+  }
+]
+Webhook 1 succeeded
 
 --- Processing Webhook Output ---
-Set response = Here's a joke: Why don't scientists trust atoms? Because they make up everything!
-
+Result: {
+  "response": "Tell this joke to the user: Why don't scientists trust atoms? Because they make up everything!"
+}
 RESULT:
-Response: Here's a joke: Why don't scientists trust atoms? Because they make up everything!
+Response: Tell this joke to the user: Why don't scientists trust atoms? Because they make up everything!
 ```
 
 ### DataMap Template Expansion
 
-The tool properly handles all DataMap template syntax:
+The tool expands DataMap templates as the platform does:
 
-- **Function Arguments**: `${args.type}`, `${args.location}`
-- **Array Access**: `${array[0].joke}`, `${array[0].weather.temp}`
+- **Function Arguments**: `${args.type}` in a webhook's URL and params, and `${input.args.type}` in its output
+- **Array Access**: `${array[0].joke}`, `${array[0].weather.temp}`, and `${results[-1].title}` for the last element
 - **Nested Objects**: `${data.results[0].title}`
-- **Fallback Values**: `${args.units || "metric"}`
+- **Helpers**: `${enc:args.city}`, `${lc:enc:args.city}` and `${fmt_ph:args.phone}`
+
+There's no default-value syntax: a template that doesn't resolve expands to an empty string, on the platform and in the simulation. The tool names each such template on stderr.
 
 ### DataMap Error Handling
 
-When APIs fail, DataMap functions gracefully fall back:
+When the webhook fails, a DataMap function falls back to its DataMap-level output:
 
 ```bash
-# Test with invalid parameters to see fallback
-swaig-test examples/joke_skill_demo.py --verbose --exec get_joke --type invalid
+# Test with an invalid API key to see the fallback
+API_NINJAS_KEY=invalid swaig-test examples/joke_skill_demo.py --verbose --exec get_joke --type dadjokes
 ```
 
-**Fallback Output:**
+**Fallback Output**, with the same parts left out:
 ```
 Calling DataMap function: get_joke
-Arguments: {"type": "invalid"}
 Function type: DataMap (serverless)
 ------------------------------------------------------------
-Response status: 404
-Webhook failed: HTTP status 404 outside 200-299 range
-Webhook 1 failed, trying next webhook...
+=== DataMap Function Execution ===
 
---- Using DataMap Fallback Output ---
-Fallback: Set response = Sorry, there is a problem with the joke service right now. Please try again later.
+--- Processing Webhooks ---
 
+=== Webhook 1/1 ===
+Making GET request to: https://api.api-ninjas.com/v1/dadjokes
+Response status: 400
+Response data: {
+  "error": "Invalid API Key.",
+  "http_code": 400
+}
+Webhook 1 failed: the response has the error key 'error'. The platform doesn't try later webhooks; the top-level output runs instead.
+
+--- Using the Top-Level Output ---
+Result: {
+  "response": "Sorry, there is a problem with the joke service right now. Please try again later."
+}
 RESULT:
 Response: Sorry, there is a problem with the joke service right now. Please try again later.
 ```
+
+The 400 status alone wouldn't fail the webhook: the joke skill's `error_keys` list `error`, which this response has.
 
 ### Test Functions (Auto-Detection)
 
@@ -1093,10 +1119,10 @@ swaig-test examples/agent.py --exec filter --categories "tech,science,health" --
 DataMap functions follow the SignalWire server-side processing pipeline:
 
 1. **Expression Processing**: Pattern matching against function arguments
-2. **Webhook Execution**: Sequential HTTP requests until one succeeds  
+2. **Webhook Execution**: One HTTP request, to the first webhook whose `require_args` are met
 3. **Foreach Processing**: Array iteration with template expansion
 4. **Output Generation**: Final result formatting using templates
-5. **Fallback Handling**: Error recovery with fallback outputs
+5. **Fallback Handling**: The DataMap-level output when the webhook fails, or else the platform's generic error
 
 ### Real API Execution Example
 
@@ -1107,52 +1133,52 @@ This DataMap function makes a real HTTP request when you run it:
 swaig-test examples/datasphere_serverless_env_demo.py --verbose --exec search_knowledge --query "AI agents"
 ```
 
-**Example Execution Flow:**
+**Example Execution Flow**, with the arguments, call data and response data left out:
 ```
 === DataMap Function Execution ===
-Config: { ... complete datamap configuration ... }
 
 --- Processing Webhooks ---
+
 === Webhook 1/1 ===
-Making POST request to: https://tony.signalwire.com/api/datasphere/documents/search
+Making POST request to: https://example.signalwire.com/api/datasphere/documents/search
 Headers: {
   "Content-Type": "application/json",
+  "User-Agent": "SignalWire-CallFabric/1.0",
   "Authorization": "Basic ODQ2NTlmMjE..."
 }
-Request data: {
-  "document_id": "b888a1cc-1707-4902-9573-aa201a0c1086", 
-  "query_string": "SignalWire",
-  "distance": "4.0",
-  "count": "1"
+Request body: {
+	"document_id":	"b888a1cc-1707-4902-9573-aa201a0c1086",
+	"query_string":	"AI agents",
+	"count":	1,
+	"distance":	4
 }
 Response status: 200
-Webhook 1 succeeded!
+Webhook 1 succeeded
 
 --- Processing Webhook Foreach ---
-Found array data in response.chunks: 1 items
-Processed 1 items
-Foreach result (formatted_results): === RESULT ===
-SignalWire's competitive advantage comes from...
+Foreach built formatted_results from 1 items
 
 --- Processing Webhook Output ---
-Set response = I found results for "SignalWire":
-
-=== RESULT ===
-SignalWire's competitive advantage comes from...
-
+Result: {
+  "response": "I found results for \"AI agents\":\n\n=== RESULT ===\nSignalWire's competitive advantage comes from...\n==================================================\n\n"
+}
 RESULT:
-Response: I found results for "SignalWire": ...
+Response: I found results for "AI agents":
+...
 ```
+
+The request body is the webhook's `params`, printed as the platform prints JSON, and the request is a POST because the webhook has params.
 
 ### Template Expansion Support
 
-The tool supports all DataMap template syntax with both `${}` and `%{}` variations:
+The tool supports the platform's DataMap template syntax, with both `${}` and `%{}` variations:
 
 | Syntax | Description | Example |
 |--------|-------------|---------|
-| `${args.param}` / `%{args.param}` | Function arguments | `${args.query}`, `%{args.type}` |
+| `${args.param}` / `%{args.param}` | Function arguments, in the URL, params and top-level expressions and output | `${args.query}`, `%{args.type}` |
+| `${input.args.param}` | Function arguments, in a webhook's foreach, expressions and output | `${input.args.query}` |
 | `${field}` / `%{field}` | A field of the API's JSON object response, from the root | `${temperature}` |
-| `${lc:enc:args.param}` | Prefix helpers, left to right: lowercase, then URL-encode | `${lc:enc:args.city}` |
+| `${lc:enc:args.param}` | Prefix helpers `lc`, `enc` and `fmt_ph`, applied in that fixed order: `fmt_ph`, then `lc`, then `enc` | `${lc:enc:args.city}` |
 | `${array[0].field}` / `%{array[0].field}` | API response array | `${array[0].joke}`, `%{array[0].text}` |
 | `${this.property}` / `%{this.property}` | Current foreach item | `${this.title}`, `%{this.content}` |
 | `${global_data.key}` / `%{global_data.key}` | Call-wide data store | `${global_data.customer_name}` |
@@ -1919,11 +1945,16 @@ Test how DataMap functions handle API failures:
 swaig-test my_agent.py --verbose --exec my_datamap_func
 ```
 
-If the primary webhook fails, you'll see:
+If the webhook fails, you'll see:
 ```
-Webhook 1 request failed: Connection timeout
---- Using DataMap Fallback Output ---
-Fallback result = Sorry, the service is temporarily unavailable.
+Request failed: Connection timeout
+...
+Webhook 1 failed: the response has protocol_error. The platform doesn't try later webhooks; the top-level output runs instead.
+
+--- Using the Top-Level Output ---
+Result: {
+  "response": "Sorry, the service is temporarily unavailable."
+}
 ```
 
 ### Custom Environment Testing
@@ -1955,13 +1986,13 @@ swaig-test my_agent.py --verbose --exec complex_search
 
 This shows the complete processing pipeline:
 - Template expansion in URLs and parameters
-- Multiple webhook attempts with fallback
+- Which webhook was requested, and why earlier ones were skipped
 - Foreach processing of array responses
 - Final output template expansion
 
 ### DataMap-Specific Debugging
 
-For DataMap function issues, `--verbose` traces template expansion, the HTTP request it produces, and fallback handling:
+For DataMap function issues, `--verbose` traces the call data, the HTTP request it produces, which webhook ran and why, and the fallback output:
 
 ```bash
 # Enable verbose to see HTTP details
@@ -2067,25 +2098,28 @@ With a real API key, the webhook succeeds and returns a joke:
 API_NINJAS_KEY=your_api_key swaig-test examples/joke_skill_demo.py --verbose --exec get_joke --type jokes
 ```
 
-**Expected Output:**
+**Expected Output**, with the arguments, call data, headers and response data left out:
 ```
 === DataMap Function Execution ===
+
 --- Processing Webhooks ---
+
+=== Webhook 1/1 ===
 Making GET request to: https://api.api-ninjas.com/v1/jokes
 Response status: 200
-Webhook 1 succeeded!
-Array response: 1 items
+Webhook 1 succeeded
 
 --- Processing Webhook Output ---
-Set response = Here's a joke: What do you call a bear with no teeth? A gummy bear!
-
+Result: {
+  "response": "Tell this joke to the user: What do you call a bear with no teeth? A gummy bear!"
+}
 RESULT:
-Response: Here's a joke: What do you call a bear with no teeth? A gummy bear!
+Response: Tell this joke to the user: What do you call a bear with no teeth? A gummy bear!
 ```
 
 #### Invalid API Key (Failure Case)
 
-Without a valid key, the webhook fails and the fallback response takes over:
+Without a valid key, the API's response has an `error` field, one of the webhook's `error_keys`, so the webhook fails and the fallback response takes over:
 
 ```bash
 # Test with an invalid API key: shows fallback output processing.
@@ -2093,19 +2127,25 @@ Without a valid key, the webhook fails and the fallback response takes over:
 swaig-test examples/joke_agent.py --verbose --exec get_joke --type jokes
 ```
 
-**Expected Output (when API key is invalid):**
+**Expected Output (when API key is invalid)**, with the same parts left out:
 ```
 === DataMap Function Execution ===
+
 --- Processing Webhooks ---
+
+=== Webhook 1/1 ===
 Making GET request to: https://api.api-ninjas.com/v1/jokes
 Response status: 400
-Response data: {"error": "Invalid API Key."}
-Webhook failed: HTTP status 400 outside 200-299 range
-Webhook 1 failed, trying next webhook...
+Response data: {
+  "error": "Invalid API Key.",
+  "http_code": 400
+}
+Webhook 1 failed: the response has the error key 'error'. The platform doesn't try later webhooks; the top-level output runs instead.
 
---- Using DataMap Fallback Output ---
-Fallback result = Tell the user that the joke service is not working right now and just make up a joke on your own
-
+--- Using the Top-Level Output ---
+Result: {
+  "response": "Tell the user that the joke service is not working right now and just make up a joke on your own"
+}
 RESULT:
 Response: Tell the user that the joke service is not working right now and just make up a joke on your own
 ```
@@ -2177,17 +2217,18 @@ Testing has these performance characteristics:
 
 ### Webhook Failure Detection
 
-DataMap webhooks are considered failed when any of these conditions occur:
+As on the platform, a DataMap webhook fails when any of these occur:
 
-1. **HTTP Status Codes**: Status outside 200-299 range
-2. **Explicit Error Keys**: `parse_error` or `protocol_error` in response
-3. **Custom Error Keys**: Any keys specified in webhook `error_keys` configuration
-4. **Network Errors**: Connection timeouts, DNS failures, etc.
+1. **Network Errors**: Connection failures, timeouts and the like, which the platform marks as `protocol_error`
+2. **Unparseable Responses**: An empty body, or one that isn't JSON, which it marks as `parse_error`
+3. **Custom Error Keys**: The response has one of the webhook's `error_keys` at its top level, whatever the value
 
-When a webhook fails, the tool:
-- Tries the next webhook in sequence (if any)
-- Uses fallback output if all webhooks fail
-- Provides detailed error information in verbose mode
+A status outside 200-299 isn't a failure by itself: the response gains an `http_code` field, and the webhook's output runs. List `http_code` in `error_keys` to fail on it.
+
+When the webhook fails, the tool, like the platform:
+- Doesn't try later webhooks
+- Uses the DataMap-level fallback output, or else returns the platform's generic error
+- Says why the webhook failed, in verbose mode
 
 ## Best Practices
 

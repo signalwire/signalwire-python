@@ -17,7 +17,9 @@ Three properties matter more than the happy path:
 """
 
 import asyncio
+import copy
 import logging
+import threading
 from collections.abc import Iterator
 from typing import Any
 
@@ -27,6 +29,7 @@ from fastapi.testclient import TestClient
 
 from signalwire.ai_chat import AIChatClient, ChatGateway, HandoffRouter
 from signalwire.ai_chat.client import _warn_if_id_will_be_altered
+from signalwire.ai_chat.gateway import MAX_MESSAGE_BYTES, MAX_REQUEST_BODY_BYTES
 
 SECRET = "s" * 32
 
@@ -152,6 +155,222 @@ class TestHandoffRedemption:
         assert client.post("/chat/handoff", json={}).status_code == 404
 
 
+class TestRegistration:
+    """The per-call config callback registers the nonce on every SWML request
+    for the call, and the browser chooses the nonce, so a repeat registration
+    must not reset, move or revive an entry."""
+
+    def test_a_repeat_registration_keeps_the_typing_count(
+        self, gateway: ChatGateway, events: list[Any]
+    ) -> None:
+        router = HandoffRouter(
+            gateway=gateway,
+            send_message=_recording_sender(events),
+            max_messages_per_call=1,
+        )
+        router.register("n", conversation_id="c", call_id="call-1")
+        assert asyncio.run(router.say("n", "one"))
+        assert not asyncio.run(router.say("n", "two"))
+        router.register("n", conversation_id="c", call_id="call-1")
+        assert not asyncio.run(router.say("n", "three"))
+        assert events == [("say", "one")]
+
+    def test_a_repeat_registration_keeps_the_registration_time(
+        self, handoff: HandoffRouter
+    ) -> None:
+        handoff.register("n", conversation_id="c", call_id="call-1")
+        first = handoff._nonces["n"].issued_at
+        handoff.register("n", conversation_id="c", call_id="call-1")
+        assert handoff._nonces["n"].issued_at == first
+
+    def test_a_live_nonce_cannot_be_moved_to_another_call(
+        self, handoff: HandoffRouter, client: TestClient, events: list[Any]
+    ) -> None:
+        handoff.register("n", conversation_id="conv-a", call_id="call-a")
+        handoff.register("n", conversation_id="conv-b", call_id="call-b")
+        assert (
+            client.post("/chat/say", json={"nonce": "n", "text": "hi"}).status_code
+            == 200
+        )
+        assert events == [("say", "call-a", "hi")]
+
+    def test_a_redeemed_nonce_cannot_be_registered_and_redeemed_again(
+        self, handoff: HandoffRouter, client: TestClient
+    ) -> None:
+        handoff.register("n", conversation_id="conv-root", call_id="call-9")
+        assert client.post("/chat/handoff", json={"nonce": "n"}).status_code == 200
+        handoff.register("n", conversation_id="conv-root", call_id="call-10")
+        again = client.post("/chat/handoff", json={"nonce": "n"})
+        assert again.status_code == 404
+        assert again.json() == {"error": "not found"}
+
+    def test_a_redeemed_nonce_cannot_type(
+        self, handoff: HandoffRouter, client: TestClient, events: list[Any]
+    ) -> None:
+        handoff.register("n", conversation_id="conv-root", call_id="call-9")
+        client.post("/chat/handoff", json={"nonce": "n"})
+        events.clear()
+        said = client.post("/chat/say", json={"nonce": "n", "text": "late"})
+        assert said.status_code == 404
+        assert events == []
+
+    def test_redemption_is_kept_until_the_ttl_passes(
+        self, handoff: HandoffRouter
+    ) -> None:
+        handoff.register("n", conversation_id="conv-root", call_id="call-9")
+        assert asyncio.run(handoff.redeem("n")) is not None
+        entry = handoff._nonces["n"]
+        assert entry.redeemed is True
+        # Once the entry would have expired it is pruned, and the nonce can be
+        # registered afresh.
+        entry.issued_at -= handoff.nonce_ttl + 1
+        handoff.register("n", conversation_id="conv-new", call_id="call-11")
+        assert handoff._nonces["n"].redeemed is False
+        assert handoff._nonces["n"].conversation_id == "conv-new"
+
+    def test_a_shared_registry_stores_the_redemption(
+        self, gateway: ChatGateway
+    ) -> None:
+        """A registry backed by shared storage sees the change only when the
+        entry is assigned back, so redemption must not rely on mutation."""
+
+        class Recording(dict[str, Any]):
+            def __init__(self) -> None:
+                super().__init__()
+                self.assigned: list[tuple[str, bool]] = []
+
+            def __setitem__(self, key: str, value: Any) -> None:
+                self.assigned.append((key, value.redeemed))
+                super().__setitem__(key, value)
+
+        registry = Recording()
+        router = HandoffRouter(gateway=gateway, registry=registry)
+        router.register("n", conversation_id="c", call_id="call-1")
+        assert asyncio.run(router.redeem("n")) is not None
+        assert registry.assigned == [("n", False), ("n", True)]
+
+
+class TestConcurrency:
+    """The per-call config callback registers nonces in worker threads, and
+    /handoff and /say requests overlap, so the table's updates are atomic."""
+
+    def test_a_registration_racing_a_redemption_cant_revive_the_nonce(
+        self, gateway: ChatGateway
+    ) -> None:
+        router = HandoffRouter(gateway=gateway)
+        handles: list[str | None] = []
+
+        def register_and_redeem_elsewhere() -> None:
+            router.register("n", conversation_id="late", call_id="call-2")
+            handles.append(asyncio.run(router.redeem("n")))
+
+        class Racing(dict[str, Any]):
+            """Once the first registration has found the nonce absent, runs
+            another registration and redemption in another thread, before the
+            first one inserts its entry."""
+
+            raced = False
+
+            def get(self, key: Any, default: Any = None) -> Any:
+                found = super().get(key, default)
+                if not Racing.raced:
+                    Racing.raced = True
+                    other = threading.Thread(target=register_and_redeem_elsewhere)
+                    other.start()
+                    other.join(timeout=0.5)  # blocks on the lock if it's atomic
+                    racers.append(other)
+                return found
+
+        racers: list[threading.Thread] = []
+        router._nonces = Racing()
+        router.register("n", conversation_id="first", call_id="call-1")
+        racers[0].join(timeout=5)
+        # One registration stands, and the nonce redeems once
+        handles.append(asyncio.run(router.redeem("n")))
+        assert sum(handle is not None for handle in handles) == 1
+
+    def test_overlapping_says_cant_pass_the_cap(self, gateway: ChatGateway) -> None:
+        delivered: list[str] = []
+
+        async def send(call_id: str, text: str) -> bool:
+            await asyncio.sleep(0.01)  # delivery takes a moment
+            delivered.append(text)
+            return True
+
+        router = HandoffRouter(
+            gateway=gateway, send_message=send, max_messages_per_call=1
+        )
+        router.register("n", conversation_id="c", call_id="call-1")
+
+        async def three_at_once() -> list[bool]:
+            return list(
+                await asyncio.gather(*(router.say("n", f"m{i}") for i in range(3)))
+            )
+
+        results = asyncio.run(three_at_once())
+        assert results.count(True) == 1
+        assert len(delivered) == 1
+
+    def test_a_failed_delivery_gives_its_slot_back(self, gateway: ChatGateway) -> None:
+        attempts: list[str] = []
+
+        def send(call_id: str, text: str) -> bool:
+            attempts.append(text)
+            if len(attempts) == 1:
+                raise ConnectionError("platform unavailable")
+            return True
+
+        router = HandoffRouter(
+            gateway=gateway, send_message=send, max_messages_per_call=1
+        )
+        router.register("n", conversation_id="c", call_id="call-1")
+        assert not asyncio.run(router.say("n", "first"))
+        assert asyncio.run(router.say("n", "again"))
+        assert not asyncio.run(router.say("n", "over the cap"))
+        assert attempts == ["first", "again"]
+
+
+class TestCopyingRegistry:
+    """A shared registry, such as one backed by a cache, returns a copy of
+    an entry rather than the stored object."""
+
+    class Copying(dict[str, Any]):
+        def get(self, key: Any, default: Any = None) -> Any:
+            value = super().get(key, default)
+            return copy.deepcopy(value)
+
+        def __setitem__(self, key: str, value: Any) -> None:
+            super().__setitem__(key, copy.deepcopy(value))
+
+    def test_a_failed_delivery_gives_its_slot_back(self, gateway: ChatGateway) -> None:
+        attempts: list[str] = []
+
+        def send(call_id: str, text: str) -> bool:
+            attempts.append(text)
+            if len(attempts) == 1:
+                raise ConnectionError("platform unavailable")
+            return True
+
+        router = HandoffRouter(
+            gateway=gateway,
+            send_message=send,
+            max_messages_per_call=1,
+            registry=self.Copying(),
+        )
+        router.register("n", conversation_id="c", call_id="call-1")
+        assert not asyncio.run(router.say("n", "first"))
+        assert asyncio.run(router.say("n", "again"))
+        assert not asyncio.run(router.say("n", "over the cap"))
+        assert attempts == ["first", "again"]
+
+    def test_a_redeemed_nonce_stays_redeemed(self, gateway: ChatGateway) -> None:
+        router = HandoffRouter(gateway=gateway, registry=self.Copying())
+        router.register("n", conversation_id="c", call_id="call-1")
+        assert asyncio.run(router.redeem("n")) is not None
+        router.register("n", conversation_id="c", call_id="call-1")
+        assert asyncio.run(router.redeem("n")) is None
+
+
 class TestEscalate:
     def test_captures_the_chat_leg_before_returning(
         self, client: TestClient, gateway: ChatGateway, events: list[Any]
@@ -185,7 +404,8 @@ class TestSay:
         assert events == [("say", "call-9", "hello")]
 
     def test_is_repeatable(self, handoff: HandoffRouter, client: TestClient) -> None:
-        """Unlike redemption -- typing lasts the life of the call."""
+        """Unlike redemption, typing is repeatable until the nonce is redeemed
+        or expires."""
         handoff.register("n2", conversation_id="conv-root", call_id="call-9")
         for _ in range(3):
             assert (
@@ -227,6 +447,73 @@ class TestSay:
         router = HandoffRouter(gateway=gateway)
         router.register("n", conversation_id="c", call_id="call-1")
         assert not asyncio.run(router.say("n", "hello"))
+
+
+class TestSizeLimits:
+    """Every route is reachable by anyone who can load the page, and /say
+    text becomes a billed turn, so the body and the text are bounded."""
+
+    def test_say_refuses_text_over_the_message_limit(
+        self, handoff: HandoffRouter, client: TestClient, events: list[Any]
+    ) -> None:
+        handoff.register("n", conversation_id="conv-root", call_id="call-9")
+        response = client.post(
+            "/chat/say", json={"nonce": "n", "text": "x" * (MAX_MESSAGE_BYTES + 1)}
+        )
+        assert response.status_code == 413
+        assert response.json() == {"error": "message too large"}
+        assert events == []
+
+    def test_the_size_answer_does_not_depend_on_the_nonce(
+        self, client: TestClient
+    ) -> None:
+        """Checked before the lookup, so it can't be used to probe a nonce."""
+        response = client.post(
+            "/chat/say",
+            json={"nonce": "never-existed", "text": "x" * (MAX_MESSAGE_BYTES + 1)},
+        )
+        assert response.status_code == 413
+        assert response.json() == {"error": "message too large"}
+
+    def test_say_accepts_text_at_the_limit(
+        self, handoff: HandoffRouter, client: TestClient, events: list[Any]
+    ) -> None:
+        handoff.register("n", conversation_id="conv-root", call_id="call-9")
+        text = "x" * MAX_MESSAGE_BYTES
+        response = client.post("/chat/say", json={"nonce": "n", "text": text})
+        assert response.status_code == 200
+        assert events == [("say", "call-9", text)]
+
+    def test_say_called_directly_refuses_oversized_text(
+        self, gateway: ChatGateway, events: list[Any]
+    ) -> None:
+        router = HandoffRouter(gateway=gateway, send_message=_recording_sender(events))
+        router.register("n", conversation_id="c", call_id="call-1")
+        assert not asyncio.run(router.say("n", "x" * (MAX_MESSAGE_BYTES + 1)))
+        assert events == []
+
+    @pytest.mark.parametrize("path", ["/chat/handoff", "/chat/escalate", "/chat/say"])
+    def test_an_oversized_body_is_refused(self, client: TestClient, path: str) -> None:
+        response = client.post(
+            path,
+            content=b" " * (MAX_REQUEST_BODY_BYTES + 1),
+            headers={"Content-Type": "application/json"},
+        )
+        assert response.status_code == 413
+        assert response.json() == {"error": "request too large"}
+
+    def test_an_oversized_handoff_leaves_the_nonce_redeemable(
+        self, handoff: HandoffRouter, client: TestClient
+    ) -> None:
+        handoff.register("n", conversation_id="conv-root", call_id="call-9")
+        padded = b'{"nonce": "n", "pad": "' + b"x" * MAX_REQUEST_BODY_BYTES + b'"}'
+        refused = client.post(
+            "/chat/handoff",
+            content=padded,
+            headers={"Content-Type": "application/json"},
+        )
+        assert refused.status_code == 413
+        assert client.post("/chat/handoff", json={"nonce": "n"}).status_code == 200
 
 
 class TestCaptureFailures:

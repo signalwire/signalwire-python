@@ -866,4 +866,7 @@ class ClaudeSkillsSkill(SkillBase):
             }
         )
 
+        # Tools are named with tool_prefix, and instances are told apart by
+        # skills_path, so the base schema's tool_name entry doesn't apply
+        schema.pop("tool_name", None)
         return schema

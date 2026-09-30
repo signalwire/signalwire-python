@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "signalwire-sdk"
-version = "3.5.0"
+version = "3.5.1"
 description = "SignalWire SDK for AI voice agents, live call control (RELAY) and REST. Run sw-pydocs for its documentation."
 authors = [
     {name = "SignalWire Team", email = "info@signalwire.com"}
@@ -299,11 +299,9 @@ module = "numpy.*"
 follow_imports = "skip"
 follow_imports_for_stubs = true
 
-# `deprecated` (a transitive runtime dep via `limits`; nothing here imports it) is the
-# same class as numpy above: Deprecated 3.0.0 ships sphinx.py using the 3.12+ `type`
-# statement, so mypy's 3.10 grammar errors on the 3.12/3.13 CI runners ("Type
-# statement is only supported in Python 3.12 and greater", run 36362773711). We don't
-# check its types; skip following into it.
+# Deprecated 3.0 (pulled in by flask-limiter's limits) uses the same 3.12+
+# `type` statement, and is installed only on the 3.12/3.13 runners. We don't
+# check its types either.
 [[tool.mypy.overrides]]
 module = "deprecated.*"
 follow_imports = "skip"

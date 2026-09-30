@@ -60,7 +60,7 @@ class DataMapDemoAgent(AgentBase):
         weather_tool = create_simple_api_tool(
             name="get_weather",
             url="https://api.weather.com/v1/current?key=API_KEY&q=${enc:args.location}",
-            response_template="Current weather in ${args.location}: ${current.condition.text}, ${current.temp_f}°F",
+            response_template="Current weather in ${input.args.location}: ${current.condition.text}, ${current.temp_f}°F",
             parameters={
                 "location": {
                     "type": "string",
@@ -127,7 +127,7 @@ class DataMapDemoAgent(AgentBase):
                 }
             )
             .output(FunctionResult("Found:\n${found}"))
-            .error_keys(["error", "status"])
+            .error_keys(["error"])
         )
 
         # 4. Random joke API - handles array responses differently
@@ -144,14 +144,14 @@ class DataMapDemoAgent(AgentBase):
             .webhook(
                 "GET", "https://api.jokes.com/random?category=${enc:args.category}"
             )
-            .output(FunctionResult("Here's a ${category} joke: ${joke}"))
+            .output(FunctionResult("Here's a ${input.args.category} joke: ${joke}"))
             .error_keys(["error"])
         )
 
-        # 5. Complex API with multiple webhooks and fallback
+        # 5. Complex API with a fallback reply
         complex_search_tool = (
             DataMap("complex_search")
-            .description("Search with fallback APIs")
+            .description("Search the full index, with a fallback reply")
             .parameter("query", "string", "Search query", required=True)
             .parameter(
                 "priority",
@@ -160,17 +160,11 @@ class DataMapDemoAgent(AgentBase):
                 enum=["fast", "comprehensive"],
                 required=False,
             )
-            # First try fast API
+            # The platform makes one request per call; it doesn't try another
+            # webhook when this one fails, so the fallback output covers that
             .webhook(
                 "GET",
-                "https://api.fastsearch.com/q?term=${enc:args.query}",
-                headers={"X-API-Key": "FAST_KEY"},
-            )
-            .output(FunctionResult("Top result: ${items[0].title}"))
-            # Fallback to comprehensive API if first fails
-            .webhook(
-                "GET",
-                "https://api.comprehensive.com/search?q=${enc:args.query}&detail=full",
+                "https://api.comprehensive.com/search?q=${enc:args.query}&detail=full&priority=${enc:args.priority}",
                 headers={"Authorization": "Bearer COMPREHENSIVE_TOKEN"},
             )
             .foreach(
@@ -183,6 +177,9 @@ class DataMapDemoAgent(AgentBase):
             )
             .output(FunctionResult("Search results:\n${found}"))
             .error_keys(["error", "failed", "unavailable"])
+            .fallback_output(
+                FunctionResult("Search is unavailable right now; try again later.")
+            )
         )
 
         # Register all tools with the agent
@@ -199,7 +196,7 @@ class DataMapDemoAgent(AgentBase):
             "- file_control(command, filename): Control audio/video playback",
             "- search_knowledge(query, limit): Search knowledge base",
             "- get_joke(category): Get random jokes",
-            "- complex_search(query, priority): Multi-API search with fallback",
+            "- complex_search(query, priority): Full-index search with a fallback reply",
         )
 
     def register_data_map_tool(self, data_map: DataMap):
@@ -234,7 +231,7 @@ def print_data_map_examples():
     weather = create_simple_api_tool(
         "get_weather",
         "https://api.weather.com/v1/current?key=API_KEY&q=${enc:args.location}",
-        "Weather in ${args.location}: ${current.condition.text}, ${current.temp_f}°F",
+        "Weather in ${input.args.location}: ${current.condition.text}, ${current.temp_f}°F",
         parameters={
             "location": {"type": "string", "description": "City name", "required": True}
         },
