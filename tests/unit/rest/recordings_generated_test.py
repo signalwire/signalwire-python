@@ -39,6 +39,22 @@ class TestRecordingsWire:
             signalwire_client.recordings.delete("test-id")
         assert exc.value.status_code == 500
 
+    def test_recordings_download(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.recordings.download("test-id")
+        last = mock.last_request()
+        assert last.method == "GET"
+        assert last.matched_route == "relay-rest.download_recording"
+
+    def test_recordings_download_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("relay-rest.download_recording", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.recordings.download("test-id")
+        assert exc.value.status_code == 500
+
     def test_recordings_get(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:

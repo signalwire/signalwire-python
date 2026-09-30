@@ -313,6 +313,19 @@ class VideoRoomRecordings(BaseResource):
             ),
         )
 
+    def download(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> str:
+        """Return the URL this endpoint redirects to (the ``Location`` of its
+        redirect), without following it or downloading anything; fetch it with any
+        HTTP client. Raises :class:`SignalWireRestError` for an error status.
+        """
+        return self._http.get_redirect_location(
+            self._path(f"{id}.mp4"),
+            params=params or None,
+            request_options=request_options,
+        )
+
 
 class VideoRoomSessions(ReadResource["ListRoomSessionsResponse", "RoomSessionSummary"]):
     """Typed resource for ``/room_sessions`` (generated)."""

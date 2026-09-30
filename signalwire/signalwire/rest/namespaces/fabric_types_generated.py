@@ -1635,16 +1635,6 @@ class GuestTokenCreateStatusCode422(TypedDict, total=False):
     errors: list[Types_StatusCodes_RestApiErrorItem]
 
 
-class InviteTokenCreateStatusCode422(TypedDict, total=False):
-    """The request contains invalid parameters. See errors for details.
-
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
-    """
-
-    errors: list[Types_StatusCodes_RestApiErrorItem]
-
-
 class LanguageParams(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
@@ -2459,21 +2449,6 @@ class SubscriberGuestTokenCreateResponse(TypedDict, total=False):
     expires_at: str
     expires_in: int
     issued_at: str
-
-
-class SubscriberInviteTokenCreateRequest(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
-
-    address_id: uuid
-    expires_at: int
-    ch: str
-    region: str
-
-
-class SubscriberInviteTokenCreateResponse(TypedDict, total=False):
-    """Open shape: extra server keys permitted; not validated at runtime."""
-
-    token: jwt
 
 
 class SubscriberListResponse(TypedDict, total=False):
@@ -3430,8 +3405,6 @@ AssignResourcePhoneRouteRequest: TypeAlias = "PhoneRouteAssignRequest"
 AssignResourcePhoneRouteResponse: TypeAlias = "PhoneRouteResponse"
 AssignResourceWhatsappNumberRequest: TypeAlias = "WhatsappNumberAssignRequest"
 AssignResourceWhatsappNumberResponse: TypeAlias = "WhatsappNumberAddressResponse"
-CreateSubscriberInviteTokenRequest: TypeAlias = "SubscriberInviteTokenCreateRequest"
-CreateSubscriberInviteTokenResponse: TypeAlias = "SubscriberInviteTokenCreateResponse"
 CreateSubscriberTokenRequest: TypeAlias = "SubscriberTokenRequest"
 CreateSubscriberTokenResponse: TypeAlias = "SubscriberTokenResponse"
 RefreshSubscriberTokenRequest: TypeAlias = "SubscriberRefreshTokenRequest"

@@ -226,6 +226,10 @@ class SpaceBillingStatements(BaseResource):
     def get_pdf(
         self, *, request_options: RequestOptions | None = None, **params: Any
     ) -> str:
+        """Return the URL this endpoint redirects to (the ``Location`` of its
+        redirect), without following it or downloading anything; fetch it with any
+        HTTP client. Raises :class:`SignalWireRestError` for an error status.
+        """
         return self._http.get_redirect_location(
             self._path("billing_statement.pdf"),
             params=params or None,

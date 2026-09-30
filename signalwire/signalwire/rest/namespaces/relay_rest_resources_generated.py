@@ -985,6 +985,19 @@ class Recordings(BaseResource):
             self._http.delete(self._path(id), request_options=request_options),
         )
 
+    def download(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> str:
+        """Return the URL this endpoint redirects to (the ``Location`` of its
+        redirect), without following it or downloading anything; fetch it with any
+        HTTP client. Raises :class:`SignalWireRestError` for an error status.
+        """
+        return self._http.get_redirect_location(
+            self._path(f"{id}.mp3"),
+            params=params or None,
+            request_options=request_options,
+        )
+
 
 class RegistryBrands(BaseResource):
     """Typed resource for ``/registry/beta/brands`` (generated)."""
@@ -1367,13 +1380,21 @@ class VerifiedCallers(
         number: str,
         name: str | None = None,
         extension: str | None = None,
+        country_code: str | None = None,
+        number_type: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> VerifiedCallerIDResponse:
         body: dict[str, Any] = {
             k: v
-            for k, v in {"number": number, "name": name, "extension": extension}.items()
+            for k, v in {
+                "number": number,
+                "name": name,
+                "extension": extension,
+                "country_code": country_code,
+                "number_type": number_type,
+            }.items()
             if v is not None
         }
         if extras:

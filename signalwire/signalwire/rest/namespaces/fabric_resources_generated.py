@@ -106,7 +106,6 @@ if TYPE_CHECKING:
         SipGatewayRequestUpdate,
         SipGatewayResponse,
         SubscriberGuestTokenCreateResponse,
-        SubscriberInviteTokenCreateResponse,
         SubscriberListResponse,
         SubscriberRefreshTokenResponse,
         SubscriberRequest,
@@ -2110,40 +2109,6 @@ class FabricTokens(BaseResource):
             "SubscriberRefreshTokenResponse",
             self._http.post(
                 self._path("subscribers", "tokens", "refresh"),
-                body=body,
-                request_options=request_options,
-            ),
-        )
-
-    @_required_via_extras("address_id")
-    def create_invite_token(
-        self,
-        *,
-        address_id: uuid,
-        expires_at: int | None = None,
-        ch: str | None = None,
-        region: str | None = None,
-        extras: Mapping[str, Any] | None = None,
-        request_options: RequestOptions | None = None,
-        **_reserved_kw: Any,
-    ) -> SubscriberInviteTokenCreateResponse:
-        body: dict[str, Any] = {
-            k: v
-            for k, v in {
-                "address_id": address_id,
-                "expires_at": expires_at,
-                "ch": ch,
-                "region": region,
-            }.items()
-            if v is not None
-        }
-        if extras:
-            body.update(extras)
-        body.update(_reserved_kw)
-        return cast(
-            "SubscriberInviteTokenCreateResponse",
-            self._http.post(
-                self._path("subscriber", "invites"),
                 body=body,
                 request_options=request_options,
             ),

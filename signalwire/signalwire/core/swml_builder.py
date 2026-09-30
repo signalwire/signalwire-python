@@ -13,7 +13,7 @@ It allows for chaining method calls to build up a document step by step.
 """
 
 import types
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, overload
 from collections.abc import Callable
 
 try:
@@ -34,7 +34,9 @@ if TYPE_CHECKING:
     # from schema.json). Inheriting the generated _SwmlVerbs Protocol gives the type
     # checker the static signatures for those verbs (answer/play/ai/record/...). Generated
     # from schema.json — see swml_verbs_generated.py. TYPE_CHECKING-only: no runtime base.
-    from signalwire.core.swml_verbs_generated import _SwmlVerbs
+    from typing_extensions import Unpack  # typing.Unpack is 3.11+; the floor is 3.10
+
+    from signalwire.core.swml_verbs_generated import _AiConfigKwargs, _SwmlVerbs
 
     _VerbsBase = _SwmlVerbs
 else:
@@ -116,6 +118,35 @@ class SWMLBuilder(_VerbsBase):
         self.service.add_verb("hangup", config)
         return self
 
+    # Two static signatures, one runtime body. The first types **kwargs by the generated
+    # `ai` config keys (_AiConfigKwargs, from schema.json) so editors and type checkers show
+    # them; the second keeps every call that type-checked before valid (owner ruling
+    # 2026-09-30, option B). mypy has no open TypedDict (PEP 728 `extra_items` is not
+    # supported by the pinned mypy), so one signature cannot do both.
+    @overload
+    def ai(
+        self,
+        prompt_text: str | None = None,
+        prompt_pom: list[dict[str, Any]] | None = None,
+        post_prompt: str | None = None,
+        post_prompt_url: str | None = None,
+        swaig: dict[str, Any] | None = None,
+        **kwargs: "Unpack[_AiConfigKwargs]",
+    ) -> Self:
+        """Add an 'ai' verb; ``**kwargs`` are the generated ``ai`` config keys."""
+
+    @overload
+    def ai(
+        self,
+        prompt_text: str | None = None,
+        prompt_pom: list[dict[str, Any]] | None = None,
+        post_prompt: str | None = None,
+        post_prompt_url: str | None = None,
+        swaig: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        """Add an 'ai' verb; any other ``**kwargs`` key is passed through unchanged."""
+
     def ai(
         self,
         prompt_text: str | None = None,
@@ -134,7 +165,8 @@ class SWMLBuilder(_VerbsBase):
             post_prompt: Optional post-prompt text
             post_prompt_url: Optional URL for post-prompt processing
             swaig: Optional SWAIG configuration
-            **kwargs: Additional AI parameters
+            **kwargs: Any other ``ai`` verb config key (``params``, ``languages``,
+                ``hints``, ...); the generated ``_AiConfigKwargs`` lists them
 
         Returns:
             Self for method chaining

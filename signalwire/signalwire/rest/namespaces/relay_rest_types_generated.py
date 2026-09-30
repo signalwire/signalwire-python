@@ -620,6 +620,8 @@ class CreateVerifiedCallerIDRequest(TypedDict, total=False):
     number: str
     name: str
     extension: str
+    country_code: str
+    number_type: str
 
 
 DomainAppCallHandler: TypeAlias = "Literal['relay_topic', 'relay_application', 'laml_webhooks', 'laml_application', 'video_room', 'relay_script', 'dialogflow', 'ai_agent', 'call_flow', 'relay_context', 'relay_connector', 'fabric_subscriber', 'sip_gateway', 'call_queue']"

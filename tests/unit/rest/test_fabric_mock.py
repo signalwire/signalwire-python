@@ -188,25 +188,9 @@ class TestSubscribersSipEndpointOps:
 class TestFabricTokens:
     """The remaining token endpoints not covered by the legacy test_fabric.py:
 
-    - ``create_invite_token`` -> POST /api/fabric/subscriber/invites
     - ``create_embed_token``  -> POST /api/fabric/embeds/tokens
     - ``refresh_subscriber_token`` -> POST /api/fabric/subscribers/tokens/refresh
     """
-
-    def test_create_invite_token(
-        self, signalwire_client: RestClient, mock: _MockHarness
-    ) -> None:
-        body = signalwire_client.fabric.tokens.create_invite_token(
-            address_id="3fa85f64-5717-4562-b3fc-2c963f66afa6"
-        )
-        assert isinstance(body, dict)
-
-        last = mock.last_request()
-        assert last.method == "POST"
-        # subscriber/invites uses the singular 'subscriber' path segment.
-        assert last.path == "/api/fabric/subscriber/invites"
-        assert isinstance(last.body, dict)
-        assert last.body.get("address_id") == "3fa85f64-5717-4562-b3fc-2c963f66afa6"
 
     def test_create_embed_token(
         self, signalwire_client: RestClient, mock: _MockHarness

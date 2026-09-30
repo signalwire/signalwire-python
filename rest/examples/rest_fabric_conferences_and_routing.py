@@ -109,14 +109,6 @@ def main():
         print(f"  Guest token failed (expected in demo): {e.status_code}")
 
     try:
-        invite = client.fabric.tokens.create_invite_token(
-            address_id="00000000-0000-0000-0000-000000000000"
-        )
-        print(f"  Invite token: {str(invite.get('token', ''))[:40]}...")
-    except SignalWireRestError as e:
-        print(f"  Invite token failed (expected in demo): {e.status_code}")
-
-    try:
         embed = client.fabric.tokens.create_embed_token(token="demo-embed-token")
         print(f"  Embed token: {str(embed.get('token', ''))[:40]}...")
     except SignalWireRestError as e:

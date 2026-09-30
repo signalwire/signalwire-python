@@ -33,6 +33,10 @@
     `ResourceSipEndpointResponse` (no operation returned either shape).
 - `SwmlRequestCall` is now a union of the per-call-type variants (`SwmlRequestCallPhone`,
   `...Sip`, `...Webrtc`, `...Other`); it can no longer be called as a constructor.
+- `client.fabric.tokens.create_invite_token` (POST /api/fabric/subscriber/invites) and its
+  `SubscriberInviteTokenCreateRequest`/`SubscriberInviteTokenCreateResponse` types: it never
+  worked with project credentials, since the route takes only a subscriber's Bearer token. Use
+  `client.fabric.tokens.create_guest_token` (POST /api/fabric/guests/tokens).
 
 ### Changed
 - REST fields the platform stores or forwards without checking them take their shape from the
@@ -65,6 +69,13 @@
   return it; responses are plain dicts at runtime.
 
 ### Added
+- `client.recordings.download(id)` and `client.video.room_recordings.download(id,
+  media_ttl=...)`: the URL of the recording's MP3 / MP4 (the server's redirect target, returned
+  without following it or downloading anything).
+- `client.verified_callers.create(..., country_code=..., number_type=...)`: the server stores
+  both when sent and looks them up otherwise.
+- `SWMLBuilder.ai(**kwargs)` and `AgentBase.set_param(key, value)` show the `ai` config and
+  `AiParams` keys to type checkers and editors; any other key still type-checks.
 - `client.calling.ai_sidecar(call_id, lang=..., ...)`, `ai_sidecar_ask(call_id, text=...)`,
   `ai_sidecar_poke(call_id, text=...)`, `ai_sidecar_stop(call_id)` and
   `ai_sidecar_status(call_id)`: the `calling.ai_sidecar` REST commands, which start, prompt,

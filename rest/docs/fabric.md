@@ -152,7 +152,7 @@ address = client.fabric.addresses.get("address-uuid")
 
 ## Tokens
 
-Create tokens for subscribers, guests, invites, and embeds:
+Create tokens for subscribers, guests, and embeds:
 
 ```python
 # Subscriber token
@@ -170,12 +170,6 @@ refreshed = client.fabric.tokens.refresh_subscriber_token(
 token = client.fabric.tokens.create_guest_token(
     allowed_addresses=["address-uuid-1", "address-uuid-2"],
     expire_at="2025-12-31T23:59:59Z",
-)
-
-# Subscriber invite token
-token = client.fabric.tokens.create_invite_token(
-    address_id="address-uuid",
-    expires_at="2025-12-31T23:59:59Z",
 )
 
 # Click-to-call embed token

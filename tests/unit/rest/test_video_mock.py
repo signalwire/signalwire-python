@@ -140,6 +140,23 @@ class TestVideoRoomRecordings:
         assert last.method == "GET"
         assert last.path == "/api/video/room_recordings/rec-xyz"
 
+    def test_download_returns_the_redirect_target(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        """GET /room_recordings/{id}.mp4 answers 302 to the recording's signed URI
+        (room_recordings_controller.rb format.mp4); download() returns that URL, unfollowed,
+        and forwards media_ttl, which sets how long the URL stays valid."""
+        url = signalwire_client.video.room_recordings.download("rec-xyz", media_ttl=60)
+        assert isinstance(url, str) and url.startswith("https://")
+        last = mock.last_request()
+        assert (last.method, last.path) == (
+            "GET",
+            "/api/video/room_recordings/rec-xyz.mp4",
+        )
+        assert last.matched_route == "video.download_room_recording"
+        assert last.query_params.get("media_ttl") == ["60"]
+        assert last.response_status == 302
+
     def test_delete_returns_empty_dict_for_204(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:

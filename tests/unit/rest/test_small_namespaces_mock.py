@@ -22,6 +22,9 @@ Each test:
 """
 
 from __future__ import annotations
+
+import pytest
+from signalwire.rest._base import SignalWireRestError
 from signalwire.rest.client import RestClient
 from .conftest import _MockHarness
 
@@ -120,6 +123,28 @@ class TestRecordings:
         signalwire_client.recordings.get("rec-123")
         last = mock.last_request()
         assert last.headers.get("accept") == "application/json"
+
+    def test_download_returns_the_redirect_target(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        """GET /recordings/{id}.mp3 answers 302 to a presigned MP3 URL
+        (recordings_controller.rb format.mp3); download() returns that URL, unfollowed."""
+        url = signalwire_client.recordings.download("rec-123")
+        assert isinstance(url, str) and url.startswith("https://")
+        last = mock.last_request()
+        assert (last.method, last.path) == (
+            "GET",
+            "/api/relay/rest/recordings/rec-123.mp3",
+        )
+        assert last.matched_route == "relay-rest.download_recording"
+        assert last.response_status == 302
+
+    def test_download_success_that_is_not_a_redirect_raises(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("relay-rest.download_recording", 200, {"not": "a redirect"})
+        with pytest.raises(SignalWireRestError):
+            signalwire_client.recordings.download("rec-123")
 
     def test_delete(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.recordings.delete("rec-123")

@@ -1903,22 +1903,6 @@ class TestFabricWire:
             signalwire_client.fabric.tokens.create_guest_token()
         assert exc.value.status_code == 500
 
-    def test_tokens_create_invite_token(
-        self, signalwire_client: RestClient, mock: _MockHarness
-    ) -> None:
-        signalwire_client.fabric.tokens.create_invite_token(address_id="x")
-        last = mock.last_request()
-        assert last.method == "POST"
-        assert last.matched_route == "fabric.create_subscriber_invite_token"
-
-    def test_tokens_create_invite_token_error(
-        self, signalwire_client: RestClient, mock: _MockHarness
-    ) -> None:
-        mock.push_scenario("fabric.create_subscriber_invite_token", 500, {"error": "x"})
-        with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.fabric.tokens.create_invite_token(address_id="x")
-        assert exc.value.status_code == 500
-
     def test_tokens_create_subscriber_token(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
