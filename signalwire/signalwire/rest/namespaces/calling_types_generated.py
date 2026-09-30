@@ -693,7 +693,7 @@ class CallLiveTranslateRequest(TypedDict, total=False):
     params: dict[str, Any]
 
 
-CallRequest: TypeAlias = "CallCreateRequest | CallUpdateCurrentCallRequest | CallHangupRequest | CallHoldRequest | CallUnholdRequest | CallAIMessageRequest | CallLiveTranscribeRequest | CallLiveTranslateRequest | CallTransferRequest | CallUserEventRequest | CallDisconnectRequest | CallPlayRequest | CallPlayPauseRequest | CallPlayResumeRequest | CallPlayStopRequest | CallPlayVolumeRequest | CallRecordRequest | CallRecordPauseRequest | CallRecordResumeRequest | CallRecordStopRequest | CallCollectRequest | CallCollectStopRequest | CallCollectStartInputTimersRequest | CallDetectRequest | CallDetectStopRequest | CallTapRequest | CallTapStopRequest | CallStreamRequest | CallStreamStopRequest | CallDenoiseRequest | CallDenoiseStopRequest | CallTranscribeRequest | CallTranscribeStopRequest | CallAIStopRequest | CallSendFaxStopRequest | CallReceiveFaxStopRequest | CallReferRequest"
+CallRequest: TypeAlias = "CallCreateRequest | CallUpdateCurrentCallRequest | CallHangupRequest | CallHoldRequest | CallUnholdRequest | CallAIMessageRequest | CallLiveTranscribeRequest | CallLiveTranslateRequest | CallTransferRequest | CallUserEventRequest | CallDisconnectRequest | CallPlayRequest | CallPlayPauseRequest | CallPlayResumeRequest | CallPlayStopRequest | CallPlayVolumeRequest | CallRecordRequest | CallRecordPauseRequest | CallRecordResumeRequest | CallRecordStopRequest | CallCollectRequest | CallCollectStopRequest | CallCollectStartInputTimersRequest | CallDetectRequest | CallDetectStopRequest | CallTapRequest | CallTapStopRequest | CallStreamRequest | CallStreamStopRequest | CallDenoiseRequest | CallDenoiseStopRequest | CallTranscribeRequest | CallTranscribeStopRequest | CallAIStopRequest | CallAISidecarRequest | CallAISidecarAskRequest | CallAISidecarPokeRequest | CallAISidecarStopRequest | CallAISidecarStatusRequest | CallSendFaxStopRequest | CallReceiveFaxStopRequest | CallReferRequest"
 
 
 class CallDisconnectRequest(TypedDict, total=False):
@@ -885,6 +885,46 @@ class CallAIStopRequest(TypedDict, total=False):
 
     id: uuid
     command: Literal["calling.ai.stop"]
+    params: dict[str, Any]
+
+
+class CallAISidecarRequest(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    id: uuid
+    command: Literal["calling.ai_sidecar"]
+    params: dict[str, Any]
+
+
+class CallAISidecarAskRequest(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    id: uuid
+    command: Literal["calling.ai_sidecar.ask"]
+    params: dict[str, Any]
+
+
+class CallAISidecarPokeRequest(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    id: uuid
+    command: Literal["calling.ai_sidecar.poke"]
+    params: dict[str, Any]
+
+
+class CallAISidecarStopRequest(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    id: uuid
+    command: Literal["calling.ai_sidecar.stop"]
+    params: dict[str, Any]
+
+
+class CallAISidecarStatusRequest(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    id: uuid
+    command: Literal["calling.ai_sidecar.status"]
     params: dict[str, Any]
 
 

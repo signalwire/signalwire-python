@@ -60,6 +60,15 @@
   are typed so; fields the server never renders are gone from response types; enums match
   what the server accepts (`tollfree`, SIP gateway `encryption`, address `country`, ...).
   Response types are plain dicts at runtime, so reading code is unaffected.
+- `Project` (projects REST types) no longer lists `region_preference`: the field is behind a
+  platform feature flag and is hidden until that feature is released. The server may still
+  return it; responses are plain dicts at runtime.
+
+### Added
+- `client.calling.ai_sidecar(call_id, lang=..., ...)`, `ai_sidecar_ask(call_id, text=...)`,
+  `ai_sidecar_poke(call_id, text=...)`, `ai_sidecar_stop(call_id)` and
+  `ai_sidecar_status(call_id)`: the `calling.ai_sidecar` REST commands, which start, prompt,
+  stop and report an AI sidecar on a live call.
 
 ### Changed
 - REST params that were declared required but that the server does not require are now

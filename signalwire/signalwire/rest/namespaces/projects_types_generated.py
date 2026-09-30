@@ -19,7 +19,6 @@ class Project(TypedDict, total=False):
     name: str
     parent_project_id: str | None
     subproject: bool
-    region_preference: str
     protect_recordings: bool
     protect_message_media: bool
     protect_fax_media: bool

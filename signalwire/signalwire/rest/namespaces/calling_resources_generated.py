@@ -1070,6 +1070,150 @@ class Calling(BaseResource):
             ),
         )
 
+    @_required_via_extras("lang")
+    def ai_sidecar(
+        self,
+        call_id: str,
+        *,
+        lang: str,
+        SWAIG: dict[str, Any] | None = None,
+        action: dict[str, Any] | None = None,
+        customer_role: Literal["remote-caller", "local-caller"] | None = None,
+        direction: list[Literal["remote-caller", "local-caller"]] | None = None,
+        global_data: dict[str, Any] | None = None,
+        hints: list[str] | None = None,
+        model: str | None = None,
+        params: dict[str, Any] | None = None,
+        permissions: dict[str, Any] | None = None,
+        prompt: dict[str, Any] | str | None = None,
+        url: str | None = None,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+    ) -> CallResponse:
+        command_params: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "SWAIG": SWAIG,
+                "action": action,
+                "customer_role": customer_role,
+                "direction": direction,
+                "global_data": global_data,
+                "hints": hints,
+                "lang": lang,
+                "model": model,
+                "params": params,
+                "permissions": permissions,
+                "prompt": prompt,
+                "url": url,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            command_params.update(extras)
+        body: dict[str, Any] = {
+            "command": "calling.ai_sidecar",
+            "params": command_params,
+            "id": call_id,
+        }
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
+
+    @_required_via_extras("text")
+    def ai_sidecar_ask(
+        self,
+        call_id: str,
+        *,
+        text: str,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+    ) -> CallResponse:
+        params: dict[str, Any] = {
+            k: v for k, v in {"text": text}.items() if v is not None
+        }
+        if extras:
+            params.update(extras)
+        body: dict[str, Any] = {
+            "command": "calling.ai_sidecar.ask",
+            "params": params,
+            "id": call_id,
+        }
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
+
+    @_required_via_extras("text")
+    def ai_sidecar_poke(
+        self,
+        call_id: str,
+        *,
+        text: str,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+    ) -> CallResponse:
+        params: dict[str, Any] = {
+            k: v for k, v in {"text": text}.items() if v is not None
+        }
+        if extras:
+            params.update(extras)
+        body: dict[str, Any] = {
+            "command": "calling.ai_sidecar.poke",
+            "params": params,
+            "id": call_id,
+        }
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
+
+    def ai_sidecar_stop(
+        self,
+        call_id: str,
+        *,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+    ) -> CallResponse:
+        params: dict[str, Any] = {}
+        body: dict[str, Any] = {
+            "command": "calling.ai_sidecar.stop",
+            "params": params,
+            "id": call_id,
+        }
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
+
+    def ai_sidecar_status(
+        self,
+        call_id: str,
+        *,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+    ) -> CallResponse:
+        params: dict[str, Any] = {}
+        body: dict[str, Any] = {
+            "command": "calling.ai_sidecar.status",
+            "params": params,
+            "id": call_id,
+        }
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
+
     @_required_via_extras("control_id")
     def send_fax_stop(
         self,

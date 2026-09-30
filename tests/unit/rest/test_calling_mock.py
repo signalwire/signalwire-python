@@ -476,6 +476,78 @@ class TestCallingAI:
         assert last.body.get("params", {}).get("control_id") == "ai-1"
 
 
+class TestCallingAISidecar:
+    def test_ai_sidecar(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        body = signalwire_client.calling.ai_sidecar(
+            "call-1",
+            lang="en-US",
+            prompt="Suggest answers to the agent.",
+            params={"live_events": True},
+        )
+        assert isinstance(body, dict)
+        assert "id" in body
+        last = mock.last_request()
+        assert last.method == "POST"
+        assert last.path == CALLS_PATH
+        assert last.body.get("command") == "calling.ai_sidecar"
+        assert last.body.get("id") == "call-1"
+        assert last.body.get("params") == {
+            "lang": "en-US",
+            "prompt": "Suggest answers to the agent.",
+            "params": {"live_events": True},
+        }
+
+    def test_ai_sidecar_ask(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        body = signalwire_client.calling.ai_sidecar_ask(
+            "call-1", text="What is the account number?"
+        )
+        assert isinstance(body, dict)
+        last = mock.last_request()
+        assert last.path == CALLS_PATH
+        assert last.body.get("command") == "calling.ai_sidecar.ask"
+        assert last.body.get("id") == "call-1"
+        assert last.body.get("params") == {"text": "What is the account number?"}
+
+    def test_ai_sidecar_poke(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        body = signalwire_client.calling.ai_sidecar_poke(
+            "call-1", text="The caller is verified."
+        )
+        assert isinstance(body, dict)
+        last = mock.last_request()
+        assert last.path == CALLS_PATH
+        assert last.body.get("command") == "calling.ai_sidecar.poke"
+        assert last.body.get("id") == "call-1"
+        assert last.body.get("params") == {"text": "The caller is verified."}
+
+    def test_ai_sidecar_stop(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        body = signalwire_client.calling.ai_sidecar_stop("call-1")
+        assert isinstance(body, dict)
+        last = mock.last_request()
+        assert last.path == CALLS_PATH
+        assert last.body.get("command") == "calling.ai_sidecar.stop"
+        assert last.body.get("id") == "call-1"
+        assert last.body.get("params") == {}
+
+    def test_ai_sidecar_status(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        body = signalwire_client.calling.ai_sidecar_status("call-1")
+        assert isinstance(body, dict)
+        last = mock.last_request()
+        assert last.path == CALLS_PATH
+        assert last.body.get("command") == "calling.ai_sidecar.status"
+        assert last.body.get("id") == "call-1"
+        assert last.body.get("params") == {}
+
+
 # ---------------------------------------------------------------------------
 # Live transcribe / translate
 # ---------------------------------------------------------------------------
