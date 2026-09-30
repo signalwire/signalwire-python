@@ -12,7 +12,7 @@
 # only on the coordinated branch, so only that branch's CI sees it. (Owner, 2026-09-29.)
 #
 # Usage: a workflow step with `id: coord`, placed AFTER the repo's own checkout:
-#     - name: Resolve coordinated refs (branch-local .porting-sdk-ref pin; no pin = main)
+#     - name: Resolve coordinated refs (branch-local .github/porting-sdk-ref pin; no pin = main)
 #       id: coord
 #       shell: bash
 #       run: bash <self-path>/.github/coordinated-ref.sh <self-path>
@@ -21,13 +21,16 @@
 #     ref: ${{ steps.coord.outputs.ref_python }}   # signalwire/signalwire-python
 #     ref: ${{ steps.coord.outputs.ref_<port> }}   # signalwire/signalwire-<port>
 #
-# Pin files (repo root; committed ONLY on a coordinated branch and DELETED in the PR that
-# merges the coordinated set — see porting-sdk/COORDINATED_PASS.md):
-#   .porting-sdk-ref         one line: the coordinated ref. porting-sdk's branch, and the
-#                            default for every other coordinated repo.
-#   .signalwire-<name>-ref   optional per-repo override, for a pass where that repo's branch
-#                            is named differently (e.g. .signalwire-typescript-ref).
-# No pin file -> main.
+# Pin files (under .github/, so the repo root stays clean; committed ONLY on a coordinated
+# branch and DELETED in the PR that merges the coordinated set — see
+# porting-sdk/COORDINATED_PASS.md):
+#   .github/porting-sdk-ref         one line: the coordinated ref. porting-sdk's branch, and
+#                                   the default for every other coordinated repo.
+#   .github/signalwire-<name>-ref   optional per-repo override, for a pass where that repo's
+#                                   branch is named differently
+#                                   (e.g. .github/signalwire-typescript-ref).
+# No pin file -> main. A pin at the retired repo-root location (.porting-sdk-ref,
+# .signalwire-<name>-ref) fails the job rather than being silently ignored.
 #
 # Content is validated (one branch name; characters A-Z a-z 0-9 . _ / - only); anything
 # else fails the job instead of reaching a `ref:` or $GITHUB_OUTPUT.
@@ -47,17 +50,24 @@ read_pin() {
   [ -f "$1" ] || return 0
   PIN=$(tr -d ' \t\r' < "$1")
   if [[ ! "$PIN" =~ ^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$ || "$PIN" == *..* || "$PIN" == */ || "$PIN" == *.lock ]]; then
-    echo "::error::${1##*/} must hold exactly one git branch name (characters A-Z a-z 0-9 . _ / - only)"
+    echo "::error::.github/${1##*/} must hold exactly one git branch name (characters A-Z a-z 0-9 . _ / - only)"
     exit 1
   fi
 }
 
-read_pin "$root/.porting-sdk-ref" main
+for legacy in "$root/.porting-sdk-ref" "$root"/.signalwire-*-ref; do
+  if [ -f "$legacy" ]; then
+    echo "::error::${legacy##*/} at the repo root is the retired pin location; move it to .github/${legacy##*/.}"
+    exit 1
+  fi
+done
+
+read_pin "$root/.github/porting-sdk-ref" main
 ref="$PIN"
 echo "ref=$ref" >> "$out"
 summary="porting-sdk=$ref"
 for n in $NAMES; do
-  read_pin "$root/.signalwire-$n-ref" "$ref"
+  read_pin "$root/.github/signalwire-$n-ref" "$ref"
   echo "ref_$n=$PIN" >> "$out"
   summary="$summary signalwire-$n=$PIN"
 done

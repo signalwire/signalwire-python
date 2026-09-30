@@ -35,7 +35,7 @@ jobs:
         with:
           repository: signalwire/porting-sdk
           # Publish always builds against porting-sdk main — deliberately NOT the
-          # coordinated-pass .porting-sdk-ref pin, so a release can never ship from
+          # coordinated-pass .github/porting-sdk-ref pin, so a release can never ship from
           # an unmerged wave branch (see porting-sdk/COORDINATED_PASS.md).
           ref: main
           path: porting-sdk
