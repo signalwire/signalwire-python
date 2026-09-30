@@ -421,7 +421,7 @@ class CreateDomainApplicationRequest(TypedDict, total=False):
     call_dialogflow_agent_id: uuid
     call_ai_agent_id: uuid
     call_flow_id: uuid
-    call_flow_version: Literal["working_copy", "current_deployed"]
+    call_flow_version: Literal["working_copy"]
     call_relay_context: str
     call_relay_context_status_callback_url: str
 
@@ -582,6 +582,7 @@ class CreateSipEndpointRequest(TypedDict, total=False):
         "relay_connector",
         "relay_script",
         "laml_webhooks",
+        "laml_webhook",
         "laml_application",
         "dialogflow",
         "video_room",
@@ -1344,7 +1345,7 @@ class SipEndpoint(TypedDict, total=False):
     send_as: str
     ciphers: list[str]
     codecs: list[str]
-    encryption: Literal["default", "required", "optional"]
+    encryption: Literal["required", "optional"]
     call_handler: SipEndpointCallHandler | None
     calling_handler_resource_id: uuid | None
     call_request_url: str | None
@@ -1392,7 +1393,7 @@ class SipEndpointResponse(TypedDict, total=False):
     send_as: str
     ciphers: list[str]
     codecs: list[str]
-    encryption: Literal["default", "required", "optional"]
+    encryption: Literal["required", "optional"]
     call_handler: SipEndpointCallHandler | None
     calling_handler_resource_id: uuid | None
     call_request_url: str | None
@@ -1558,7 +1559,7 @@ class UpdateDomainApplicationRequest(TypedDict, total=False):
     call_dialogflow_agent_id: uuid
     call_ai_agent_id: uuid
     call_flow_id: uuid
-    call_flow_version: Literal["working_copy", "current_deployed"]
+    call_flow_version: Literal["working_copy"]
     call_relay_context: str
     call_relay_context_status_callback_url: str
 
@@ -1669,6 +1670,7 @@ class UpdateSipEndpointRequest(TypedDict, total=False):
         "relay_connector",
         "relay_script",
         "laml_webhooks",
+        "laml_webhook",
         "laml_application",
         "dialogflow",
         "video_room",
@@ -1991,7 +1993,7 @@ ListQueueMembersResponse: TypeAlias = "QueueMemberListResponse"
 RetrieveNextQueueMemberResponse: TypeAlias = "QueueMemberResponse"
 RetrieveQueueMemberResponse: TypeAlias = "QueueMemberResponse"
 ListRecordingsResponse: TypeAlias = "RecordingListResponse"
-GetRecordingResponse: TypeAlias = "PstnRecording | SipRecording | WebRtcRecording"
+GetRecordingResponse: TypeAlias = "Recording"
 ListBrandsResponse: TypeAlias = "BrandListResponse"
 CreateBrandRequest: TypeAlias = "CreateManagedBrandRequest | CreateCspBrandRequest"
 CreateBrandResponse: TypeAlias = "BrandResponse"

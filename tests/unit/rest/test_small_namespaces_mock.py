@@ -111,6 +111,16 @@ class TestRecordings:
         assert last.method == "GET"
         assert last.path == "/api/relay/rest/recordings/rec-123"
 
+    def test_get_asks_for_json(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        """prime-rails' recordings#show negotiates on Accept: `*/*` (or none) redirects to the
+        audio file and only `application/json` renders the recording, so the GET must say JSON
+        (app/controllers/api/relay/rest/recordings_controller.rb, respond_to format.all first)."""
+        signalwire_client.recordings.get("rec-123")
+        last = mock.last_request()
+        assert last.headers.get("accept") == "application/json"
+
     def test_delete(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.recordings.delete("rec-123")
         assert body == {} or isinstance(body, dict)

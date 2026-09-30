@@ -89,12 +89,11 @@ class Messages(BaseResource):
             ),
         )
 
-    @_required_via_extras("body")
     def update(
         self,
         message_id: str,
         *,
-        body: str,
+        body: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,

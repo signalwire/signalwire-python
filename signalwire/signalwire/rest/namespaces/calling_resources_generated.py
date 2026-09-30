@@ -38,12 +38,12 @@ class Calling(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/calling/calls")
 
-    @_required_via_extras("to", from_="from")
+    @_required_via_extras(from_="from")
     def dial(
         self,
         *,
         from_: str,
-        to: str,
+        to: str | None = None,
         caller_id: str | None = None,
         fallback_url: str | None = None,
         status_url: str | None = None,
@@ -52,6 +52,7 @@ class Calling(BaseResource):
         ]
         | None = None,
         url_method: str | None = None,
+        codecs: list[str] | str | None = None,
         to_script: str | dict[str, Any] | None = None,
         timeout: int | None = None,
         max_price_per_minute: float | None = None,
@@ -62,7 +63,6 @@ class Calling(BaseResource):
         headers: list[dict[str, Any]] | None = None,
         custom_variables: dict[str, str] | None = None,
         url: str | None = None,
-        codecs: list[str] | str | None = None,
         swml: str | dict[str, Any] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
@@ -77,6 +77,7 @@ class Calling(BaseResource):
                 "status_url": status_url,
                 "status_events": status_events,
                 "url_method": url_method,
+                "codecs": codecs,
                 "to_script": to_script,
                 "timeout": timeout,
                 "max_price_per_minute": max_price_per_minute,
@@ -87,7 +88,6 @@ class Calling(BaseResource):
                 "headers": headers,
                 "custom_variables": custom_variables,
                 "url": url,
-                "codecs": codecs,
                 "swml": swml,
             }.items()
             if v is not None

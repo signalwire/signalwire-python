@@ -55,6 +55,7 @@ if TYPE_CHECKING:
         QueueMemberListResponse,
         QueueMemberResponse,
         QueueResponse,
+        Recording,
         RecordingListResponse,
         ShortCodeListResponse,
         ShortCodeMessageHandler,
@@ -968,9 +969,9 @@ class Recordings(BaseResource):
 
     def get(
         self, id: str, *, request_options: RequestOptions | None = None, **params: Any
-    ) -> dict[str, Any]:
+    ) -> Recording:
         return cast(
-            "dict[str, Any]",
+            "Recording",
             self._http.get(
                 self._path(id), params=params or None, request_options=request_options
             ),

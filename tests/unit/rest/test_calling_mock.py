@@ -65,6 +65,22 @@ class TestCallingLifecycle:
         assert last.body.get("command") == "dial"
         assert last.body.get("params", {}).get("codecs") == "OPUS,G729,VP8,PCMA"
 
+    def test_dial_to_script_without_to(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        """The server needs `to` OR `to_script` (Create contract to_or_to_script_is_present),
+        so a dial that runs SWML on the destination leg may omit `to`."""
+        signalwire_client.calling.dial(
+            url="https://example.com/swml",
+            from_="+15559876543",
+            to_script="https://example.com/leg.swml",
+        )
+        last = mock.last_request()
+        assert last.body.get("command") == "dial"
+        params = last.body.get("params", {})
+        assert "to" not in params
+        assert params.get("to_script") == "https://example.com/leg.swml"
+
     def test_update(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.calling.update(id="call-1", status="completed")
         assert isinstance(body, dict)

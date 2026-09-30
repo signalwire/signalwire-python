@@ -604,6 +604,7 @@ CallCreateParamsURL = TypedDict(
         "status_url": "str",
         "status_events": "list[Literal['answered', 'queued', 'initiated', 'ringing', 'ending', 'ended']]",
         "url_method": "str",
+        "codecs": "list[str] | str",
         "to_script": "str | dict[str, Any]",
         "timeout": "int",
         "max_price_per_minute": "float",
