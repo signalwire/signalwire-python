@@ -1380,21 +1380,13 @@ class VerifiedCallers(
         number: str,
         name: str | None = None,
         extension: str | None = None,
-        country_code: str | None = None,
-        number_type: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> VerifiedCallerIDResponse:
         body: dict[str, Any] = {
             k: v
-            for k, v in {
-                "number": number,
-                "name": name,
-                "extension": extension,
-                "country_code": country_code,
-                "number_type": number_type,
-            }.items()
+            for k, v in {"number": number, "name": name, "extension": extension}.items()
             if v is not None
         }
         if extras:

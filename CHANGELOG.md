@@ -72,8 +72,6 @@
 - `client.recordings.download(id)` and `client.video.room_recordings.download(id,
   media_ttl=...)`: the URL of the recording's MP3 / MP4 (the server's redirect target, returned
   without following it or downloading anything).
-- `client.verified_callers.create(..., country_code=..., number_type=...)`: the server stores
-  both when sent and looks them up otherwise.
 - `SWMLBuilder.ai(**kwargs)` and `AgentBase.set_param(key, value)` show the `ai` config and
   `AiParams` keys to type checkers and editors; any other key still type-checks.
 - `client.calling.ai_sidecar(call_id, lang=..., ...)`, `ai_sidecar_ask(call_id, text=...)`,
