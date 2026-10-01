@@ -3105,7 +3105,7 @@ class WhatsappNumberAddressResponse(TypedDict, total=False):
     cover_url: str | None
     preview_url: str | None
     locked: bool
-    channels: dict[str, str]
+    channels: dict[str, Any]
 
 
 class Step(TypedDict, total=False):
