@@ -610,14 +610,20 @@
                   "description": "A key-value object for storing data that persists throughout the AI session.\nCan be set initially in the SWML script or modified during the conversation using the set_global_data action.\nThe global_data object is accessible everywhere in the AI session: prompts, AI parameters,\nand SWML returned from SWAIG functions. Access properties using template strings (e.g. \\${global_data.property_name}).",
                   "type": "object",
                   "examples": [
-                    "#{ company_name: \"Acme Corp\", support_hours: \"9am-5pm EST\" }"
+                    {
+                      "company_name": "Acme Corp",
+                      "support_hours": "9am-5pm EST"
+                    }
                   ]
                 },
                 "hints": {
                   "description": "Hints help the AI agent understand certain words or phrases better. Words that can commonly be misinterpreted can be added to the hints to help the AI speak more accurately.",
                   "type": "array",
                   "examples": [
-                    "#[\"pizza\", \"pepperoni\"]"
+                    [
+                      "pizza",
+                      "pepperoni"
+                    ]
                   ],
                   "items": {
                     "anyOf": [
@@ -917,7 +923,10 @@
                   "description": "An object of any necessary parameters for the API call. The key is the parameter name and the value is the parameter value.",
                   "type": "object",
                   "examples": [
-                    "#{ account_id: \"acc_123\", include_details: true }"
+                    {
+                      "account_id": "acc_123",
+                      "include_details": true
+                    }
                   ],
                   "properties": {
                     "acknowledge_interruptions": {
@@ -4168,7 +4177,7 @@
                   "description": "Which leg is the customer, used as the turn-end trigger source. **Default:** `remote-caller`.",
                   "default": "remote-caller",
                   "examples": [
-                    "TranscribeDirection.`remote-caller`"
+                    "remote-caller"
                   ],
                   "anyOf": [
                     {
@@ -4187,7 +4196,10 @@
                 "direction": {
                   "description": "The call legs to observe. Both legs are required — a single-leg value is rejected. When omitted, both legs are observed. **Default:** both legs (`remote-caller` and `local-caller`).",
                   "examples": [
-                    "#[\n    TranscribeDirection.`remote-caller`,\n    TranscribeDirection.`local-caller`\n  ]"
+                    [
+                      "remote-caller",
+                      "local-caller"
+                    ]
                   ],
                   "anyOf": [
                     {
@@ -4216,7 +4228,9 @@
                 "global_data": {
                   "description": "A key-value object of data that is available throughout the sidecar session. You can reference it in the prompt with variable expansion, and it is included in the requests sent to your tools.\nIt also persists across sessions on the same call leg.",
                   "examples": [
-                    "#{ company_name: \"Acme Corp\" }"
+                    {
+                      "company_name": "Acme Corp"
+                    }
                   ],
                   "anyOf": [
                     {
@@ -4230,7 +4244,12 @@
                 "hints": {
                   "description": "Hints that improve speech recognition of specific terms, such as product names, competitor names, jargon, or customer names. Strongly recommended.",
                   "examples": [
-                    "#[\"ACME\", \"Globex\", \"FedRAMP\", \"SOC 2\"]"
+                    [
+                      "ACME",
+                      "Globex",
+                      "FedRAMP",
+                      "SOC 2"
+                    ]
                   ],
                   "anyOf": [
                     {
@@ -4254,7 +4273,7 @@
                 "lang": {
                   "description": "The conversation language as a single BCP-47 tag. Sets the speech recognition language and is shared with the model as a hint.",
                   "examples": [
-                    "string(\"en-US\")"
+                    "en-US"
                   ],
                   "anyOf": [
                     {
@@ -4732,7 +4751,10 @@
                   "description": "A powerful and flexible environmental variable which can accept arbitrary data that is set initially in the SWML script\nor from the SWML `set_global_data` action. This data can be referenced `globally`.\nAll contained information can be accessed and expanded within the prompt - for example, by using a template string.",
                   "type": "object",
                   "examples": [
-                    "#{ company_name: \"Acme Corp\", support_hours: \"9am-5pm EST\" }"
+                    {
+                      "company_name": "Acme Corp",
+                      "support_hours": "9am-5pm EST"
+                    }
                   ]
                 },
                 "greeting_prompt": {
@@ -5056,7 +5078,7 @@
                   "exclusiveMinimum": -1,
                   "default": 14400,
                   "examples": [
-                    "3600"
+                    3600
                   ],
                   "anyOf": [
                     {
@@ -5113,7 +5135,7 @@
                   "exclusiveMinimum": -1,
                   "default": 14400,
                   "examples": [
-                    "3600"
+                    3600
                   ],
                   "anyOf": [
                     {
@@ -5628,7 +5650,7 @@
               "description": "Delay answer until the B-leg answers.\nDefault is `false`.",
               "default": false,
               "examples": [
-                "true"
+                true
               ],
               "anyOf": [
                 {
@@ -5771,7 +5793,7 @@
               "description": "The amount of time, in seconds, to wait for the `confirm` URL to return a response",
               "minimum": 0,
               "examples": [
-                "30"
+                30
               ],
               "anyOf": [
                 {
@@ -5864,7 +5886,7 @@
               "exclusiveMinimum": -1,
               "default": 14400,
               "examples": [
-                "3600"
+                3600
               ],
               "anyOf": [
                 {
@@ -6079,7 +6101,9 @@
             "ringback": {
               "description": "Ringback to play while the call is connecting: a URL, a list of URLs, or a play object (`url` / `urls` / `volume`). `false` turns the generated ringback off and passes the far end's early media through. If not specified, plays audio from the provider.",
               "examples": [
-                "#[\"https://example.com/ringback.mp3\"]"
+                [
+                  "https://example.com/ringback.mp3"
+                ]
               ],
               "anyOf": [
                 {
@@ -6120,7 +6144,7 @@
               "description": "Time, in seconds, to set the SIP `Session-Expires` header in INVITE.\nMust be a positive, non-zero number.\nIt has no effect on calls to phone numbers.\nBased on SignalWire settings.",
               "minimum": 1,
               "examples": [
-                "1800"
+                1800
               ],
               "anyOf": [
                 {
@@ -6188,7 +6212,7 @@
               "minimum": 0,
               "default": 60,
               "examples": [
-                "30"
+                30
               ],
               "anyOf": [
                 {
@@ -6231,7 +6255,7 @@
               "description": "If true, WebRTC media is offered to the SIP endpoint.\nIt has no effect on calls to phone numbers.\nDefault is `false`.",
               "default": false,
               "examples": [
-                "true"
+                true
               ],
               "anyOf": [
                 {
@@ -6822,7 +6846,7 @@
                   "description": "If `true`, stops detection on beep / end of voicemail greeting. Default `false`.",
                   "default": false,
                   "examples": [
-                    "true"
+                    true
                   ],
                   "anyOf": [
                     {
@@ -6853,7 +6877,7 @@
                   "minimum": 1,
                   "default": 1,
                   "examples": [
-                    "1.0"
+                    1.0
                   ],
                   "anyOf": [
                     {
@@ -6869,7 +6893,7 @@
                   "minimum": 1,
                   "default": 4.5,
                   "examples": [
-                    "4.5"
+                    4.5
                   ],
                   "anyOf": [
                     {
@@ -6884,7 +6908,7 @@
                   "description": "How long to wait for voice to finish before firing READY event. Default is `end_silence_timeout`.",
                   "minimum": 1,
                   "examples": [
-                    "2.0"
+                    2.0
                   ],
                   "anyOf": [
                     {
@@ -6900,7 +6924,7 @@
                   "minimum": 1,
                   "default": 1.25,
                   "examples": [
-                    "1.25"
+                    1.25
                   ],
                   "anyOf": [
                     {
@@ -6916,7 +6940,7 @@
                   "minimum": 1,
                   "default": 6,
                   "examples": [
-                    "6"
+                    6
                   ],
                   "anyOf": [
                     {
@@ -6948,7 +6972,7 @@
                   "exclusiveMinimum": -1,
                   "default": 30.0,
                   "examples": [
-                    "30.0"
+                    30.0
                   ],
                   "anyOf": [
                     {
@@ -6984,7 +7008,7 @@
                   "description": "If false, the detector will run asynchronously and status_url must be set.\nIf true, the detector will wait for detection to complete before moving to the next SWML instruction.\nDefault is `true`.",
                   "default": true,
                   "examples": [
-                    "true"
+                    true
                   ],
                   "anyOf": [
                     {
@@ -7560,7 +7584,7 @@
                   "minimum": 1,
                   "default": 180,
                   "examples": [
-                    "1800"
+                    1800
                   ],
                   "anyOf": [
                     {
@@ -7675,7 +7699,10 @@
                   "description": "User-defined metadata, ignored by SignalWire",
                   "type": "object",
                   "examples": [
-                    "#{ request_id: \"req_abc123\", source: \"ivr\" }"
+                    {
+                      "request_id": "req_abc123",
+                      "source": "ivr"
+                    }
                   ]
                 },
                 "on_return": {
@@ -7709,7 +7736,9 @@
                 "params": {
                   "description": "Parameters accessible as `params.*` in the called section. Replaces (does not merge with) any outer `params` from the caller.",
                   "examples": [
-                    "#{ name: \"%{message.from}\" }"
+                    {
+                      "name": "%{message.from}"
+                    }
                   ],
                   "anyOf": [
                     {
@@ -8126,7 +8155,7 @@
                   "maximum": 100,
                   "default": 100,
                   "examples": [
-                    "3"
+                    3
                   ],
                   "anyOf": [
                     {
@@ -8491,7 +8520,7 @@
                   "description": "Ends the conference when the main participant leaves. This means the end action will not wait on more participants to leave before ending. Default `false`.",
                   "default": false,
                   "examples": [
-                    "false"
+                    false
                   ],
                   "anyOf": [
                     {
@@ -8506,7 +8535,7 @@
                   "description": "The maximum number of participants allowed in the conference. If the limit is reached, new participants will not be able to join. Default `100000`.",
                   "minimum": 1,
                   "examples": [
-                    "50"
+                    50
                   ],
                   "anyOf": [
                     {
@@ -8546,7 +8575,7 @@
                   "description": "Whether to join the conference in a muted state. If set to `true`, the participant will be muted upon joining. Default `false`.",
                   "default": false,
                   "examples": [
-                    "false"
+                    false
                   ],
                   "anyOf": [
                     {
@@ -8689,7 +8718,7 @@
                   "description": "Starts the conference when the main participant joins. This means the start action will not wait on more participants to join before starting. Default `true`.",
                   "default": true,
                   "examples": [
-                    "true"
+                    true
                   ],
                   "anyOf": [
                     {
@@ -9682,14 +9711,14 @@
         "label": {
           "title": "label Method",
           "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:911.",
+          "examples": [
+            "greeting"
+          ],
           "anyOf": [
             {
               "title": "label Method",
               "description": "Mark any point of the SWML section with a label so that goto can jump to it.",
               "type": "object",
-              "examples": [
-                "greeting"
-              ],
               "properties": {
                 "label": {
                   "description": "Mark any point of the SWML section with a label so that `goto` can jump to it. Must be\nunique within the section.",
@@ -11054,7 +11083,7 @@
                   "description": "If `true`, the call will automatically answer as the sound is playing. If `false`, you will start playing the audio during early media. Default `true`.",
                   "default": true,
                   "examples": [
-                    "true"
+                    true
                   ],
                   "anyOf": [
                     {
@@ -11159,7 +11188,11 @@
                   "description": "Array of URLs to play.\nRequired if `url` is not present.\nAllowed URLs are:\n    - http:// or https:// - audio file to GET\n    - ring:[duration:]<country code> - ring tone to play. For example: ring:us to play single ring or ring:20.0:us to play ring for 20 seconds.\n    - say:<text to speak> - Sentence to say\n    - silence: <duration> - seconds of silence to play",
                   "type": "array",
                   "examples": [
-                    "#[\n    \"https://example.com/intro.mp3\",\n    \"say:Welcome to our service\",\n    \"silence:2\"\n  ]"
+                    [
+                      "https://example.com/intro.mp3",
+                      "say:Welcome to our service",
+                      "silence:2"
+                    ]
                   ],
                   "items": {
                     "type": "string",
@@ -11172,7 +11205,7 @@
                   "maximum": 40,
                   "default": 0.0,
                   "examples": [
-                    "10"
+                    10
                   ],
                   "anyOf": [
                     {
@@ -11247,7 +11280,7 @@
                   "minimum": 1,
                   "default": 5.0,
                   "examples": [
-                    "5.0"
+                    5.0
                   ],
                   "anyOf": [
                     {
@@ -11263,7 +11296,7 @@
                   "minimum": 1,
                   "default": 5.0,
                   "examples": [
-                    "10.0"
+                    10.0
                   ],
                   "anyOf": [
                     {
@@ -11279,7 +11312,7 @@
                   "minimum": 1,
                   "default": 1,
                   "examples": [
-                    "4"
+                    4
                   ],
                   "anyOf": [
                     {
@@ -11366,7 +11399,7 @@
                   "description": "Time in seconds to wait for end of speech utterance.",
                   "minimum": 1,
                   "examples": [
-                    "2.0"
+                    2.0
                   ],
                   "anyOf": [
                     {
@@ -11400,7 +11433,11 @@
                   "description": "Expected words or phrases to help the speech recognition.",
                   "type": "array",
                   "examples": [
-                    "#[\"sales\", \"support\", \"billing\"]"
+                    [
+                      "sales",
+                      "support",
+                      "billing"
+                    ]
                   ],
                   "items": {
                     "type": "string"
@@ -11424,7 +11461,7 @@
                   "description": "Max time in seconds to wait for speech result.",
                   "minimum": 1,
                   "examples": [
-                    "15.0"
+                    15.0
                   ],
                   "anyOf": [
                     {
@@ -11476,7 +11513,7 @@
                   "maximum": 40,
                   "default": 0.0,
                   "examples": [
-                    "0"
+                    0
                   ],
                   "anyOf": [
                     {
@@ -11506,7 +11543,7 @@
                   "minimum": 1,
                   "default": 1,
                   "examples": [
-                    "4"
+                    4
                   ],
                   "anyOf": [
                     {
@@ -11537,7 +11574,7 @@
                   "minimum": 1,
                   "default": 5.0,
                   "examples": [
-                    "5.0"
+                    5.0
                   ],
                   "anyOf": [
                     {
@@ -11553,7 +11590,7 @@
                   "minimum": 1,
                   "default": 5.0,
                   "examples": [
-                    "10.0"
+                    10.0
                   ],
                   "anyOf": [
                     {
@@ -11762,7 +11799,7 @@
                   "description": "Play a beep before recording.\nDefault is `false`.",
                   "default": false,
                   "examples": [
-                    "true"
+                    true
                   ],
                   "anyOf": [
                     {
@@ -11798,7 +11835,7 @@
                   "minimum": 1,
                   "default": 5.0,
                   "examples": [
-                    "5.0"
+                    5.0
                   ],
                   "anyOf": [
                     {
@@ -11817,7 +11854,7 @@
                   "minimum": 1,
                   "default": 4.0,
                   "examples": [
-                    "4.0"
+                    4.0
                   ],
                   "anyOf": [
                     {
@@ -11837,7 +11874,7 @@
                   "maximum": 100,
                   "default": 44.0,
                   "examples": [
-                    "44.0"
+                    44.0
                   ],
                   "anyOf": [
                     {
@@ -11853,7 +11890,7 @@
                   "minimum": 0,
                   "default": 0,
                   "examples": [
-                    "60"
+                    60
                   ],
                   "anyOf": [
                     {
@@ -11884,7 +11921,7 @@
                   "description": "If true, record in stereo.\nDefault is `false`.",
                   "default": false,
                   "examples": [
-                    "true"
+                    true
                   ],
                   "anyOf": [
                     {
@@ -11971,7 +12008,7 @@
                   "description": "Play a beep before recording.\nDefault is `false`.",
                   "default": false,
                   "examples": [
-                    "true"
+                    true
                   ],
                   "anyOf": [
                     {
@@ -12020,7 +12057,7 @@
                   "description": "Time in seconds to wait in silence before ending the recording. Must be at least `1`; `0` and fractional values below `1` are rejected.",
                   "minimum": 1,
                   "examples": [
-                    "5"
+                    5
                   ],
                   "anyOf": [
                     {
@@ -12035,7 +12072,7 @@
                   "description": "Time in seconds to wait for the start of speech. Must be at least `1`; `0` and fractional values below `1` are rejected.",
                   "minimum": 1,
                   "examples": [
-                    "5"
+                    5
                   ],
                   "anyOf": [
                     {
@@ -12052,7 +12089,7 @@
                   "maximum": 100,
                   "default": 44.0,
                   "examples": [
-                    "44.0"
+                    44.0
                   ],
                   "anyOf": [
                     {
@@ -12068,7 +12105,7 @@
                   "minimum": 0,
                   "default": 0,
                   "examples": [
-                    "300"
+                    300
                   ],
                   "anyOf": [
                     {
@@ -12099,7 +12136,7 @@
                   "description": "If `true`, record in stereo.\nDefault is `false`.",
                   "default": false,
                   "examples": [
-                    "true"
+                    true
                   ],
                   "anyOf": [
                     {
@@ -12165,7 +12202,9 @@
                 "body": {
                   "description": "Request body. Objects are JSON-encoded automatically.",
                   "examples": [
-                    "#{ phone: \"%{message.from}\" }"
+                    {
+                      "phone": "%{message.from}"
+                    }
                   ],
                   "anyOf": [
                     {
@@ -12191,7 +12230,7 @@
                   "minimum": 0,
                   "default": 5,
                   "examples": [
-                    "5.0"
+                    5.0
                   ],
                   "anyOf": [
                     {
@@ -12209,7 +12248,9 @@
                   "description": "HTTP headers to include with the request, as a map of header name to value. Each value must be a string.",
                   "type": "object",
                   "examples": [
-                    "#{ Authorization: \"Bearer token\" }"
+                    {
+                      "Authorization": "Bearer token"
+                    }
                   ]
                 },
                 "method": {
@@ -12240,7 +12281,7 @@
                   "description": "If `true`, parse the JSON response into `request_response.*` variables.",
                   "default": false,
                   "examples": [
-                    "true"
+                    true
                   ],
                   "anyOf": [
                     {
@@ -12256,7 +12297,7 @@
                   "minimum": 0,
                   "default": 5,
                   "examples": [
-                    "3"
+                    3
                   ],
                   "anyOf": [
                     {
@@ -12406,7 +12447,11 @@
           "description": "Array of URLs to play.\nRequired if `url` is not present.\nAllowed URLs are:\n    - http:// or https:// - audio file to GET\n    - ring:[duration:]<country code> - ring tone to play. For example: ring:us to play single ring or ring:20.0:us to play ring for 20 seconds.\n    - say:<text to speak> - Sentence to say\n    - silence: <duration> - seconds of silence to play",
           "type": "array",
           "examples": [
-            "#[\n    \"https://example.com/intro.mp3\",\n    \"say:Welcome to our service\",\n    \"silence:2\"\n  ]"
+            [
+              "https://example.com/intro.mp3",
+              "say:Welcome to our service",
+              "silence:2"
+            ]
           ],
           "items": {
             "type": "string",
@@ -12419,7 +12464,7 @@
           "maximum": 40,
           "default": 0.0,
           "examples": [
-            "10"
+            10
           ],
           "anyOf": [
             {
@@ -13091,7 +13136,9 @@
               "description": "Required if `body` is not present. Array of media URLs to include in the message.",
               "type": "array",
               "examples": [
-                "#[\"https://example.com/image.png\"]"
+                [
+                  "https://example.com/image.png"
+                ]
               ],
               "items": {
                 "type": "string"
@@ -13131,7 +13178,10 @@
               "description": "Array of tags to associate with the message to facilitate log searches.",
               "type": "array",
               "examples": [
-                "#[\"notification\", \"order-confirmation\"]"
+                [
+                  "notification",
+                  "order-confirmation"
+                ]
               ],
               "items": {
                 "type": "string"
@@ -13330,7 +13380,7 @@
                 "duration": {
                   "description": "The amount of time to sleep in milliseconds.\nMust be a positive integer. Can also be set to `-1` for the sleep to never end.",
                   "examples": [
-                    "5000"
+                    5000
                   ],
                   "anyOf": [
                     {
@@ -13371,7 +13421,7 @@
                 {
                   "description": "The amount of time to sleep in milliseconds.\nMust be a positive integer. Can also be set to `-1` for the sleep to never end.",
                   "examples": [
-                    "5000"
+                    5000
                   ],
                   "anyOf": [
                     {
@@ -14672,7 +14722,7 @@
                   "maximum": 120,
                   "default": 20,
                   "examples": [
-                    "20"
+                    20
                   ],
                   "anyOf": [
                     {
@@ -14914,13 +14964,18 @@
                   "description": "User data, ignored by SignalWire.\nAccepts an object mapping variable names to values.\nDefault is not set.",
                   "type": "object",
                   "examples": [
-                    "#{ transfer_reason: \"escalation\", original_agent: \"agent_001\" }"
+                    {
+                      "original_agent": "agent_001",
+                      "transfer_reason": "escalation"
+                    }
                   ]
                 },
                 "params": {
                   "description": "Parameters to include in the request body of the fetch. Available as `params.*` in the transferred document.",
                   "examples": [
-                    "#{ reason: \"escalation\" }"
+                    {
+                      "reason": "escalation"
+                    }
                   ],
                   "anyOf": [
                     {
@@ -15036,7 +15091,11 @@
               "properties": {
                 "event": {
                   "examples": [
-                    "#{\n      type: \"call_update\",\n      status: \"connected\",\n      caller_name: \"John Doe\",\n    }"
+                    {
+                      "type": "call_update",
+                      "caller_name": "John Doe",
+                      "status": "connected"
+                    }
                   ],
                   "anyOf": [
                     {
