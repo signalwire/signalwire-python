@@ -1707,7 +1707,7 @@ class PhoneRouteResponse(TypedDict, total=False):
     cover_url: str
     preview_url: str | None
     locked: bool
-    channels: AudioChannel | MessagingChannel
+    channels: dict[str, Any]
     type: Literal["app", "call", "room"]
     resource_id: str
 

@@ -928,18 +928,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive); a numeric string is read as its NUMBER instead. Any other string reads as FALSE.",
+                            "numeric_strings": "number",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -1009,18 +1012,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -1042,18 +1048,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -1072,18 +1081,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -1127,18 +1139,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -1156,18 +1171,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -1214,18 +1232,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -1262,18 +1283,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -1291,18 +1315,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -1331,18 +1358,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -1432,18 +1462,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -1531,18 +1564,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -1604,18 +1640,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -1628,19 +1667,24 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "all",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "also_recognized": [
+                              "all"
+                            ],
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Also recognized: all. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -1659,18 +1703,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -1686,18 +1733,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -1728,18 +1778,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -1777,18 +1830,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -1901,18 +1957,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -1931,18 +1990,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -1977,18 +2039,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -2120,18 +2185,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive); a numeric string is read as its NUMBER instead. Any other string reads as FALSE.",
+                            "numeric_strings": "number",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -2173,18 +2241,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -2203,18 +2274,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -2233,18 +2307,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -2340,18 +2417,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -2384,18 +2464,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -2456,18 +2539,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -2627,18 +2713,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -2668,18 +2757,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -2698,18 +2790,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -2743,18 +2838,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -2826,18 +2924,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -2864,18 +2965,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -2893,18 +2997,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -2942,18 +3049,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -2975,18 +3085,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -3004,18 +3117,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -3034,18 +3150,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -3075,18 +3194,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -3105,18 +3227,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -3135,18 +3260,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -3167,18 +3295,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -3197,18 +3328,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -3281,18 +3415,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -3310,18 +3447,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -3502,18 +3642,21 @@
                         },
                         {
                           "type": "string",
-                          "x-boolean-string-accepts": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
+                          "x-boolean-strings": {
+                            "case_insensitive": true,
+                            "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                            "numeric_strings": "true_when_nonzero",
+                            "other_strings": "false",
+                            "true_spellings": [
+                              "yes",
+                              "on",
+                              "true",
+                              "t",
+                              "enabled",
+                              "active",
+                              "allow"
+                            ]
+                          },
                           "x-emit-canonical": [
                             "true",
                             "false"
@@ -4910,7 +5053,7 @@
                 },
                 "max_duration": {
                   "description": "Maximum duration in seconds for the call. Defaults to `14400` seconds (4 hours).",
-                  "minimum": 0.0,
+                  "exclusiveMinimum": -1,
                   "default": 14400,
                   "examples": [
                     "3600"
@@ -4967,7 +5110,7 @@
               "prefixItems": [
                 {
                   "description": "Maximum duration in seconds for the call. Defaults to `14400` seconds (4 hours).",
-                  "minimum": 0.0,
+                  "exclusiveMinimum": -1,
                   "default": 14400,
                   "examples": [
                     "3600"
@@ -4994,7 +5137,7 @@
                   "type": "number"
                 },
                 {
-                  "minimum": 0.0,
+                  "exclusiveMinimum": -1,
                   "default": 14400,
                   "anyOf": [
                     {
@@ -5018,7 +5161,7 @@
                   "type": "string"
                 },
                 {
-                  "minimum": 0.0,
+                  "exclusiveMinimum": -1,
                   "default": 14400,
                   "anyOf": [
                     {
@@ -5718,7 +5861,7 @@
             },
             "max_duration": {
               "description": "Maximum duration, in seconds, allowed for the call.\nDefault is `14400` seconds.",
-              "minimum": 0.0,
+              "exclusiveMinimum": -1,
               "default": 14400,
               "examples": [
                 "3600"
@@ -6707,7 +6850,7 @@
                 },
                 "end_silence_timeout": {
                   "description": "How long to wait for voice to finish. Default `1.0`.",
-                  "exclusiveMinimum": 0.0,
+                  "minimum": 1,
                   "default": 1,
                   "examples": [
                     "1.0"
@@ -6723,7 +6866,7 @@
                 },
                 "initial_timeout": {
                   "description": "How long to wait for initial voice before giving up. Default `4.5`.",
-                  "exclusiveMinimum": 0.0,
+                  "minimum": 1,
                   "default": 4.5,
                   "examples": [
                     "4.5"
@@ -6739,7 +6882,7 @@
                 },
                 "machine_ready_timeout": {
                   "description": "How long to wait for voice to finish before firing READY event. Default is `end_silence_timeout`.",
-                  "exclusiveMinimum": 0.0,
+                  "minimum": 1,
                   "examples": [
                     "2.0"
                   ],
@@ -6754,7 +6897,7 @@
                 },
                 "machine_voice_threshold": {
                   "description": "The number of seconds of ongoing voice activity required to classify as MACHINE. Default `1.25`.",
-                  "exclusiveMinimum": 0.0,
+                  "minimum": 1,
                   "default": 1.25,
                   "examples": [
                     "1.25"
@@ -6802,7 +6945,7 @@
                 },
                 "timeout": {
                   "description": "The max time to run detector. Default `30.0` seconds.",
-                  "minimum": 0.0,
+                  "exclusiveMinimum": -1,
                   "default": 30.0,
                   "examples": [
                     "30.0"
@@ -7061,7 +7204,7 @@
               }
             },
             "max_duration": {
-              "minimum": 0.0,
+              "exclusiveMinimum": -1,
               "default": 14400,
               "anyOf": [
                 {
@@ -10669,23 +10812,25 @@
                   "anyOf": [
                     {
                       "type": "string",
-                      "x-boolean-string-accepts": [
-                        "0",
-                        "1",
-                        "active",
-                        "allow",
-                        "enabled",
-                        "false",
-                        "on",
-                        "t",
-                        "true",
-                        "yes"
-                      ],
+                      "x-boolean-strings": {
+                        "case_insensitive": true,
+                        "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. A FALSE spelling (switch_false) reads as FALSE; any other string is kept as the literal value.",
+                        "numeric_strings": "true_when_nonzero",
+                        "other_strings": "literal",
+                        "true_spellings": [
+                          "yes",
+                          "on",
+                          "true",
+                          "t",
+                          "enabled",
+                          "active",
+                          "allow"
+                        ]
+                      },
                       "x-emit-canonical": [
                         "true",
                         "false"
-                      ],
-                      "x-other-strings-read-as": "literal"
+                      ]
                     },
                     {
                       "$ref": "#/$defs/SWMLVar"
@@ -10732,23 +10877,25 @@
                   "anyOf": [
                     {
                       "type": "string",
-                      "x-boolean-string-accepts": [
-                        "0",
-                        "1",
-                        "active",
-                        "allow",
-                        "enabled",
-                        "false",
-                        "on",
-                        "t",
-                        "true",
-                        "yes"
-                      ],
+                      "x-boolean-strings": {
+                        "case_insensitive": true,
+                        "note": "Any string is accepted. Read as TRUE: yes, on, true, t, enabled, active, allow (case-insensitive), or a numeric string whose integer part is non-zero. Any other string reads as FALSE.",
+                        "numeric_strings": "true_when_nonzero",
+                        "other_strings": "false",
+                        "true_spellings": [
+                          "yes",
+                          "on",
+                          "true",
+                          "t",
+                          "enabled",
+                          "active",
+                          "allow"
+                        ]
+                      },
                       "x-emit-canonical": [
                         "true",
                         "false"
-                      ],
-                      "x-other-strings-read-as": "false"
+                      ]
                     },
                     {
                       "$ref": "#/$defs/SWMLVar"
@@ -11097,7 +11244,7 @@
               "properties": {
                 "digit_timeout": {
                   "description": "Time in seconds to wait for next digit.\nDefault is `5.0` seconds.",
-                  "exclusiveMinimum": 0.0,
+                  "minimum": 1,
                   "default": 5.0,
                   "examples": [
                     "5.0"
@@ -11113,7 +11260,7 @@
                 },
                 "initial_timeout": {
                   "description": "Time in seconds to wait for start of input.\nDefault is `5.0` seconds.",
-                  "exclusiveMinimum": 0.0,
+                  "minimum": 1,
                   "default": 5.0,
                   "examples": [
                     "10.0"
@@ -11217,7 +11364,7 @@
                 },
                 "speech_end_timeout": {
                   "description": "Time in seconds to wait for end of speech utterance.",
-                  "exclusiveMinimum": 0.0,
+                  "minimum": 1,
                   "examples": [
                     "2.0"
                   ],
@@ -11275,7 +11422,7 @@
                 },
                 "speech_timeout": {
                   "description": "Max time in seconds to wait for speech result.",
-                  "exclusiveMinimum": 0.0,
+                  "minimum": 1,
                   "examples": [
                     "15.0"
                   ],
@@ -11387,7 +11534,7 @@
                 },
                 {
                   "description": "Time in seconds to wait for next digit.\nDefault is `5.0` seconds.",
-                  "exclusiveMinimum": 0.0,
+                  "minimum": 1,
                   "default": 5.0,
                   "examples": [
                     "5.0"
@@ -11403,7 +11550,7 @@
                 },
                 {
                   "description": "Time in seconds to wait for start of input.\nDefault is `5.0` seconds.",
-                  "exclusiveMinimum": 0.0,
+                  "minimum": 1,
                   "default": 5.0,
                   "examples": [
                     "10.0"
@@ -11648,7 +11795,7 @@
                 },
                 "end_silence_timeout": {
                   "description": "Time in seconds to wait in silence before ending the recording.\nDefault is `5.0` seconds.",
-                  "exclusiveMinimum": 0.0,
+                  "minimum": 1,
                   "default": 5.0,
                   "examples": [
                     "5.0"
@@ -11667,7 +11814,7 @@
                 },
                 "initial_timeout": {
                   "description": "Time in seconds to wait for the start of speech.\nDefault is `4.0` seconds.",
-                  "exclusiveMinimum": 0.0,
+                  "minimum": 1,
                   "default": 4.0,
                   "examples": [
                     "4.0"
@@ -11871,7 +12018,7 @@
                 },
                 "end_silence_timeout": {
                   "description": "Time in seconds to wait in silence before ending the recording. Must be at least `1`; `0` and fractional values below `1` are rejected.",
-                  "exclusiveMinimum": 0.0,
+                  "minimum": 1,
                   "examples": [
                     "5"
                   ],
@@ -11886,7 +12033,7 @@
                 },
                 "initial_timeout": {
                   "description": "Time in seconds to wait for the start of speech. Must be at least `1`; `0` and fractional values below `1` are rejected.",
-                  "exclusiveMinimum": 0.0,
+                  "minimum": 1,
                   "examples": [
                     "5"
                   ],
