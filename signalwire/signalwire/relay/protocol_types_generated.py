@@ -209,6 +209,7 @@ class CallingConnectParams(TypedDict, total=False):
     max_price_per_minute: float | None
     node_id: str
     ringback: list[dict[str, Any]]
+    send_digits: str
     tag: str
 
 
@@ -271,6 +272,7 @@ class CallingDialParams(TypedDict, total=False):
     max_price_per_minute: float | None
     node_id: str
     region: str
+    send_digits: str
     tag: str
 
 
