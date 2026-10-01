@@ -39,7 +39,9 @@ class _Agent(AgentBase):
         super().__init__(name="ctx", route="/ctx", suppress_logs=True)
         self.prompt_add_section("Role", body="You help callers.")
         ctx = self.define_contexts().add_context("default")
-        ctx.add_step("identify").set_text("Ask for the account.").set_functions(["verify_account"])
+        ctx.add_step("identify").set_text("Ask for the account.").set_functions(
+            ["verify_account"]
+        )
         # get_balance isn't registered anywhere
         ctx.add_step("help").set_text("Help.").set_functions(["get_balance"])
 
@@ -58,7 +60,14 @@ def test_swaig_test_dump_shows_the_real_reason(tmp_path: Path) -> None:
     agent_file = tmp_path / "ctx_agent.py"
     agent_file.write_text(AGENT, encoding="utf-8")
     completed = subprocess.run(  # noqa: S603  # fixed arguments: this interpreter and the CLI module
-        [sys.executable, "-m", "signalwire.cli.swaig_test_wrapper", str(agent_file), "--dump-swml", "--raw"],
+        [
+            sys.executable,
+            "-m",
+            "signalwire.cli.swaig_test_wrapper",
+            str(agent_file),
+            "--dump-swml",
+            "--raw",
+        ],
         capture_output=True,
         text=True,
         timeout=120,

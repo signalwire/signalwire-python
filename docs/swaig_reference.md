@@ -553,6 +553,17 @@ Stop currently playing background audio.
 result.stop_background_file()
 ```
 
+#### `change_voice(voice)`
+Change the agent's voice for the rest of the call. `voice` is an
+`engine.voice:model` spec, the same form the SWML `languages` list uses (the
+`engine.` prefix and `:model` suffix are optional). It replaces the voice of the
+language currently in use, takes effect at the next speech batch boundary (never
+mid-utterance), and falls back to the fallback voice if the new one will not open.
+
+```python
+result.change_voice("elevenlabs.rachel")
+```
+
 ---
 
 ### Speech Recognition Settings

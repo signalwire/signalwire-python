@@ -14,17 +14,13 @@ Tests are skipped automatically when they are not installed.
 
 import json
 import os
-import sys
 import base64
 import logging
-import threading
-import re
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock, call
-from datetime import datetime
+from unittest.mock import patch, MagicMock
 
 if TYPE_CHECKING:
     from signalwire.mcp_gateway.gateway_service import MCPGateway
@@ -32,7 +28,9 @@ if TYPE_CHECKING:
 
 # Skip the entire module when Flask is not installed
 flask = pytest.importorskip("flask", reason="flask is required for MCP Gateway tests")
-pytest.importorskip("flask_limiter", reason="flask_limiter is required for MCP Gateway tests")
+pytest.importorskip(
+    "flask_limiter", reason="flask_limiter is required for MCP Gateway tests"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -41,15 +39,25 @@ pytest.importorskip("flask_limiter", reason="flask_limiter is required for MCP G
 # filesystem, network, or real MCP processes.
 # ---------------------------------------------------------------------------
 
+# Fixture credentials. The gateway config below and the _auth_headers_* helpers
+# MUST agree, or every authenticated request in this file 401s — so they share
+# these constants instead of repeating the literals. Naming them also keeps the
+# values out of function signatures, where they read as hardcoded credential
+# defaults.
+_FIXTURE_USER = "admin"
+_FIXTURE_PASSWORD = "secret"
+_FIXTURE_BEARER_TOKEN = "test-bearer-token"
+
+
 def _minimal_config() -> dict[str, Any]:
     """Return a minimal valid configuration dictionary."""
     return {
         "server": {
             "host": "0.0.0.0",
             "port": 8080,
-            "auth_user": "admin",
-            "auth_password": "secret",
-            "auth_token": "test-bearer-token",
+            "auth_user": _FIXTURE_USER,
+            "auth_password": _FIXTURE_PASSWORD,
+            "auth_token": _FIXTURE_BEARER_TOKEN,
         },
         "services": {},
         "session": {
@@ -70,7 +78,9 @@ def _minimal_config() -> dict[str, Any]:
     }
 
 
-def _create_gateway(config: dict[str, Any] | None = None) -> tuple["MCPGateway", dict[str, MagicMock]]:
+def _create_gateway(
+    config: dict[str, Any] | None = None,
+) -> tuple["MCPGateway", dict[str, MagicMock]]:
     """
     Instantiate an ``MCPGateway`` with every external dependency mocked.
 
@@ -136,13 +146,15 @@ def _create_gateway(config: dict[str, Any] | None = None) -> tuple["MCPGateway",
     return gateway, mocks
 
 
-def _auth_headers_basic(user: str = "admin", password: str = "secret") -> dict[str, str]:
+def _auth_headers_basic(
+    user: str = _FIXTURE_USER, password: str = _FIXTURE_PASSWORD
+) -> dict[str, str]:
     """Return HTTP headers for Basic authentication."""
     creds = base64.b64encode(f"{user}:{password}".encode()).decode()
     return {"Authorization": f"Basic {creds}"}
 
 
-def _auth_headers_bearer(token: str = "test-bearer-token") -> dict[str, str]:
+def _auth_headers_bearer(token: str) -> dict[str, str]:
     """Return HTTP headers for Bearer token authentication."""
     return {"Authorization": f"Bearer {token}"}
 
@@ -151,12 +163,13 @@ def _auth_headers_bearer(token: str = "test-bearer-token") -> dict[str, str]:
 # Tests: Initialization
 # ===================================================================
 
+
 class TestMCPGatewayInit:
     """Tests for MCPGateway construction and configuration."""
 
     def test_init_loads_config_via_config_loader(self) -> None:
         """When ConfigLoader has_config() returns True, config is loaded through it."""
-        gateway, mocks = _create_gateway()
+        _gateway, mocks = _create_gateway()
         assert mocks["config_loader"].has_config.called
         assert mocks["config_loader"].get_config.called
         assert mocks["config_loader"].substitute_vars.called
@@ -170,12 +183,18 @@ class TestMCPGatewayInit:
         mock_config_loader = MagicMock()
         mock_config_loader.has_config.return_value = False
 
-        with patch("signalwire.mcp_gateway.gateway_service.ConfigLoader", return_value=mock_config_loader), \
-             patch("signalwire.mcp_gateway.gateway_service.SecurityConfig"), \
-             patch("signalwire.mcp_gateway.gateway_service.MCPManager") as mock_mcp_cls, \
-             patch("signalwire.mcp_gateway.gateway_service.SessionManager") as mock_session_cls, \
-             patch.object(MCPGateway, "_load_config", return_value=config) as mock_load:
-
+        with (
+            patch(
+                "signalwire.mcp_gateway.gateway_service.ConfigLoader",
+                return_value=mock_config_loader,
+            ),
+            patch("signalwire.mcp_gateway.gateway_service.SecurityConfig"),
+            patch("signalwire.mcp_gateway.gateway_service.MCPManager") as mock_mcp_cls,
+            patch(
+                "signalwire.mcp_gateway.gateway_service.SessionManager"
+            ) as mock_session_cls,
+            patch.object(MCPGateway, "_load_config", return_value=config) as mock_load,
+        ):
             mock_mcp_cls.return_value.validate_services.return_value = {}
             mock_session_cls.return_value.default_timeout = 300
 
@@ -200,7 +219,7 @@ class TestMCPGatewayInit:
 
     def test_init_validates_services_on_startup(self) -> None:
         """validate_services() is called during __init__."""
-        gateway, mocks = _create_gateway()
+        _gateway, mocks = _create_gateway()
         mocks["mcp_manager"].validate_services.assert_called_once()
 
     def test_init_logs_warning_for_failed_validation(self) -> None:
@@ -213,20 +232,28 @@ class TestMCPGatewayInit:
         mock_config_loader.get_config.return_value = config
         mock_config_loader.substitute_vars.return_value = config
 
-        with patch("signalwire.mcp_gateway.gateway_service.ConfigLoader", return_value=mock_config_loader), \
-             patch("signalwire.mcp_gateway.gateway_service.SecurityConfig"), \
-             patch("signalwire.mcp_gateway.gateway_service.MCPManager") as mcp_cls, \
-             patch("signalwire.mcp_gateway.gateway_service.SessionManager") as sm_cls, \
-             patch("signalwire.mcp_gateway.gateway_service.logger") as mock_logger:
-
-            mcp_cls.return_value.validate_services.return_value = {"bad_svc": False, "good_svc": True}
+        with (
+            patch(
+                "signalwire.mcp_gateway.gateway_service.ConfigLoader",
+                return_value=mock_config_loader,
+            ),
+            patch("signalwire.mcp_gateway.gateway_service.SecurityConfig"),
+            patch("signalwire.mcp_gateway.gateway_service.MCPManager") as mcp_cls,
+            patch("signalwire.mcp_gateway.gateway_service.SessionManager") as sm_cls,
+            patch("signalwire.mcp_gateway.gateway_service.logger") as mock_logger,
+        ):
+            mcp_cls.return_value.validate_services.return_value = {
+                "bad_svc": False,
+                "good_svc": True,
+            }
             sm_cls.return_value.default_timeout = 300
 
             MCPGateway("fake.json")
 
             # At least one warning about 'bad_svc' failing validation
-            warning_calls = [c for c in mock_logger.warning.call_args_list
-                             if "bad_svc" in str(c)]
+            warning_calls = [
+                c for c in mock_logger.warning.call_args_list if "bad_svc" in str(c)
+            ]
             assert len(warning_calls) >= 1
 
     def test_init_shutdown_flags_default(self) -> None:
@@ -253,21 +280,28 @@ class TestMCPGatewayInit:
         mock_cl.get_config.return_value = config
         mock_cl.substitute_vars.return_value = config
 
-        with patch("signalwire.mcp_gateway.gateway_service.ConfigLoader", return_value=mock_cl), \
-             patch("signalwire.mcp_gateway.gateway_service.SecurityConfig") as sec_cls, \
-             patch("signalwire.mcp_gateway.gateway_service.MCPManager") as mcp_cls, \
-             patch("signalwire.mcp_gateway.gateway_service.SessionManager") as sm_cls:
-
+        with (
+            patch(
+                "signalwire.mcp_gateway.gateway_service.ConfigLoader",
+                return_value=mock_cl,
+            ),
+            patch("signalwire.mcp_gateway.gateway_service.SecurityConfig") as sec_cls,
+            patch("signalwire.mcp_gateway.gateway_service.MCPManager") as mcp_cls,
+            patch("signalwire.mcp_gateway.gateway_service.SessionManager") as sm_cls,
+        ):
             mcp_cls.return_value.validate_services.return_value = {}
             sm_cls.return_value.default_timeout = 300
 
             MCPGateway("myconfig.json")
-            sec_cls.assert_called_once_with(config_file="myconfig.json", service_name="mcp")
+            sec_cls.assert_called_once_with(
+                config_file="myconfig.json", service_name="mcp"
+            )
 
 
 # ===================================================================
 # Tests: Input Validation Helpers
 # ===================================================================
+
 
 class TestValidationHelpers:
     """Tests for _validate_service_name, _validate_session_id, _validate_tool_name."""
@@ -313,7 +347,9 @@ class TestValidationHelpers:
     # -- session id ---------------------------------------------------------
 
     def test_validate_session_id_valid(self) -> None:
-        assert self.gateway._validate_session_id("sess-123.abc_def") == "sess-123.abc_def"
+        assert (
+            self.gateway._validate_session_id("sess-123.abc_def") == "sess-123.abc_def"
+        )
 
     def test_validate_session_id_empty(self) -> None:
         with pytest.raises(ValueError, match="Invalid session ID length"):
@@ -360,6 +396,7 @@ class TestValidationHelpers:
 # ===================================================================
 # Tests: Security Event Logging
 # ===================================================================
+
 
 class TestLogSecurityEvent:
     """Tests for _log_security_event."""
@@ -414,6 +451,7 @@ class TestLogSecurityEvent:
 # Tests: Environment Variable Substitution
 # ===================================================================
 
+
 class TestSubstituteEnvVars:
     """Tests for _substitute_env_vars."""
 
@@ -440,7 +478,10 @@ class TestSubstituteEnvVars:
         env = os.environ.copy()
         env.pop("MISSING_VAR_XYZ", None)
         with patch.dict(os.environ, env, clear=True):
-            assert self.gateway._substitute_env_vars("${MISSING_VAR_XYZ|fallback}") == "fallback"
+            assert (
+                self.gateway._substitute_env_vars("${MISSING_VAR_XYZ|fallback}")
+                == "fallback"
+            )
 
     def test_substitute_env_var_present_with_default_ignored(self) -> None:
         with patch.dict(os.environ, {"MY_VAR": "real"}):
@@ -472,6 +513,7 @@ class TestSubstituteEnvVars:
 # Tests: _load_config
 # ===================================================================
 
+
 class TestLoadConfig:
     """Tests for the fallback _load_config method."""
 
@@ -487,7 +529,9 @@ class TestLoadConfig:
         loaded = self.gateway._load_config(str(config_file))
         assert loaded["server"]["port"] == 8080
 
-    def test_load_config_creates_default_when_nothing_exists(self, tmp_path: Path) -> None:
+    def test_load_config_creates_default_when_nothing_exists(
+        self, tmp_path: Path
+    ) -> None:
         config_path = str(tmp_path / "nonexistent.json")
         # Neither config_path nor sample_config.json exist
         with patch("os.path.exists", return_value=False):
@@ -501,45 +545,33 @@ class TestLoadConfig:
     def test_load_config_copies_sample_when_available(self, tmp_path: Path) -> None:
         config_path = str(tmp_path / "config.json")
 
-        # _load_config tests Path(...).exists(), not os.path.exists. Patching
-        # the latter intercepted nothing, so the real filesystem answered: the
-        # tmp_path config genuinely did not exist AND neither did
-        # sample_config.json, so the branch under test was never entered and
-        # shutil.copy was never called. Patch Path.exists, which receives the
-        # Path as self rather than a string argument.
-        call_count = [0]
-
-        def exists_side_effect(self_path: Path) -> bool:
-            name = str(self_path)
-            if name == config_path:
-                # First call: config doesn't exist; after copy it does
-                call_count[0] += 1
-                return call_count[0] > 1
-            if name == "sample_config.json":
+        def exists_side_effect(self: Path) -> bool:
+            # config.json is absent (so the sample path is taken); the sample is
+            # present. Delegate every other Path to the real filesystem.
+            if str(self) == config_path:
+                return False
+            if str(self) == "sample_config.json":
                 return True
-            return False
+            return os.path.exists(str(self))  # noqa: PTH110  # real-fs fallback inside a Path.exists patch; Path.exists is the patched target
 
-        with patch(
-            "signalwire.mcp_gateway.gateway_service.Path.exists",
-            new=exists_side_effect,
-        ), patch("shutil.copy") as mock_copy:
-            mock_file_content = json.dumps(_minimal_config())
-            mock_file = MagicMock()
-            mock_file.__enter__ = MagicMock(return_value=MagicMock(
-                read=MagicMock(return_value=mock_file_content)
-            ))
-            mock_file.__exit__ = MagicMock(return_value=False)
+        def copy_side_effect(src: str, dst: str) -> None:
+            # Stand in for the real copy so the source's own Path.open("r") has
+            # something real to read.
+            Path(dst).write_text(json.dumps(_minimal_config()))
 
-            # _load_config reads through Path.open, not builtins.open, so
-            # patching builtins left the real read to hit a file that the
-            # mocked exists() only claimed was there.
-            with patch(
-                "signalwire.mcp_gateway.gateway_service.Path.open",
-                return_value=mock_file,
-            ):
-                self.gateway._load_config(config_path)
+        with (
+            patch(
+                "signalwire.mcp_gateway.gateway_service.Path.exists",
+                autospec=True,
+                side_effect=exists_side_effect,
+            ),
+            patch("shutil.copy", side_effect=copy_side_effect) as mock_copy,
+        ):
+            loaded = self.gateway._load_config(config_path)
 
-            mock_copy.assert_called_once_with("sample_config.json", config_path)
+        mock_copy.assert_called_once_with("sample_config.json", config_path)
+        # The config actually produced by the copied sample was loaded.
+        assert loaded["server"]["port"] == _minimal_config()["server"]["port"]
 
     def test_load_config_converts_string_port_to_int(self, tmp_path: Path) -> None:
         config_data = _minimal_config()
@@ -586,6 +618,7 @@ class TestLoadConfig:
 # Tests: Authentication
 # ===================================================================
 
+
 class TestAuthentication:
     """Tests for _check_auth decorator and auth routes."""
 
@@ -597,7 +630,7 @@ class TestAuthentication:
     def test_bearer_token_auth_success(self) -> None:
         resp = self.client.get(
             "/services",
-            headers=_auth_headers_bearer("test-bearer-token"),
+            headers=_auth_headers_bearer(_FIXTURE_BEARER_TOKEN),
         )
         assert resp.status_code == 200
 
@@ -667,6 +700,7 @@ class TestAuthentication:
 # Tests: Health Endpoint
 # ===================================================================
 
+
 class TestHealthEndpoint:
     """Tests for GET /health (no auth required)."""
 
@@ -695,6 +729,7 @@ class TestHealthEndpoint:
 # ===================================================================
 # Tests: Security Headers
 # ===================================================================
+
 
 class TestSecurityHeaders:
     """Verify that security headers are set on every response."""
@@ -725,6 +760,7 @@ class TestSecurityHeaders:
 # Tests: List Services
 # ===================================================================
 
+
 class TestListServicesEndpoint:
     """Tests for GET /services."""
 
@@ -752,6 +788,7 @@ class TestListServicesEndpoint:
 # ===================================================================
 # Tests: Get Service Tools
 # ===================================================================
+
 
 class TestGetServiceToolsEndpoint:
     """Tests for GET /services/<service_name>/tools."""
@@ -795,6 +832,7 @@ class TestGetServiceToolsEndpoint:
 # ===================================================================
 # Tests: Call Service Tool
 # ===================================================================
+
 
 class TestCallServiceToolEndpoint:
     """Tests for POST /services/<service_name>/call."""
@@ -871,18 +909,22 @@ class TestCallServiceToolEndpoint:
         assert "other_service" in resp.get_json()["error"]
 
     def test_call_tool_missing_tool_parameter(self) -> None:
-        resp = self._post_call(payload={
-            "session_id": "sess-1",
-            "arguments": {},
-        })
+        resp = self._post_call(
+            payload={
+                "session_id": "sess-1",
+                "arguments": {},
+            }
+        )
         assert resp.status_code == 400
         assert "tool" in resp.get_json()["error"].lower()
 
     def test_call_tool_missing_session_id(self) -> None:
-        resp = self._post_call(payload={
-            "tool": "add_todo",
-            "arguments": {},
-        })
+        resp = self._post_call(
+            payload={
+                "tool": "add_todo",
+                "arguments": {},
+            }
+        )
         assert resp.status_code == 400
         assert "session_id" in resp.get_json()["error"].lower()
 
@@ -899,50 +941,60 @@ class TestCallServiceToolEndpoint:
         assert resp.status_code == 500
 
     def test_call_tool_invalid_arguments_type(self) -> None:
-        resp = self._post_call(payload={
-            "tool": "add_todo",
-            "session_id": "sess-1",
-            "arguments": "not_a_dict",
-        })
+        resp = self._post_call(
+            payload={
+                "tool": "add_todo",
+                "session_id": "sess-1",
+                "arguments": "not_a_dict",
+            }
+        )
         assert resp.status_code == 400
         assert "arguments" in resp.get_json()["error"].lower()
 
     def test_call_tool_invalid_timeout_negative(self) -> None:
-        resp = self._post_call(payload={
-            "tool": "add_todo",
-            "session_id": "sess-1",
-            "arguments": {},
-            "timeout": -5,
-        })
+        resp = self._post_call(
+            payload={
+                "tool": "add_todo",
+                "session_id": "sess-1",
+                "arguments": {},
+                "timeout": -5,
+            }
+        )
         assert resp.status_code == 400
         assert "timeout" in resp.get_json()["error"].lower()
 
     def test_call_tool_invalid_timeout_too_large(self) -> None:
-        resp = self._post_call(payload={
-            "tool": "add_todo",
-            "session_id": "sess-1",
-            "arguments": {},
-            "timeout": 9999,
-        })
+        resp = self._post_call(
+            payload={
+                "tool": "add_todo",
+                "session_id": "sess-1",
+                "arguments": {},
+                "timeout": 9999,
+            }
+        )
         assert resp.status_code == 400
         assert "timeout" in resp.get_json()["error"].lower()
 
     def test_call_tool_invalid_timeout_string(self) -> None:
-        resp = self._post_call(payload={
-            "tool": "add_todo",
-            "session_id": "sess-1",
-            "arguments": {},
-            "timeout": "fast",
-        })
+        resp = self._post_call(
+            payload={
+                "tool": "add_todo",
+                "session_id": "sess-1",
+                "arguments": {},
+                "timeout": "fast",
+            }
+        )
         assert resp.status_code == 400
 
     def test_call_tool_invalid_metadata_type(self) -> None:
-        resp = self._post_call(payload={
-            "tool": "add_todo",
-            "session_id": "sess-1",
-            "arguments": {},
-            "metadata": "not_a_dict",
-        })
+        resp = self._post_call(
+            payload={
+                "tool": "add_todo",
+                "session_id": "sess-1",
+                "arguments": {},
+                "metadata": "not_a_dict",
+            }
+        )
         assert resp.status_code == 400
         assert "metadata" in resp.get_json()["error"].lower()
 
@@ -1001,7 +1053,9 @@ class TestCallServiceToolEndpoint:
     def test_call_tool_session_creation_failure(self) -> None:
         """Error when session creation fails."""
         self.mocks["session_manager"].get_session.return_value = None
-        self.mocks["mcp_manager"].create_client.side_effect = RuntimeError("cannot start")
+        self.mocks["mcp_manager"].create_client.side_effect = RuntimeError(
+            "cannot start"
+        )
 
         resp = self._post_call()
         assert resp.status_code == 500
@@ -1048,6 +1102,7 @@ class TestCallServiceToolEndpoint:
 # Tests: List Sessions
 # ===================================================================
 
+
 class TestListSessionsEndpoint:
     """Tests for GET /sessions."""
 
@@ -1079,6 +1134,7 @@ class TestListSessionsEndpoint:
 # ===================================================================
 # Tests: Close Session
 # ===================================================================
+
 
 class TestCloseSessionEndpoint:
     """Tests for DELETE /sessions/<session_id>."""
@@ -1123,13 +1179,16 @@ class TestCloseSessionEndpoint:
                 "/sessions/sess-123",
                 headers=_auth_headers_basic(),
             )
-            closed_calls = [c for c in mock_log.call_args_list if c[0][0] == "session_closed"]
+            closed_calls = [
+                c for c in mock_log.call_args_list if c[0][0] == "session_closed"
+            ]
             assert len(closed_calls) >= 1
 
 
 # ===================================================================
 # Tests: Signal Handler
 # ===================================================================
+
 
 class TestSignalHandler:
     """Tests for _signal_handler."""
@@ -1150,6 +1209,7 @@ class TestSignalHandler:
 
         # Server.shutdown is called in a daemon thread; give it a moment
         import time
+
         time.sleep(0.2)
         mock_server.shutdown.assert_called()
 
@@ -1162,6 +1222,7 @@ class TestSignalHandler:
 # ===================================================================
 # Tests: Shutdown
 # ===================================================================
+
 
 class TestShutdown:
     """Tests for shutdown()."""
@@ -1216,6 +1277,7 @@ class TestShutdown:
 # Tests: Run Method
 # ===================================================================
 
+
 class TestRunMethod:
     """Tests for run()."""
 
@@ -1225,10 +1287,14 @@ class TestRunMethod:
 
     def test_run_creates_server_and_serves(self) -> None:
         mock_server = MagicMock()
-        with patch("signalwire.mcp_gateway.gateway_service.make_server", return_value=mock_server) as mock_make, \
-             patch("signalwire.mcp_gateway.gateway_service.signal") as mock_signal, \
-             patch("os.path.exists", return_value=False):
-
+        with (
+            patch(
+                "signalwire.mcp_gateway.gateway_service.make_server",
+                return_value=mock_server,
+            ) as mock_make,
+            patch("signalwire.mcp_gateway.gateway_service.signal"),
+            patch("os.path.exists", return_value=False),
+        ):
             # simulate immediate shutdown via KeyboardInterrupt
             mock_server.serve_forever.side_effect = KeyboardInterrupt()
             self.gateway.run()
@@ -1242,11 +1308,19 @@ class TestRunMethod:
         mock_server = MagicMock()
         mock_server.serve_forever.side_effect = KeyboardInterrupt()
 
-        with patch("signalwire.mcp_gateway.gateway_service.make_server", return_value=mock_server), \
-             patch("signalwire.mcp_gateway.gateway_service.signal"), \
-             patch("signalwire.mcp_gateway.gateway_service.Path.exists", return_value=True), \
-             patch("signalwire.mcp_gateway.gateway_service.ssl") as mock_ssl:
-
+        with (
+            patch(
+                "signalwire.mcp_gateway.gateway_service.make_server",
+                return_value=mock_server,
+            ),
+            patch("signalwire.mcp_gateway.gateway_service.signal"),
+            patch(
+                "signalwire.mcp_gateway.gateway_service.Path.exists",
+                autospec=True,
+                side_effect=lambda self: str(self) == "certs/server.pem",
+            ),
+            patch("signalwire.mcp_gateway.gateway_service.ssl") as mock_ssl,
+        ):
             mock_ctx = MagicMock()
             mock_ssl.SSLContext.return_value = mock_ctx
             self.gateway.run()
@@ -1258,11 +1332,15 @@ class TestRunMethod:
         mock_server = MagicMock()
         mock_server.serve_forever.side_effect = KeyboardInterrupt()
 
-        with patch("signalwire.mcp_gateway.gateway_service.make_server", return_value=mock_server), \
-             patch("signalwire.mcp_gateway.gateway_service.signal"), \
-             patch("os.path.exists", return_value=False), \
-             patch.object(self.gateway, "shutdown") as mock_shutdown:
-
+        with (
+            patch(
+                "signalwire.mcp_gateway.gateway_service.make_server",
+                return_value=mock_server,
+            ),
+            patch("signalwire.mcp_gateway.gateway_service.signal"),
+            patch("os.path.exists", return_value=False),
+            patch.object(self.gateway, "shutdown") as mock_shutdown,
+        ):
             self.gateway.run()
             mock_shutdown.assert_called()
 
@@ -1270,10 +1348,14 @@ class TestRunMethod:
         mock_server = MagicMock()
         mock_server.serve_forever.side_effect = KeyboardInterrupt()
 
-        with patch("signalwire.mcp_gateway.gateway_service.make_server", return_value=mock_server), \
-             patch("signalwire.mcp_gateway.gateway_service.signal") as mock_signal_mod, \
-             patch("os.path.exists", return_value=False):
-
+        with (
+            patch(
+                "signalwire.mcp_gateway.gateway_service.make_server",
+                return_value=mock_server,
+            ),
+            patch("signalwire.mcp_gateway.gateway_service.signal") as mock_signal_mod,
+            patch("os.path.exists", return_value=False),
+        ):
             self.gateway.run()
 
             # SIGTERM and SIGINT handlers should be registered
@@ -1291,14 +1373,17 @@ class TestRunMethod:
         mock_server = MagicMock()
         mock_server.serve_forever.side_effect = KeyboardInterrupt()
 
-        with patch("signalwire.mcp_gateway.gateway_service.make_server", return_value=mock_server) as mock_make, \
-             patch("signalwire.mcp_gateway.gateway_service.signal"), \
-             patch("os.path.exists", return_value=False):
-
+        with (
+            patch(
+                "signalwire.mcp_gateway.gateway_service.make_server",
+                return_value=mock_server,
+            ) as mock_make,
+            patch("signalwire.mcp_gateway.gateway_service.signal"),
+            patch("os.path.exists", return_value=False),
+        ):
             gateway.run()
             assert mock_make.call_args[0][0] == "127.0.0.1"
             assert mock_make.call_args[0][1] == 9999
-
 
     def test_run_listens_on_loopback_with_published_default_password(self) -> None:
         config = _minimal_config()
@@ -1308,10 +1393,14 @@ class TestRunMethod:
         mock_server = MagicMock()
         mock_server.serve_forever.side_effect = KeyboardInterrupt()
 
-        with patch("signalwire.mcp_gateway.gateway_service.make_server", return_value=mock_server) as mock_make, \
-             patch("signalwire.mcp_gateway.gateway_service.signal"), \
-             patch("os.path.exists", return_value=False):
-
+        with (
+            patch(
+                "signalwire.mcp_gateway.gateway_service.make_server",
+                return_value=mock_server,
+            ) as mock_make,
+            patch("signalwire.mcp_gateway.gateway_service.signal"),
+            patch("os.path.exists", return_value=False),
+        ):
             gateway.run()
             assert mock_make.call_args[0][0] == "127.0.0.1"
 
@@ -1319,14 +1408,19 @@ class TestRunMethod:
 class TestResolveBindHost:
     """The published default password keeps the gateway on the loopback interface."""
 
-    @pytest.mark.parametrize("host", ["0.0.0.0", "", "::", "192.168.1.10", "gateway.example.com"])
+    @pytest.mark.parametrize(
+        "host", ["0.0.0.0", "", "::", "192.168.1.10", "gateway.example.com"]
+    )
     def test_default_password_restricts_non_loopback_hosts(
         self, host: str, caplog: pytest.LogCaptureFixture
     ) -> None:
         from signalwire.mcp_gateway.gateway_service import _resolve_bind_host
 
         with caplog.at_level(logging.WARNING, logger="gateway_service"):
-            assert _resolve_bind_host({"host": host, "auth_password": "changeme"}) == "127.0.0.1"
+            assert (
+                _resolve_bind_host({"host": host, "auth_password": "changeme"})
+                == "127.0.0.1"
+            )
         assert "published default" in caplog.text
 
     def test_default_password_restricts_the_default_host(self) -> None:
@@ -1341,14 +1435,18 @@ class TestResolveBindHost:
         from signalwire.mcp_gateway.gateway_service import _resolve_bind_host
 
         with caplog.at_level(logging.WARNING, logger="gateway_service"):
-            assert _resolve_bind_host({"host": host, "auth_password": "changeme"}) == host
+            assert (
+                _resolve_bind_host({"host": host, "auth_password": "changeme"}) == host
+            )
         assert caplog.text == ""
 
     @pytest.mark.parametrize("host", ["0.0.0.0", "::", "192.168.1.10"])
     def test_other_passwords_keep_the_configured_host(self, host: str) -> None:
         from signalwire.mcp_gateway.gateway_service import _resolve_bind_host
 
-        assert _resolve_bind_host({"host": host, "auth_password": "s3cret-value"}) == host
+        assert (
+            _resolve_bind_host({"host": host, "auth_password": "s3cret-value"}) == host
+        )
 
     def test_other_passwords_keep_the_default_host(self) -> None:
         from signalwire.mcp_gateway.gateway_service import _resolve_bind_host
@@ -1359,6 +1457,7 @@ class TestResolveBindHost:
 # ===================================================================
 # Tests: Error Handler
 # ===================================================================
+
 
 class TestErrorHandler:
     """Tests for the generic error handler."""
@@ -1388,13 +1487,14 @@ class TestErrorHandler:
 # Tests: Edge Cases
 # ===================================================================
 
+
 class TestEdgeCases:
     """Miscellaneous edge case tests."""
 
     def test_multiple_gateway_instances_are_independent(self) -> None:
         """Two gateways do not share state."""
-        gw1, mocks1 = _create_gateway()
-        gw2, mocks2 = _create_gateway()
+        gw1, _mocks1 = _create_gateway()
+        gw2, _mocks2 = _create_gateway()
         assert gw1.app is not gw2.app
         assert gw1.mcp_manager is not gw2.mcp_manager
 
@@ -1419,21 +1519,22 @@ class TestEdgeCases:
         assert "logging" not in gateway.config
         assert gateway.app is not None
 
-    def test_config_with_log_file(self) -> None:
+    def test_config_with_log_file(self, tmp_path: Path) -> None:
         """When [logging].file is set, a FileHandler must be installed on
         the root logger pointed at that file path."""
+        log_file = str(tmp_path / "test_gateway.log")
         config = _minimal_config()
-        config["logging"] = {"level": "DEBUG", "file": "/tmp/test_gateway.log"}
+        config["logging"] = {"level": "DEBUG", "file": log_file}
         # Create a real-ish mock handler that won't break the logging system
         mock_handler = MagicMock(spec=logging.FileHandler)
         mock_handler.level = logging.DEBUG
         mock_handler.formatter = None
         mock_handler.filters = []
         with patch("logging.FileHandler", return_value=mock_handler) as mock_fh:
-            gateway, _ = _create_gateway(config)
+            _gateway, _ = _create_gateway(config)
         # FileHandler was constructed targeting the configured path.
         assert mock_fh.call_count >= 1
-        assert mock_fh.call_args[0][0] == "/tmp/test_gateway.log"
+        assert mock_fh.call_args[0][0] == log_file
         # Clean up: remove the mock handler from the root logger to avoid
         # poisoning other tests
         root = logging.getLogger()
@@ -1475,7 +1576,7 @@ class TestEdgeCases:
 
     def test_call_tool_with_zero_timeout(self) -> None:
         """Timeout of 0 should be rejected."""
-        gateway, mocks = _create_gateway()
+        gateway, _mocks = _create_gateway()
         client = gateway.app.test_client()
 
         payload = {
@@ -1525,14 +1626,17 @@ class TestEdgeCases:
 class TestCheckServerConfig:
     """An empty or invalid host or port stops the gateway with a clear message (B18)."""
 
-    @pytest.mark.parametrize("server", [
-        {"host": "", "port": 8080},
-        {"host": "0.0.0.0", "port": ""},
-        {"host": "0.0.0.0", "port": "8080"},
-        {"host": "0.0.0.0", "port": 0},
-        {"host": "0.0.0.0", "port": 70000},
-        {"host": "0.0.0.0", "port": True},
-    ])
+    @pytest.mark.parametrize(
+        "server",
+        [
+            {"host": "", "port": 8080},
+            {"host": "0.0.0.0", "port": ""},
+            {"host": "0.0.0.0", "port": "8080"},
+            {"host": "0.0.0.0", "port": 0},
+            {"host": "0.0.0.0", "port": 70000},
+            {"host": "0.0.0.0", "port": True},
+        ],
+    )
     def test_rejects(self, server: dict[str, Any]) -> None:
         from signalwire.mcp_gateway.gateway_service import _check_server_config
 
@@ -1550,7 +1654,9 @@ class TestCheckServerConfig:
         config = _minimal_config()
         config["server"]["port"] = ""
         gateway, _ = _create_gateway(config)
-        with patch("signalwire.mcp_gateway.gateway_service.make_server") as mock_make, \
-             pytest.raises(SystemExit):
+        with (
+            patch("signalwire.mcp_gateway.gateway_service.make_server") as mock_make,
+            pytest.raises(SystemExit),
+        ):
             gateway.run()
         mock_make.assert_not_called()

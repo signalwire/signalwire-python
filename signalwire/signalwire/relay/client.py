@@ -26,6 +26,7 @@ import asyncio
 import json
 import os
 import re
+import signal
 import ssl as ssl_module
 import uuid
 from typing import Any, TYPE_CHECKING
@@ -94,14 +95,23 @@ _MAX_PING_FAILURES = 3
 _DEFAULT_MAX_ACTIVE_CALLS = 1000
 _MAX_QUEUE_SIZE = 500
 
-# Max concurrent RelayClient connections per process (env: RELAY_MAX_CONNECTIONS)
-try:
-    _MAX_CONNECTIONS = max(1, int(os.environ.get("RELAY_MAX_CONNECTIONS", "1")))
-except ValueError:
-    _MAX_CONNECTIONS = 1
-
 # Process-wide tracking of active RelayClient connections
 _active_clients: set[int] = set()
+
+
+def _max_connections() -> int:
+    """Max concurrent RelayClient connections per process.
+
+    Read from ``RELAY_MAX_CONNECTIONS`` **at connection time**, never cached.
+    ``connect()``'s refusal message tells the operator to set this variable;
+    caching it at import made that advice impossible to follow, because by the
+    time the message is seen the module is already imported. Defaults to 1;
+    a non-integer or sub-1 value falls back to 1.
+    """
+    try:
+        return max(1, int(os.environ.get("RELAY_MAX_CONNECTIONS", "1")))
+    except ValueError:
+        return 1
 
 
 # Credential-bearing JSON keys whose VALUES must never appear in debug logs
@@ -170,6 +180,12 @@ class RelayClient:
         contexts: list[str] | None = None,
         max_active_calls: int | None = None,
     ):
+        """Configure the client; nothing connects until ``connect()`` or ``run()``.
+
+        Each credential falls back to its environment variable when omitted:
+        ``SIGNALWIRE_PROJECT_ID``, ``SIGNALWIRE_API_TOKEN``, ``SIGNALWIRE_JWT_TOKEN``
+        and ``SIGNALWIRE_SPACE`` (the host).
+        """
         self.project = project or os.environ.get("SIGNALWIRE_PROJECT_ID", "")
         self.token = token or os.environ.get("SIGNALWIRE_API_TOKEN", "")
         self.jwt_token = jwt_token or os.environ.get("SIGNALWIRE_JWT_TOKEN", "")
@@ -271,6 +287,7 @@ class RelayClient:
         self._auth_reject_attempts: int = 0
 
     def __del__(self) -> None:
+        """Drop this client from the live-client registry when collected."""
         _active_clients.discard(id(self))
 
     async def __aenter__(self) -> RelayClient:
@@ -344,9 +361,10 @@ class RelayClient:
         # Guard against connection leaks — enforce per-process limit
         # (don't count ourselves if we're already tracked, i.e. reconnecting)
         other_count = len(_active_clients - {id(self)})
-        if other_count >= _MAX_CONNECTIONS:
+        max_connections = _max_connections()
+        if other_count >= max_connections:
             raise RuntimeError(
-                f"RelayClient connection limit reached ({_MAX_CONNECTIONS}). "
+                f"RelayClient connection limit reached ({max_connections}). "
                 f"There are already {other_count} active connection(s) in this process. "
                 f"Call disconnect() on existing clients first, or set "
                 f"RELAY_MAX_CONNECTIONS env var to allow more."
@@ -682,11 +700,27 @@ class RelayClient:
         """Connect and maintain the connection with auto-reconnect."""
         # Register SIGINT handler so Ctrl+C triggers a clean shutdown
         # instead of dumping a stack trace.
+        #
+        # loop.add_signal_handler() is a Unix-only asyncio capability: the
+        # Windows Proactor/Selector loops raise NotImplementedError
+        # unconditionally (CPython Lib/asyncio/events.py). Without this guard a
+        # bare `NotImplementedError` escaped _run_forever() on the very first
+        # statement, so RelayClient.run() could never connect on Windows at
+        # all. Degrade instead: on a platform with no loop-level signal
+        # handling, Ctrl+C still stops the client — asyncio.run() surfaces it
+        # as KeyboardInterrupt, which run() suppresses — we just lose the
+        # graceful _shutdown() handshake.
         loop = asyncio.get_running_loop()
-        loop.add_signal_handler(
-            __import__("signal").SIGINT,
-            lambda: asyncio.ensure_future(self._shutdown()),
-        )
+        try:
+            loop.add_signal_handler(
+                signal.SIGINT,
+                lambda: asyncio.ensure_future(self._shutdown()),
+            )
+        except NotImplementedError:
+            logger.debug(
+                "Loop-level SIGINT handling unavailable on this platform; "
+                "falling back to KeyboardInterrupt-driven shutdown"
+            )
 
         while not self._closing:
             try:
@@ -1301,6 +1335,7 @@ class RelayClient:
         )
 
     def _cancel_check_ping(self) -> None:
+        """Cancel the pending server-ping check, if one is scheduled."""
         if self._check_ping_handle:
             self._check_ping_handle.cancel()
             self._check_ping_handle = None
@@ -1330,6 +1365,7 @@ class RelayError(Exception):
     """Error returned by the RELAY server."""
 
     def __init__(self, code: int, message: str):
+        """Record the RELAY error code and message the server returned."""
         self.code = code
         self.message = message
         super().__init__(f"RELAY error {code}: {message}")

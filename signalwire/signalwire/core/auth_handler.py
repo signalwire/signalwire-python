@@ -8,7 +8,7 @@ See LICENSE file in the project root for full license information.
 """
 
 import secrets
-from typing import Any, TYPE_CHECKING
+from typing import Any, Protocol, TYPE_CHECKING, runtime_checkable
 from collections.abc import Callable
 from functools import wraps
 
@@ -43,6 +43,64 @@ if TYPE_CHECKING:
     from signalwire.core.security_config import SecurityConfig
 
 logger = get_logger("auth_handler")
+
+
+# ---------------------------------------------------------------------------
+# Credential carriers
+# ---------------------------------------------------------------------------
+#
+# ``verify_basic_auth`` and ``verify_bearer_token`` used to annotate their sole
+# parameter with FastAPI's ``HTTPBasicCredentials`` / ``HTTPAuthorizationCredentials``.
+# Neither method ever touched anything framework-specific: they read
+# ``.username``/``.password`` and ``.credentials`` respectively and compare them with
+# ``secrets.compare_digest``. The FIELDS are the contract; which web framework's class
+# carries them is idiom — and FastAPI is an OPTIONAL dependency here (see the
+# try/except above, which sets these names to ``None`` in a non-web install), so the
+# annotation degraded to ``None`` exactly when FastAPI was absent.
+#
+# So the parameter types are declared structurally, as ``Protocol``s. A Protocol is
+# strictly WIDER than the concrete class: a real FastAPI ``HTTPBasicCredentials``
+# still satisfies ``BasicCredentials`` with no change at any existing call site, and
+# so does any object carrying the same attributes.
+#
+# The names and field sets match what the rest of the fleet converged on
+# independently: 8 of the 9 ports already ship a ``BasicCredentials`` carrier of
+# ``username``/``password`` and a ``BearerCredentials`` carrier of
+# ``scheme``/``credentials`` (go is the exception — it passes the ``*http.Request``
+# or a scalar pair, which is the same contract expressed in its own idiom).
+#
+# Deliberately NO concrete value class is defined here: any object with the fields
+# satisfies these, so adding one would be surface the ports would then have to
+# mirror for nothing.
+
+
+@runtime_checkable
+class BasicCredentials(Protocol):
+    """HTTP Basic credentials parsed from the ``Authorization`` header.
+
+    Structural: any object exposing ``username`` and ``password`` satisfies this,
+    including FastAPI's ``HTTPBasicCredentials``.
+    """
+
+    username: str
+    password: str
+
+
+@runtime_checkable
+class BearerCredentials(Protocol):
+    """HTTP Bearer/authorization credentials parsed from the ``Authorization`` header.
+
+    Structural: any object exposing ``scheme`` and ``credentials`` satisfies this,
+    including FastAPI's ``HTTPAuthorizationCredentials``.
+
+    ``scheme`` is the auth-scheme token as the client sent it (``Bearer``) and
+    ``credentials`` is the raw token following it. ``verify_bearer_token`` compares
+    only ``credentials``; ``scheme`` is carried because it is half of what the header
+    conveys and a caller cannot otherwise tell ``Bearer`` from another scheme.
+    """
+
+    scheme: str
+    credentials: str
 
 
 class AuthHandler:
@@ -95,7 +153,7 @@ class AuthHandler:
                 "header": getattr(self.security_config, "api_key_header", "X-API-Key"),
             }
 
-    def verify_basic_auth(self, credentials: HTTPBasicCredentials) -> bool:
+    def verify_basic_auth(self, credentials: BasicCredentials) -> bool:
         """Verify basic auth credentials"""
         if not self.auth_methods.get("basic", {}).get("enabled"):
             return False
@@ -110,7 +168,7 @@ class AuthHandler:
 
         return username_correct and password_correct
 
-    def verify_bearer_token(self, credentials: HTTPAuthorizationCredentials) -> bool:
+    def verify_bearer_token(self, credentials: BearerCredentials) -> bool:
         """Verify bearer token"""
         if not self.auth_methods.get("bearer", {}).get("enabled"):
             return False
@@ -152,6 +210,32 @@ class AuthHandler:
             else None,
             api_key: str | None = None,  # Get from header in request
         ) -> dict[str, Any]:
+            """
+            Authenticate a request from the FastAPI security schemes.
+
+            Bearer is tried first, then Basic; the first scheme that verifies
+            wins and no later scheme is consulted. Both comparisons go through
+            ``secrets.compare_digest``. The ``api_key`` parameter is accepted
+            but NOT consulted here — API-key auth in this dependency is
+            unimplemented, so a request bearing only an API key is treated as
+            unauthenticated (``AuthHandler.flask_decorator`` does honour the
+            API-key header; this FastAPI path does not).
+
+            On failure with ``optional=False`` this raises
+            ``HTTPException(401, detail="Invalid authentication credentials")``
+            with a ``WWW-Authenticate: Basic`` header — Basic is always
+            advertised as the challenge, even when Bearer is the configured
+            scheme. With ``optional=True`` no exception is raised and the
+            handler runs with ``authenticated=False``.
+
+            Returns:
+                ``{"authenticated": bool, "method": "bearer" | "basic" | None}``.
+                ``method`` is None whenever ``authenticated`` is False.
+
+            Raises:
+                HTTPException: 401 when no scheme verifies and ``optional`` is
+                    False.
+            """
             # Try each auth method
             authenticated = False
             auth_method = None
@@ -189,6 +273,33 @@ class AuthHandler:
 
         @wraps(f)
         def decorated(*args: Any, **kwargs: Any) -> Any:
+            """
+            Authenticate the current Flask request, then call the view.
+
+            Schemes are tried in this order, and the first that verifies calls
+            through to the wrapped view with the original ``*args``/``**kwargs``:
+
+            1. ``Authorization: Bearer <token>`` — only if a bearer token is
+               configured; the token is everything after the 7-character
+               ``"Bearer "`` prefix.
+            2. The configured API-key header (``X-API-Key`` unless
+               ``security_config.api_key_header`` overrides it).
+            3. Flask's parsed ``request.authorization`` (HTTP Basic), matching
+               both username and password.
+
+            Every comparison uses ``secrets.compare_digest``.
+
+            On failure it logs an ``auth_failed`` event with the client IP,
+            method and path, and returns a Flask ``Response`` with body
+            ``"Authentication required"``, status **401**, and header
+            ``WWW-Authenticate: Basic realm="SignalWire Service"``. Note this
+            RETURNS a response rather than raising, and the challenge is always
+            Basic regardless of which schemes are enabled.
+
+            Returns:
+                The wrapped view's return value on success, else the 401
+                ``Response``.
+            """
             from flask import request, Response
 
             # Try Bearer token first

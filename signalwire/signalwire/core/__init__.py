@@ -34,6 +34,7 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
 
 
 def __getattr__(name: str) -> Any:
+    """Import a lazily exported name on first access and cache it in the module."""
     spec = _LAZY_IMPORTS.get(name)
     if spec is None:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
@@ -45,6 +46,7 @@ def __getattr__(name: str) -> Any:
 
 
 def __dir__() -> list[str]:
+    """List the module's names, including the lazily imported ones."""
     return sorted(set(globals()) | set(_LAZY_IMPORTS))
 
 

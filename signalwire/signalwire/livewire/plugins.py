@@ -25,6 +25,7 @@ _logged: dict[str, bool] = {}
 
 
 def _log_once(key: str, message: str) -> None:
+    """Log ``message`` the first time ``key`` is seen, and never again for that key."""
     global _logged
     with _lock:
         if _logged.get(key):
@@ -49,6 +50,7 @@ class DeepgramSTT:
     """Stub for livekit Deepgram STT plugin."""
 
     def __init__(self, **kwargs: Any):
+        """Accept the plugin's options and log a one-time no-op notice."""
         self._kwargs = kwargs
         _log_once(
             "deepgram_stt",
@@ -66,6 +68,7 @@ class OpenAILLM:
     """Stub for livekit OpenAI LLM plugin."""
 
     def __init__(self, **kwargs: Any):
+        """Record the ``model`` option and log a one-time no-op notice."""
         self._kwargs = kwargs
         self.model = kwargs.get("model", "")
         _log_once(
@@ -84,6 +87,7 @@ class CartesiaTTS:
     """Stub for livekit Cartesia TTS plugin."""
 
     def __init__(self, **kwargs: Any):
+        """Accept the plugin's options and log a one-time no-op notice."""
         self._kwargs = kwargs
         _log_once(
             "cartesia_tts",
@@ -96,6 +100,7 @@ class ElevenLabsTTS:
     """Stub for livekit ElevenLabs TTS plugin."""
 
     def __init__(self, **kwargs: Any):
+        """Accept the plugin's options and log a one-time no-op notice."""
         self._kwargs = kwargs
         _log_once(
             "elevenlabs_tts",
@@ -113,6 +118,7 @@ class SileroVAD:
     """Stub for livekit Silero VAD plugin."""
 
     def __init__(self, **kwargs: Any):
+        """Accept the plugin's options and log a one-time no-op notice."""
         self._kwargs = kwargs
         _log_once(
             "silero_vad",

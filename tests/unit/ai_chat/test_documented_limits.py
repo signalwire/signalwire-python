@@ -25,7 +25,7 @@ KEY = "pk_test"
 def _gateway(**kw: Any) -> ChatGateway:
     client = AIChatClient(
         project="p",
-        token="t",  # noqa: S106 - test fixture, not a credential
+        token="t",
         url="https://service.example.invalid/aichat",
     )
     return ChatGateway(

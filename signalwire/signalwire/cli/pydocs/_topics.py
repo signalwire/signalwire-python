@@ -43,20 +43,23 @@ _QUICKSTART = Topic(
     name="quickstart",
     title="Quickstart: a working agent in one file",
     summary="The smallest complete agent, and how to run and test it",
-    body="""\
+    body='''\
 ```python
 from signalwire import AgentBase, FunctionResult
 
 
 class MyAgent(AgentBase):
+    """An agent that tells the caller the time."""
+
     def __init__(self):
+        """Name the agent, give it a voice and describe its role."""
         super().__init__(name="my-agent", route="/agent")
         self.add_language(name="English", code="en-US", voice="inworld.Mark")
         self.prompt_add_section("Role", body="You are a helpful assistant.")
 
     @AgentBase.tool()
     def get_time(self) -> FunctionResult:
-        \"\"\"Get the current time.\"\"\"
+        """Get the current time."""
         from datetime import datetime
 
         return FunctionResult(f"The time is {datetime.now():%H:%M}.")
@@ -87,7 +90,7 @@ swaig-test my_agent.py --list-tools
 swaig-test my_agent.py --dump-swml
 swaig-test my_agent.py --exec get_time
 ```
-""",
+''',
     docs=(
         ("README.md", "The SDK's overview and quickstarts for agents, RELAY and REST"),
         ("docs/agent_guide.md", "The main guide to building agents"),
@@ -230,7 +233,7 @@ _TOOLS = Topic(
     name="tools",
     title="Tools (SWAIG functions) and FunctionResult",
     summary="Functions the model can call, and what they return",
-    body="""\
+    body='''\
 A tool is a function the model can ask to call. SignalWire sends the call to
 the agent's `/swaig` endpoint, and the SDK runs your handler. A plain `def`
 handler runs in a worker thread, so handlers for different calls run at the
@@ -243,11 +246,11 @@ summary is the tool's description, and its `Args:` describe the parameters:
 ```python
 @AgentBase.tool()
 def get_order_status(self, order_id: str) -> FunctionResult:
-    \"\"\"Look up an order's status.
+    """Look up an order's status.
 
     Args:
         order_id: The order number the caller gives
-    \"\"\"
+    """
     order = orders.find(order_id)  # your code decides what's true
     return FunctionResult(
         tool_result=f"Order {order_id} shipped {order.shipped_on}.",
@@ -270,7 +273,7 @@ Or give the schema yourself, with a handler that takes `(args, raw_data)`:
   call's SWML.
 - A tool call is a request from the model, not an authorization. Check
   identity, state and business rules in the handler.
-""",
+''',
     docs=(
         ("docs/swaig_reference.md", "Every FunctionResult method and action"),
         (

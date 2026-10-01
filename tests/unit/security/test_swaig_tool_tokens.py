@@ -29,7 +29,9 @@ def agent() -> AgentBase:
     agent = AgentBase(name="tokens", route="/agent")
     agent.define_tool("secret", "A secure tool.", {}, _handler("ran secret"))
     agent.define_tool("other", "Another secure tool.", {}, _handler("ran other"))
-    agent.define_tool("open", "A tool without a token.", {}, _handler("ran open"), secure=False)
+    agent.define_tool(
+        "open", "A tool without a token.", {}, _handler("ran open"), secure=False
+    )
     return agent
 
 
@@ -40,19 +42,29 @@ def client(agent: AgentBase) -> TestClient:
 
 def _auth(agent: AgentBase) -> dict[str, str]:
     user, password = agent.get_basic_auth_credentials()[:2]
-    return {"Authorization": "Basic " + base64.b64encode(f"{user}:{password}".encode()).decode()}
+    return {
+        "Authorization": "Basic "
+        + base64.b64encode(f"{user}:{password}".encode()).decode()
+    }
 
 
 def _token(client: TestClient, agent: AgentBase, function: str, call_id: str) -> str:
     """The token the SWML for ``call_id`` hands out for ``function``."""
     swml = client.get(f"/agent/?call_id={call_id}", headers=_auth(agent)).json()
     ai = next(verb["ai"] for verb in swml["sections"]["main"] if "ai" in verb)
-    url: str = next(f["web_hook_url"] for f in ai["SWAIG"]["functions"] if f["function"] == function)
+    url: str = next(
+        f["web_hook_url"] for f in ai["SWAIG"]["functions"] if f["function"] == function
+    )
     return parse_qs(urlparse(url).query)["__token"][0]
 
 
-def _call(client: TestClient, agent: AgentBase, function: str, call_id: str,
-          token: str | None = None) -> str:
+def _call(
+    client: TestClient,
+    agent: AgentBase,
+    function: str,
+    call_id: str,
+    token: str | None = None,
+) -> str:
     query = f"?__token={token}" if token else ""
     resp = client.post(
         f"/agent/swaig{query}",
@@ -63,7 +75,9 @@ def _call(client: TestClient, agent: AgentBase, function: str, call_id: str,
     return str(resp.json()["response"])
 
 
-def test_the_token_from_the_swml_runs_the_function(client: TestClient, agent: AgentBase) -> None:
+def test_the_token_from_the_swml_runs_the_function(
+    client: TestClient, agent: AgentBase
+) -> None:
     token = _token(client, agent, "secret", "call-1")
     assert _call(client, agent, "secret", "call-1", token) == "ran secret"
 
@@ -72,17 +86,23 @@ def test_no_token_is_refused(client: TestClient, agent: AgentBase) -> None:
     assert REFUSED in _call(client, agent, "secret", "call-1")
 
 
-def test_a_token_for_another_call_is_refused(client: TestClient, agent: AgentBase) -> None:
+def test_a_token_for_another_call_is_refused(
+    client: TestClient, agent: AgentBase
+) -> None:
     token = _token(client, agent, "secret", "call-1")
     assert REFUSED in _call(client, agent, "secret", "call-2", token)
 
 
-def test_a_token_for_another_function_is_refused(client: TestClient, agent: AgentBase) -> None:
+def test_a_token_for_another_function_is_refused(
+    client: TestClient, agent: AgentBase
+) -> None:
     token = _token(client, agent, "other", "call-1")
     assert REFUSED in _call(client, agent, "secret", "call-1", token)
 
 
-def test_a_function_marked_not_secure_needs_no_token(client: TestClient, agent: AgentBase) -> None:
+def test_a_function_marked_not_secure_needs_no_token(
+    client: TestClient, agent: AgentBase
+) -> None:
     assert _call(client, agent, "open", "call-1") == "ran open"
 
 
@@ -92,7 +112,9 @@ def test_a_tool_added_per_call_needs_its_token_too() -> None:
     agent = AgentBase(name="tokens", route="/agent")
     agent.add_per_call_config(
         lambda query, body, headers, copy: copy.define_tool(
-            "dynamic", "Added per call.", {}, _handler("ran dynamic")))
+            "dynamic", "Added per call.", {}, _handler("ran dynamic")
+        )
+    )
     client = TestClient(agent.get_app())
     assert REFUSED in _call(client, agent, "dynamic", "call-1")
     token = _token(client, agent, "dynamic", "call-1")
@@ -123,8 +145,11 @@ def _post_prompt_query(client: TestClient, agent: AgentBase, call_id: str) -> st
 def test_a_summary_for_a_dotted_call_id_is_delivered() -> None:
     agent, client, received = _summary_agent()
     query = _post_prompt_query(client, agent, "chat-abc.1")
-    resp = client.post(f"/agent/post_prompt?{query}", headers=_auth(agent),
-                       json={"call_id": "chat-abc.1", "summary": "Booked."})
+    resp = client.post(
+        f"/agent/post_prompt?{query}",
+        headers=_auth(agent),
+        json={"call_id": "chat-abc.1", "summary": "Booked."},
+    )
     assert resp.status_code == 200
     assert received == ["Booked."]
 
@@ -132,7 +157,10 @@ def test_a_summary_for_a_dotted_call_id_is_delivered() -> None:
 def test_a_token_for_one_call_cant_deliver_another_calls_summary() -> None:
     agent, client, received = _summary_agent()
     query = _post_prompt_query(client, agent, "call-a")
-    resp = client.post(f"/agent/post_prompt?call_id=call-a&{query}", headers=_auth(agent),
-                       json={"call_id": "call-b", "summary": "Forged."})
+    resp = client.post(
+        f"/agent/post_prompt?call_id=call-a&{query}",
+        headers=_auth(agent),
+        json={"call_id": "call-b", "summary": "Forged."},
+    )
     assert resp.status_code == 400
     assert received == []

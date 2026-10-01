@@ -88,6 +88,7 @@ class _Changes:
     """The context variables a function set in its worker thread."""
 
     def __init__(self) -> None:
+        """Start with no recorded changes, not yet complete."""
         self.values: list[tuple[contextvars.ContextVar[Any], Any]] = []
         # Set last, once values is final
         self.complete = False

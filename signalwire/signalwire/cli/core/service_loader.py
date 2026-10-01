@@ -45,6 +45,7 @@ class ServiceCapture:
     """Captures SWMLService instances when they try to run/serve"""
 
     def __init__(self) -> None:
+        """Start with no services captured."""
         self.captured_services: list[SWMLService] = []
         self.original_methods: dict[Any, Any] = {}
 

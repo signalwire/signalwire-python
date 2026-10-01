@@ -25,6 +25,7 @@ class GoogleSearchScraper:
     def __init__(
         self, api_key: str, search_engine_id: str, max_content_length: int = 32768
     ):
+        """Keep the credentials and open the session that fetches result pages."""
         self.api_key = api_key
         self.search_engine_id = search_engine_id
         self.max_content_length = max_content_length
@@ -948,7 +949,7 @@ class WebSearchSkill(SkillBase):
             "quality_filtering": True,
         }
 
-    def get_prompt_sections(self) -> list[dict[str, Any]]:
+    def _get_prompt_sections(self) -> list[dict[str, Any]]:
         """Return prompt sections to add to agent"""
         return [
             {

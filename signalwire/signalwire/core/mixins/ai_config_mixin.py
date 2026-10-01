@@ -8,10 +8,28 @@ See LICENSE file in the project root for full license information.
 """
 
 import threading
-from typing import TYPE_CHECKING, Any
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, TypeVar
 
 if TYPE_CHECKING:
     from signalwire.core.agent_base import AgentBase  # type: ignore[attr-defined]  # cycle: agent_base imports the mixins; the name resolves at type-check time but mypy flags the back-reference
+    from signalwire.core.swml_verbs_generated import AiParams, _AiParamsSetters
+
+    _F = TypeVar("_F", bound=Callable[..., Any])
+
+    def _signature_of(sig: _F) -> Callable[[Callable[..., Any]], _F]:
+        """Decorator factory: give the decorated method the static type of ``sig``."""
+        ...
+
+    # set_param's static signature, generated from schema.json
+    # (swml_verbs_generated._AiParamsSetters): one overload per AiParams key, then a
+    # `(key: str, value: Any)` fallback, so every call that type-checked before still does.
+    # TYPE_CHECKING-only; at runtime the decorator is the identity.
+    _set_param_signature = _signature_of(_AiParamsSetters.set_param)
+else:
+
+    def _set_param_signature(fn: Callable[..., Any]) -> Callable[..., Any]:
+        return fn
 
 
 from signalwire.core.mixins._mixin_host import _HostTyped
@@ -282,12 +300,14 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
             self._pronounce = pronunciations
         return self
 
+    @_set_param_signature
     def set_param(self, key: str, value: Any) -> "AgentBase":
         """
         Set a single AI parameter
 
         Args:
-            key: Parameter name
+            key: Parameter name (the ``AiParams`` keys are listed for type checkers and
+                editors; any other key is accepted too)
             value: Parameter value
 
         Returns:
@@ -297,12 +317,13 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
             self._params[key] = value
         return self
 
-    def set_params(self, params: dict[str, Any]) -> "AgentBase":
+    def set_params(self, params: "AiParams | dict[str, Any]") -> "AgentBase":
         """
         Set multiple AI parameters at once
 
         Args:
-            params: Dictionary of parameter name/value pairs
+            params: Dictionary of parameter name/value pairs (``AiParams``, generated from
+                schema.json, or any ``dict``)
 
         Returns:
             Self for method chaining
@@ -532,6 +553,7 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
 
             @agent.on_debug_event
             def handle_debug(event_type, data):
+                '''Alert the operations team when the model returns an error.'''
                 if event_type == "llm_error":
                     alert_ops_team(data)
         """

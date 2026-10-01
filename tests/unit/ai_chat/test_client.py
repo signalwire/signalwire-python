@@ -25,7 +25,7 @@ from signalwire.ai_chat import (
 )
 
 PROJECT = "proj-1"
-TOKEN = "tok-1"  # noqa: S105  test placeholder credential, not a real secret
+TOKEN = "tok-1"
 
 
 class StubService:

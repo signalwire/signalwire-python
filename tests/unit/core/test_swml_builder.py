@@ -12,8 +12,7 @@ Unit tests for SWML builder module
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-from typing import Dict, List, Any, Optional
+from unittest.mock import Mock
 
 from signalwire.core.swml_builder import SWMLBuilder
 from signalwire.core.swml_service import SWMLService
@@ -21,14 +20,14 @@ from signalwire.core.swml_service import SWMLService
 
 class TestSWMLBuilder:
     """Test SWMLBuilder functionality"""
-    
+
     def test_basic_initialization(self) -> None:
         """Test basic SWMLBuilder initialization"""
         mock_service = Mock(spec=SWMLService)
         builder = SWMLBuilder(mock_service)
-        
+
         assert builder.service is mock_service
-    
+
     def test_answer_verb(self) -> None:
         """Test adding answer verb"""
         mock_service = Mock(spec=SWMLService)
@@ -47,7 +46,9 @@ class TestSWMLBuilder:
         result = builder.answer(max_duration=30, codecs="PCMU,PCMA")
 
         assert result is builder
-        mock_service.add_verb.assert_called_once_with("answer", {"max_duration": 30, "codecs": "PCMU,PCMA"})
+        mock_service.add_verb.assert_called_once_with(
+            "answer", {"max_duration": 30, "codecs": "PCMU,PCMA"}
+        )
 
     def test_hangup_verb(self) -> None:
         """Test adding hangup verb"""
@@ -77,7 +78,9 @@ class TestSWMLBuilder:
         result = builder.ai(prompt_text="You are helpful")
 
         assert result is builder
-        mock_service.add_verb.assert_called_once_with("ai", {"prompt": {"text": "You are helpful"}})
+        mock_service.add_verb.assert_called_once_with(
+            "ai", {"prompt": {"text": "You are helpful"}}
+        )
 
     def test_ai_verb_with_pom(self) -> None:
         """Test adding AI verb with POM"""
@@ -88,7 +91,9 @@ class TestSWMLBuilder:
         result = builder.ai(prompt_pom=pom_data)
 
         assert result is builder
-        mock_service.add_verb.assert_called_once_with("ai", {"prompt": {"pom": pom_data}})
+        mock_service.add_verb.assert_called_once_with(
+            "ai", {"prompt": {"pom": pom_data}}
+        )
 
     def test_ai_verb_with_swaig(self) -> None:
         """Test adding AI verb with SWAIG configuration"""
@@ -101,10 +106,9 @@ class TestSWMLBuilder:
         result = builder.ai(prompt_text="You are helpful", swaig=swaig_config)
 
         assert result is builder
-        mock_service.add_verb.assert_called_once_with("ai", {
-            "prompt": {"text": "You are helpful"},
-            "SWAIG": swaig_config
-        })
+        mock_service.add_verb.assert_called_once_with(
+            "ai", {"prompt": {"text": "You are helpful"}, "SWAIG": swaig_config}
+        )
 
     def test_ai_verb_with_kwargs(self) -> None:
         """Test adding AI verb with additional parameters"""
@@ -112,151 +116,147 @@ class TestSWMLBuilder:
         builder = SWMLBuilder(mock_service)
 
         result = builder.ai(
-            prompt_text="You are helpful",
-            temperature=0.7,
-            max_tokens=150
+            prompt_text="You are helpful", temperature=0.7, max_tokens=150
         )
 
         assert result is builder
-        mock_service.add_verb.assert_called_once_with("ai", {
-            "prompt": {"text": "You are helpful"},
-            "temperature": 0.7,
-            "max_tokens": 150
-        })
-    
+        mock_service.add_verb.assert_called_once_with(
+            "ai",
+            {
+                "prompt": {"text": "You are helpful"},
+                "temperature": 0.7,
+                "max_tokens": 150,
+            },
+        )
+
     def test_play_verb_with_url(self) -> None:
         """Test adding play verb with single URL"""
         mock_service = Mock(spec=SWMLService)
         builder = SWMLBuilder(mock_service)
-        
+
         result = builder.play(url="test.mp3")
-        
+
         assert result is builder
         mock_service.add_verb.assert_called_once_with("play", {"url": "test.mp3"})
-    
+
     def test_play_verb_with_urls(self) -> None:
         """Test adding play verb with multiple URLs"""
         mock_service = Mock(spec=SWMLService)
         builder = SWMLBuilder(mock_service)
-        
+
         urls = ["test1.mp3", "test2.mp3"]
         result = builder.play(urls=urls)
-        
+
         assert result is builder
         mock_service.add_verb.assert_called_once_with("play", {"urls": urls})
-    
+
     def test_play_verb_with_options(self) -> None:
         """Test adding play verb with options"""
         mock_service = Mock(spec=SWMLService)
         builder = SWMLBuilder(mock_service)
-        
+
         result = builder.play(
-            url="test.mp3",
-            volume=0.8,
-            say_voice="alice",
-            say_language="en-US"
+            url="test.mp3", volume=0.8, say_voice="alice", say_language="en-US"
         )
-        
+
         assert result is builder
         expected_config = {
             "url": "test.mp3",
             "volume": 0.8,
             "say_voice": "alice",
-            "say_language": "en-US"
+            "say_language": "en-US",
         }
         mock_service.add_verb.assert_called_once_with("play", expected_config)
-    
+
     def test_play_verb_no_url_error(self) -> None:
         """Test play verb raises error when no URL provided"""
         mock_service = Mock(spec=SWMLService)
         builder = SWMLBuilder(mock_service)
-        
+
         with pytest.raises(ValueError, match="Either url or urls must be provided"):
             builder.play()
-    
+
     def test_say_verb(self) -> None:
         """Test adding say verb"""
         mock_service = Mock(spec=SWMLService)
         builder = SWMLBuilder(mock_service)
-        
+
         result = builder.say("Hello world")
-        
+
         assert result is builder
-        mock_service.add_verb.assert_called_once_with("play", {"url": "say:Hello world"})
-    
+        mock_service.add_verb.assert_called_once_with(
+            "play", {"url": "say:Hello world"}
+        )
+
     def test_say_verb_with_options(self) -> None:
         """Test adding say verb with options"""
         mock_service = Mock(spec=SWMLService)
         builder = SWMLBuilder(mock_service)
-        
-        result = builder.say(
-            "Hello world",
-            voice="alice",
-            language="en-US",
-            volume=0.7
-        )
-        
+
+        result = builder.say("Hello world", voice="alice", language="en-US", volume=0.7)
+
         assert result is builder
         expected_config = {
             "url": "say:Hello world",
             "say_voice": "alice",
             "say_language": "en-US",
-            "volume": 0.7
+            "volume": 0.7,
         }
         mock_service.add_verb.assert_called_once_with("play", expected_config)
-    
+
     def test_add_section(self) -> None:
         """Test adding section"""
         mock_service = Mock(spec=SWMLService)
         builder = SWMLBuilder(mock_service)
-        
+
         result = builder.add_section("greeting")
-        
+
         assert result is builder
         mock_service.add_section.assert_called_once_with("greeting")
-    
+
     def test_build(self) -> None:
         """Test building document"""
         mock_service = Mock(spec=SWMLService)
-        mock_service.get_document.return_value = {"version": "1.0.0", "sections": {"main": []}}
+        mock_service.get_document.return_value = {
+            "version": "1.0.0",
+            "sections": {"main": []},
+        }
         builder = SWMLBuilder(mock_service)
-        
+
         result = builder.build()
-        
+
         assert result == {"version": "1.0.0", "sections": {"main": []}}
         mock_service.get_document.assert_called_once()
-    
+
     def test_render(self) -> None:
         """Test rendering document"""
         mock_service = Mock(spec=SWMLService)
         mock_service.render_document.return_value = '{"version": "1.0.0"}'
         builder = SWMLBuilder(mock_service)
-        
+
         result = builder.render()
-        
+
         assert result == '{"version": "1.0.0"}'
         mock_service.render_document.assert_called_once()
-    
+
     def test_reset(self) -> None:
         """Test resetting document"""
         mock_service = Mock(spec=SWMLService)
         builder = SWMLBuilder(mock_service)
-        
+
         result = builder.reset()
-        
+
         assert result is builder
         mock_service.reset_document.assert_called_once()
-    
+
     def test_method_chaining(self) -> None:
         """Test method chaining functionality"""
         mock_service = Mock(spec=SWMLService)
         builder = SWMLBuilder(mock_service)
 
-        result = (builder
-                 .answer()
-                 .say("Hello")
-                 .ai(prompt_text="You are helpful")
-                 .hangup())
+        result = (
+            builder.answer().say("Hello").ai(prompt_text="You are helpful").hangup()
+        )
 
         assert result is builder
 
@@ -271,18 +271,18 @@ class TestSWMLBuilder:
 
 class TestSWMLBuilderErrorHandling:
     """Test error handling in SWMLBuilder"""
-    
+
     def test_initialization_without_service(self) -> None:
         """Test initialization without service raises error"""
         with pytest.raises(TypeError):
             SWMLBuilder()  # type: ignore[call-arg]  # intentional invalid input for validation test
-    
+
     def test_initialization_with_none_service(self) -> None:
         """Test initialization with None service"""
         # SWMLBuilder should accept None but it will fail when methods are called
         builder = SWMLBuilder(None)  # type: ignore[arg-type]  # intentional invalid input for validation test
         assert builder.service is None
-    
+
     def test_service_method_errors_propagate(self) -> None:
         """Test that service method errors propagate"""
         mock_service = Mock(spec=SWMLService)
@@ -295,7 +295,7 @@ class TestSWMLBuilderErrorHandling:
 
 class TestSWMLBuilderIntegration:
     """Test integration scenarios"""
-    
+
     def test_complete_agent_workflow(self) -> None:
         """Test complete agent building workflow"""
         mock_service = Mock(spec=SWMLService)
@@ -306,50 +306,52 @@ class TestSWMLBuilderIntegration:
                     {"answer": {}},
                     {"play": {"url": "say:Welcome!"}},
                     {"ai": {"prompt": {"text": "You are helpful"}}},
-                    {"hangup": {"reason": "completed"}}
+                    {"hangup": {"reason": "completed"}},
                 ]
-            }
+            },
         }
 
         builder = SWMLBuilder(mock_service)
 
         # Build a complete workflow
-        result = (builder
-                 .answer()
-                 .say("Welcome!")
-                 .ai(prompt_text="You are helpful")
-                 .hangup(reason="completed")
-                 .build())
+        result = (
+            builder.answer()
+            .say("Welcome!")
+            .ai(prompt_text="You are helpful")
+            .hangup(reason="completed")
+            .build()
+        )
 
         # Verify the document structure
         assert result["version"] == "1.0.0"
         assert "sections" in result
         assert "main" in result["sections"]
         assert len(result["sections"]["main"]) == 4
-    
+
     def test_multi_section_workflow(self) -> None:
         """Test multi-section workflow"""
         mock_service = Mock(spec=SWMLService)
         builder = SWMLBuilder(mock_service)
-        
+
         # Build workflow with multiple sections
-        result = (builder
-                 .add_section("greeting")
-                 .say("Hello!")
-                 .add_section("main")
-                 .ai(prompt_text="You are helpful")
-                 .add_section("goodbye")
-                 .say("Goodbye!")
-                 .hangup())
-        
+        result = (
+            builder.add_section("greeting")
+            .say("Hello!")
+            .add_section("main")
+            .ai(prompt_text="You are helpful")
+            .add_section("goodbye")
+            .say("Goodbye!")
+            .hangup()
+        )
+
         assert result is builder
-        
+
         # Verify sections were added
         assert mock_service.add_section.call_count == 3
         mock_service.add_section.assert_any_call("greeting")
         mock_service.add_section.assert_any_call("main")
         mock_service.add_section.assert_any_call("goodbye")
-    
+
     def test_complex_ai_configuration(self) -> None:
         """Test complex AI configuration"""
         mock_service = Mock(spec=SWMLService)
@@ -363,12 +365,10 @@ class TestSWMLBuilderIntegration:
                     "description": "Get weather information",
                     "parameters": {
                         "type": "object",
-                        "properties": {
-                            "location": {"type": "string"}
-                        }
-                    }
+                        "properties": {"location": {"type": "string"}},
+                    },
                 }
-            ]
+            ],
         }
 
         result = builder.ai(
@@ -377,19 +377,22 @@ class TestSWMLBuilderIntegration:
             post_prompt_url="https://example.com/summary",
             swaig=swaig_config,
             temperature=0.7,
-            max_tokens=150
+            max_tokens=150,
         )
 
         assert result is builder
-        mock_service.add_verb.assert_called_once_with("ai", {
-            "prompt": {"text": "You are a weather assistant"},
-            "post_prompt": {"text": "Summarize the weather information provided"},
-            "post_prompt_url": "https://example.com/summary",
-            "SWAIG": swaig_config,
-            "temperature": 0.7,
-            "max_tokens": 150
-        })
-    
+        mock_service.add_verb.assert_called_once_with(
+            "ai",
+            {
+                "prompt": {"text": "You are a weather assistant"},
+                "post_prompt": {"text": "Summarize the weather information provided"},
+                "post_prompt_url": "https://example.com/summary",
+                "SWAIG": swaig_config,
+                "temperature": 0.7,
+                "max_tokens": 150,
+            },
+        )
+
     def test_service_delegation(self) -> None:
         """Test that builder properly delegates to service"""
         real_service = SWMLService(name="test_service", schema_validation=False)
@@ -408,4 +411,4 @@ class TestSWMLBuilderIntegration:
 
         # Verify verbs were added
         main_section = document["sections"]["main"]
-        assert len(main_section) > 0 
+        assert len(main_section) > 0

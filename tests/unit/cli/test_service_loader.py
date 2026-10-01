@@ -23,14 +23,9 @@ Tests cover:
 """
 
 import pytest
-import sys
-import types
-import importlib
-import importlib.util
 from pathlib import Path
-from typing import Any  # noqa: E402
-from unittest.mock import Mock, patch, MagicMock, PropertyMock, call
-from io import StringIO
+from typing import Any
+from unittest.mock import Mock, patch, MagicMock
 
 from signalwire.cli.core.service_loader import (
     ServiceCapture,
@@ -38,7 +33,6 @@ from signalwire.cli.core.service_loader import (
     load_agent_from_file,
     discover_agents_in_file,
     simulate_request_to_service,
-    DEPENDENCIES_AVAILABLE,
 )
 from signalwire.core.swml_service import SWMLService
 from signalwire.core.agent_base import AgentBase
@@ -47,6 +41,7 @@ from signalwire.core.agent_base import AgentBase
 # =============================================================================
 # Helper Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def capturer() -> ServiceCapture:
@@ -57,11 +52,14 @@ def capturer() -> ServiceCapture:
 class _FakeSWMLService:
     """A plain class that is NOT a subclass of AgentBase.
     Used so isinstance(obj, AgentBase) returns False."""
+
     name: str = ""
     route: str = ""
 
 
-def _make_mock_service(name: str = "test_service", route: str = "/test") -> _FakeSWMLService:
+def _make_mock_service(
+    name: str = "test_service", route: str = "/test"
+) -> _FakeSWMLService:
     """Create an object that is NOT an AgentBase instance."""
     svc = _FakeSWMLService()
     svc.name = name
@@ -91,13 +89,18 @@ def _make_mock_agent(
 # ServiceCapture.__init__ Tests
 # =============================================================================
 
+
 class TestServiceCaptureInit:
     """Tests for ServiceCapture initialization."""
 
-    def test_init_creates_empty_captured_services(self, capturer: ServiceCapture) -> None:
+    def test_init_creates_empty_captured_services(
+        self, capturer: ServiceCapture
+    ) -> None:
         assert capturer.captured_services == []
 
-    def test_init_creates_empty_original_methods(self, capturer: ServiceCapture) -> None:
+    def test_init_creates_empty_original_methods(
+        self, capturer: ServiceCapture
+    ) -> None:
         assert capturer.original_methods == {}
 
 
@@ -105,45 +108,60 @@ class TestServiceCaptureInit:
 # ServiceCapture.capture Error Handling Tests
 # =============================================================================
 
+
 class TestServiceCaptureErrors:
     """Tests for ServiceCapture.capture error conditions."""
 
-    def test_capture_file_not_found(self, capturer: ServiceCapture, tmp_path: Path) -> None:
+    def test_capture_file_not_found(
+        self, capturer: ServiceCapture, tmp_path: Path
+    ) -> None:
         """FileNotFoundError when the service file doesn't exist."""
         missing = str(tmp_path / "no_such_file.py")
         with pytest.raises(FileNotFoundError, match="Service file not found"):
             capturer.capture(missing)
 
-    def test_capture_non_python_file(self, capturer: ServiceCapture, tmp_path: Path) -> None:
+    def test_capture_non_python_file(
+        self, capturer: ServiceCapture, tmp_path: Path
+    ) -> None:
         """ValueError when the file is not a .py file."""
         txt_file = tmp_path / "service.txt"
         txt_file.write_text("not python")
         with pytest.raises(ValueError, match="must be a Python file"):
             capturer.capture(str(txt_file))
 
-    def test_capture_non_python_file_js(self, capturer: ServiceCapture, tmp_path: Path) -> None:
+    def test_capture_non_python_file_js(
+        self, capturer: ServiceCapture, tmp_path: Path
+    ) -> None:
         """ValueError for .js files."""
         js_file = tmp_path / "service.js"
         js_file.write_text("console.log('hi')")
         with pytest.raises(ValueError, match="must be a Python file"):
             capturer.capture(str(js_file))
 
-    def test_capture_dependencies_not_available(self, capturer: ServiceCapture, tmp_path: Path) -> None:
+    def test_capture_dependencies_not_available(
+        self, capturer: ServiceCapture, tmp_path: Path
+    ) -> None:
         """ImportError when DEPENDENCIES_AVAILABLE is False."""
         py_file = tmp_path / "service.py"
         py_file.write_text("pass")
-        with patch("signalwire.cli.core.service_loader.DEPENDENCIES_AVAILABLE", False):
-            with pytest.raises(ImportError, match="Required dependencies not available"):
-                capturer.capture(str(py_file))
+        with (
+            patch("signalwire.cli.core.service_loader.DEPENDENCIES_AVAILABLE", False),
+            pytest.raises(ImportError, match="Required dependencies not available"),
+        ):
+            capturer.capture(str(py_file))
 
-    def test_capture_import_error_no_services_captured(self, capturer: ServiceCapture, tmp_path: Path) -> None:
+    def test_capture_import_error_no_services_captured(
+        self, capturer: ServiceCapture, tmp_path: Path
+    ) -> None:
         """ImportError when module exec fails and no services were captured."""
         py_file = tmp_path / "bad_service.py"
         py_file.write_text("raise RuntimeError('import boom')")
         with pytest.raises(ImportError, match="Failed to load service module"):
             capturer.capture(str(py_file))
 
-    def test_capture_import_error_with_services_captured(self, capturer: ServiceCapture, tmp_path: Path) -> None:
+    def test_capture_import_error_with_services_captured(
+        self, capturer: ServiceCapture, tmp_path: Path
+    ) -> None:
         """When module exec fails but services were already captured, no error raised."""
         py_file = tmp_path / "partial_service.py"
         # Write a service file that will create an instance, call run(), then crash
@@ -162,10 +180,13 @@ class TestServiceCaptureErrors:
 # ServiceCapture.capture Successful Loading Tests
 # =============================================================================
 
+
 class TestServiceCaptureSuccess:
     """Tests for successful service capture scenarios."""
 
-    def test_capture_service_via_serve(self, capturer: ServiceCapture, tmp_path: Path) -> None:
+    def test_capture_service_via_serve(
+        self, capturer: ServiceCapture, tmp_path: Path
+    ) -> None:
         """Capture a service that calls serve()."""
         py_file = tmp_path / "my_service.py"
         py_file.write_text(
@@ -177,7 +198,9 @@ class TestServiceCaptureSuccess:
         assert len(services) == 1
         assert services[0].name == "serve_test"
 
-    def test_capture_service_via_run(self, capturer: ServiceCapture, tmp_path: Path) -> None:
+    def test_capture_service_via_run(
+        self, capturer: ServiceCapture, tmp_path: Path
+    ) -> None:
         """Capture a service that calls run() (via AgentBase)."""
         py_file = tmp_path / "my_agent.py"
         py_file.write_text(
@@ -188,7 +211,9 @@ class TestServiceCaptureSuccess:
         services = capturer.capture(str(py_file))
         assert len(services) == 1
 
-    def test_capture_multiple_services(self, capturer: ServiceCapture, tmp_path: Path) -> None:
+    def test_capture_multiple_services(
+        self, capturer: ServiceCapture, tmp_path: Path
+    ) -> None:
         """Capture multiple services from one file."""
         py_file = tmp_path / "multi_service.py"
         py_file.write_text(
@@ -203,7 +228,9 @@ class TestServiceCaptureSuccess:
         names = {s.name for s in services}
         assert names == {"svc1", "svc2"}
 
-    def test_capture_resets_list_between_calls(self, capturer: ServiceCapture, tmp_path: Path) -> None:
+    def test_capture_resets_list_between_calls(
+        self, capturer: ServiceCapture, tmp_path: Path
+    ) -> None:
         """captured_services is reset before each capture call."""
         py_file = tmp_path / "resettable.py"
         py_file.write_text(
@@ -219,7 +246,9 @@ class TestServiceCaptureSuccess:
         # Should be a fresh list, not appended
         assert len(capturer.captured_services) == 1
 
-    def test_capture_with_suppress_output(self, capturer: ServiceCapture, tmp_path: Path) -> None:
+    def test_capture_with_suppress_output(
+        self, capturer: ServiceCapture, tmp_path: Path
+    ) -> None:
         """suppress_output=True suppresses stdout from the loaded module."""
         py_file = tmp_path / "noisy_service.py"
         py_file.write_text(
@@ -229,8 +258,10 @@ class TestServiceCaptureSuccess:
             "svc.serve()\n"
         )
         import io
+
         captured_output = io.StringIO()
         import contextlib
+
         with contextlib.redirect_stdout(captured_output):
             services = capturer.capture(str(py_file), suppress_output=True)
 
@@ -239,7 +270,12 @@ class TestServiceCaptureSuccess:
         # suppress_output redirects inside capture()
         # (stdout was already redirected by capture, so our outer redirect sees nothing)
 
-    def test_capture_without_suppress_output(self, capturer: ServiceCapture, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_capture_without_suppress_output(
+        self,
+        capturer: ServiceCapture,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
         """suppress_output=False (default) allows stdout from the loaded module."""
         py_file = tmp_path / "chatty_service.py"
         py_file.write_text(
@@ -250,7 +286,9 @@ class TestServiceCaptureSuccess:
         services = capturer.capture(str(py_file), suppress_output=False)
         assert len(services) == 1
 
-    def test_capture_returns_list(self, capturer: ServiceCapture, tmp_path: Path) -> None:
+    def test_capture_returns_list(
+        self, capturer: ServiceCapture, tmp_path: Path
+    ) -> None:
         """capture() returns a list."""
         py_file = tmp_path / "list_service.py"
         py_file.write_text(
@@ -261,7 +299,9 @@ class TestServiceCaptureSuccess:
         result = capturer.capture(str(py_file))
         assert isinstance(result, list)
 
-    def test_capture_resolves_relative_path(self, capturer: ServiceCapture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_capture_resolves_relative_path(
+        self, capturer: ServiceCapture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """capture() resolves the path before checking existence."""
         py_file = tmp_path / "relative_service.py"
         py_file.write_text(
@@ -273,7 +313,9 @@ class TestServiceCaptureSuccess:
         services = capturer.capture("relative_service.py")
         assert len(services) == 1
 
-    def test_capture_empty_module_returns_empty_list(self, capturer: ServiceCapture, tmp_path: Path) -> None:
+    def test_capture_empty_module_returns_empty_list(
+        self, capturer: ServiceCapture, tmp_path: Path
+    ) -> None:
         """Capture of a file with no services returns empty list."""
         py_file = tmp_path / "empty_service.py"
         py_file.write_text("x = 42\n")
@@ -285,6 +327,7 @@ class TestServiceCaptureSuccess:
 # ServiceCapture._apply_patches and _restore_patches Tests
 # =============================================================================
 
+
 class TestServiceCapturePatching:
     """Tests for the patch/restore mechanism."""
 
@@ -295,8 +338,8 @@ class TestServiceCapturePatching:
         try:
             assert len(capturer.original_methods) > 0
             # Check that original serve was stored
-            assert (SWMLService, 'serve') in capturer.original_methods
-            assert capturer.original_methods[(SWMLService, 'serve')] is original_serve
+            assert (SWMLService, "serve") in capturer.original_methods
+            assert capturer.original_methods[(SWMLService, "serve")] is original_serve
         finally:
             capturer._restore_patches()
 
@@ -309,7 +352,9 @@ class TestServiceCapturePatching:
         finally:
             capturer._restore_patches()
 
-    def test_restore_patches_restores_original_methods(self, capturer: ServiceCapture) -> None:
+    def test_restore_patches_restores_original_methods(
+        self, capturer: ServiceCapture
+    ) -> None:
         """_restore_patches restores original methods."""
         original_serve = SWMLService.serve
         capturer._apply_patches()
@@ -327,7 +372,9 @@ class TestServiceCapturePatching:
         capturer._restore_patches()  # Should not raise
         assert capturer.original_methods == {}
 
-    def test_patches_restored_after_error(self, capturer: ServiceCapture, tmp_path: Path) -> None:
+    def test_patches_restored_after_error(
+        self, capturer: ServiceCapture, tmp_path: Path
+    ) -> None:
         """Patches are restored even when capture raises an error."""
         original_serve = SWMLService.serve
         py_file = tmp_path / "error_service.py"
@@ -341,7 +388,9 @@ class TestServiceCapturePatching:
         """The patched run() method captures the service instance."""
         capturer._apply_patches()
         try:
-            svc = SWMLService(name="mock_run_test", route="/mr", schema_validation=False)
+            svc = SWMLService(
+                name="mock_run_test", route="/mr", schema_validation=False
+            )
             # Calling run on the instance should capture it
             # But run is on WebMixin/AgentBase; for SWMLService only serve exists
             # Let's test serve:
@@ -365,6 +414,7 @@ class TestServiceCapturePatching:
 # load_and_simulate_service Tests
 # =============================================================================
 
+
 class TestLoadAndSimulateService:
     """Tests for the load_and_simulate_service function."""
 
@@ -380,27 +430,42 @@ class TestLoadAndSimulateService:
         mock_svc1 = _make_mock_service(route="/a")
         mock_svc2 = _make_mock_service(route="/b")
 
-        with patch.object(ServiceCapture, 'capture', return_value=[mock_svc1, mock_svc2]):
-            with pytest.raises(ValueError, match="Multiple services found"):
-                load_and_simulate_service("fake.py")
+        with (
+            patch.object(
+                ServiceCapture, "capture", return_value=[mock_svc1, mock_svc2]
+            ),
+            pytest.raises(ValueError, match="Multiple services found"),
+        ):
+            load_and_simulate_service("fake.py")
 
     def test_multiple_services_wrong_route_raises_value_error(self) -> None:
         """ValueError when specified route doesn't match any service."""
         mock_svc1 = _make_mock_service(route="/a")
         mock_svc2 = _make_mock_service(route="/b")
 
-        with patch.object(ServiceCapture, 'capture', return_value=[mock_svc1, mock_svc2]):
-            with pytest.raises(ValueError, match="No service found for route '/c'"):
-                load_and_simulate_service("fake.py", route="/c")
+        with (
+            patch.object(
+                ServiceCapture, "capture", return_value=[mock_svc1, mock_svc2]
+            ),
+            pytest.raises(ValueError, match="No service found for route '/c'"),
+        ):
+            load_and_simulate_service("fake.py", route="/c")
 
     def test_multiple_services_correct_route_selects_service(self) -> None:
         """Correct service selected when route matches."""
         mock_svc1 = _make_mock_service(route="/a")
         mock_svc2 = _make_mock_service(route="/b")
 
-        with patch.object(ServiceCapture, 'capture', return_value=[mock_svc1, mock_svc2]), \
-             patch("signalwire.cli.core.service_loader.simulate_request_to_service", new=MagicMock()), \
-             patch("signalwire.cli.core.service_loader.asyncio") as mock_asyncio:
+        with (
+            patch.object(
+                ServiceCapture, "capture", return_value=[mock_svc1, mock_svc2]
+            ),
+            patch(
+                "signalwire.cli.core.service_loader.simulate_request_to_service",
+                new=MagicMock(),
+            ),
+            patch("signalwire.cli.core.service_loader.asyncio") as mock_asyncio,
+        ):
             mock_asyncio.run.return_value = {"result": "ok"}
             result = load_and_simulate_service("fake.py", route="/b")
             assert result == {"result": "ok"}
@@ -412,9 +477,14 @@ class TestLoadAndSimulateService:
         """Single service is selected without needing a route."""
         mock_svc = _make_mock_service(route="/only")
 
-        with patch.object(ServiceCapture, 'capture', return_value=[mock_svc]), \
-             patch("signalwire.cli.core.service_loader.simulate_request_to_service", new=MagicMock()), \
-             patch("signalwire.cli.core.service_loader.asyncio") as mock_asyncio:
+        with (
+            patch.object(ServiceCapture, "capture", return_value=[mock_svc]),
+            patch(
+                "signalwire.cli.core.service_loader.simulate_request_to_service",
+                new=MagicMock(),
+            ),
+            patch("signalwire.cli.core.service_loader.asyncio") as mock_asyncio,
+        ):
             mock_asyncio.run.return_value = {"response": "data"}
             result = load_and_simulate_service("fake.py")
             assert result == {"response": "data"}
@@ -423,9 +493,14 @@ class TestLoadAndSimulateService:
         """Method, body, query_params, and headers are forwarded."""
         mock_svc = _make_mock_service(route="/only")
 
-        with patch.object(ServiceCapture, 'capture', return_value=[mock_svc]), \
-             patch("signalwire.cli.core.service_loader.simulate_request_to_service", new=MagicMock()), \
-             patch("signalwire.cli.core.service_loader.asyncio") as mock_asyncio:
+        with (
+            patch.object(ServiceCapture, "capture", return_value=[mock_svc]),
+            patch(
+                "signalwire.cli.core.service_loader.simulate_request_to_service",
+                new=MagicMock(),
+            ),
+            patch("signalwire.cli.core.service_loader.asyncio") as mock_asyncio,
+        ):
             mock_asyncio.run.return_value = {}
             load_and_simulate_service(
                 "fake.py",
@@ -433,7 +508,7 @@ class TestLoadAndSimulateService:
                 body={"key": "val"},
                 query_params={"q": "search"},
                 headers={"X-Custom": "header"},
-                suppress_output=True
+                suppress_output=True,
             )
             # Verify asyncio.run was called
             assert mock_asyncio.run.called
@@ -443,7 +518,9 @@ class TestLoadAndSimulateService:
         mock_svc1 = _make_mock_service(route="/route1")
         mock_svc2 = _make_mock_service(route="/route2")
 
-        with patch.object(ServiceCapture, 'capture', return_value=[mock_svc1, mock_svc2]):
+        with patch.object(
+            ServiceCapture, "capture", return_value=[mock_svc1, mock_svc2]
+        ):
             with pytest.raises(ValueError, match="/route1") as exc_info:
                 load_and_simulate_service("fake.py")
             assert "/route2" in str(exc_info.value)
@@ -453,6 +530,7 @@ class TestLoadAndSimulateService:
 # load_agent_from_file Tests
 # =============================================================================
 
+
 class TestLoadAgentFromFile:
     """Tests for the load_agent_from_file backward compatibility function."""
 
@@ -460,15 +538,17 @@ class TestLoadAgentFromFile:
         """ValueError when no agents found in the file."""
         mock_svc = _make_mock_service()  # Not an AgentBase
 
-        with patch.object(ServiceCapture, 'capture', return_value=[mock_svc]):
-            with pytest.raises(ValueError, match="No agents found"):
-                load_agent_from_file("fake.py")
+        with (
+            patch.object(ServiceCapture, "capture", return_value=[mock_svc]),
+            pytest.raises(ValueError, match="No agents found"),
+        ):
+            load_agent_from_file("fake.py")
 
     def test_single_agent_returned(self) -> None:
         """Single agent is returned directly."""
         mock_agent = _make_mock_agent(name="solo")
 
-        with patch.object(ServiceCapture, 'capture', return_value=[mock_agent]):
+        with patch.object(ServiceCapture, "capture", return_value=[mock_agent]):
             result = load_agent_from_file("fake.py")
             assert result is mock_agent
 
@@ -477,7 +557,7 @@ class TestLoadAgentFromFile:
         agent1 = _make_mock_agent(name="first", class_name="FirstAgent")
         agent2 = _make_mock_agent(name="second", class_name="SecondAgent")
 
-        with patch.object(ServiceCapture, 'capture', return_value=[agent1, agent2]):
+        with patch.object(ServiceCapture, "capture", return_value=[agent1, agent2]):
             result = load_agent_from_file("fake.py")
             assert result is agent1
 
@@ -486,7 +566,7 @@ class TestLoadAgentFromFile:
         agent1 = _make_mock_agent(name="first", class_name="FirstAgent")
         agent2 = _make_mock_agent(name="second", class_name="SecondAgent")
 
-        with patch.object(ServiceCapture, 'capture', return_value=[agent1, agent2]):
+        with patch.object(ServiceCapture, "capture", return_value=[agent1, agent2]):
             result = load_agent_from_file("fake.py", agent_class_name="SecondAgent")
             assert result is agent2
 
@@ -495,7 +575,7 @@ class TestLoadAgentFromFile:
         agent1 = _make_mock_agent(name="first", class_name="FirstAgent")
         agent2 = _make_mock_agent(name="second", class_name="SecondAgent")
 
-        with patch.object(ServiceCapture, 'capture', return_value=[agent1, agent2]):
+        with patch.object(ServiceCapture, "capture", return_value=[agent1, agent2]):
             result = load_agent_from_file("fake.py", agent_class_name="ThirdAgent")
             assert result is agent1
 
@@ -504,7 +584,9 @@ class TestLoadAgentFromFile:
         mock_svc = _make_mock_service()
         mock_agent = _make_mock_agent(name="real_agent")
 
-        with patch.object(ServiceCapture, 'capture', return_value=[mock_svc, mock_agent]):
+        with patch.object(
+            ServiceCapture, "capture", return_value=[mock_svc, mock_agent]
+        ):
             result = load_agent_from_file("fake.py")
             assert result is mock_agent
 
@@ -512,35 +594,42 @@ class TestLoadAgentFromFile:
         """suppress_output parameter is forwarded to capture()."""
         mock_agent = _make_mock_agent()
 
-        with patch.object(ServiceCapture, 'capture', return_value=[mock_agent]) as mock_capture:
+        with patch.object(
+            ServiceCapture, "capture", return_value=[mock_agent]
+        ) as mock_capture:
             load_agent_from_file("fake.py", suppress_output=True)
             mock_capture.assert_called_once_with("fake.py", suppress_output=True)
 
     def test_empty_capture_raises(self) -> None:
         """Empty capture list raises ValueError (no agents)."""
-        with patch.object(ServiceCapture, 'capture', return_value=[]):
-            with pytest.raises(ValueError, match="No agents found"):
-                load_agent_from_file("fake.py")
+        with (
+            patch.object(ServiceCapture, "capture", return_value=[]),
+            pytest.raises(ValueError, match="No agents found"),
+        ):
+            load_agent_from_file("fake.py")
 
 
 # =============================================================================
 # discover_agents_in_file Tests
 # =============================================================================
 
+
 class TestDiscoverAgentsInFile:
     """Tests for the discover_agents_in_file backward compatibility function."""
 
     def test_empty_file_returns_empty_list(self) -> None:
         """Empty capture returns empty list."""
-        with patch.object(ServiceCapture, 'capture', return_value=[]):
+        with patch.object(ServiceCapture, "capture", return_value=[]):
             result = discover_agents_in_file("fake.py")
             assert result == []
 
     def test_returns_proper_dict_format(self) -> None:
         """Each entry has expected keys: name, class_name, type, agent_name, route, description, object."""
-        mock_agent = _make_mock_agent(name="discover_me", route="/d", class_name="DiscoverAgent")
+        mock_agent = _make_mock_agent(
+            name="discover_me", route="/d", class_name="DiscoverAgent"
+        )
 
-        with patch.object(ServiceCapture, 'capture', return_value=[mock_agent]):
+        with patch.object(ServiceCapture, "capture", return_value=[mock_agent]):
             result = discover_agents_in_file("fake.py")
             assert len(result) == 1
             entry = result[0]
@@ -556,7 +645,9 @@ class TestDiscoverAgentsInFile:
         mock_svc = _make_mock_service()
         mock_agent = _make_mock_agent(name="agent_only")
 
-        with patch.object(ServiceCapture, 'capture', return_value=[mock_svc, mock_agent]):
+        with patch.object(
+            ServiceCapture, "capture", return_value=[mock_svc, mock_agent]
+        ):
             result = discover_agents_in_file("fake.py")
             assert len(result) == 1
             assert result[0]["name"] == "agent_only"
@@ -566,7 +657,7 @@ class TestDiscoverAgentsInFile:
         agent1 = _make_mock_agent(name="agent1", class_name="Agent1")
         agent2 = _make_mock_agent(name="agent2", class_name="Agent2")
 
-        with patch.object(ServiceCapture, 'capture', return_value=[agent1, agent2]):
+        with patch.object(ServiceCapture, "capture", return_value=[agent1, agent2]):
             result = discover_agents_in_file("fake.py")
             assert len(result) == 2
             names = {e["name"] for e in result}
@@ -577,7 +668,7 @@ class TestDiscoverAgentsInFile:
         mock_agent = _make_mock_agent(name="documented")
         # The docstring is set in _make_mock_agent via the type() call
 
-        with patch.object(ServiceCapture, 'capture', return_value=[mock_agent]):
+        with patch.object(ServiceCapture, "capture", return_value=[mock_agent]):
             result = discover_agents_in_file("fake.py")
             assert result[0]["description"] == "A mock agent"
 
@@ -585,6 +676,7 @@ class TestDiscoverAgentsInFile:
 # =============================================================================
 # simulate_request_to_service Tests
 # =============================================================================
+
 
 class TestSimulateRequestToService:
     """Tests for the async simulate_request_to_service function."""
@@ -599,17 +691,24 @@ class TestSimulateRequestToService:
 
         mock_service._handle_request = async_handler
 
-        with patch("signalwire.cli.simulation.mock_env.create_mock_request") as mock_create, \
-             patch("signalwire.cli.core.service_loader.Response") as mock_response_cls:
+        with (
+            patch(
+                "signalwire.cli.simulation.mock_env.create_mock_request"
+            ) as mock_create,
+            patch("signalwire.cli.core.service_loader.Response") as mock_response_cls,
+        ):
             mock_create.return_value = Mock()
             mock_response_cls.return_value = Mock()
-            result = await simulate_request_to_service(mock_service, body={"test": True})
+            result = await simulate_request_to_service(
+                mock_service, body={"test": True}
+            )
             assert result == {"swml": "data"}
 
     @pytest.mark.asyncio
     async def test_simulate_returns_body_response(self) -> None:
         """When the handler returns an object with body attr, parse as JSON."""
         import json as json_mod
+
         response_obj = Mock()
         response_obj.body = json_mod.dumps({"parsed": True}).encode()
 
@@ -620,8 +719,12 @@ class TestSimulateRequestToService:
 
         mock_service._handle_request = async_handler
 
-        with patch("signalwire.cli.simulation.mock_env.create_mock_request") as mock_create, \
-             patch("signalwire.cli.core.service_loader.Response") as mock_response_cls:
+        with (
+            patch(
+                "signalwire.cli.simulation.mock_env.create_mock_request"
+            ) as mock_create,
+            patch("signalwire.cli.core.service_loader.Response") as mock_response_cls,
+        ):
             mock_create.return_value = Mock()
             mock_response_cls.return_value = Mock()
             result = await simulate_request_to_service(mock_service)
@@ -637,8 +740,12 @@ class TestSimulateRequestToService:
 
         mock_service._handle_request = async_handler
 
-        with patch("signalwire.cli.simulation.mock_env.create_mock_request") as mock_create, \
-             patch("signalwire.cli.core.service_loader.Response") as mock_response_cls:
+        with (
+            patch(
+                "signalwire.cli.simulation.mock_env.create_mock_request"
+            ) as mock_create,
+            patch("signalwire.cli.core.service_loader.Response") as mock_response_cls,
+        ):
             mock_create.return_value = Mock()
             mock_response_cls.return_value = Mock()
             result = await simulate_request_to_service(mock_service)

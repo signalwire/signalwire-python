@@ -23,7 +23,11 @@ import pytest
 import requests
 from requests.adapters import BaseAdapter
 
-from signalwire.cli.execution.datamap_exec import _request, _Run, execute_datamap_function
+from signalwire.cli.execution.datamap_exec import (
+    _request,
+    _Run,
+    execute_datamap_function,
+)
 from signalwire.utils.url_validator import _PublicSession
 
 PUBLIC_ADDRESS = "93.184.216.34"
@@ -55,7 +59,9 @@ class Scripted(BaseAdapter):
             # Where Requests reads a response's cookies from
             message = http.client.HTTPMessage()
             message["Set-Cookie"] = headers["Set-Cookie"]
-            response.raw = SimpleNamespace(_original_response=SimpleNamespace(msg=message))
+            response.raw = SimpleNamespace(
+                _original_response=SimpleNamespace(msg=message)
+            )
         response._content = body.encode()
         response.url = request.url or ""
         response.request = request
@@ -84,15 +90,20 @@ def _scripted(routes: dict[str, tuple[int, dict[str, str], str]]) -> Iterator[Sc
             address = PUBLIC_ADDRESS
         return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (address, 0))]
 
-    with patch.object(_PublicSession, "__init__", init), \
-         patch("signalwire.utils.url_validator.socket.getaddrinfo", resolve):
+    with (
+        patch.object(_PublicSession, "__init__", init),
+        patch("signalwire.utils.url_validator.socket.getaddrinfo", resolve),
+    ):
         yield adapter
 
 
 def _function(webhook: dict[str, Any]) -> dict[str, Any]:
     return {
         "function": "lookup",
-        "data_map": {"webhooks": [webhook], "output": {"response": "The lookup failed."}},
+        "data_map": {
+            "webhooks": [webhook],
+            "output": {"response": "The lookup failed."},
+        },
     }
 
 
@@ -118,11 +129,18 @@ def test_a_post_is_sent_again_with_its_body_after_a_redirect() -> None:
 
 def test_a_redirect_to_a_private_address_is_refused() -> None:
     routes = {
-        "https://api.example.com/w": (302, {"Location": "http://127.0.0.1:8000/private"}, ""),
+        "https://api.example.com/w": (
+            302,
+            {"Location": "http://127.0.0.1:8000/private"},
+            "",
+        ),
         "http://127.0.0.1:8000/private": (200, {}, json.dumps({"answer": "internal"})),
     }
-    webhook = {"url": "https://api.example.com/w", "method": "GET",
-               "output": {"response": "Answer: ${answer}"}}
+    webhook = {
+        "url": "https://api.example.com/w",
+        "method": "GET",
+        "output": {"response": "Answer: ${answer}"},
+    }
     with _scripted(routes) as adapter:
         result = execute_datamap_function(_function(webhook), {})
     assert result == {"response": "The lookup failed."}
@@ -131,12 +149,19 @@ def test_a_redirect_to_a_private_address_is_refused() -> None:
 
 def test_credentials_stay_with_their_host() -> None:
     routes = {
-        "https://api.example.com/w": (302, {"Location": "https://other.example.com/x"}, ""),
+        "https://api.example.com/w": (
+            302,
+            {"Location": "https://other.example.com/x"},
+            "",
+        ),
         "https://other.example.com/x": (200, {}, json.dumps({"answer": "moved"})),
     }
-    webhook = {"url": "https://api.example.com/w", "method": "GET",
-               "headers": {"Authorization": "Bearer secret-key"},
-               "output": {"response": "Answer: ${answer}"}}
+    webhook = {
+        "url": "https://api.example.com/w",
+        "method": "GET",
+        "headers": {"Authorization": "Bearer secret-key"},
+        "output": {"response": "Answer: ${answer}"},
+    }
     with _scripted(routes) as adapter:
         result = execute_datamap_function(_function(webhook), {})
     assert result == {"response": "Answer: moved"}
@@ -146,12 +171,19 @@ def test_credentials_stay_with_their_host() -> None:
 
 def test_credentials_arent_sent_over_a_redirect_to_plain_http() -> None:
     routes = {
-        "https://api.example.com/w": (302, {"Location": "http://api.example.com/final"}, ""),
+        "https://api.example.com/w": (
+            302,
+            {"Location": "http://api.example.com/final"},
+            "",
+        ),
         "http://api.example.com/final": (200, {}, json.dumps({"answer": "downgraded"})),
     }
-    webhook = {"url": "https://user:pass@api.example.com/w", "method": "GET",
-               "headers": {"Authorization": "Bearer secret-key", "Cookie": "session=1"},
-               "output": {"response": "Answer: ${answer}"}}
+    webhook = {
+        "url": "https://user:pass@api.example.com/w",
+        "method": "GET",
+        "headers": {"Authorization": "Bearer secret-key", "Cookie": "session=1"},
+        "output": {"response": "Answer: ${answer}"},
+    }
     with _scripted(routes) as adapter:
         result = execute_datamap_function(_function(webhook), {})
     assert result == {"response": "Answer: downgraded"}
@@ -161,13 +193,20 @@ def test_credentials_arent_sent_over_a_redirect_to_plain_http() -> None:
 
 def test_the_same_origin_written_differently_keeps_its_credentials() -> None:
     routes = {
-        "https://api.example.com/w": (302, {"Location": "https://API.example.com:443/final"}, ""),
+        "https://api.example.com/w": (
+            302,
+            {"Location": "https://API.example.com:443/final"},
+            "",
+        ),
         "https://api.example.com:443/final": (200, {}, json.dumps({"answer": "same"})),
         "https://api.example.com/final": (200, {}, json.dumps({"answer": "same"})),
     }
-    webhook = {"url": "https://api.example.com/w", "method": "GET",
-               "headers": {"Authorization": "Bearer secret-key"},
-               "output": {"response": "Answer: ${answer}"}}
+    webhook = {
+        "url": "https://api.example.com/w",
+        "method": "GET",
+        "headers": {"Authorization": "Bearer secret-key"},
+        "output": {"response": "Answer: ${answer}"},
+    }
     with _scripted(routes) as adapter:
         result = execute_datamap_function(_function(webhook), {})
     assert result == {"response": "Answer: same"}
@@ -184,11 +223,20 @@ def test_netrc_and_response_cookies_add_no_credentials(
     monkeypatch.setenv("NETRC", str(netrc))
     routes = {
         "https://api.example.com/w": (
-            302, {"Location": "http://api.example.com/final", "Set-Cookie": "sid=abc; Path=/"}, ""),
+            302,
+            {
+                "Location": "http://api.example.com/final",
+                "Set-Cookie": "sid=abc; Path=/",
+            },
+            "",
+        ),
         "http://api.example.com/final": (200, {}, json.dumps({"answer": "plain"})),
     }
-    webhook = {"url": "https://api.example.com/w", "method": "GET",
-               "output": {"response": "Answer: ${answer}"}}
+    webhook = {
+        "url": "https://api.example.com/w",
+        "method": "GET",
+        "output": {"response": "Answer: ${answer}"},
+    }
     with _scripted(routes) as adapter:
         result = execute_datamap_function(_function(webhook), {})
     assert result == {"response": "Answer: plain"}
@@ -204,8 +252,11 @@ def test_any_3xx_with_a_location_is_followed(status: int) -> None:
         "https://api.example.com/w": (status, {"Location": "/final"}, ""),
         "https://api.example.com/final": (200, {}, json.dumps({"answer": "moved"})),
     }
-    webhook = {"url": "https://api.example.com/w", "method": "GET",
-               "output": {"response": "Answer: ${answer}"}}
+    webhook = {
+        "url": "https://api.example.com/w",
+        "method": "GET",
+        "output": {"response": "Answer: ${answer}"},
+    }
     with _scripted(routes):
         result = execute_datamap_function(_function(webhook), {})
     assert result == {"response": "Answer: moved"}
@@ -215,13 +266,19 @@ def test_a_failed_request_reports_the_last_status_received() -> None:
     # Like curl: after too many redirects, http_code is the last redirect's status
     routes = {"https://api.example.com/w": (302, {"Location": "/w"}, "")}
     with _scripted(routes):
-        reply = _request(_Run(False), {"url": "https://api.example.com/w", "method": "GET"}, {})
+        reply = _request(
+            _Run(False), {"url": "https://api.example.com/w", "method": "GET"}, {}
+        )
     assert reply["http_code"] == 302
     assert reply["http_req_result"] == 47
 
 
 def test_a_request_that_gets_no_response_reports_status_0() -> None:
-    routes = {"https://api.example.com/w": (302, {"Location": "http://127.0.0.1/x"}, "")}
+    routes = {
+        "https://api.example.com/w": (302, {"Location": "http://127.0.0.1/x"}, "")
+    }
     with _scripted(routes):
-        reply = _request(_Run(False), {"url": "http://127.0.0.1/x", "method": "GET"}, {})
+        reply = _request(
+            _Run(False), {"url": "http://127.0.0.1/x", "method": "GET"}, {}
+        )
     assert reply["http_code"] == 0

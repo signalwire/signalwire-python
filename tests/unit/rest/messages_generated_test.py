@@ -42,7 +42,7 @@ class TestMessagesWire:
     def test_messages_update(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.messages.update("test-id", body="x")
+        signalwire_client.messages.update("test-id")
         last = mock.last_request()
         assert last.method == "PATCH"
         assert last.matched_route == "messages.update_message"
@@ -52,5 +52,5 @@ class TestMessagesWire:
     ) -> None:
         mock.push_scenario("messages.update_message", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.messages.update("test-id", body="x")
+            signalwire_client.messages.update("test-id")
         assert exc.value.status_code == 500

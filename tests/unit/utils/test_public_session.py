@@ -95,7 +95,9 @@ def proxy_server() -> Iterator[tuple[int, list[str]]]:
 
 @pytest.mark.usefixtures("public_test_dns")
 class TestRedirects:
-    def test_redirect_to_metadata_address_is_refused(self, scripted_adapter: type) -> None:
+    def test_redirect_to_metadata_address_is_refused(
+        self, scripted_adapter: type
+    ) -> None:
         session = _PublicSession()
         adapter = scripted_adapter(
             {"http://public.test/start": (302, {"Location": METADATA_URL}, b"")}
@@ -105,7 +107,9 @@ class TestRedirects:
             session.get("http://public.test/start", timeout=5)
         assert adapter.sent == ["http://public.test/start"]
 
-    def test_redirect_to_public_address_is_followed(self, scripted_adapter: type) -> None:
+    def test_redirect_to_public_address_is_followed(
+        self, scripted_adapter: type
+    ) -> None:
         session = _PublicSession()
         adapter = scripted_adapter(
             {
@@ -138,9 +142,11 @@ class TestConnectionCheck:
         session = _PublicSession()
         # The check before the request saw a public address; the connection
         # then reaches 127.0.0.1.
-        with patch("signalwire.utils.url_validator.validate_url", return_value=True):
-            with pytest.raises(requests.exceptions.ConnectionError) as info:
-                session.get(f"http://127.0.0.1:{port}/", timeout=5)
+        with (
+            patch("signalwire.utils.url_validator.validate_url", return_value=True),
+            pytest.raises(requests.exceptions.ConnectionError) as info,
+        ):
+            session.get(f"http://127.0.0.1:{port}/", timeout=5)
         assert "private or internal address" in str(info.value)
         assert hits == []
 
@@ -172,9 +178,11 @@ class TestConnectionCheck:
     ) -> None:
         sock = Mock()
         sock.getpeername.return_value = peer
-        with patch.object(HTTPConnection, "_new_conn", return_value=sock):
-            with pytest.raises(_BlockedAddressError):
-                cls("public.test", 443)._new_conn()
+        with (
+            patch.object(HTTPConnection, "_new_conn", return_value=sock),
+            pytest.raises(_BlockedAddressError),
+        ):
+            cls("public.test", 443)._new_conn()
         sock.close.assert_called_once()
 
     @pytest.mark.parametrize("cls", [_PublicHTTPConnection, _PublicHTTPSConnection])
@@ -195,7 +203,13 @@ class TestProxies:
 
     @pytest.fixture(autouse=True)
     def _no_proxy_settings(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        for name in ("no_proxy", "NO_PROXY", "all_proxy", "ALL_PROXY", "SWML_URL_FETCH_USE_PROXY"):
+        for name in (
+            "no_proxy",
+            "NO_PROXY",
+            "all_proxy",
+            "ALL_PROXY",
+            "SWML_URL_FETCH_USE_PROXY",
+        ):
             monkeypatch.delenv(name, raising=False)
 
     @staticmethod
@@ -214,9 +228,11 @@ class TestProxies:
         self._set_proxy(monkeypatch, f"http://127.0.0.1:{proxy_port}")
         # The URL check passes, as it does for a hostname that resolves
         # publicly here and privately at the proxy
-        with patch("signalwire.utils.url_validator.validate_url", return_value=True):
-            with pytest.raises(requests.exceptions.ConnectionError) as info:
-                _PublicSession().get(f"http://127.0.0.1:{port}/", timeout=5)
+        with (
+            patch("signalwire.utils.url_validator.validate_url", return_value=True),
+            pytest.raises(requests.exceptions.ConnectionError) as info,
+        ):
+            _PublicSession().get(f"http://127.0.0.1:{port}/", timeout=5)
         assert "private or internal address" in str(info.value)
         assert requested == []
         assert hits == []
@@ -254,7 +270,9 @@ class TestProxies:
         send = adapter.send
 
         def record(request: requests.PreparedRequest, **kwargs: Any) -> Any:
-            seen.append((request.headers.get("Proxy-Authorization"), kwargs.get("proxies")))
+            seen.append(
+                (request.headers.get("Proxy-Authorization"), kwargs.get("proxies"))
+            )
             return send(request, **kwargs)
 
         adapter.send = record

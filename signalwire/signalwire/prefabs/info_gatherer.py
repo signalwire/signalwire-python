@@ -105,6 +105,7 @@ class InfoGathererAgent(AgentBase):
 
         Example:
             def my_question_callback(query_params, body_params, headers):
+                '''Choose the question set named by the ``set`` query parameter.'''
                 question_set = query_params.get('set', 'default')
                 if question_set == 'support':
                     return [

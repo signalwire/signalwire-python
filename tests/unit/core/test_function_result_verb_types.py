@@ -39,8 +39,11 @@ class TestPayTypes:
     def test_defaults_are_strings(self) -> None:
         pay = _pay(FunctionResult().pay("https://pay.example.com/c"))
         assert (
-            pay["timeout"], pay["max_attempts"], pay["min_postal_code_length"],
-            pay["security_code"], pay["postal_code"],
+            pay["timeout"],
+            pay["max_attempts"],
+            pay["min_postal_code_length"],
+            pay["security_code"],
+            pay["postal_code"],
         ) == ("5", "1", "0", "true", "true")
 
     def test_postal_code_string_is_the_code(self) -> None:

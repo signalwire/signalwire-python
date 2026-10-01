@@ -48,7 +48,7 @@ def _recording_sender(events: list[Any]) -> Any:
 def gateway() -> ChatGateway:
     client = AIChatClient(
         project="p",
-        token="t",  # noqa: S106 - test fixture, not a credential
+        token="t",
         url="https://service.example.invalid/aichat",
     )
     return ChatGateway(
@@ -297,11 +297,15 @@ class TestConcurrency:
             delivered.append(text)
             return True
 
-        router = HandoffRouter(gateway=gateway, send_message=send, max_messages_per_call=1)
+        router = HandoffRouter(
+            gateway=gateway, send_message=send, max_messages_per_call=1
+        )
         router.register("n", conversation_id="c", call_id="call-1")
 
         async def three_at_once() -> list[bool]:
-            return list(await asyncio.gather(*(router.say("n", f"m{i}") for i in range(3))))
+            return list(
+                await asyncio.gather(*(router.say("n", f"m{i}") for i in range(3)))
+            )
 
         results = asyncio.run(three_at_once())
         assert results.count(True) == 1
@@ -316,7 +320,9 @@ class TestConcurrency:
                 raise ConnectionError("platform unavailable")
             return True
 
-        router = HandoffRouter(gateway=gateway, send_message=send, max_messages_per_call=1)
+        router = HandoffRouter(
+            gateway=gateway, send_message=send, max_messages_per_call=1
+        )
         router.register("n", conversation_id="c", call_id="call-1")
         assert not asyncio.run(router.say("n", "first"))
         assert asyncio.run(router.say("n", "again"))
@@ -346,7 +352,9 @@ class TestCopyingRegistry:
             return True
 
         router = HandoffRouter(
-            gateway=gateway, send_message=send, max_messages_per_call=1,
+            gateway=gateway,
+            send_message=send,
+            max_messages_per_call=1,
             registry=self.Copying(),
         )
         router.register("n", conversation_id="c", call_id="call-1")
@@ -500,7 +508,9 @@ class TestSizeLimits:
         handoff.register("n", conversation_id="conv-root", call_id="call-9")
         padded = b'{"nonce": "n", "pad": "' + b"x" * MAX_REQUEST_BODY_BYTES + b'"}'
         refused = client.post(
-            "/chat/handoff", content=padded, headers={"Content-Type": "application/json"}
+            "/chat/handoff",
+            content=padded,
+            headers={"Content-Type": "application/json"},
         )
         assert refused.status_code == 413
         assert client.post("/chat/handoff", json={"nonce": "n"}).status_code == 200
@@ -566,7 +576,9 @@ class TestConversationIdSanitization:
             sdk_logger.setLevel(level)
 
     @pytest.mark.parametrize("safe", ["conv-abc", "root.2", "a_b-c.d:e"])
-    def test_safe_ids_are_quiet(self, safe: str, records: list[logging.LogRecord]) -> None:
+    def test_safe_ids_are_quiet(
+        self, safe: str, records: list[logging.LogRecord]
+    ) -> None:
         _warn_if_id_will_be_altered(safe)
         assert records == []
 

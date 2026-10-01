@@ -23,11 +23,11 @@ Contract (canonical reference form mirrored by every SDK port):
   invocation naming a non-existent file still reports ``parse OK``.
 """
 
-import sys  # noqa: E402
+import sys
 
-import pytest  # noqa: E402
+import pytest
 
-from signalwire.cli.test_swaig import main  # noqa: E402
+from signalwire.cli.test_swaig import main
 
 
 def _run(argv: list[str], monkeypatch: pytest.MonkeyPatch) -> int:

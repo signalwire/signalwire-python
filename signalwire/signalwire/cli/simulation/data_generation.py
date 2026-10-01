@@ -12,7 +12,6 @@ Generate fake SWML post_data and related helpers
 
 import uuid
 import json
-from datetime import datetime
 from typing import Any
 
 
@@ -26,54 +25,87 @@ def generate_fake_node_id() -> str:
     return f"test-node-{uuid.uuid4().hex[:8]}"
 
 
+#: The ``call.type`` device variants the engine writes in a SWML webhook request:
+#: each carries a different key set.
+CALL_TYPES = ("phone", "sip", "webrtc")
+
+
+def _fake_e164(prefix: str) -> str:
+    return f"{prefix}{uuid.uuid4().int % 10**7:07d}"
+
+
 def generate_fake_sip_from(call_type: str) -> str:
-    """Generate a fake 'from' address based on call type"""
+    """Generate a fake ``call.from`` address for a device type."""
+    if call_type == "phone":
+        return _fake_e164("+1555")
     if call_type == "sip":
-        return f"+1555{uuid.uuid4().hex[:7]}"  # Fake phone number
+        return f"sip:caller-{uuid.uuid4().hex[:8]}@test.sip.domain"
     # webrtc
     return f"user-{uuid.uuid4().hex[:8]}@test.domain"
 
 
 def generate_fake_sip_to(call_type: str) -> str:
-    """Generate a fake 'to' address based on call type"""
+    """Generate a fake ``call.to`` address for a device type."""
+    if call_type == "phone":
+        return _fake_e164("+1444")
     if call_type == "sip":
-        return f"+1444{uuid.uuid4().hex[:7]}"  # Fake phone number
+        return f"sip:agent-{uuid.uuid4().hex[:8]}@test.sip.domain"
     # webrtc
     return f"agent-{uuid.uuid4().hex[:8]}@test.domain"
 
 
+def _sip_uri_parts(address: str) -> tuple[str, str]:
+    """(user, host) of a ``sip:user@host`` address."""
+    user, _, host = address.removeprefix("sip:").partition("@")
+    return user, host
+
+
 def adapt_for_call_type(call_data: dict[str, Any], call_type: str) -> dict[str, Any]:
     """
-    Adapt call data structure based on call type (sip vs webrtc)
+    Add the device-variant keys the engine writes for ``call_type``.
+
+    The engine's ``call`` object is closed and its key set depends on the device
+    type (the per-device-type variants of the engine's SWML webhook request):
+
+    - ``phone``: ``type``, ``from``, ``to``, ``from_number``, ``to_number`` (``from``
+      and ``to`` repeat the numbers), optional ``headers``;
+    - ``sip``: ``type``, ``from``, ``to``, optional ``headers`` (an array of
+      ``{name, value}``) and ``sip_data``;
+    - ``webrtc``: ``type``, ``from``, ``to``.
 
     Args:
-        call_data: Base call data structure
-        call_type: "sip" or "webrtc"
+        call_data: Base call data structure (the keys common to every device type)
+        call_type: "phone", "sip" or "webrtc"
 
     Returns:
-        Adapted call data with appropriate addresses and metadata
+        A copy of ``call_data`` with that variant's keys added
     """
+    if call_type not in CALL_TYPES:
+        raise ValueError(f"call_type must be one of {CALL_TYPES}, got {call_type!r}")
     call_data = call_data.copy()
-
-    # Update addresses based on call type
+    call_data["type"] = call_type
     call_data["from"] = generate_fake_sip_from(call_type)
     call_data["to"] = generate_fake_sip_to(call_type)
 
-    # Add call type specific metadata
-    if call_type == "sip":
-        call_data["type"] = "phone"
-        call_data["headers"] = {
-            "User-Agent": "Test-SIP-Client/1.0.0",
-            "From": f"<sip:{call_data['from']}@test.sip.provider>",
-            "To": f"<sip:{call_data['to']}@test.sip.provider>",
-            "Call-ID": call_data["call_id"],
-        }
-    else:  # webrtc
-        call_data["type"] = "webrtc"
-        call_data["headers"] = {
-            "User-Agent": "Test-WebRTC-Client/1.0.0",
-            "Origin": "https://test.webrtc.app",
-            "Sec-WebSocket-Protocol": "sip",
+    if call_type == "phone":
+        call_data["from_number"] = call_data["from"]
+        call_data["to_number"] = call_data["to"]
+    elif call_type == "sip":
+        call_data["headers"] = [
+            {"name": "X-Test-Client", "value": "swaig-test"},
+        ]
+        from_user, from_host = _sip_uri_parts(call_data["from"])
+        to_user, to_host = _sip_uri_parts(call_data["to"])
+        call_data["sip_data"] = {
+            "sip_req_user": to_user,
+            "sip_req_host": to_host,
+            "sip_req_uri": f"{to_user}@{to_host}",
+            "sip_from_user": from_user,
+            "sip_from_host": from_host,
+            "sip_from_uri": f"{from_user}@{from_host}",
+            "sip_to_user": to_user,
+            "sip_to_host": to_host,
+            "sip_to_uri": f"{to_user}@{to_host}",
         }
 
     return call_data
@@ -85,51 +117,33 @@ def generate_fake_swml_post_data(
     call_state: str = "created",
 ) -> dict[str, Any]:
     """
-    Generate fake SWML post_data that matches real SignalWire structure
+    Generate a fake SWML webhook request body in the engine's shape
+
+    The shape is the body the SignalWire engine POSTs to a SWML webhook (the
+    same contract ``SwmlRequestData`` types): a closed ``call`` object carrying ``call_id``, ``node_id``, ``call_state`` and
+    ``direction`` plus its device variant's keys, the ``vars`` bag (always
+    present) and ``envs``.
 
     Args:
-        call_type: "sip" or "webrtc" (default: webrtc)
+        call_type: "phone", "sip" or "webrtc" (default: webrtc)
         call_direction: "inbound" or "outbound" (default: inbound)
         call_state: Call state (default: created)
 
     Returns:
-        Fake post_data dict with call, vars, and envs structure
+        Fake request body with call, vars, and envs
     """
-    call_id = generate_fake_uuid()
-    project_id = generate_fake_uuid()
-    space_id = generate_fake_uuid()
-    current_time = datetime.now().isoformat()
-
-    # Base call structure
-    call_data = {
-        "call_id": call_id,
+    call_data: dict[str, Any] = {
+        "project_id": generate_fake_uuid(),
+        "space_id": generate_fake_uuid(),
+        "call_id": generate_fake_uuid(),
         "node_id": generate_fake_node_id(),
         "segment_id": generate_fake_uuid(),
-        "call_session_id": generate_fake_uuid(),
-        "tag": call_id,
-        "state": call_state,
+        "call_state": call_state,
         "direction": call_direction,
-        "type": call_type,
-        "from": generate_fake_sip_from(call_type),
-        "to": generate_fake_sip_to(call_type),
-        "timeout": 30,
-        "max_duration": 14400,
-        "answer_on_bridge": False,
-        "hangup_after_bridge": True,
-        "ringback": [],
-        "record": {},
-        "project_id": project_id,
-        "space_id": space_id,
-        "created_at": current_time,
-        "updated_at": current_time,
     }
 
-    # Adapt for specific call type
-    call_data = adapt_for_call_type(call_data, call_type)
-
-    # Complete post_data structure
     return {
-        "call": call_data,
+        "call": adapt_for_call_type(call_data, call_type),
         "vars": {
             "userVariables": {}  # Empty by default, can be filled via overrides
         },
@@ -141,177 +155,78 @@ def generate_comprehensive_post_data(
     function_name: str,
     args: dict[str, Any],
     custom_data: dict[str, Any] | None = None,
+    *,
+    description: str = "",
+    argument_desc: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
-    Generate comprehensive post_data that matches what SignalWire would send
+    Generate a full SWAIG function request body in the engine's shape
+
+    The shape is the body the SignalWire engine POSTs to a SWAIG function's
+    ``web_hook_url`` (the same contract ``SwaigRequest`` types): every key the engine
+    always writes, plus the conditional keys a fully-configured call carries (caller
+    ID, project/space, global data, a meta_data token, and the conversation log that
+    ``swaig_post_conversation`` adds). Keys the engine writes only on the data_map
+    path (``args``, ``input``) or on an error invocation (``fatal_error``,
+    ``error_reason``) are not fabricated.
 
     Args:
         function_name: Name of the SWAIG function being called
         args: Function arguments
-        custom_data: Optional custom data to override defaults
+        custom_data: Optional custom data merged over the generated body
+        description: The function's description (the engine sends it)
+        argument_desc: The function's parameter JSON Schema (the engine sends it)
 
     Returns:
-        Complete post_data dict with all possible keys
+        The request body
     """
     call_id = str(uuid.uuid4())
-    session_id = str(uuid.uuid4())
-    project_id = str(uuid.uuid4())
-    space_id = str(uuid.uuid4())
-    space_name = "test-space"
-    environment = "production"
+    raw_args = json.dumps(args)
+    tool_call = {
+        "id": f"call_{call_id[:8]}",
+        "type": "function",
+        "function": {"name": function_name, "arguments": raw_args},
+    }
+    call_log: list[dict[str, Any]] = [
+        {
+            "role": "system",
+            "content": "You are a helpful AI assistant created with SignalWire AI Agents.",
+        },
+        {"role": "user", "content": f"Please call the {function_name} function"},
+        {
+            "role": "assistant",
+            "content": f"I'll call the {function_name} function for you.",
+            "tool_calls": [tool_call],
+        },
+    ]
 
-    current_time = datetime.now().isoformat()
-
-    # Base structure with all keys
     post_data: dict[str, Any] = {
+        # Always present.
+        "ai_session_id": str(uuid.uuid4()),
+        "app_name": "swaig-test",
+        "argument": {"parsed": [args], "raw": raw_args},
+        "argument_desc": argument_desc
+        if argument_desc is not None
+        else {"type": "object", "properties": {}},
         "call_id": call_id,
-        "call": {
-            "call_id": call_id,
-            "node_id": f"test-node-{uuid.uuid4().hex[:8]}",
-            "segment_id": str(uuid.uuid4()),
-            "call_session_id": str(uuid.uuid4()),
-            "to": "+15551234567",
-            "from": "+15559876543",
-            "direction": "inbound",
-            "state": "answered",
-            "tag": call_id,
-            "project_id": project_id,
-            "space_id": space_id,
-            "headers": {"User-Agent": "SignalWire/1.0"},
-            "type": "phone",
-            "timeout": 30,
-            "answer_on_bridge": False,
-            "created_at": current_time,
-            "updated_at": current_time,
-        },
-        "vars": {
-            "environment": environment,
-            "space_id": space_id,
-            "userVariables": {},
-            "call_data": {
-                "id": call_id,
-                "state": "answered",
-                "type": "phone",
-                "from": "+15559876543",
-                "to": "+15551234567",
-                "project_id": project_id,
-                "created_at": current_time,
-            },
-        },
-        "params": args,
-        "space_id": space_id,
-        "project_id": project_id,
-        "meta_data": {
-            "application": {"name": "SignalWire AI Agent", "version": "1.0.0"},
-            "swml": {"version": "1.0.0", "session_id": session_id},
-            "ai": {
-                "call_id": call_id,
-                "session_id": session_id,
-                "conversation_id": session_id,
-            },
-            "request": {
-                "method": "POST",
-                "source_ip": "192.168.1.1",
-                "user_agent": "SignalWire-AI-Agent/1.0",
-            },
-            "timing": {"request_start": current_time, "function_start": current_time},
-            "user": {
-                "id": f"user-{uuid.uuid4().hex[:8]}",
-                "session_start": current_time,
-                "last_updated": current_time,
-            },
-        },
-        # Global application data
-        "global_data": {
-            "app_name": "test_application",
-            "environment": "test",
-            "user_preferences": {"language": "en"},
-            "session_data": {"start_time": current_time},
-        },
-        # Conversation context
-        "call_log": [
-            {
-                "role": "system",
-                "content": "You are a helpful AI assistant created with SignalWire AI Agents.",
-            },
-            {"role": "user", "content": f"Please call the {function_name} function"},
-            {
-                "role": "assistant",
-                "content": f"I'll call the {function_name} function for you.",
-                "tool_calls": [
-                    {
-                        "id": f"call_{call_id[:8]}",
-                        "type": "function",
-                        "function": {
-                            "name": function_name,
-                            "arguments": json.dumps(args),
-                        },
-                    }
-                ],
-            },
-        ],
-        "raw_call_log": [
-            {
-                "role": "system",
-                "content": "You are a helpful AI assistant created with SignalWire AI Agents.",
-            },
-            {"role": "user", "content": "Hello"},
-            {"role": "assistant", "content": "Hello! How can I help you today?"},
-            {"role": "user", "content": f"Please call the {function_name} function"},
-            {
-                "role": "assistant",
-                "content": f"I'll call the {function_name} function for you.",
-                "tool_calls": [
-                    {
-                        "id": f"call_{call_id[:8]}",
-                        "type": "function",
-                        "function": {
-                            "name": function_name,
-                            "arguments": json.dumps(args),
-                        },
-                    }
-                ],
-            },
-        ],
-        # SWML and prompt variables
-        "prompt_vars": {
-            # From SWML prompt variables
-            "ai_instructions": "You are a helpful assistant",
-            "temperature": 0.7,
-            "max_tokens": 1000,
-            # From global_data
-            "app_name": "test_application",
-            "environment": "test",
-            "user_preferences": {"language": "en"},
-            "session_data": {"start_time": current_time},
-            # SWML system variables
-            "current_timestamp": current_time,
-            "call_duration": "00:02:15",
-            "caller_number": "+15551234567",
-            "to_number": "+15559876543",
-        },
-        # Permission flags (from SWML parameters)
-        "swaig_allow_swml": True,
-        "swaig_post_conversation": True,
-        "swaig_post_swml_vars": True,
-        # Additional context
-        "http_method": "POST",
-        "webhook_url": f"https://test.example.com/webhook/{function_name}",
-        "user_agent": "SignalWire-AI-Agent/1.0",
-        "request_headers": {
-            "Content-Type": "application/json",
-            "User-Agent": "SignalWire-AI-Agent/1.0",
-            "X-Signalwire-Call-Id": call_id,
-            "X-Signalwire-Session-Id": session_id,
-        },
-        # SignalWire environment data
-        "swml_env": {
-            "space_id": space_id,
-            "project_id": project_id,
-            "environment": environment,
-            "space_name": space_name,
-            "api_version": "1.0.0",
-        },
+        "channel_active": True,
+        "channel_offhook": True,
+        "channel_ready": True,
+        "content_disposition": "SWAIG Function",
+        "content_type": "text/swaig",
+        "description": description,
+        "function": function_name,
+        "version": "2.0",
+        # Conditional: present on a fully-configured call.
+        "caller_id_name": "Test Caller",
+        "caller_id_num": "+15559876543",
+        "project_id": str(uuid.uuid4()),
+        "space_id": str(uuid.uuid4()),
+        "global_data": {},
+        "meta_data_token": f"token-{uuid.uuid4().hex[:8]}",
+        "meta_data": {},
+        "call_log": call_log,
+        "raw_call_log": [dict(entry) for entry in call_log],
     }
 
     # Apply custom data overrides if provided

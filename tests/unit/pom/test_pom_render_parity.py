@@ -19,17 +19,13 @@ Port translations live next to each port's POM module:
   - (others as ported)
 """
 
-import json
-import textwrap
-
-import yaml
-
-from signalwire.pom.pom import PromptObjectModel, Section
+from signalwire.pom.pom import PromptObjectModel
 
 
 # ----------------------------------------------------------------------------
 # Empty POM
 # ----------------------------------------------------------------------------
+
 
 class TestEmptyPom:
     def test_empty_render_markdown_is_empty_string(self) -> None:
@@ -55,6 +51,7 @@ class TestEmptyPom:
 # Single section with title + body
 # ----------------------------------------------------------------------------
 
+
 class TestSimpleSection:
     def test_render_markdown_exact(self) -> None:
         pom = PromptObjectModel()
@@ -67,12 +64,12 @@ class TestSimpleSection:
         pom.add_section(title="Greeting", body="Hello world")
         expected = (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<prompt>\n'
-            '  <section>\n'
-            '    <title>Greeting</title>\n'
-            '    <body>Hello world</body>\n'
-            '  </section>\n'
-            '</prompt>'
+            "<prompt>\n"
+            "  <section>\n"
+            "    <title>Greeting</title>\n"
+            "    <body>Hello world</body>\n"
+            "  </section>\n"
+            "</prompt>"
         )
         assert pom.render_xml() == expected
 
@@ -81,30 +78,33 @@ class TestSimpleSection:
 # Section with bullets
 # ----------------------------------------------------------------------------
 
+
 class TestBullets:
     def test_render_markdown_with_bullets(self) -> None:
         pom = PromptObjectModel()
-        pom.add_section(title="Goals", body="Be helpful",
-                       bullets=["Be concise", "Be clear"])
+        pom.add_section(
+            title="Goals", body="Be helpful", bullets=["Be concise", "Be clear"]
+        )
         expected = "## Goals\n\nBe helpful\n\n- Be concise\n- Be clear\n"
         assert pom.render_markdown() == expected
 
     def test_render_xml_with_bullets(self) -> None:
         pom = PromptObjectModel()
-        pom.add_section(title="Goals", body="Be helpful",
-                       bullets=["Be concise", "Be clear"])
+        pom.add_section(
+            title="Goals", body="Be helpful", bullets=["Be concise", "Be clear"]
+        )
         expected = (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<prompt>\n'
-            '  <section>\n'
-            '    <title>Goals</title>\n'
-            '    <body>Be helpful</body>\n'
-            '    <bullets>\n'
-            '      <bullet>Be concise</bullet>\n'
-            '      <bullet>Be clear</bullet>\n'
-            '    </bullets>\n'
-            '  </section>\n'
-            '</prompt>'
+            "<prompt>\n"
+            "  <section>\n"
+            "    <title>Goals</title>\n"
+            "    <body>Be helpful</body>\n"
+            "    <bullets>\n"
+            "      <bullet>Be concise</bullet>\n"
+            "      <bullet>Be clear</bullet>\n"
+            "    </bullets>\n"
+            "  </section>\n"
+            "</prompt>"
         )
         assert pom.render_xml() == expected
 
@@ -112,6 +112,7 @@ class TestBullets:
 # ----------------------------------------------------------------------------
 # Subsections
 # ----------------------------------------------------------------------------
+
 
 class TestSubsections:
     def test_render_markdown_with_subsection(self) -> None:
@@ -127,22 +128,22 @@ class TestSubsections:
         s.add_subsection(title="Sub1", body="Sub1 body", bullets=["a", "b"])
         expected = (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<prompt>\n'
-            '  <section>\n'
-            '    <title>Top</title>\n'
-            '    <body>Top body</body>\n'
-            '    <subsections>\n'
-            '      <section>\n'
-            '        <title>Sub1</title>\n'
-            '        <body>Sub1 body</body>\n'
-            '        <bullets>\n'
-            '          <bullet>a</bullet>\n'
-            '          <bullet>b</bullet>\n'
-            '        </bullets>\n'
-            '      </section>\n'
-            '    </subsections>\n'
-            '  </section>\n'
-            '</prompt>'
+            "<prompt>\n"
+            "  <section>\n"
+            "    <title>Top</title>\n"
+            "    <body>Top body</body>\n"
+            "    <subsections>\n"
+            "      <section>\n"
+            "        <title>Sub1</title>\n"
+            "        <body>Sub1 body</body>\n"
+            "        <bullets>\n"
+            "          <bullet>a</bullet>\n"
+            "          <bullet>b</bullet>\n"
+            "        </bullets>\n"
+            "      </section>\n"
+            "    </subsections>\n"
+            "  </section>\n"
+            "</prompt>"
         )
         assert pom.render_xml() == expected
 
@@ -150,6 +151,7 @@ class TestSubsections:
 # ----------------------------------------------------------------------------
 # Numbered top-level sections
 # ----------------------------------------------------------------------------
+
 
 class TestNumberedSections:
     def test_render_markdown_numbered_propagates_to_siblings(self) -> None:
@@ -167,16 +169,16 @@ class TestNumberedSections:
         pom.add_section(title="S2", body="b2")
         expected = (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<prompt>\n'
-            '  <section>\n'
-            '    <title>1. S1</title>\n'
-            '    <body>b1</body>\n'
-            '  </section>\n'
-            '  <section>\n'
-            '    <title>2. S2</title>\n'
-            '    <body>b2</body>\n'
-            '  </section>\n'
-            '</prompt>'
+            "<prompt>\n"
+            "  <section>\n"
+            "    <title>1. S1</title>\n"
+            "    <body>b1</body>\n"
+            "  </section>\n"
+            "  <section>\n"
+            "    <title>2. S2</title>\n"
+            "    <body>b2</body>\n"
+            "  </section>\n"
+            "</prompt>"
         )
         assert pom.render_xml() == expected
 
@@ -184,6 +186,7 @@ class TestNumberedSections:
 # ----------------------------------------------------------------------------
 # Numbered bullets
 # ----------------------------------------------------------------------------
+
 
 class TestNumberedBullets:
     def test_render_markdown_numbered_bullets(self) -> None:
@@ -197,15 +200,15 @@ class TestNumberedBullets:
         pom.add_section(title="X", bullets=["one", "two"], numberedBullets=True)
         expected = (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<prompt>\n'
-            '  <section>\n'
-            '    <title>X</title>\n'
-            '    <bullets>\n'
+            "<prompt>\n"
+            "  <section>\n"
+            "    <title>X</title>\n"
+            "    <bullets>\n"
             '      <bullet id="1">one</bullet>\n'
             '      <bullet id="2">two</bullet>\n'
-            '    </bullets>\n'
-            '  </section>\n'
-            '</prompt>'
+            "    </bullets>\n"
+            "  </section>\n"
+            "</prompt>"
         )
         assert pom.render_xml() == expected
 
@@ -214,27 +217,28 @@ class TestNumberedBullets:
 # JSON / YAML round-trip with exact key order
 # ----------------------------------------------------------------------------
 
+
 class TestSerialization:
     def test_to_json_exact_shape(self) -> None:
         pom = PromptObjectModel()
         s = pom.add_section(title="A", body="ab")
         s.add_subsection(title="A1", body="a1b", bullets=["x"])
         expected = (
-            '[\n'
-            '  {\n'
+            "[\n"
+            "  {\n"
             '    "title": "A",\n'
             '    "body": "ab",\n'
             '    "subsections": [\n'
-            '      {\n'
+            "      {\n"
             '        "title": "A1",\n'
             '        "body": "a1b",\n'
             '        "bullets": [\n'
             '          "x"\n'
-            '        ]\n'
-            '      }\n'
-            '    ]\n'
-            '  }\n'
-            ']'
+            "        ]\n"
+            "      }\n"
+            "    ]\n"
+            "  }\n"
+            "]"
         )
         assert pom.to_json() == expected
 
@@ -274,6 +278,7 @@ class TestSerialization:
 # find_section recursion
 # ----------------------------------------------------------------------------
 
+
 class TestFindSection:
     def test_find_section_top_level(self) -> None:
         pom = PromptObjectModel()
@@ -300,6 +305,7 @@ class TestFindSection:
 # ----------------------------------------------------------------------------
 # add_pom_as_subsection
 # ----------------------------------------------------------------------------
+
 
 class TestAddPomAsSubsection:
     def test_add_pom_to_existing_section_by_title(self) -> None:

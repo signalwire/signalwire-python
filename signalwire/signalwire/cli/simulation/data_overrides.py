@@ -112,6 +112,19 @@ def apply_overrides(
     return data
 
 
+def _address(value: str, call_type: str, fake_prefix: str) -> str:
+    """A ``call.from``/``call.to`` value for a device type: a phone number or a full
+    address (``user@host``) is used as-is; otherwise a phone call gets a fake number
+    and a sip/webrtc call gets ``value`` as the user part of an address."""
+    if value.startswith("+") or value.isdigit() or "@" in value:
+        return value
+    if call_type == "phone":
+        return f"{fake_prefix}{uuid.uuid4().int % 10**7:07d}"
+    if call_type == "sip":
+        return f"sip:{value}@test.sip.domain"
+    return f"{value}@test.domain"
+
+
 def apply_convenience_mappings(
     data: dict[str, Any], args: argparse.Namespace
 ) -> dict[str, Any]:
@@ -129,50 +142,45 @@ def apply_convenience_mappings(
 
     # Map high-level arguments to specific paths
     if hasattr(args, "call_id") and args.call_id:
-        # Set at root level for SWAIG functions
-        data["call_id"] = args.call_id
-        # Also set in call object if it exists
+        # A SWAIG function request carries call_id at the ROOT; a SWML webhook
+        # request carries it only inside its closed ``call`` object (a root call_id
+        # is a key the engine never writes there).
+        if "call" not in data or "call_id" in data:
+            data["call_id"] = args.call_id
         if "call" in data:
-            set_nested_value(data, "call.call_id", args.call_id)
-            set_nested_value(
-                data, "call.tag", args.call_id
-            )  # tag often matches call_id
+            data["call"] = {**data["call"], "call_id": args.call_id}
 
-    if hasattr(args, "project_id") and args.project_id:
-        set_nested_value(data, "call.project_id", args.project_id)
+    # The call.* keys below belong to the SWML webhook request's ``call`` object
+    # (the engine's shape, typed by ``SwmlRequestData``). They
+    # are applied only to a body that HAS one — never fabricated into a body (e.g. a
+    # SWAIG function request) whose contract carries no ``call`` object.
+    if "call" in data:
+        call = data["call"] = dict(data["call"])
+        call_type = call.get("type", getattr(args, "call_type", "webrtc"))
 
-    if hasattr(args, "space_id") and args.space_id:
-        set_nested_value(data, "call.space_id", args.space_id)
+        if hasattr(args, "project_id") and args.project_id:
+            call["project_id"] = args.project_id
 
-    if hasattr(args, "call_state") and args.call_state:
-        set_nested_value(data, "call.state", args.call_state)
+        if hasattr(args, "space_id") and args.space_id:
+            call["space_id"] = args.space_id
 
-    if hasattr(args, "call_direction") and args.call_direction:
-        set_nested_value(data, "call.direction", args.call_direction)
+        if hasattr(args, "call_state") and args.call_state:
+            call["call_state"] = args.call_state
 
-    # Handle from/to addresses with fake generation if needed
-    if hasattr(args, "from_number") and args.from_number:
-        # If looks like phone number, use as-is, otherwise generate fake
-        if args.from_number.startswith("+") or args.from_number.isdigit():
-            set_nested_value(data, "call.from", args.from_number)
-        else:
-            # Generate fake phone number or SIP address
-            call_type = getattr(args, "call_type", "webrtc")
-            if call_type == "sip":
-                set_nested_value(data, "call.from", f"+1555{uuid.uuid4().hex[:7]}")
-            else:
-                set_nested_value(data, "call.from", f"{args.from_number}@test.domain")
+        if hasattr(args, "call_direction") and args.call_direction:
+            call["direction"] = args.call_direction
 
-    if hasattr(args, "to_extension") and args.to_extension:
-        # Similar logic for 'to' address
-        if args.to_extension.startswith("+") or args.to_extension.isdigit():
-            set_nested_value(data, "call.to", args.to_extension)
-        else:
-            call_type = getattr(args, "call_type", "webrtc")
-            if call_type == "sip":
-                set_nested_value(data, "call.to", f"+1444{uuid.uuid4().hex[:7]}")
-            else:
-                set_nested_value(data, "call.to", f"{args.to_extension}@test.domain")
+        # from/to addresses; a phone call carries each number twice (from +
+        # from_number, to + to_number), so both are kept in step.
+        if hasattr(args, "from_number") and args.from_number:
+            call["from"] = _address(args.from_number, call_type, "+1555")
+            if call_type == "phone":
+                call["from_number"] = call["from"]
+
+        if hasattr(args, "to_extension") and args.to_extension:
+            call["to"] = _address(args.to_extension, call_type, "+1444")
+            if call_type == "phone":
+                call["to_number"] = call["to"]
 
     # Merge user variables
     user_vars = {}

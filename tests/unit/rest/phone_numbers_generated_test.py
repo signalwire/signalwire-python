@@ -23,6 +23,42 @@ if TYPE_CHECKING:
 
 
 class TestPhoneNumbersWire:
+    def test_phone_numbers_assign_e911_address(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.phone_numbers.assign_e911_address(
+            "test-id", e911_address_id="x"
+        )
+        last = mock.last_request()
+        assert last.method == "POST"
+        assert last.matched_route == "relay-rest.assign_e911_address"
+
+    def test_phone_numbers_assign_e911_address_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("relay-rest.assign_e911_address", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.phone_numbers.assign_e911_address(
+                "test-id", e911_address_id="x"
+            )
+        assert exc.value.status_code == 500
+
+    def test_phone_numbers_clear_cnam(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.phone_numbers.clear_cnam("test-id")
+        last = mock.last_request()
+        assert last.method == "DELETE"
+        assert last.matched_route == "relay-rest.clear_caller_id_name"
+
+    def test_phone_numbers_clear_cnam_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("relay-rest.clear_caller_id_name", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.phone_numbers.clear_cnam("test-id")
+        assert exc.value.status_code == 500
+
     def test_phone_numbers_create(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
@@ -71,6 +107,22 @@ class TestPhoneNumbersWire:
             signalwire_client.phone_numbers.get("test-id")
         assert exc.value.status_code == 500
 
+    def test_phone_numbers_get_cnam(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.phone_numbers.get_cnam("test-id")
+        last = mock.last_request()
+        assert last.method == "GET"
+        assert last.matched_route == "relay-rest.retrieve_caller_id_name"
+
+    def test_phone_numbers_get_cnam_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("relay-rest.retrieve_caller_id_name", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.phone_numbers.get_cnam("test-id")
+        assert exc.value.status_code == 500
+
     def test_phone_numbers_list(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
@@ -85,6 +137,38 @@ class TestPhoneNumbersWire:
         mock.push_scenario("relay-rest.list_phone_numbers", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
             signalwire_client.phone_numbers.list()
+        assert exc.value.status_code == 500
+
+    def test_phone_numbers_remove_e911_address(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.phone_numbers.remove_e911_address("test-id")
+        last = mock.last_request()
+        assert last.method == "DELETE"
+        assert last.matched_route == "relay-rest.remove_e911_address"
+
+    def test_phone_numbers_remove_e911_address_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("relay-rest.remove_e911_address", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.phone_numbers.remove_e911_address("test-id")
+        assert exc.value.status_code == 500
+
+    def test_phone_numbers_request_cnam(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.phone_numbers.request_cnam("test-id", name="x")
+        last = mock.last_request()
+        assert last.method == "POST"
+        assert last.matched_route == "relay-rest.request_caller_id_name"
+
+    def test_phone_numbers_request_cnam_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("relay-rest.request_caller_id_name", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.phone_numbers.request_cnam("test-id", name="x")
         assert exc.value.status_code == 500
 
     def test_phone_numbers_search(

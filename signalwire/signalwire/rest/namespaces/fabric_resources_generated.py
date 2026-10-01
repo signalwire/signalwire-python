@@ -9,21 +9,34 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, cast
 from collections.abc import Mapping
 
-from .._base import BaseResource, FabricResource, ReadResource
+from .._base import (
+    BaseResource,
+    CrudResource,
+    FabricResource,
+    ReadResource,
+    _required_via_extras,
+)
 
 if TYPE_CHECKING:
     from .._request_options import RequestOptions
 
     from .fabric_types_generated import (
+        AIAgentConversationLogListResponse,
         AIAgentCreateRequest,
+        AIAgentLanguage,
         AIAgentListResponse,
+        AIAgentPostPrompt,
+        AIAgentPrompt,
+        AIAgentPronounce,
         AIAgentResponse,
+        AIAgentSWAIG,
         AIAgentUpdateRequest,
+        AIAgentVoice,
         AIParams,
-        AIPostPrompt,
-        AIPostPromptUpdate,
-        AIPrompt,
-        AIPromptUpdate,
+        AliasAddress,
+        AliasAddressCreateRequest,
+        AliasAddressListResponse,
+        AliasAddressUpdateRequest,
         CXMLScriptCreateRequest,
         CXMLScriptListResponse,
         CXMLScriptResponse,
@@ -51,20 +64,22 @@ if TYPE_CHECKING:
         CxmlApplicationAddressListResponse,
         CxmlApplicationListResponse,
         CxmlApplicationResponse,
+        CxmlWebhookUsedForType,
         DomainApplicationResponse,
         EmbedsTokensResponse,
         Encryption,
-        FabricAddress,
-        FabricAddressesResponse,
+        FabricAddressItem,
+        FabricAddressListResponse,
         FreeswitchConnectorCreateRequest,
         FreeswitchConnectorListResponse,
         FreeswitchConnectorResponse,
         FreeswitchConnectorUpdateRequest,
-        Hint,
-        Languages,
         Layout,
+        PhoneNumberAddress,
+        PhoneNumberAddressCreateRequest,
+        PhoneNumberAddressListResponse,
+        PhoneNumberAddressUpdateRequest,
         PhoneRouteResponse,
-        Pronounce,
         RelayApplicationCreateRequest,
         RelayApplicationListResponse,
         RelayApplicationResponse,
@@ -72,22 +87,25 @@ if TYPE_CHECKING:
         ResourceAddressListResponse,
         ResourceListResponse,
         ResourceResponse,
-        SWAIG,
-        SWAIGUpdate,
+        ResourceResponseSipEndpoint,
         SWMLWebhookCreateRequest,
         SWMLWebhookListResponse,
         SWMLWebhookResponse,
         SWMLWebhookUpdateRequest,
+        SipAddress,
+        SipAddressCreateRequest,
+        SipAddressListResponse,
+        SipAddressUpdateRequest,
         SipEndpointCreateRequest,
         SipEndpointListResponse,
         SipEndpointResponse,
         SipEndpointUpdateRequest,
+        SipGatewayEncryption,
         SipGatewayListResponse,
         SipGatewayRequest,
         SipGatewayRequestUpdate,
         SipGatewayResponse,
         SubscriberGuestTokenCreateResponse,
-        SubscriberInviteTokenCreateResponse,
         SubscriberListResponse,
         SubscriberRefreshTokenResponse,
         SubscriberRequest,
@@ -95,21 +113,367 @@ if TYPE_CHECKING:
         SubscriberSIPEndpoint,
         SubscriberSipEndpointListResponse,
         SubscriberTokenResponse,
+        SubscriberUpdateRequest,
         SwmlScriptCreateRequest,
         SwmlScriptListResponse,
         SwmlScriptResponse,
         SwmlScriptUpdateRequest,
         UsedForType,
+        WhatsappNumberAddressResponse,
         jwt,
         uuid,
     )
 
 
-class FabricAddresses(ReadResource["FabricAddressesResponse", "FabricAddress"]):
+class AliasAddresses(
+    CrudResource[
+        "AliasAddressListResponse",
+        "AliasAddress",
+        "AliasAddressCreateRequest",
+        "AliasAddressUpdateRequest",
+    ]
+):
+    """Typed resource for ``/addresses/alias`` (generated)."""
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/fabric/addresses/alias")
+
+    @_required_via_extras("name", "resource_id")
+    def create(  # type: ignore[override]
+        self,
+        *,
+        name: str,
+        resource_id: uuid,
+        display_name: str | None = None,
+        channels: list[Literal["audio", "messaging", "video"]] | None = None,
+        codecs: list[
+            Literal[
+                "OPUS",
+                "OPUS@48000H@20I",
+                "OPUS@24000H@20I",
+                "OPUS@16000H@20I",
+                "OPUS@8000H@20I",
+                "G722",
+                "PCMU",
+                "PCMA",
+                "G729",
+                "VP8",
+                "H264",
+            ]
+        ]
+        | None = None,
+        context: Literal["private", "public"] | None = None,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> AliasAddress:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "name": name,
+                "display_name": display_name,
+                "resource_id": resource_id,
+                "channels": channels,
+                "codecs": codecs,
+                "context": context,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "AliasAddress",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
+
+    def update(
+        self,
+        id: str,
+        /,
+        *,
+        name: str | None = None,
+        display_name: str | None = None,
+        channels: list[Literal["audio", "messaging", "video"]] | None = None,
+        codecs: list[
+            Literal[
+                "OPUS",
+                "OPUS@48000H@20I",
+                "OPUS@24000H@20I",
+                "OPUS@16000H@20I",
+                "OPUS@8000H@20I",
+                "G722",
+                "PCMU",
+                "PCMA",
+                "G729",
+                "VP8",
+                "H264",
+            ]
+        ]
+        | None = None,
+        context: Literal["private", "public"] | None = None,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> AliasAddress:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "name": name,
+                "display_name": display_name,
+                "channels": channels,
+                "codecs": codecs,
+                "context": context,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "AliasAddress",
+            self._http.patch(
+                self._path(id), body=body, request_options=request_options
+            ),
+        )
+
+
+class SipAddresses(
+    CrudResource[
+        "SipAddressListResponse",
+        "SipAddress",
+        "SipAddressCreateRequest",
+        "SipAddressUpdateRequest",
+    ]
+):
+    """Typed resource for ``/addresses/sip`` (generated)."""
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/fabric/addresses/sip")
+
+    @_required_via_extras("name", "calling_handler_resource_id")
+    def create(  # type: ignore[override]
+        self,
+        *,
+        name: str,
+        calling_handler_resource_id: uuid,
+        user: str | None = None,
+        context_id: uuid | None = None,
+        ip_auth_enabled: bool | None = None,
+        ip_auth: list[str] | None = None,
+        codecs: list[
+            Literal[
+                "OPUS",
+                "OPUS@48000H@20I",
+                "OPUS@24000H@20I",
+                "OPUS@16000H@20I",
+                "OPUS@8000H@20I",
+                "G722",
+                "PCMU",
+                "PCMA",
+                "G729",
+                "VP8",
+                "H264",
+            ]
+        ]
+        | None = None,
+        ciphers: list[
+            Literal[
+                "AEAD_AES_256_GCM_8",
+                "AES_256_CM_HMAC_SHA1_80",
+                "AES_CM_128_HMAC_SHA1_80",
+                "AES_256_CM_HMAC_SHA1_32",
+                "AES_CM_128_HMAC_SHA1_32",
+            ]
+        ]
+        | None = None,
+        encryption: Literal["required", "optional", "forbidden"] | None = None,
+        password: str | None = None,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> SipAddress:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "name": name,
+                "user": user,
+                "context_id": context_id,
+                "calling_handler_resource_id": calling_handler_resource_id,
+                "ip_auth_enabled": ip_auth_enabled,
+                "ip_auth": ip_auth,
+                "codecs": codecs,
+                "ciphers": ciphers,
+                "encryption": encryption,
+                "password": password,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "SipAddress",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
+
+    def update(
+        self,
+        id: str,
+        /,
+        *,
+        name: str | None = None,
+        user: str | None = None,
+        context_id: uuid | None = None,
+        ip_auth_enabled: bool | None = None,
+        ip_auth: list[str] | None = None,
+        codecs: list[
+            Literal[
+                "OPUS",
+                "OPUS@48000H@20I",
+                "OPUS@24000H@20I",
+                "OPUS@16000H@20I",
+                "OPUS@8000H@20I",
+                "G722",
+                "PCMU",
+                "PCMA",
+                "G729",
+                "VP8",
+                "H264",
+            ]
+        ]
+        | None = None,
+        ciphers: list[
+            Literal[
+                "AEAD_AES_256_GCM_8",
+                "AES_256_CM_HMAC_SHA1_80",
+                "AES_CM_128_HMAC_SHA1_80",
+                "AES_256_CM_HMAC_SHA1_32",
+                "AES_CM_128_HMAC_SHA1_32",
+            ]
+        ]
+        | None = None,
+        encryption: Literal["required", "optional", "forbidden"] | None = None,
+        password: str | None = None,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> SipAddress:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "name": name,
+                "user": user,
+                "context_id": context_id,
+                "ip_auth_enabled": ip_auth_enabled,
+                "ip_auth": ip_auth,
+                "codecs": codecs,
+                "ciphers": ciphers,
+                "encryption": encryption,
+                "password": password,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "SipAddress",
+            self._http.patch(
+                self._path(id), body=body, request_options=request_options
+            ),
+        )
+
+
+class PhoneNumberAddresses(
+    CrudResource[
+        "PhoneNumberAddressListResponse",
+        "PhoneNumberAddress",
+        "PhoneNumberAddressCreateRequest",
+        "PhoneNumberAddressUpdateRequest",
+    ]
+):
+    """Typed resource for ``/addresses/phone`` (generated)."""
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/fabric/addresses/phone")
+
+    @_required_via_extras("resource_id", "handler_type")
+    def create(  # type: ignore[override]
+        self,
+        *,
+        resource_id: uuid,
+        handler_type: Literal["calling", "messaging"],
+        phone_number_id: uuid | None = None,
+        number: str | None = None,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> PhoneNumberAddress:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "phone_number_id": phone_number_id,
+                "number": number,
+                "resource_id": resource_id,
+                "handler_type": handler_type,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "PhoneNumberAddress",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
+
+    def update(
+        self,
+        id: str,
+        /,
+        *,
+        name: str | None = None,
+        resource_id: uuid | None = None,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> PhoneNumberAddress:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {"name": name, "resource_id": resource_id}.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "PhoneNumberAddress",
+            self._http.patch(
+                self._path(id), body=body, request_options=request_options
+            ),
+        )
+
+
+class FabricAddresses(ReadResource["FabricAddressListResponse", "FabricAddressItem"]):
     """Typed resource for ``/addresses`` (generated)."""
 
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/fabric/addresses")
+
+    def delete(
+        self, id: str, *, request_options: RequestOptions | None = None
+    ) -> dict[str, Any]:
+        return cast(
+            "dict[str, Any]",
+            self._http.delete(self._path(id), request_options=request_options),
+        )
 
 
 class GenericResources(BaseResource):
@@ -158,6 +522,7 @@ class GenericResources(BaseResource):
             ),
         )
 
+    @_required_via_extras("phone_route_id", "handler")
     def assign_phone_route(
         self,
         id: str,
@@ -185,6 +550,7 @@ class GenericResources(BaseResource):
             ),
         )
 
+    @_required_via_extras("domain_application_id")
     def assign_domain_application(
         self,
         id: str,
@@ -211,6 +577,64 @@ class GenericResources(BaseResource):
             ),
         )
 
+    @_required_via_extras("sip_endpoint_id")
+    def assign_sip_endpoint(
+        self,
+        id: str,
+        *,
+        sip_endpoint_id: uuid,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> ResourceResponseSipEndpoint:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {"sip_endpoint_id": sip_endpoint_id}.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "ResourceResponseSipEndpoint",
+            self._http.post(
+                self._path(id, "sip_endpoints"),
+                body=body,
+                request_options=request_options,
+            ),
+        )
+
+    @_required_via_extras("whatsapp_number_id", "handler")
+    def assign_whatsapp_number(
+        self,
+        id: str,
+        *,
+        whatsapp_number_id: uuid,
+        handler: UsedForType,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> WhatsappNumberAddressResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "whatsapp_number_id": whatsapp_number_id,
+                "handler": handler,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "WhatsappNumberAddressResponse",
+            self._http.post(
+                self._path(id, "whatsapp_numbers"),
+                body=body,
+                request_options=request_options,
+            ),
+        )
+
 
 class AiAgents(
     FabricResource[
@@ -225,20 +649,23 @@ class AiAgents(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/fabric/resources/ai_agents")
 
+    @_required_via_extras("name")
     def create(  # type: ignore[override]
         self,
         *,
-        prompt: AIPrompt,
         name: str,
         global_data: dict[str, Any] | None = None,
-        hints: list[str | Hint] | None = None,
-        languages: list[Languages] | None = None,
+        hints: list[str] | None = None,
+        languages: list[AIAgentLanguage] | None = None,
         params: AIParams | None = None,
-        post_prompt: AIPostPrompt | None = None,
+        post_prompt: AIAgentPostPrompt | None = None,
         post_prompt_url: str | None = None,
-        pronounce: list[Pronounce] | None = None,
-        SWAIG: SWAIG | None = None,
-        agent_id: uuid | None = None,
+        pronounce: list[AIAgentPronounce] | None = None,
+        prompt: AIAgentPrompt | None = None,
+        SWAIG: AIAgentSWAIG | None = None,
+        post_prompt_auth_user: str | None = None,
+        post_prompt_auth_password: str | None = None,
+        multilingual: dict[str, Any] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -255,8 +682,10 @@ class AiAgents(
                 "pronounce": pronounce,
                 "prompt": prompt,
                 "SWAIG": SWAIG,
-                "agent_id": agent_id,
                 "name": name,
+                "post_prompt_auth_user": post_prompt_auth_user,
+                "post_prompt_auth_password": post_prompt_auth_password,
+                "multilingual": multilingual,
             }.items()
             if v is not None
         }
@@ -276,16 +705,18 @@ class AiAgents(
         /,
         *,
         global_data: dict[str, Any] | None = None,
-        hints: list[str | Hint] | None = None,
-        languages: list[Languages] | None = None,
+        hints: list[str] | None = None,
+        languages: list[AIAgentLanguage] | None = None,
         params: AIParams | None = None,
-        post_prompt: AIPostPromptUpdate | None = None,
+        post_prompt: AIAgentPostPrompt | None = None,
         post_prompt_url: str | None = None,
-        pronounce: list[Pronounce] | None = None,
-        prompt: AIPromptUpdate | None = None,
-        SWAIG: SWAIGUpdate | None = None,
-        agent_id: uuid | None = None,
+        pronounce: list[AIAgentPronounce] | None = None,
+        prompt: AIAgentPrompt | None = None,
+        SWAIG: AIAgentSWAIG | None = None,
         name: str | None = None,
+        post_prompt_auth_user: str | None = None,
+        post_prompt_auth_password: str | None = None,
+        multilingual: dict[str, Any] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -302,8 +733,10 @@ class AiAgents(
                 "pronounce": pronounce,
                 "prompt": prompt,
                 "SWAIG": SWAIG,
-                "agent_id": agent_id,
                 "name": name,
+                "post_prompt_auth_user": post_prompt_auth_user,
+                "post_prompt_auth_password": post_prompt_auth_password,
+                "multilingual": multilingual,
             }.items()
             if v is not None
         }
@@ -314,6 +747,34 @@ class AiAgents(
             "AIAgentResponse",
             self._http.patch(
                 self._path(id), body=body, request_options=request_options
+            ),
+        )
+
+    def list_voices(
+        self, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> list[AIAgentVoice]:
+        return cast(
+            "list[AIAgentVoice]",
+            self._http.get(
+                self._path("voices"),
+                params=params or None,
+                request_options=request_options,
+            ),
+        )
+
+    def list_conversation_logs(
+        self,
+        ai_agent_id: str,
+        *,
+        request_options: RequestOptions | None = None,
+        **params: Any,
+    ) -> AIAgentConversationLogListResponse:
+        return cast(
+            "AIAgentConversationLogListResponse",
+            self._http.get(
+                self._path(ai_agent_id, "conversation_logs"),
+                params=params or None,
+                request_options=request_options,
             ),
         )
 
@@ -333,16 +794,25 @@ class CallFlows(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/fabric/resources/call_flows")
 
+    @_required_via_extras("title")
     def create(  # type: ignore[override]
         self,
         *,
         title: str,
+        flow_data: dict[str, Any] | str | None = None,
+        relayml: dict[str, Any] | str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> CallFlowResponse:
         body: dict[str, Any] = {
-            k: v for k, v in {"title": title}.items() if v is not None
+            k: v
+            for k, v in {
+                "title": title,
+                "flow_data": flow_data,
+                "relayml": relayml,
+            }.items()
+            if v is not None
         }
         if extras:
             body.update(extras)
@@ -361,13 +831,20 @@ class CallFlows(
         *,
         title: str | None = None,
         document_version: int | None = None,
+        flow_data: dict[str, Any] | str | None = None,
+        relayml: dict[str, Any] | str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> CallFlowResponse:
         body: dict[str, Any] = {
             k: v
-            for k, v in {"title": title, "document_version": document_version}.items()
+            for k, v in {
+                "title": title,
+                "document_version": document_version,
+                "flow_data": flow_data,
+                "relayml": relayml,
+            }.items()
             if v is not None
         }
         if extras:
@@ -384,7 +861,7 @@ class CallFlows(
         return cast(
             "CallFlowAddressListResponse",
             self._http.get(
-                f"/api/fabric/resources/call_flow/{id}/addresses",
+                self._path(id, "addresses"),
                 params=params or None,
                 request_options=request_options,
             ),
@@ -396,7 +873,7 @@ class CallFlows(
         return cast(
             "CallFlowVersionListResponse",
             self._http.get(
-                f"/api/fabric/resources/call_flow/{id}/versions",
+                self._path(id, "versions"),
                 params=params or None,
                 request_options=request_options,
             ),
@@ -412,9 +889,7 @@ class CallFlows(
         return cast(
             "CallFlowVersionDeployResponse",
             self._http.post(
-                f"/api/fabric/resources/call_flow/{id}/versions",
-                body=body,
-                request_options=request_options,
+                self._path(id, "versions"), body=body, request_options=request_options
             ),
         )
 
@@ -434,69 +909,11 @@ class ConferenceRooms(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/fabric/resources/conference_rooms")
 
+    @_required_via_extras("name")
     def create(  # type: ignore[override]
         self,
         *,
         name: str,
-        enable_room_previews: bool,
-        display_name: str | None = None,
-        description: str | None = None,
-        join_from: str | None = None,
-        join_until: str | None = None,
-        max_members: int | None = None,
-        quality: Literal["1080p", "720p"] | None = None,
-        remove_at: str | None = None,
-        remove_after_seconds_elapsed: int | None = None,
-        layout: Layout | None = None,
-        record_on_start: bool | None = None,
-        meta: dict[str, Any] | None = None,
-        sync_audio_video: bool | None = None,
-        tone_on_entry_and_exit: bool | None = None,
-        room_join_video_off: bool | None = None,
-        user_join_video_off: bool | None = None,
-        extras: Mapping[str, Any] | None = None,
-        request_options: RequestOptions | None = None,
-        **_reserved_kw: Any,
-    ) -> ConferenceRoomResponse:
-        body: dict[str, Any] = {
-            k: v
-            for k, v in {
-                "name": name,
-                "display_name": display_name,
-                "description": description,
-                "join_from": join_from,
-                "join_until": join_until,
-                "max_members": max_members,
-                "quality": quality,
-                "remove_at": remove_at,
-                "remove_after_seconds_elapsed": remove_after_seconds_elapsed,
-                "layout": layout,
-                "record_on_start": record_on_start,
-                "enable_room_previews": enable_room_previews,
-                "meta": meta,
-                "sync_audio_video": sync_audio_video,
-                "tone_on_entry_and_exit": tone_on_entry_and_exit,
-                "room_join_video_off": room_join_video_off,
-                "user_join_video_off": user_join_video_off,
-            }.items()
-            if v is not None
-        }
-        if extras:
-            body.update(extras)
-        body.update(_reserved_kw)
-        return cast(
-            "ConferenceRoomResponse",
-            self._http.post(
-                self._base_path, body=body, request_options=request_options
-            ),
-        )
-
-    def update(
-        self,
-        id: str,
-        /,
-        *,
-        name: str | None = None,
         display_name: str | None = None,
         description: str | None = None,
         join_from: str | None = None,
@@ -545,6 +962,55 @@ class ConferenceRooms(
         body.update(_reserved_kw)
         return cast(
             "ConferenceRoomResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
+
+    def update(
+        self,
+        id: str,
+        /,
+        *,
+        display_name: str | None = None,
+        join_from: str | None = None,
+        join_until: str | None = None,
+        max_members: int | None = None,
+        quality: Literal["1080p", "720p"] | None = None,
+        remove_at: str | None = None,
+        remove_after_seconds_elapsed: int | None = None,
+        layout: Layout | None = None,
+        record_on_start: bool | None = None,
+        enable_room_previews: bool | None = None,
+        meta: dict[str, Any] | None = None,
+        sync_audio_video: bool | None = None,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> ConferenceRoomResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "display_name": display_name,
+                "join_from": join_from,
+                "join_until": join_until,
+                "max_members": max_members,
+                "quality": quality,
+                "remove_at": remove_at,
+                "remove_after_seconds_elapsed": remove_after_seconds_elapsed,
+                "layout": layout,
+                "record_on_start": record_on_start,
+                "enable_room_previews": enable_room_previews,
+                "meta": meta,
+                "sync_audio_video": sync_audio_video,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "ConferenceRoomResponse",
             self._http.put(self._path(id), body=body, request_options=request_options),
         )
 
@@ -554,7 +1020,7 @@ class ConferenceRooms(
         return cast(
             "ConferenceRoomAddressListResponse",
             self._http.get(
-                f"/api/fabric/resources/conference_room/{id}/addresses",
+                self._path(id, "addresses"),
                 params=params or None,
                 request_options=request_options,
             ),
@@ -591,20 +1057,19 @@ class CxmlApplications(BaseResource):
         self,
         id: str,
         *,
-        display_name: str | None = None,
-        account_sid: uuid | None = None,
-        voice_url: str | None = None,
-        voice_method: Literal["GET"] | Literal["POST"] | None = None,
-        voice_fallback_url: str | None = None,
-        voice_fallback_method: Literal["GET"] | Literal["POST"] | None = None,
-        status_callback: str | None = None,
-        status_callback_method: Literal["GET"] | Literal["POST"] | None = None,
-        sms_url: str | None = None,
-        sms_method: Literal["GET"] | Literal["POST"] | None = None,
-        sms_fallback_url: str | None = None,
-        sms_fallback_method: Literal["GET"] | Literal["POST"] | None = None,
-        sms_status_callback: str | None = None,
-        sms_status_callback_method: Literal["GET"] | Literal["POST"] | None = None,
+        name: str | None = None,
+        call_request_url: str | None = None,
+        call_request_method: Literal["GET", "POST"] | None = None,
+        call_fallback_url: str | None = None,
+        call_fallback_method: Literal["GET", "POST"] | None = None,
+        call_status_url: str | None = None,
+        call_status_method: Literal["GET", "POST"] | None = None,
+        message_request_url: str | None = None,
+        message_request_method: Literal["GET", "POST"] | None = None,
+        message_fallback_url: str | None = None,
+        message_fallback_method: Literal["GET", "POST"] | None = None,
+        message_status_url: str | None = None,
+        message_status_method: Literal["GET", "POST"] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -612,20 +1077,19 @@ class CxmlApplications(BaseResource):
         body: dict[str, Any] = {
             k: v
             for k, v in {
-                "display_name": display_name,
-                "account_sid": account_sid,
-                "voice_url": voice_url,
-                "voice_method": voice_method,
-                "voice_fallback_url": voice_fallback_url,
-                "voice_fallback_method": voice_fallback_method,
-                "status_callback": status_callback,
-                "status_callback_method": status_callback_method,
-                "sms_url": sms_url,
-                "sms_method": sms_method,
-                "sms_fallback_url": sms_fallback_url,
-                "sms_fallback_method": sms_fallback_method,
-                "sms_status_callback": sms_status_callback,
-                "sms_status_callback_method": sms_status_callback_method,
+                "name": name,
+                "call_request_url": call_request_url,
+                "call_request_method": call_request_method,
+                "call_fallback_url": call_fallback_url,
+                "call_fallback_method": call_fallback_method,
+                "call_status_url": call_status_url,
+                "call_status_method": call_status_method,
+                "message_request_url": message_request_url,
+                "message_request_method": message_request_method,
+                "message_fallback_url": message_fallback_url,
+                "message_fallback_method": message_fallback_method,
+                "message_status_url": message_status_url,
+                "message_status_method": message_status_method,
             }.items()
             if v is not None
         }
@@ -673,13 +1137,15 @@ class CxmlScripts(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/fabric/resources/cxml_scripts")
 
+    @_required_via_extras("contents", "name")
     def create(  # type: ignore[override]
         self,
         *,
-        display_name: str,
         contents: str,
+        name: str,
         status_callback_url: str | None = None,
         status_callback_method: Literal["GET"] | Literal["POST"] | None = None,
+        script_type: Literal["calling", "faxing", "messaging"] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -687,10 +1153,11 @@ class CxmlScripts(
         body: dict[str, Any] = {
             k: v
             for k, v in {
-                "display_name": display_name,
                 "contents": contents,
                 "status_callback_url": status_callback_url,
                 "status_callback_method": status_callback_method,
+                "name": name,
+                "script_type": script_type,
             }.items()
             if v is not None
         }
@@ -709,10 +1176,11 @@ class CxmlScripts(
         id: str,
         /,
         *,
-        display_name: str | None = None,
         contents: str | None = None,
         status_callback_url: str | None = None,
         status_callback_method: Literal["GET"] | Literal["POST"] | None = None,
+        name: str | None = None,
+        script_type: Literal["calling", "faxing", "messaging"] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -720,10 +1188,11 @@ class CxmlScripts(
         body: dict[str, Any] = {
             k: v
             for k, v in {
-                "display_name": display_name,
                 "contents": contents,
                 "status_callback_url": status_callback_url,
                 "status_callback_method": status_callback_method,
+                "name": name,
+                "script_type": script_type,
             }.items()
             if v is not None
         }
@@ -749,12 +1218,13 @@ class CxmlWebhooks(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/fabric/resources/cxml_webhooks")
 
+    @_required_via_extras("primary_request_url")
     def create(  # type: ignore[override]
         self,
         *,
         primary_request_url: str,
         name: str | None = None,
-        used_for: UsedForType | None = None,
+        used_for: CxmlWebhookUsedForType | None = None,
         primary_request_method: Literal["GET"] | Literal["POST"] | None = None,
         fallback_request_url: str | None = None,
         fallback_request_method: Literal["GET"] | Literal["POST"] | None = None,
@@ -794,7 +1264,7 @@ class CxmlWebhooks(
         /,
         *,
         name: str | None = None,
-        used_for: UsedForType | None = None,
+        used_for: CxmlWebhookUsedForType | None = None,
         primary_request_url: str | None = None,
         primary_request_method: Literal["GET"] | Literal["POST"] | None = None,
         fallback_request_url: str | None = None,
@@ -845,6 +1315,7 @@ class FreeswitchConnectors(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/fabric/resources/freeswitch_connectors")
 
+    @_required_via_extras("name", "token")
     def create(  # type: ignore[override]
         self,
         *,
@@ -912,6 +1383,7 @@ class RelayApplications(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/fabric/resources/relay_applications")
 
+    @_required_via_extras("name", "topic")
     def create(  # type: ignore[override]
         self,
         *,
@@ -986,18 +1458,19 @@ class SipEndpoints(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/fabric/resources/sip_endpoints")
 
+    @_required_via_extras("username", "password")
     def create(  # type: ignore[override]
         self,
         *,
         username: str,
-        caller_id: str,
-        send_as: str,
-        ciphers: list[Ciphers],
-        codecs: list[Codecs],
-        encryption: Encryption,
-        call_handler: CallHandlerType,
-        calling_handler_resource_id: uuid | None,
-        id: uuid | None = None,
+        password: str,
+        caller_id: str | None = None,
+        send_as: str | None = None,
+        ciphers: list[Ciphers] | None = None,
+        codecs: list[Codecs] | None = None,
+        encryption: Encryption | None = None,
+        call_handler: CallHandlerType | None = None,
+        calling_handler_resource_id: uuid | None | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -1005,7 +1478,6 @@ class SipEndpoints(
         body: dict[str, Any] = {
             k: v
             for k, v in {
-                "id": id,
                 "username": username,
                 "caller_id": caller_id,
                 "send_as": send_as,
@@ -1014,6 +1486,7 @@ class SipEndpoints(
                 "encryption": encryption,
                 "call_handler": call_handler,
                 "calling_handler_resource_id": calling_handler_resource_id,
+                "password": password,
             }.items()
             if v is not None
         }
@@ -1040,6 +1513,7 @@ class SipEndpoints(
         encryption: Encryption | None = None,
         call_handler: CallHandlerType | None = None,
         calling_handler_resource_id: uuid | None | None = None,
+        password: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -1055,6 +1529,7 @@ class SipEndpoints(
                 "encryption": encryption,
                 "call_handler": call_handler,
                 "calling_handler_resource_id": calling_handler_resource_id,
+                "password": password,
             }.items()
             if v is not None
         }
@@ -1080,12 +1555,13 @@ class SipGateways(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/fabric/resources/sip_gateways")
 
+    @_required_via_extras("name", "uri", "encryption", "ciphers", "codecs")
     def create(  # type: ignore[override]
         self,
         *,
         name: str,
         uri: str,
-        encryption: Encryption,
+        encryption: SipGatewayEncryption,
         ciphers: list[Ciphers],
         codecs: list[Codecs],
         extras: Mapping[str, Any] | None = None,
@@ -1120,7 +1596,7 @@ class SipGateways(
         *,
         name: str | None = None,
         uri: str | None = None,
-        encryption: Encryption | None = None,
+        encryption: SipGatewayEncryption | None = None,
         ciphers: list[Ciphers] | None = None,
         codecs: list[Codecs] | None = None,
         extras: Mapping[str, Any] | None = None,
@@ -1154,7 +1630,7 @@ class Subscribers(
         "SubscriberListResponse",
         "SubscriberResponse",
         "SubscriberRequest",
-        "SubscriberRequest",
+        "SubscriberUpdateRequest",
     ]
 ):
     """Typed resource for ``/resources/subscribers`` (generated)."""
@@ -1164,6 +1640,7 @@ class Subscribers(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/fabric/resources/subscribers")
 
+    @_required_via_extras("email")
     def create(  # type: ignore[override]
         self,
         *,
@@ -1173,10 +1650,9 @@ class Subscribers(
         last_name: str | None = None,
         display_name: str | None = None,
         job_title: str | None = None,
-        timezone: str | None = None,
         country: str | None = None,
-        region: str | None = None,
         company_name: str | None = None,
+        time_zone: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -1190,10 +1666,9 @@ class Subscribers(
                 "last_name": last_name,
                 "display_name": display_name,
                 "job_title": job_title,
-                "timezone": timezone,
                 "country": country,
-                "region": region,
                 "company_name": company_name,
+                "time_zone": time_zone,
             }.items()
             if v is not None
         }
@@ -1218,10 +1693,9 @@ class Subscribers(
         last_name: str | None = None,
         display_name: str | None = None,
         job_title: str | None = None,
-        timezone: str | None = None,
         country: str | None = None,
-        region: str | None = None,
         company_name: str | None = None,
+        time_zone: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -1235,10 +1709,9 @@ class Subscribers(
                 "last_name": last_name,
                 "display_name": display_name,
                 "job_title": job_title,
-                "timezone": timezone,
                 "country": country,
-                "region": region,
                 "company_name": company_name,
+                "time_zone": time_zone,
             }.items()
             if v is not None
         }
@@ -1266,6 +1739,7 @@ class Subscribers(
             ),
         )
 
+    @_required_via_extras("username", "password")
     def create_sip_endpoint(
         self,
         fabric_subscriber_id: str,
@@ -1395,12 +1869,14 @@ class SwmlScripts(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/fabric/resources/swml_scripts")
 
+    @_required_via_extras("name", "contents")
     def create(  # type: ignore[override]
         self,
         *,
         name: str,
-        contents: str,
+        contents: str | dict[str, Any],
         status_callback_url: str | None = None,
+        script_type: Literal["calling", "messaging"] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -1411,6 +1887,7 @@ class SwmlScripts(
                 "name": name,
                 "contents": contents,
                 "status_callback_url": status_callback_url,
+                "script_type": script_type,
             }.items()
             if v is not None
         }
@@ -1429,9 +1906,10 @@ class SwmlScripts(
         id: str,
         /,
         *,
-        display_name: str | None = None,
-        contents: str | None = None,
+        contents: str | dict[str, Any] | None = None,
         status_callback_url: str | None = None,
+        name: str | None = None,
+        script_type: Literal["calling", "messaging"] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -1439,9 +1917,10 @@ class SwmlScripts(
         body: dict[str, Any] = {
             k: v
             for k, v in {
-                "display_name": display_name,
                 "contents": contents,
                 "status_callback_url": status_callback_url,
+                "name": name,
+                "script_type": script_type,
             }.items()
             if v is not None
         }
@@ -1467,12 +1946,13 @@ class SwmlWebhooks(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/fabric/resources/swml_webhooks")
 
+    @_required_via_extras("primary_request_url")
     def create(  # type: ignore[override]
         self,
         *,
         primary_request_url: str,
         name: str | None = None,
-        used_for: Literal["calling"] | None = None,
+        used_for: Literal["calling", "messaging"] | None = None,
         primary_request_method: Literal["GET"] | Literal["POST"] | None = None,
         fallback_request_url: str | None = None,
         fallback_request_method: Literal["GET"] | Literal["POST"] | None = None,
@@ -1512,7 +1992,7 @@ class SwmlWebhooks(
         /,
         *,
         name: str | None = None,
-        used_for: Literal["calling"] | None = None,
+        used_for: Literal["calling", "messaging"] | None = None,
         primary_request_url: str | None = None,
         primary_request_method: Literal["GET"] | Literal["POST"] | None = None,
         fallback_request_url: str | None = None,
@@ -1554,10 +2034,12 @@ class FabricTokens(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/fabric")
 
+    @_required_via_extras("reference")
     def create_subscriber_token(
         self,
         *,
         reference: str,
+        ch: str | None = None,
         expire_at: int | None = None,
         application_id: uuid | None = None,
         password: str | None = None,
@@ -1569,6 +2051,8 @@ class FabricTokens(BaseResource):
         country: str | None = None,
         region: str | None = None,
         company_name: str | None = None,
+        scope: Literal["sat:refresh"] | None = None,
+        fingerprint: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -1576,6 +2060,7 @@ class FabricTokens(BaseResource):
         body: dict[str, Any] = {
             k: v
             for k, v in {
+                "ch": ch,
                 "reference": reference,
                 "expire_at": expire_at,
                 "application_id": application_id,
@@ -1588,6 +2073,8 @@ class FabricTokens(BaseResource):
                 "country": country,
                 "region": region,
                 "company_name": company_name,
+                "scope": scope,
+                "fingerprint": fingerprint,
             }.items()
             if v is not None
         }
@@ -1603,6 +2090,7 @@ class FabricTokens(BaseResource):
             ),
         )
 
+    @_required_via_extras("refresh_token")
     def refresh_subscriber_token(
         self,
         *,
@@ -1626,37 +2114,21 @@ class FabricTokens(BaseResource):
             ),
         )
 
-    def create_invite_token(
-        self,
-        *,
-        address_id: uuid,
-        expires_at: int | None = None,
-        extras: Mapping[str, Any] | None = None,
-        request_options: RequestOptions | None = None,
-        **_reserved_kw: Any,
-    ) -> SubscriberInviteTokenCreateResponse:
-        body: dict[str, Any] = {
-            k: v
-            for k, v in {"address_id": address_id, "expires_at": expires_at}.items()
-            if v is not None
-        }
-        if extras:
-            body.update(extras)
-        body.update(_reserved_kw)
-        return cast(
-            "SubscriberInviteTokenCreateResponse",
-            self._http.post(
-                self._path("subscriber", "invites"),
-                body=body,
-                request_options=request_options,
-            ),
-        )
-
     def create_guest_token(
         self,
         *,
-        allowed_addresses: list[uuid],
+        allowed_addresses: list[uuid] | None = None,
         expire_at: int | None = None,
+        ch: str | None = None,
+        region: str | None = None,
+        email: str | None = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        display_name: str | None = None,
+        job_title: str | None = None,
+        time_zone: str | None = None,
+        country: str | None = None,
+        company_name: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -1666,6 +2138,16 @@ class FabricTokens(BaseResource):
             for k, v in {
                 "allowed_addresses": allowed_addresses,
                 "expire_at": expire_at,
+                "ch": ch,
+                "region": region,
+                "email": email,
+                "first_name": first_name,
+                "last_name": last_name,
+                "display_name": display_name,
+                "job_title": job_title,
+                "time_zone": time_zone,
+                "country": country,
+                "company_name": company_name,
             }.items()
             if v is not None
         }
@@ -1681,6 +2163,7 @@ class FabricTokens(BaseResource):
             ),
         )
 
+    @_required_via_extras("token")
     def create_embed_token(
         self,
         *,

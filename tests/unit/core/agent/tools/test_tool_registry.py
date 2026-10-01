@@ -24,7 +24,9 @@ def registry() -> ToolRegistry:
 
 class TestToolRegistryDefineAndQuery:
     def test_register_swaig_function_via_dict(self, registry: ToolRegistry) -> None:
-        registry.register_swaig_function({"function": "lookup", "description": "Look up a value"})
+        registry.register_swaig_function(
+            {"function": "lookup", "description": "Look up a value"}
+        )
         assert registry.has_function("lookup")
 
     def test_has_function_false_when_unregistered(self, registry: ToolRegistry) -> None:
@@ -61,12 +63,17 @@ class TestToolRegistryDefineAndQuery:
         assert registry.remove_function("doomed") is True
         assert registry.has_function("doomed") is False
 
-    def test_remove_function_when_absent_returns_false(self, registry: ToolRegistry) -> None:
+    def test_remove_function_when_absent_returns_false(
+        self, registry: ToolRegistry
+    ) -> None:
         assert registry.remove_function("never_existed") is False
 
     def test_define_tool_registers_with_handler(self, registry: ToolRegistry) -> None:
-        def my_handler(args: dict[str, Any], raw_data: dict[str, Any] | None = None) -> dict[str, str]:
+        def my_handler(
+            args: dict[str, Any], raw_data: dict[str, Any] | None = None
+        ) -> dict[str, str]:
             return {"result": "ok"}
+
         registry.define_tool(
             name="echo",
             description="Echo back",

@@ -13,7 +13,7 @@ It allows for chaining method calls to build up a document step by step.
 """
 
 import types
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, overload
 from collections.abc import Callable
 
 try:
@@ -22,13 +22,21 @@ except ImportError:
     from typing_extensions import Self  # For Python 3.9-3.10
 
 from signalwire.core.swml_service import SWMLService
+from signalwire.utils.schema_utils import (
+    _reject_unaccepted_body,
+    _verb_body,
+    _verb_method_name,
+    _verb_name_for_attribute,
+)
 
 if TYPE_CHECKING:
     # The SWML verb methods are installed dynamically at runtime (_create_verb_methods,
     # from schema.json). Inheriting the generated _SwmlVerbs Protocol gives the type
     # checker the static signatures for those verbs (answer/play/ai/record/...). Generated
     # from schema.json — see swml_verbs_generated.py. TYPE_CHECKING-only: no runtime base.
-    from signalwire.core.swml_verbs_generated import _SwmlVerbs
+    from typing_extensions import Unpack  # typing.Unpack is 3.11+; the floor is 3.10
+
+    from signalwire.core.swml_verbs_generated import _AiConfigKwargs, _SwmlVerbs
 
     _VerbsBase = _SwmlVerbs
 else:
@@ -63,14 +71,21 @@ class SWMLBuilder(_VerbsBase):
         self._create_verb_methods()
 
     def answer(
-        self, max_duration: int | None = None, codecs: str | None = None
+        self,
+        max_duration: int | None = None,
+        codecs: str | list[str] | None = None,
+        username: str | None = None,
+        password: str | None = None,
     ) -> Self:
         """
         Add an 'answer' verb to the main section
 
         Args:
             max_duration: Maximum duration in seconds
-            codecs: Comma-separated list of codecs
+            codecs: Codecs to offer — a comma-separated string or a list
+                (PCMU, PCMA, G722, G729, AMR-WB, OPUS, VP8, H264)
+            username: Username to use for SIP authentication
+            password: Password to use for SIP authentication
 
         Returns:
             Self for method chaining
@@ -80,6 +95,10 @@ class SWMLBuilder(_VerbsBase):
             config["max_duration"] = max_duration
         if codecs is not None:
             config["codecs"] = codecs
+        if username is not None:
+            config["username"] = username
+        if password is not None:
+            config["password"] = password
         self.service.add_verb("answer", config)
         return self
 
@@ -99,6 +118,35 @@ class SWMLBuilder(_VerbsBase):
         self.service.add_verb("hangup", config)
         return self
 
+    # Two static signatures, one runtime body. The first types **kwargs by the generated
+    # `ai` config keys (_AiConfigKwargs, from schema.json) so editors and type checkers show
+    # them; the second keeps every call that type-checked before valid (owner ruling
+    # 2026-09-30, option B). mypy has no open TypedDict (PEP 728 `extra_items` is not
+    # supported by the pinned mypy), so one signature cannot do both.
+    @overload
+    def ai(
+        self,
+        prompt_text: str | None = None,
+        prompt_pom: list[dict[str, Any]] | None = None,
+        post_prompt: str | None = None,
+        post_prompt_url: str | None = None,
+        swaig: dict[str, Any] | None = None,
+        **kwargs: "Unpack[_AiConfigKwargs]",
+    ) -> Self:
+        """Add an 'ai' verb; ``**kwargs`` are the generated ``ai`` config keys."""
+
+    @overload
+    def ai(
+        self,
+        prompt_text: str | None = None,
+        prompt_pom: list[dict[str, Any]] | None = None,
+        post_prompt: str | None = None,
+        post_prompt_url: str | None = None,
+        swaig: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        """Add an 'ai' verb; any other ``**kwargs`` key is passed through unchanged."""
+
     def ai(
         self,
         prompt_text: str | None = None,
@@ -117,7 +165,8 @@ class SWMLBuilder(_VerbsBase):
             post_prompt: Optional post-prompt text
             post_prompt_url: Optional URL for post-prompt processing
             swaig: Optional SWAIG configuration
-            **kwargs: Additional AI parameters
+            **kwargs: Any other ``ai`` verb config key (``params``, ``languages``,
+                ``hints``, ...); the generated ``_AiConfigKwargs`` lists them
 
         Returns:
             Self for method chaining
@@ -156,6 +205,8 @@ class SWMLBuilder(_VerbsBase):
         say_language: str | None = None,
         say_gender: str | None = None,
         auto_answer: bool | None = None,
+        loop: int | None = None,
+        status_url: str | None = None,
     ) -> Self:
         """
         Add a 'play' verb to the main section
@@ -168,6 +219,8 @@ class SWMLBuilder(_VerbsBase):
             say_language: Language for text-to-speech
             say_gender: Gender for text-to-speech
             auto_answer: Whether to auto-answer the call
+            loop: How many times to play (0 = until the call ends)
+            status_url: http(s) URL to deliver play status events
 
         Returns:
             Self for method chaining
@@ -194,6 +247,10 @@ class SWMLBuilder(_VerbsBase):
             config["say_gender"] = say_gender
         if auto_answer is not None:
             config["auto_answer"] = auto_answer
+        if loop is not None:
+            config["loop"] = loop
+        if status_url is not None:
+            config["status_url"] = status_url
 
         # Add the verb
         self.service.add_verb("play", config)
@@ -289,7 +346,8 @@ class SWMLBuilder(_VerbsBase):
         # Create a method for each verb
         for verb_name in verb_names:
             # Skip verbs that already have specific methods
-            if hasattr(self, verb_name):
+            method_name = _verb_method_name(verb_name)
+            if hasattr(self, method_name):
                 continue
 
             # Handle sleep verb specially since it takes an integer directly
@@ -319,7 +377,7 @@ class SWMLBuilder(_VerbsBase):
                     return self_instance
 
                 # Set it as an attribute of self
-                setattr(self, verb_name, types.MethodType(sleep_method, self))
+                setattr(self, method_name, types.MethodType(sleep_method, self))
 
                 # Also cache it for later
                 self._verb_methods_cache[verb_name] = sleep_method
@@ -329,16 +387,46 @@ class SWMLBuilder(_VerbsBase):
             def make_verb_method(
                 name: str,
             ) -> Callable[..., "SWMLBuilder"]:
+                """
+                Build the builder method for one SWML verb.
+
+                The closure exists to bind ``name`` per verb — without it every
+                generated method would share the loop variable and emit the
+                last verb in the schema.
+
+                The returned function takes the verb's config as one optional
+                positional mapping (the form the static stub declares) and/or
+                keyword arguments, merges the keywords over the mapping, drops
+                every keyword whose value is None (so unset options never reach
+                the wire), passes the result to
+                ``service.add_verb(name, config)``, and returns the builder for
+                chaining. It carries the verb's schema ``description`` as its
+                ``__doc__`` when the schema supplies one.
+
+                ``sleep`` is NOT built here — it takes a bare integer rather
+                than an object in SWML and is special-cased by the caller.
+
+                Args:
+                    name: The SWML verb name, used as the emitted key. The
+                        method is installed under it, or under ``return_`` for
+                        a keyword verb such as ``return``.
+
+                Returns:
+                    An unbound function of ``(self_instance, config=None,
+                    **kwargs) -> SWMLBuilder``, which the caller binds with
+                    ``types.MethodType`` and caches.
+                """
+
                 def verb_method(
-                    self_instance: "SWMLBuilder", **kwargs: Any
+                    self_instance: "SWMLBuilder", config: Any = None, **kwargs: Any
                 ) -> "SWMLBuilder":
                     """
                     Dynamically generated method for SWML verb - returns self for chaining
                     """
-                    config: dict[str, Any] = {
-                        key: value for key, value in kwargs.items() if value is not None
-                    }
-                    self_instance.service.add_verb(name, config)
+                    added = self_instance.service.add_verb(
+                        name, _verb_body(name, config, kwargs)
+                    )
+                    _reject_unaccepted_body(name, config, added)
                     return self_instance
 
                 # Add docstring to the method
@@ -359,7 +447,7 @@ class SWMLBuilder(_VerbsBase):
             method = make_verb_method(verb_name)
 
             # Set it as an attribute of self
-            setattr(self, verb_name, types.MethodType(method, self))
+            setattr(self, method_name, types.MethodType(method, self))
 
             # Also cache it for later
             self._verb_methods_cache[verb_name] = method
@@ -389,7 +477,9 @@ class SWMLBuilder(_VerbsBase):
 
         verb_names = self.service.schema_utils.get_all_verb_names()
 
-        if name in verb_names:
+        verb = _verb_name_for_attribute(name, verb_names)
+        if verb is not None:
+            name = verb
             # Check if we already have this method in the cache
             if not hasattr(self, "_verb_methods_cache"):
                 self._verb_methods_cache = {}
@@ -431,15 +521,15 @@ class SWMLBuilder(_VerbsBase):
 
             # Generate the method implementation for normal verbs
             def verb_method(
-                self_instance: "SWMLBuilder", **kwargs: Any
+                self_instance: "SWMLBuilder", config: Any = None, **kwargs: Any
             ) -> "SWMLBuilder":
                 """
                 Dynamically generated method for SWML verb - returns self for chaining
                 """
-                config: dict[str, Any] = {
-                    key: value for key, value in kwargs.items() if value is not None
-                }
-                self_instance.service.add_verb(name, config)
+                added = self_instance.service.add_verb(
+                    name, _verb_body(name, config, kwargs)
+                )
+                _reject_unaccepted_body(name, config, added)
                 return self_instance
 
             # Add docstring to the method

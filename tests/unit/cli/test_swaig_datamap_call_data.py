@@ -11,7 +11,7 @@ import sys
 import textwrap
 from pathlib import Path
 
-AGENT = textwrap.dedent('''
+AGENT = textwrap.dedent("""
     from signalwire import AgentBase
     from signalwire.core.data_map import DataMap
     from signalwire.core.function_result import FunctionResult
@@ -24,16 +24,28 @@ AGENT = textwrap.dedent('''
         .expression("${args.topic}", r".*", FunctionResult("Tenant ${global_data.tenant}"))
         .to_swaig_function()
     )
-''')
+""")
 
 
 def _run(tmp_path: Path, *extra: str, agent: str = AGENT) -> str:
     agent_file = tmp_path / "tenant_agent.py"
     agent_file.write_text(agent, encoding="utf-8")
     completed = subprocess.run(  # noqa: S603  # fixed arguments: this interpreter and the CLI module
-        [sys.executable, "-m", "signalwire.cli.swaig_test_wrapper", str(agent_file), *extra,
-         "--exec", "which_tenant", "--topic", "hours"],
-        capture_output=True, text=True, timeout=120, check=False,
+        [
+            sys.executable,
+            "-m",
+            "signalwire.cli.swaig_test_wrapper",
+            str(agent_file),
+            *extra,
+            "--exec",
+            "which_tenant",
+            "--topic",
+            "hours",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
     )
     return completed.stdout + completed.stderr
 
@@ -54,14 +66,17 @@ def test_without_custom_data_the_agents_global_data_applies(tmp_path: Path) -> N
     agent = AGENT + 'agent.set_global_data({"tenant": "house"})\n'
     assert "Tenant house" in _run(tmp_path, agent=agent)
     assert "Tenant acme" in _run(
-        tmp_path, "--custom-data", '{"global_data": {"tenant": "acme"}}', agent=agent)
+        tmp_path, "--custom-data", '{"global_data": {"tenant": "acme"}}', agent=agent
+    )
 
 
 def test_global_data_set_per_call_applies(tmp_path: Path) -> None:
     # A per-request configuration callback's global data is what a call gets
     agent = AGENT + (
         'agent.set_global_data({"tenant": "house"})\n'
-        'agent.add_per_call_config(\n'
+        "agent.add_per_call_config(\n"
         '    lambda query, body, headers, copy: copy.update_global_data({"tenant": query["t"]}))\n'
     )
-    assert "Tenant acme" in _run(tmp_path, "--query-params", '{"t": "acme"}', agent=agent)
+    assert "Tenant acme" in _run(
+        tmp_path, "--query-params", '{"t": "acme"}', agent=agent
+    )

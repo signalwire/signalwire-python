@@ -9,10 +9,12 @@ See LICENSE file in the project root for full license information.
 HTTP client infrastructure and base resource classes for the REST client.
 """
 
+import functools
 import os
 import time
+from collections.abc import Callable, Mapping
 from importlib.metadata import PackageNotFoundError, version
-from typing import Any, Generic, TypeVar, cast
+from typing import Any, Generic, ParamSpec, TypeVar, cast
 
 import requests
 from signalwire.core.logging_config import get_logger
@@ -24,6 +26,42 @@ from signalwire.rest._request_options import (
 )
 
 logger = get_logger("rest_client")
+
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+
+def _required_via_extras(
+    *names: str, **renamed: str
+) -> Callable[[Callable[_P, _R]], Callable[_P, _R]]:
+    """Let a REQUIRED keyword argument of a generated REST method be supplied through
+    ``extras={...}`` (or, for a reserved-word wire key, the ``**`` tail).
+
+    A field the spec marks required is a required keyword-only parameter, so omitting it
+    raises ``TypeError`` before the method body runs. A caller that already sends that field
+    through the ``extras`` door would otherwise start failing the moment the spec learns the
+    field is required; the owner ruled (2026-09-29) that such a call keeps working. ``names``
+    are parameters whose wire key is the same name; ``renamed`` maps a parameter to its wire
+    key (``from_="from"``). The static signature is unchanged.
+    """
+    pairs = [(n, n) for n in names] + list(renamed.items())
+
+    def _deco(fn: Callable[_P, _R]) -> Callable[_P, _R]:
+        @functools.wraps(fn)
+        def _wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
+            extras = kwargs.get("extras") or {}
+            for arg, key in pairs:
+                if arg in kwargs:
+                    continue
+                if isinstance(extras, Mapping) and key in extras:
+                    kwargs[arg] = extras[key]
+                elif key != arg and key in kwargs:
+                    kwargs[arg] = kwargs.pop(key)
+            return fn(*args, **kwargs)
+
+        return _wrapper
+
+    return _deco
 
 
 def _user_agent() -> str:
@@ -84,6 +122,11 @@ class SignalWireRestError(Exception):
         method: str = "GET",
         headers: dict[str, str] | None = None,
     ) -> None:
+        """Record the failed request and the response the server returned.
+
+        ``status_code`` is ``None`` when no response was produced; ``request_id`` is
+        read from the response headers when the server sent one.
+        """
         self.status_code = status_code
         self.body = body
         self.url = url
@@ -110,6 +153,7 @@ _REQUEST_ID_HEADERS = (
 
 
 def _extract_request_id(headers: dict[str, str] | None) -> str | None:
+    """Return the request id from the first known request-id header, if any."""
     if not headers:
         return None
     lowered = {k.lower(): v for k, v in headers.items()}
@@ -131,6 +175,7 @@ class SignalWireRestTransportError(SignalWireRestError):
     """
 
     def __init__(self, body: Any, url: str, method: str = "GET") -> None:
+        """Record a request that failed before any response was received."""
         super().__init__(None, body, url, method, headers=None)
 
 
@@ -144,6 +189,12 @@ class HttpClient:
         host: str,
         request_options: RequestOptions | None = None,
     ) -> None:
+        """Open an authenticated session against ``host``.
+
+        A loopback host (``127.0.0.1`` or ``localhost``) is reached over plain HTTP;
+        every other host over HTTPS. ``request_options`` sets the client-wide timeout,
+        retry and header defaults.
+        """
         # A loopback host (127.0.0.1[:port] / localhost[:port]) is a local mock/dev
         # server that speaks plain HTTP — use http:// for it. Every other host is the
         # real platform over https://. This lets a shipped example run verbatim against
@@ -196,7 +247,21 @@ class HttpClient:
         body: Any = None,
         params: dict[str, Any] | None = None,
         request_options: RequestOptions | None = None,
+        *,
+        headers: dict[str, str] | None = None,
+        response: str = "json",
     ) -> Any:
+        """Send one request, retrying per the request options; return the body.
+
+        ``headers`` are sent on this request only (over the session defaults).
+        ``response`` selects how a success is read: ``"json"`` (the decoded JSON body),
+        ``"text"`` (the body as text, for a non-JSON media type such as ``text/csv``), or
+        ``"redirect"`` (redirects are NOT followed; the 3xx ``Location`` is returned — an
+        endpoint whose answer IS a redirect to a resource's URL).
+
+        Raises ``SignalWireRestError`` for a non-2xx response (a non-3xx one for
+        ``"redirect"``) and ``SignalWireRestTransportError`` when no response was received.
+        """
         url = self._base_url + path
         # D1 (owner-approved 2026-07-18): error.url is the FULL URL WITH the query
         # string preserved — the reference decision the fleet never actually took (the
@@ -215,6 +280,13 @@ class HttpClient:
                 full_url = f"{url}?{qs}"
         opts = resolve(self._request_options, request_options)
         logger.debug("REST request", method=method, path=path)
+        # Only a call that needs them passes these, so every other request is sent exactly
+        # as before (same ``Session.request`` arguments).
+        extra: dict[str, Any] = {}
+        if headers:
+            extra["headers"] = headers
+        if response == "redirect":
+            extra["allow_redirects"] = False
 
         # total attempts = retries + 1; retry on a retryable status (idempotency-
         # aware) or a transport error, honoring Retry-After then exponential
@@ -231,7 +303,7 @@ class HttpClient:
 
             try:
                 resp = self._session.request(
-                    method, url, json=body, params=params, timeout=opts.timeout
+                    method, url, json=body, params=params, timeout=opts.timeout, **extra
                 )
             except requests.RequestException as exc:
                 # Transport failure (connection refused / DNS / reset / TLS /
@@ -242,6 +314,21 @@ class HttpClient:
                     self._sleep(opts.retry_backoff * 2 ** (attempt - 1))
                     continue
                 raise SignalWireRestTransportError(str(exc), full_url, method) from exc
+
+            if response == "redirect" and not resp.ok:
+                pass  # a 4xx/5xx: the error path below
+            elif response == "redirect":
+                location = resp.headers.get("Location")
+                if resp.is_redirect and location:
+                    return location
+                # A success that is not the redirect the endpoint answers with.
+                raise SignalWireRestError(
+                    resp.status_code,
+                    resp.text,
+                    full_url,
+                    method,
+                    headers=dict(resp.headers),
+                )
 
             if not resp.ok:
                 if attempt <= opts.retries and status_is_retryable(
@@ -264,6 +351,8 @@ class HttpClient:
                     headers=dict(resp.headers),
                 )
 
+            if response == "text":
+                return resp.text
             if resp.status_code == 204 or not resp.content:
                 return {}
             try:
@@ -287,9 +376,80 @@ class HttpClient:
         path: str,
         params: dict[str, Any] | None = None,
         request_options: RequestOptions | None = None,
+        *,
+        headers: dict[str, str] | None = None,
     ) -> Any:
+        """Issue a ``GET`` to ``path`` and return the decoded JSON body.
+
+        Args:
+            path: Absolute API path (e.g. ``/api/fabric/resources``), appended to
+                the client's ``scheme://host`` base URL.
+            params: Query-string parameters. ``None`` values are dropped from the
+                URL recorded on an error; list values expand repeated-key style.
+            request_options: Per-call transport overrides (timeout / retries /
+                backoff / abort signal) shallow-merged over the client default.
+            headers: Extra request headers for this call only.
+
+        Returns:
+            The parsed JSON body, or ``{}`` for a ``204`` or an empty body.
+
+        Raises:
+            SignalWireRestError: On a non-2xx response, or on a 2xx whose body is
+                not decodable JSON.
+            SignalWireRestTransportError: If no response was ever received
+                (connection refused, DNS failure, TLS error, timeout) or the
+                ``abort_signal`` was set before an attempt.
+        """
         return self._request(
-            "GET", path, params=params, request_options=request_options
+            "GET", path, params=params, request_options=request_options, headers=headers
+        )
+
+    def get_text(
+        self,
+        path: str,
+        params: dict[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        *,
+        headers: dict[str, str] | None = None,
+    ) -> str:
+        """Issue a ``GET`` whose success body is NOT JSON and return it as text.
+
+        For an endpoint that answers with another media type (e.g. ``text/csv``); pass
+        that type as the ``Accept`` header. Errors are raised exactly as :meth:`get`.
+        """
+        return cast(
+            str,
+            self._request(
+                "GET",
+                path,
+                params=params,
+                request_options=request_options,
+                headers=headers,
+                response="text",
+            ),
+        )
+
+    def get_redirect_location(
+        self,
+        path: str,
+        params: dict[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+    ) -> str:
+        """Issue a ``GET`` whose success IS a redirect and return its ``Location``.
+
+        The redirect is not followed: the endpoint's answer is the URL of the resource
+        (e.g. a signed download URL), which the caller fetches with any HTTP client.
+        Raises :class:`SignalWireRestError` for an error status or a non-redirect success.
+        """
+        return cast(
+            str,
+            self._request(
+                "GET",
+                path,
+                params=params,
+                request_options=request_options,
+                response="redirect",
+            ),
         )
 
     def post(
@@ -298,9 +458,39 @@ class HttpClient:
         body: Any = None,
         params: dict[str, Any] | None = None,
         request_options: RequestOptions | None = None,
+        *,
+        headers: dict[str, str] | None = None,
     ) -> Any:
+        """Issue a ``POST`` to ``path`` with ``body`` JSON-encoded, returning the
+        decoded JSON response.
+
+        Unlike :meth:`get`, this is a non-idempotent method: on a retryable
+        failure it retries only for a transport error or a ``429``/``503``
+        throttle, never blindly on ``500``/``502``/``504``.
+
+        Args:
+            path: Absolute API path.
+            body: Value serialised as the JSON request body. ``None`` sends no body.
+            params: Query-string parameters (some create endpoints take both).
+            request_options: Per-call transport overrides.
+            headers: Extra request headers for this call only (e.g. an
+                ``Idempotency-Key``).
+
+        Returns:
+            The parsed JSON body, or ``{}`` for a ``204`` or an empty body.
+
+        Raises:
+            SignalWireRestError: On a non-2xx response, or an undecodable 2xx body.
+            SignalWireRestTransportError: If no response was received or the request
+                was cancelled via ``abort_signal``.
+        """
         return self._request(
-            "POST", path, body=body, params=params, request_options=request_options
+            "POST",
+            path,
+            body=body,
+            params=params,
+            request_options=request_options,
+            headers=headers,
         )
 
     def put(
@@ -309,6 +499,24 @@ class HttpClient:
         body: Any = None,
         request_options: RequestOptions | None = None,
     ) -> Any:
+        """Issue a ``PUT`` to ``path`` with ``body`` JSON-encoded (full replace).
+
+        Takes no query parameters, unlike :meth:`get`/:meth:`post`. ``PUT`` is
+        treated as idempotent, so it retries on the full ``retry_on_status`` set.
+
+        Args:
+            path: Absolute API path, usually a specific item (``<collection>/<id>``).
+            body: Value serialised as the JSON request body.
+            request_options: Per-call transport overrides.
+
+        Returns:
+            The parsed JSON body, or ``{}`` for a ``204`` or an empty body.
+
+        Raises:
+            SignalWireRestError: On a non-2xx response, or an undecodable 2xx body.
+            SignalWireRestTransportError: If no response was received or the request
+                was cancelled via ``abort_signal``.
+        """
         return self._request("PUT", path, body=body, request_options=request_options)
 
     def patch(
@@ -317,9 +525,45 @@ class HttpClient:
         body: Any = None,
         request_options: RequestOptions | None = None,
     ) -> Any:
+        """Issue a ``PATCH`` to ``path`` with ``body`` JSON-encoded (partial update).
+
+        Takes no query parameters. Like :meth:`post`, ``PATCH`` is non-idempotent,
+        so it retries only on a transport error or a ``429``/``503`` throttle.
+
+        Args:
+            path: Absolute API path, usually a specific item (``<collection>/<id>``).
+            body: Value serialised as the JSON request body — only the fields to change.
+            request_options: Per-call transport overrides.
+
+        Returns:
+            The parsed JSON body, or ``{}`` for a ``204`` or an empty body.
+
+        Raises:
+            SignalWireRestError: On a non-2xx response, or an undecodable 2xx body.
+            SignalWireRestTransportError: If no response was received or the request
+                was cancelled via ``abort_signal``.
+        """
         return self._request("PATCH", path, body=body, request_options=request_options)
 
     def delete(self, path: str, request_options: RequestOptions | None = None) -> Any:
+        """Issue a ``DELETE`` to ``path``, returning the decoded JSON response.
+
+        Sends neither a body nor query parameters. ``DELETE`` is treated as
+        idempotent, so it retries on the full ``retry_on_status`` set. SignalWire
+        delete endpoints typically answer ``204``, which surfaces here as ``{}``.
+
+        Args:
+            path: Absolute API path of the item to delete.
+            request_options: Per-call transport overrides.
+
+        Returns:
+            The parsed JSON body, or ``{}`` for a ``204`` or an empty body.
+
+        Raises:
+            SignalWireRestError: On a non-2xx response, or an undecodable 2xx body.
+            SignalWireRestTransportError: If no response was received or the request
+                was cancelled via ``abort_signal``.
+        """
         return self._request("DELETE", path, request_options=request_options)
 
 
@@ -327,10 +571,12 @@ class BaseResource:
     """Base for all namespace/resource classes."""
 
     def __init__(self, http: HttpClient, base_path: str) -> None:
+        """Bind the resource to the HTTP client and its base API path."""
         self._http = http
         self._base_path = base_path
 
     def _path(self, *parts: Any) -> str:
+        """Join path segments onto the resource's base path."""
         return "/".join([self._base_path] + [str(p) for p in parts])
 
 
@@ -345,6 +591,28 @@ class ReadResource(BaseResource, Generic[TList, TItem]):
     def list(
         self, *, request_options: RequestOptions | None = None, **params: Any
     ) -> TList:
+        """Fetch ONE raw page from this resource's collection endpoint.
+
+        ``GET``s the resource's ``base_path`` verbatim (no id segment appended)
+        and returns the server's response as-is — the envelope, not the items.
+        This does NOT follow pagination links: use :meth:`paginate` to iterate
+        every item across all pages.
+
+        Args:
+            request_options: Per-call transport overrides (timeout / retries /
+                backoff / abort signal).
+            **params: Arbitrary filter/paging query parameters, sent as the query
+                string. Passing none sends no query string at all.
+
+        Returns:
+            The decoded list envelope, statically typed as this resource's
+            ``TList`` binding. At runtime it is the raw JSON dict from the server;
+            the type parameter is static only.
+
+        Raises:
+            SignalWireRestError: On a non-2xx response, or an undecodable 2xx body.
+            SignalWireRestTransportError: If no response was received.
+        """
         return cast(
             TList,
             self._http.get(
@@ -382,6 +650,27 @@ class ReadResource(BaseResource, Generic[TList, TItem]):
     def get(
         self, resource_id: str, *, request_options: RequestOptions | None = None
     ) -> TItem:
+        """Fetch a single item of this resource by id.
+
+        ``GET``s ``<base_path>/<resource_id>``. Distinct from
+        :meth:`HttpClient.get`, which takes a caller-built absolute path and no id:
+        here the path is composed from the resource's own ``base_path``, and no
+        query parameters are sent.
+
+        Args:
+            resource_id: Identifier appended as the final path segment. Stringified
+                as-is, so it must already be URL-safe.
+            request_options: Per-call transport overrides.
+
+        Returns:
+            The decoded item, statically typed as this resource's ``TItem``
+            binding; a raw JSON dict at runtime.
+
+        Raises:
+            SignalWireRestError: On a non-2xx response — notably ``404`` for an
+                unknown id — or an undecodable 2xx body.
+            SignalWireRestTransportError: If no response was received.
+        """
         return cast(
             TItem,
             self._http.get(self._path(resource_id), request_options=request_options),
@@ -403,6 +692,28 @@ class CrudResource(ReadResource[TList, TItem], Generic[TList, TItem, TCreate, TU
     def create(
         self, *, request_options: RequestOptions | None = None, **kwargs: Any
     ) -> TItem:
+        """Create a new item in this collection.
+
+        ``POST``s ``base_path`` with the keyword arguments serialised **as the JSON
+        request body** — not as a query string, which is how they differ from
+        :meth:`list`'s ``**params``.
+
+        Concrete generated resources override this with a closed, spec-typed
+        signature; this base accepts arbitrary wire fields.
+
+        Args:
+            request_options: Per-call transport overrides.
+            **kwargs: Fields of the create request, sent verbatim as the JSON body.
+
+        Returns:
+            The created item as returned by the server, statically typed as
+            ``TItem``; a raw JSON dict at runtime.
+
+        Raises:
+            SignalWireRestError: On a non-2xx response — notably ``422`` for an
+                invalid body — or an undecodable 2xx body.
+            SignalWireRestTransportError: If no response was received.
+        """
         # Honest fallback: the body accepts arbitrary wire fields and at runtime
         # is a plain dict. Concrete resources override this with a generated
         # CLOSED typed signature (explicit spec fields + an ``extras`` door); the
@@ -425,6 +736,31 @@ class CrudResource(ReadResource[TList, TItem], Generic[TList, TItem, TCreate, TU
         request_options: RequestOptions | None = None,
         **kwargs: Any,
     ) -> TItem:
+        """Update an existing item by id, sending only the given fields.
+
+        Dispatches on the class attribute ``_update_method``: ``PATCH`` by default
+        (partial update), or ``PUT`` for resources that bind
+        :class:`FabricResourcePUT`. The keyword arguments become the JSON request
+        body, sent to ``<base_path>/<resource_id>``.
+
+        Concrete generated resources override this with a closed, spec-typed
+        signature; this base accepts arbitrary wire fields.
+
+        Args:
+            resource_id: Identifier of the item to update, appended as the final
+                path segment. Positional-only, so a subclass may rename it.
+            request_options: Per-call transport overrides.
+            **kwargs: Fields to change, sent verbatim as the JSON body.
+
+        Returns:
+            The updated item as returned by the server, statically typed as
+            ``TItem``; a raw JSON dict at runtime.
+
+        Raises:
+            SignalWireRestError: On a non-2xx response — notably ``404`` for an
+                unknown id or ``422`` for an invalid body — or an undecodable 2xx body.
+            SignalWireRestTransportError: If no response was received.
+        """
         # resource_id is positional-only so a subclass may rename it without an LSP
         # override conflict. Same contract as ``create``: honest ``**kwargs: Any``
         # fallback; the concrete generated override carries the closed typed shape, the
@@ -442,6 +778,27 @@ class CrudResource(ReadResource[TList, TItem], Generic[TList, TItem, TCreate, TU
     def delete(
         self, resource_id: str, *, request_options: RequestOptions | None = None
     ) -> TItem:
+        """Delete a single item of this resource by id.
+
+        ``DELETE``s ``<base_path>/<resource_id>``. Distinct from
+        :meth:`HttpClient.delete`, which takes a caller-built absolute path: here
+        the path is composed from the resource's own ``base_path``.
+
+        Args:
+            resource_id: Identifier of the item to delete, appended as the final
+                path segment.
+            request_options: Per-call transport overrides.
+
+        Returns:
+            Statically typed as ``TItem``, but SignalWire delete endpoints
+            typically answer ``204`` with no body, which arrives here as ``{}``.
+            Do not rely on the deleted item being echoed back.
+
+        Raises:
+            SignalWireRestError: On a non-2xx response — notably ``404`` for an
+                unknown id.
+            SignalWireRestTransportError: If no response was received.
+        """
         return cast(
             TItem,
             self._http.delete(self._path(resource_id), request_options=request_options),
@@ -458,6 +815,28 @@ class CrudWithAddresses(CrudResource[TList, TItem, TCreate, TUpdate]):
         request_options: RequestOptions | None = None,
         **params: Any,
     ) -> Any:
+        """List the addresses belonging to one item of this resource.
+
+        ``GET``s the sibling sub-collection ``<base_path>/<resource_id>/addresses``.
+        Unlike :meth:`list`, which pages the resource's OWN collection, this lists a
+        different collection nested under a single item, so it requires an id.
+
+        Args:
+            resource_id: Identifier of the owning item.
+            request_options: Per-call transport overrides.
+            **params: Filter/paging query parameters for the addresses collection.
+                Passing none sends no query string.
+
+        Returns:
+            The decoded addresses list envelope. Untyped (``Any``) — this method
+            carries no ``TList``-style type parameter, so it is the raw server JSON
+            both statically and at runtime.
+
+        Raises:
+            SignalWireRestError: On a non-2xx response — notably ``404`` for an
+                unknown ``resource_id``.
+            SignalWireRestTransportError: If no response was received.
+        """
         return self._http.get(
             self._path(resource_id, "addresses"),
             params=params or None,

@@ -57,6 +57,7 @@ def _basic_auth_headers(agent: AgentBase) -> dict[str, str]:
 # Signed: valid signature → 200, invalid → 403
 # ---------------------------------------------------------------------------
 
+
 class TestAgentSignedWebhooks:
     def test_post_swaig_with_valid_signature_runs_handler(self) -> None:
         agent = AgentBase(name="t1", signing_key=SIGNING_KEY)
@@ -140,8 +141,16 @@ class TestAgentSignedWebhooks:
 # Paths below the agent's route that reach a signed handler. The router matches
 # the canonical forms; the catch-alls serve the bare route and slash variants,
 # and must not become a way around the check.
-SIGNED_PATHS = ["", "/", "/swaig", "/swaig/", "//swaig", "/swaig//",
-                "/post_prompt", "/post_prompt//"]
+SIGNED_PATHS = [
+    "",
+    "/",
+    "/swaig",
+    "/swaig/",
+    "//swaig",
+    "/swaig//",
+    "/post_prompt",
+    "/post_prompt//",
+]
 
 
 def _served_app(agent: AgentBase) -> Any:
@@ -190,7 +199,10 @@ class TestEveryServedPathIsSigned:
             resp = client.post(
                 "/agent" + path,
                 content=body,
-                headers={**_basic_auth_headers(agent), "content-type": "application/json"},
+                headers={
+                    **_basic_auth_headers(agent),
+                    "content-type": "application/json",
+                },
             )
         assert resp.status_code == 403, (
             f"{app_kind}: unsigned POST /agent{path} got {resp.status_code}: {resp.text[:200]}"
@@ -228,7 +240,9 @@ class TestEveryServedPathIsSigned:
 
     @pytest.mark.parametrize("app_kind", sorted(APPS))
     @pytest.mark.parametrize("path", ["/sip", "/sip/", "/sip//"])
-    def test_a_routing_callback_path_needs_a_signature(self, app_kind: str, path: str) -> None:
+    def test_a_routing_callback_path_needs_a_signature(
+        self, app_kind: str, path: str
+    ) -> None:
         """A callback path renders SWML like the root, so it is signed like the root."""
         agent = AgentBase(name="signed", route="/agent", signing_key=SIGNING_KEY)
         agent.register_routing_callback(lambda body, headers: None, path="/sip")
@@ -237,8 +251,11 @@ class TestEveryServedPathIsSigned:
         signature = _scheme_a_sig(SIGNING_KEY, f"http://testserver/agent{path}", body)
         with APPS[app_kind](agent) as client:
             unsigned = client.post(f"/agent{path}", content=body, headers=headers)
-            signed = client.post(f"/agent{path}", content=body,
-                                 headers={**headers, SIGNALWIRE_SIGNATURE_HEADER: signature})
+            signed = client.post(
+                f"/agent{path}",
+                content=body,
+                headers={**headers, SIGNALWIRE_SIGNATURE_HEADER: signature},
+            )
         assert unsigned.status_code == 403
         assert signed.status_code == 200
         assert "sections" in signed.json()
@@ -247,13 +264,16 @@ class TestEveryServedPathIsSigned:
         """/agentswaig is not /agent/swaig."""
         agent = AgentBase(name="signed", route="/agent", signing_key=SIGNING_KEY)
         client = TestClient(_served_app(agent))
-        resp = client.post("/agentswaig", content="{}", headers=_basic_auth_headers(agent))
+        resp = client.post(
+            "/agentswaig", content="{}", headers=_basic_auth_headers(agent)
+        )
         assert resp.json() == {"error": "Invalid route"}
 
 
 # ---------------------------------------------------------------------------
 # Startup warning when key is unset
 # ---------------------------------------------------------------------------
+
 
 class _CaptureHandler(logging.Handler):
     """Minimal handler used to harvest LogRecords from the SDK's namespaced logger.
@@ -273,7 +293,9 @@ class _CaptureHandler(logging.Handler):
 
 
 class TestAgentNoKeyWarning:
-    def test_warning_emitted_when_signing_key_unset(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_warning_emitted_when_signing_key_unset(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """AgentBase logs a prominent WARNING when neither arg nor env is set."""
         monkeypatch.delenv("SIGNALWIRE_SIGNING_KEY", raising=False)
 
@@ -286,7 +308,8 @@ class TestAgentNoKeyWarning:
             agent_logger.removeHandler(capture)
 
         warning_records = [
-            r for r in capture.records
+            r
+            for r in capture.records
             if r.levelno >= logging.WARNING
             and (
                 "webhook_signature_validation_disabled" in r.getMessage()
@@ -310,7 +333,8 @@ class TestAgentNoKeyWarning:
             agent_logger.removeHandler(capture)
 
         warning_records = [
-            r for r in capture.records
+            r
+            for r in capture.records
             if r.levelno >= logging.WARNING
             and (
                 "webhook_signature_validation_disabled" in r.getMessage()
@@ -321,7 +345,9 @@ class TestAgentNoKeyWarning:
             f"unexpected disabled-warning when key is set: {[r.getMessage() for r in warning_records]}"
         )
 
-    def test_warning_waits_until_the_agent_serves(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_warning_waits_until_the_agent_serves(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """An agent built before logging is on logs the warning when serve() turns it on."""
         monkeypatch.delenv("SIGNALWIRE_SIGNING_KEY", raising=False)
         with _logging_not_set_up():
@@ -331,7 +357,9 @@ class TestAgentNoKeyWarning:
                 agent.serve()
         assert len(_disabled_warnings(capture)) == 1
 
-    def test_agent_server_logs_the_warning_when_it_runs(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_agent_server_logs_the_warning_when_it_runs(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """AgentServer.run() turns logging on, then logs each unsigned agent's warning."""
         monkeypatch.delenv("SIGNALWIRE_SIGNING_KEY", raising=False)
         with _logging_not_set_up():
@@ -357,7 +385,10 @@ class TestAgentNoKeyWarning:
 def _logging_not_set_up() -> Iterator[None]:
     """The SDK's logging as an app that hasn't configured any leaves it: a
     NullHandler on "signalwire" and nothing to propagate to."""
-    sdk, agent_base = logging.getLogger("signalwire"), logging.getLogger("signalwire.agent_base")
+    sdk, agent_base = (
+        logging.getLogger("signalwire"),
+        logging.getLogger("signalwire.agent_base"),
+    )
     handlers, level, propagate = sdk.handlers[:], sdk.level, sdk.propagate
     agent_base_level = agent_base.level
     sdk.handlers = [logging.NullHandler()]
@@ -387,13 +418,17 @@ def _captured(name: str) -> Iterator[_CaptureHandler]:
 @contextlib.contextmanager
 def _not_serving() -> Iterator[None]:
     """serve() and AgentServer.run() without starting uvicorn or reconfiguring logging."""
-    with patch("uvicorn.run"), patch("signalwire.core.logging_config.configure_logging"):
+    with (
+        patch("uvicorn.run"),
+        patch("signalwire.core.logging_config.configure_logging"),
+    ):
         yield
 
 
 def _disabled_warnings(capture: _CaptureHandler) -> list[logging.LogRecord]:
     return [
-        r for r in capture.records
+        r
+        for r in capture.records
         if r.levelno >= logging.WARNING
         and "webhook_signature_validation_disabled" in r.getMessage()
     ]
@@ -403,8 +438,11 @@ def _disabled_warnings(capture: _CaptureHandler) -> list[logging.LogRecord]:
 # Env var fallback
 # ---------------------------------------------------------------------------
 
+
 class TestAgentEnvFallback:
-    def test_env_signing_key_picked_up_when_no_explicit_arg(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_env_signing_key_picked_up_when_no_explicit_arg(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """SIGNALWIRE_SIGNING_KEY env var supplies the key when arg is omitted."""
         monkeypatch.setenv("SIGNALWIRE_SIGNING_KEY", SIGNING_KEY)
         agent = AgentBase(name="envtest")

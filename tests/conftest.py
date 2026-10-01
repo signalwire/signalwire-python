@@ -16,12 +16,11 @@ import tempfile
 import shutil
 from collections.abc import Iterator
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from typing import Any
 import json
 import requests
 import uuid
-from datetime import datetime
 
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent
@@ -29,10 +28,7 @@ sys.path.insert(0, str(project_root))
 
 # Import the main classes we'll be testing
 from signalwire.core.agent_base import AgentBase
-from signalwire.core.function_result import FunctionResult
 from signalwire.core.swaig_function import SWAIGFunction
-from signalwire.core.data_map import DataMap
-from signalwire.core.contexts import ContextBuilder
 from signalwire.core.swml_service import SWMLService
 
 
@@ -52,15 +48,15 @@ def mock_env_vars() -> Iterator[dict[str, str]]:
         "SIGNALWIRE_API_TOKEN": "test-token",
         "SIGNALWIRE_SPACE": "test.signalwire.com",
         "OPENAI_API_KEY": "test-openai-key",
-        "TEST_ENV_VAR": "test-value"
+        "TEST_ENV_VAR": "test-value",
     }
-    
+
     # Patch os.environ
     original_environ = os.environ.copy()
     os.environ.update(env_vars)
-    
+
     yield env_vars
-    
+
     # Restore original environment
     os.environ.clear()
     os.environ.update(original_environ)
@@ -70,13 +66,13 @@ def mock_env_vars() -> Iterator[dict[str, str]]:
 def sample_agent_config() -> dict[str, Any]:
     """Sample agent configuration for testing"""
     return {
-        'name': 'test_agent',
-        'route': '/test',
-        'host': '127.0.0.1',
-        'port': 3001,
-        'basic_auth': ('test_user', 'test_password'),
-        'use_pom': False,  # Disable POM to avoid dependency issues in tests
-        'suppress_logs': True
+        "name": "test_agent",
+        "route": "/test",
+        "host": "127.0.0.1",
+        "port": 3001,
+        "basic_auth": ("test_user", "test_password"),
+        "use_pom": False,  # Disable POM to avoid dependency issues in tests
+        "suppress_logs": True,
     }
 
 
@@ -94,7 +90,7 @@ def mock_agent(mock_env_vars: dict[str, str]) -> AgentBase:
             port=3001,
             suppress_logs=True,
             use_pom=False,
-            schema_validation=False
+            schema_validation=False,
         )
 
         # Mock the session manager to avoid initialization issues
@@ -108,22 +104,27 @@ def mock_agent(mock_env_vars: dict[str, str]) -> AgentBase:
 @pytest.fixture
 def sample_swaig_function() -> Any:
     """Sample SWAIG function for testing"""
+
     def test_handler(param1: str, param2: int = 42) -> dict[str, Any]:
         return {"result": f"Processed {param1} with {param2}"}
-    
+
     parameters: dict[str, Any] = {
         "type": "object",
         "properties": {
             "param1": {"type": "string", "description": "First parameter"},
-            "param2": {"type": "integer", "description": "Second parameter", "default": 42}
+            "param2": {
+                "type": "integer",
+                "description": "Second parameter",
+                "default": 42,
+            },
         },
-        "required": ["param1"]
+        "required": ["param1"],
     }
     return SWAIGFunction(
         name="test_function",
         description="A test function",
         parameters=parameters,
-        handler=test_handler
+        handler=test_handler,
     )
 
 
@@ -132,29 +133,19 @@ def sample_post_data() -> dict[str, Any]:
     """Sample POST data that would come from SignalWire"""
     return {
         "function": "test_function",
-        "argument": {
-            "parsed": [{"param1": "test_value", "param2": 100}]
-        },
+        "argument": {"parsed": [{"param1": "test_value", "param2": 100}]},
         "call_id": str(uuid.uuid4()),
-        "meta_data": {
-            "token": "test-token-123"
-        },
-        "global_data": {
-            "user_id": "test-user-456"
-        },
-        "vars": {
-            "userVariables": {
-                "custom_var": "custom_value"
-            }
-        },
+        "meta_data": {"token": "test-token-123"},
+        "global_data": {"user_id": "test-user-456"},
+        "vars": {"userVariables": {"custom_var": "custom_value"}},
         "call": {
             "call_id": str(uuid.uuid4()),
             "state": "created",
             "direction": "inbound",
             "type": "webrtc",
             "from": "+15551234567",
-            "to": "+15559876543"
-        }
+            "to": "+15559876543",
+        },
     }
 
 
@@ -187,19 +178,15 @@ def sample_swml_document() -> dict[str, Any]:
         "version": "1.0.0",
         "sections": {
             "main": [
-                {
-                    "answer": {}
-                },
+                {"answer": {}},
                 {
                     "ai": {
                         "prompt": "You are a helpful AI assistant.",
-                        "SWAIG": {
-                            "functions": []
-                        }
+                        "SWAIG": {"functions": []},
                     }
-                }
+                },
             ]
-        }
+        },
     }
 
 
@@ -207,23 +194,23 @@ def sample_swml_document() -> dict[str, Any]:
 def mock_skill() -> type:
     """Mock skill for testing skill manager"""
     from signalwire.core.skill_base import SkillBase
-    
+
     class MockSkill(SkillBase):
         SKILL_NAME = "mock_skill"
         SKILL_DESCRIPTION = "A mock skill for testing"
         SKILL_VERSION = "1.0.0"
-        
+
         def setup(self) -> bool:
             return True
-            
+
         def register_tools(self) -> None:
             self.agent.define_tool(
                 name="mock_tool",
                 description="A mock tool",
                 parameters={"type": "object", "properties": {}},
-                handler=lambda: {"result": "mock"}
+                handler=lambda: {"result": "mock"},
             )
-    
+
     return MockSkill
 
 
@@ -247,9 +234,9 @@ def sample_contexts() -> Any:
                 {
                     "name": "detect_greeting",
                     "condition": "contains greeting words",
-                    "action": "respond with greeting"
+                    "action": "respond with greeting",
                 }
-            ]
+            ],
         }
     ]
 
@@ -257,15 +244,13 @@ def sample_contexts() -> Any:
 @pytest.fixture
 def mock_swml_service() -> Any:
     """Create a mock SWML service for testing (schema validation disabled)"""
-    service = SWMLService(
+    return SWMLService(
         name="test_service",
         route="/test",
         host="127.0.0.1",
         port=3001,
-        schema_validation=False
+        schema_validation=False,
     )
-
-    return service
 
 
 @pytest.fixture
@@ -278,10 +263,10 @@ def mock_swaig_function() -> Any:
             "type": "object",
             "properties": {
                 "param1": {"type": "string", "description": "Test parameter"},
-                "param2": {"type": "integer", "description": "Test number"}
+                "param2": {"type": "integer", "description": "Test number"},
             },
-            "required": ["param1"]
-        }
+            "required": ["param1"],
+        },
     }
 
 
@@ -296,10 +281,7 @@ def mock_post_data() -> Any:
         "to": "+15559876543",
         "direction": "inbound",
         "timestamp": "2024-01-01T12:00:00Z",
-        "vars": {
-            "user_id": "test-user-123",
-            "session_id": "test-session-456"
-        }
+        "vars": {"user_id": "test-user-123", "session_id": "test-session-456"},
     }
 
 
@@ -313,62 +295,59 @@ def sample_swml_response() -> Any:
                 {
                     "ai": {
                         "prompt": "You are a helpful assistant",
-                        "SWAIG": {
-                            "functions": []
-                        }
+                        "SWAIG": {"functions": []},
                     }
                 }
             ]
-        }
+        },
     }
 
 
 # Pytest hooks for better test organization
 def pytest_configure(config: "pytest.Config") -> None:
     """Configure pytest with custom markers"""
-    config.addinivalue_line(
-        "markers", "unit: mark test as a unit test"
-    )
-    config.addinivalue_line(
-        "markers", "integration: mark test as an integration test"
-    )
-    config.addinivalue_line(
-        "markers", "slow: mark test as slow running"
-    )
-    config.addinivalue_line(
-        "markers", "network: mark test as requiring network access"
-    )
+    config.addinivalue_line("markers", "unit: mark test as a unit test")
+    config.addinivalue_line("markers", "integration: mark test as an integration test")
+    config.addinivalue_line("markers", "slow: mark test as slow running")
+    config.addinivalue_line("markers", "network: mark test as requiring network access")
 
 
-def pytest_collection_modifyitems(config: "pytest.Config", items: "list[pytest.Item]") -> None:
+def pytest_collection_modifyitems(
+    config: "pytest.Config", items: "list[pytest.Item]"
+) -> None:
     """Automatically mark tests based on their location"""
     for item in items:
         # Mark tests in unit/ directory as unit tests
         if "unit" in str(item.fspath):
             item.add_marker(pytest.mark.unit)
-        
+
         # Mark tests in integration/ directory as integration tests
         if "integration" in str(item.fspath):
             item.add_marker(pytest.mark.integration)
-        
+
         # Mark tests that use network fixtures as network tests
-        if any(fixture in getattr(item, "fixturenames", []) for fixture in ["requests_mock", "httpx_mock"]):
+        if any(
+            fixture in getattr(item, "fixturenames", [])
+            for fixture in ["requests_mock", "httpx_mock"]
+        ):
             item.add_marker(pytest.mark.network)
 
 
 # Test utilities
 class TestUtils:
     """Utility functions for tests"""
-    
+
     @staticmethod
-    def create_mock_response(status_code: int = 200, json_data: "dict[str, Any] | None" = None) -> Any:
+    def create_mock_response(
+        status_code: int = 200, json_data: "dict[str, Any] | None" = None
+    ) -> Any:
         """Create a mock HTTP response"""
         response = Mock()
         response.status_code = status_code
         response.json.return_value = json_data or {}
         response.text = json.dumps(json_data or {})
         return response
-    
+
     @staticmethod
     def assert_swml_structure(swml_dict: "dict[str, Any]") -> None:
         """Assert that a dictionary has valid SWML structure"""
@@ -376,7 +355,7 @@ class TestUtils:
         assert "sections" in swml_dict
         assert "main" in swml_dict["sections"]
         assert isinstance(swml_dict["sections"]["main"], list)
-    
+
     @staticmethod
     def assert_swaig_function_structure(func_dict: "dict[str, Any]") -> None:
         """Assert that a dictionary has valid SWAIG function structure"""
@@ -388,7 +367,8 @@ class TestUtils:
 @pytest.fixture
 def test_utils() -> type:
     """Provide test utilities"""
-    return TestUtils 
+    return TestUtils
+
 
 class ScriptedHTTPAdapter:
     """A Requests adapter that answers each URL with a scripted response.
@@ -450,11 +430,12 @@ def route_public_session_to_requests() -> Iterator[None]:
 
     def request(self: Any, method: str, url: str, **kwargs: Any) -> Any:
         kwargs.pop("allow_redirects", None)
+        timeout = kwargs.pop("timeout", None)
         if method == "POST":
-            response = requests.post(url, **kwargs)
+            response = requests.post(url, timeout=timeout, **kwargs)
         else:
             kwargs.pop("data", None)
-            response = requests.get(url, **kwargs)
+            response = requests.get(url, timeout=timeout, **kwargs)
         if isinstance(response, Mock) and not isinstance(response.is_redirect, bool):
             response.is_redirect = False
         return response

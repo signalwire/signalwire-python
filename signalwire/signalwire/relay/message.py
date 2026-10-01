@@ -55,6 +55,7 @@ class Message:
         reason: str = "",
         tags: list[str] | None = None,
     ):
+        """Create a message record from the fields the server reports."""
         self.message_id = message_id
         self.context = context
         self.direction = direction
@@ -142,6 +143,7 @@ class Message:
                 )
 
     def __repr__(self) -> str:
+        """Show the message id, direction, state and addresses."""
         return (
             f"Message(id={self.message_id!r}, direction={self.direction!r}, "
             f"state={self.state!r}, from={self.from_number!r}, to={self.to_number!r})"

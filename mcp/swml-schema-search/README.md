@@ -153,7 +153,7 @@ Output:
 Methods matching 'audio' (2 found):
 
   join_conference
-    Join an ad-hoc audio conference started on either the SignalWire or Compatibility API.
+    Join an ad-hoc audio conference.
 
   record
     Record the call audio in the foreground, pausing further SWML execution until recording ends.

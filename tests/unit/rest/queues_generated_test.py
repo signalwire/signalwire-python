@@ -26,7 +26,7 @@ class TestQueuesWire:
     def test_queues_create(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.queues.create()
+        signalwire_client.queues.create(name="x")
         last = mock.last_request()
         assert last.method == "POST"
         assert last.matched_route == "relay-rest.create_queue"
@@ -36,7 +36,7 @@ class TestQueuesWire:
     ) -> None:
         mock.push_scenario("relay-rest.create_queue", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.queues.create()
+            signalwire_client.queues.create(name="x")
         assert exc.value.status_code == 500
 
     def test_queues_delete(

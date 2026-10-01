@@ -1,5 +1,213 @@
 # Changelog
 
+## [Unreleased]
+
+### Deprecated
+- Generated type names that were renamed when the SWML verb and SWML webhook types were
+  re-derived from the engine specs keep their old name as a deprecated alias of the new one
+  (one per 1:1 rename against 3.x):
+  - `signalwire.core.swml_verbs_generated`: `AIObject` -> `AiConfig`, `AIParams` -> `AiParams`, `AIPostPrompt` -> `AiPostPrompt`, `AIPrompt` -> `AiPrompt`, `AmazonBedrockObject` -> `AmazonBedrockConfig`, `BedrockParams` -> `AmazonBedrockParams`, `BedrockPostPrompt` -> `AmazonBedrockPostPrompt`, `BedrockPrompt` -> `AmazonBedrockPrompt`, `BedrockSWAIG` -> `AmazonBedrockSWAIG`, `BedrockSWAIGFunction` -> `AmazonBedrockSWAIGFunctionsItem`, `CondParams` -> `CondItem`, `ConversationMessage` -> `AiParamsConvoItem`, `EnterQueueObject` -> `EnterQueueConfig`, `ExecuteSwitch` -> `ExecuteResult`, `Hint` -> `AiHintsItem`, `JoinConferenceObject` -> `JoinConferenceConfig`, `Languages` -> `AiLanguagesItem`, `PayParameters` -> `CallPayParameters`, `PayPrompts` -> `CallPayPrompts`, `Pronounce` -> `AiPronounceItem`, `SWAIGIncludes` -> `AiSWAIGIncludesItem`, `SWAIGInternalFiller` -> `AiSWAIGInternalFillers`, `TranscribeAction` -> `LiveTranscribeAction`, `TranslateAction` -> `LiveTranslateAction`.
+  - `signalwire.rest.namespaces.swml_webhooks_types_generated`: `SwaigRequestData` ->
+    `signalwire.core.swaig_request_generated.SwaigRequest`, `SwaigArgument` ->
+    `signalwire.core.swaig_request_generated.SwaigArgument`, `PostPromptData` ->
+    `signalwire.core.post_prompt_generated.PostPrompt`.
+  - `signalwire.cli.types.PostData` -> `SwmlRequestData`.
+  - `signalwire.rest.namespaces.fabric_types_generated`: the SWML verb types no fabric operation
+    uses (`SWMLObject`, `Play`, `Connect`, ... 142 names) are aliases of the same names in
+    `signalwire.rest.namespaces.calling_types_generated`; `AIPromptUpdate` -> `AIAgentPrompt`,
+    `AIPostPromptUpdate` -> `AIAgentPostPrompt`, `SWAIGUpdate` -> `AIAgentSWAIG`,
+    `SWAIGInternalFillerUpdate` -> `SWAIGInternalFiller`, `FunctionFillersUpdate` ->
+    `FunctionFillers`, `ContextsUpdate` -> `Contexts`, and the `*Pom`/`*Text`/`Contexts*Object`
+    `...Update` variants -> the calling module's names without `Update`.
+
+### Removed
+- Generated type names with no single replacement (their shapes were merged into, or split
+  across, the engine-derived types). These are static typing helpers; the dicts you pass are
+  unchanged:
+  - `signalwire.core.swml_verbs_generated`: `AIPostPromptPom`, `AIPostPromptText`, `AIPromptPom`, `AIPromptText`, `Action`, `AllOfProperty`, `AnyOfProperty`, `ArrayProperty`, `AttentionTimeout`, `BooleanProperty`, `CallStatus`, `ChangeContextAction`, `ChangeStepAction`, `CondElse`, `CondReg`, `ConnectDeviceParallel`, `ConnectDeviceSerial`, `ConnectDeviceSerialParallel`, `ConnectDeviceSingle`, `ConnectHeaders`, `ConnectSwitch`, `ConstProperty`, `ContextPOMSteps`, `ContextSteps`, `ContextSwitchAction`, `ContextTextSteps`, `Contexts`, `ContextsObject`, `ContextsPOMObject`, `ContextsTextObject`, `ConversationRole`, `CustomTranslationFilter`, `Direction`, `FunctionFillers`, `FunctionParameters`, `HangUpHookSWAIGFunction`, `HangupAction`, `HoldAction`, `InjectAction`, `IntegerProperty`, `LanguageParams`, `LanguagesWithFillers`, `LanguagesWithSoloFillers`, `NullProperty`, `NumberProperty`, `ObjectProperty`, `OmitPropertiesBedrockPostPomptTextOmittedPromptProps`, `OmitPropertiesBedrockPostPromptPomOmittedPromptProps`, `OmitPropertiesBedrockPromptPomOmittedPromptProps`, `OmitPropertiesBedrockPromptTextOmittedPromptProps`, `OneOfProperty`, `Output`, `POM`, `PayPromptAction`, `PayPromptPlayAction`, `PayPromptSayAction`, `PickPropertiesHangUpHookSWAIGFunctionPickedSWAIGFunctionProps`, `PickPropertiesStartUpHookSWAIGFunctionPickedSWAIGFunctionProps`, `PickPropertiesSummarizeConversationSWAIGFunctionPickedSWAIGFunctionProps`, `PickPropertiesUserSWAIGFunctionPickedSWAIGFunctionProps`, `PlayWithURL`, `PlayWithURLS`, `PlaybackBGAction`, `PomSectionBodyContent`, `PomSectionBulletsContent`, `SMSWithBody`, `SMSWithMedia`, `SWAIG`, `SWAIGDefaults`, `SWAIGFunction`, `SWAIGNativeFunction`, `SWMLAction`, `SayAction`, `SchemaType`, `SetGlobalDataAction`, `SetMetaDataAction`, `SpeechEngine`, `StartAction`, `StartUpHookSWAIGFunction`, `StopAction`, `StopPlaybackBGAction`, `StringFormat`, `StringProperty`, `SummarizeAction`, `SummarizeActionUnion`, `SummarizeConversationSWAIGFunction`, `ToggleFunctionsAction`, `TranscribeDirection`, `TranscribeStartAction`, `TranscribeSummarizeAction`, `TranscribeSummarizeActionUnion`, `TranslateDirection`, `TranslationFilterPreset`, `UnsetGlobalDataAction`, `UnsetMetaDataAction`, `UserInputAction`, `UserSWAIGFunction`, `ValidConfirmMethods`, `play_url`.
+  - `signalwire.rest.namespaces.swml_webhooks_types_generated`: `PostPromptParams`,
+    `PostPromptConversationTurn`, `PostPromptFunctionCall` (see
+    `signalwire.core.post_prompt_generated`) and `SignalWireErrorBody`.
+  - `signalwire.cli.types`: `CallData` and `VarsData`.
+  - `signalwire.rest.namespaces.fabric_types_generated`: `FabricAddressesResponse` and
+    `ResourceSipEndpointResponse` (no operation returned either shape).
+- `SwmlRequestCall` is now a union of the per-call-type variants (`SwmlRequestCallPhone`,
+  `...Sip`, `...Webrtc`, `...Other`); it can no longer be called as a constructor.
+- `client.fabric.tokens.create_invite_token` (POST /api/fabric/subscriber/invites) and its
+  `SubscriberInviteTokenCreateRequest`/`SubscriberInviteTokenCreateResponse` types: it never
+  worked with project credentials, since the route takes only a subscriber's Bearer token. Use
+  `client.fabric.tokens.create_guest_token` (POST /api/fabric/guests/tokens).
+
+### Changed
+- REST fields the platform stores or forwards without checking them take their shape from the
+  engine spec that does check them: fabric AI agent `prompt`, `post_prompt`, `languages`,
+  `SWAIG`, `pronounce`, `hints`, `params` (the SWML `ai` verb) and the `calling.*` command
+  params (the RELAY calling methods). New optional arguments where the engine accepts more
+  (`calling.play` `gender`/`language`/`voice`, `calling.collect` `continue`/`start_input_timers`/
+  `send_start_of_input`/`status_url`, `calling.stream` `name`/`status_url`/`status_url_method`,
+  `calling.record_pause` `behavior`, `calling.detect`/`calling.tap` `status_url`,
+  `calling.live_transcribe` `hints`).
+- `calling.play`, `record`, `collect`, `detect`, `tap`, `stream` and `transcribe` generate a
+  `control_id` when you omit it; the engine rejects these commands without one.
+- `calling.record(audio=...)` sends the settings as `params.record.audio`, where the engine reads
+  them (the old top-level `params.audio` was rejected). `record=` is a new optional argument.
+  `calling.play` media type `ring` is `ringtone`; `calling.tap` device params have no `rate`.
+- A required REST argument supplied through `extras={...}` satisfies the requirement instead of
+  raising `TypeError`.
+- `core.logging_config.strip_control_chars` accepts both `(event_dict)` and structlog's
+  `(logger, method_name, event_dict)`.
+- `ConnectDevice*` and `Contexts` in the calling/fabric REST types are plain `dict` aliases that
+  can still be called to build a dict.
+- REST request and response types follow the platform code (prime-rails), for example:
+  fabric `/resources/call_flows/{id}/...` and `/resources/conference_rooms/{id}/addresses`
+  use the plural paths the server routes; list responses that are one `{links, data}` object
+  are typed so; fields the server never renders are gone from response types; enums match
+  what the server accepts (`tollfree`, SIP gateway `encryption`, address `country`, ...).
+  Response types are plain dicts at runtime, so reading code is unaffected.
+- `Project` (projects REST types) no longer lists `region_preference`: the field is behind a
+  platform feature flag and is hidden until that feature is released. The server may still
+  return it; responses are plain dicts at runtime.
+
+### Added
+- `client.recordings.download(id)` and `client.video.room_recordings.download(id,
+  media_ttl=...)`: the URL of the recording's MP3 / MP4 (the server's redirect target, returned
+  without following it or downloading anything).
+- `SWMLBuilder.ai(**kwargs)` and `AgentBase.set_param(key, value)` show the `ai` config and
+  `AiParams` keys to type checkers and editors; any other key still type-checks.
+- `client.calling.ai_sidecar(call_id, lang=..., ...)`, `ai_sidecar_ask(call_id, text=...)`,
+  `ai_sidecar_poke(call_id, text=...)`, `ai_sidecar_stop(call_id)` and
+  `ai_sidecar_status(call_id)`: the `calling.ai_sidecar` REST commands, which start, prompt,
+  stop and report an AI sidecar on a live call.
+
+### Changed
+- REST params that were declared required but that the server does not require are now
+  optional. This is a widening: every call that worked before still works.
+  - Fabric SIP endpoint `create` needs only `username`/`password`. `caller_id`, `send_as`,
+    `ciphers`, `codecs`, `encryption`, `call_handler` and `calling_handler_resource_id` are
+    optional.
+  - The fabric SIP gateway `ciphers`/`codecs`.
+  - cXML script `create(display_name=)`.
+  - The guest token's `allowed_addresses`.
+  - `short_codes.update(name=, message_handler=)`.
+  - The fabric subscriber, conference room, SIP endpoint, number group and verified
+    caller ID `update` bodies.
+  - SWML script `contents` also accepts a dict.
+  - SWML webhook `used_for` accepts `messaging`.
+  - `fabric.conference_rooms.create(enable_room_previews=)`, `video.streams.update(url=)`
+    and `space.settings.update(name=)` are optional (the server keeps the stored value).
+  - Video conference, room and room-token `join_from`/`join_until`/`remove_at` also accept
+    a Unix timestamp (`float`), as the server does.
+  - `messages.create(body=)` also accepts a dict or list (a WhatsApp content body).
+
+### Added
+- `messages.create()`: WhatsApp `message_type`, `template_id` and
+  `header_template_parameters` / `body_template_parameters` / `button_template_parameters`.
+- `fabric.tokens.create_subscriber_token()`: `scope` (`sat:refresh`) and `fingerprint`.
+- Response types gain the fields the server renders: `AvailablePhoneNumber.e164`,
+  `national_number_formatted`, `international_number_formatted`, `country_code`;
+  `AssignedNumber.status_callback_url`; `CXMLScriptResponse.display_name`;
+  video `ActiveSession.sync_audio_video`; and `RelayConferenceRecording` joins the
+  `Recording` union.
+- `client.space`: the Space Administration API (`/api/space`) — space settings,
+  geographic permissions, billing profile, billing statements (JSON, CSV text via
+  `billing_statements.get_csv()`, and the PDF's signed URL via `get_pdf()`), usage,
+  payment history and methods, members (invite/list/get/update/remove and per-member
+  project access), balance and top-ups (`create_top_up(idempotency_key=...)` sends the
+  `Idempotency-Key` header), and the low-balance setting.
+- `RestClient(personal_access_token=...)` (or `SIGNALWIRE_PERSONAL_ACCESS_TOKEN`): the
+  Space Administration API authenticates with a user's Personal Access Token, not a
+  project token. A client may hold either credential or both; calling a resource whose
+  credential is missing raises `ValueError`.
+- Fabric: `client.fabric.alias_addresses`, `.sip_addresses` and `.phone_number_addresses`
+  (list/create/get/update/delete), `client.fabric.addresses.delete(id)`, and
+  `client.fabric.resources.assign_sip_endpoint(id, ...)` /
+  `.assign_whatsapp_number(id, ...)`.
+- `client.whatsapp.numbers` (list/get), `.businesses` (list) and `.templates`
+  (list/create/get/update/delete).
+- `client.addresses.update(id, ...)`, `client.registry.brands.update(id, ...)`, and on
+  `client.phone_numbers`: `assign_e911_address`, `remove_e911_address`, `get_cnam`,
+  `request_cnam` and `clear_cnam`.
+- The phone-number and address response types gain the fields the server already
+  returns: `e911_status` and `cnam`; `emergency_enabled`, `validated` and `validated_at`.
+- REST request params and response fields the server already accepts or returns (checked
+  against its routes, contracts and serializers), all optional:
+  - Relay list methods take cursor pagination (`page_number`, `page_size`, `page_token`) on
+    queues, queue members, verified caller IDs and the registry brands, campaigns, numbers and
+    orders. `queues.list()` also takes `filter_name`.
+  - `addresses.create(emergency_enabled=, auto_correct_address=)`.
+  - Registry brand and campaign create/update take `signalwire_contact_emails`. Managed
+    creates take `csp_brand_reference` / `csp_campaign_reference`. Campaign update takes
+    `status_callback_url`.
+  - `sip_profile.update(default_outbound_policy=)`.
+  - Fabric `cxml_applications.update()` takes the `call_*` / `message_*` URL and method
+    fields and `name`.
+  - `subscribers.create/update(time_zone=)`.
+  - AI agents take `post_prompt_auth_user`, `post_prompt_auth_password` and `multilingual`.
+  - Call flows take `flow_data` and `relayml`.
+  - cXML and SWML scripts take `name` and `script_type`.
+  - SIP endpoints take `password`.
+  - The guest token takes the subscriber profile fields.
+  - The brand, campaign, order, SIP profile, cXML application, AI agent, SWML script and
+    assign-address response types gain the fields the server emits.
+- `FunctionResult.change_voice(voice)` emits the SWAIG `change_voice` action,
+  which changes the agent's voice mid-call. `voice` is an `engine.voice:model`
+  spec, the same form the SWML `languages` list uses (the `engine.` prefix and
+  `:model` suffix are optional), and it replaces the voice of the language
+  currently in use; a different TTS engine is allowed. The platform applies it
+  at the next speech batch boundary, never mid-utterance, keeps it for that
+  language for the rest of the call, and falls back to the fallback voice if the
+  new one will not open.
+- `SWMLBuilder` and `SWMLService` gain the experimental SWML verbs
+  `bind_digit`, `clear_digit_bindings` and `set_capabilities`, which the
+  bundled schema now publishes.
+- `SWMLBuilder` and `SWMLService` gain the SWML verbs `echo`, `execute_rpc`,
+  `ring`, `set_meta`, `stream`, `stop_stream`, `transcribe` and
+  `transcribe_stop`. The type stubs already declared them, but the bundled
+  `schema.json` the methods are installed from did not, so calling one raised
+  `AttributeError`. The bundle is now the current SWML schema.
+
+### Changed
+- The bundled SWML `schema.json` follows the engine end to end for values the platform
+  accepts and then ignores. Where the verb's handler discards the platform's reply
+  (`live_transcribe`, `live_translate`, `ai_sidecar`, `amazon_bedrock`, `user_event`), a
+  value only that platform check refuses is now accepted, and the listed values are an
+  annotation (`x-known-values`, `x-effect-requires`). An example is an
+  `amazon_bedrock.prompt.voice_id` outside the five Bedrock voices. Vocabularies whose
+  unlisted values are ignored are open too: `SWAIG.native_functions`, the
+  case-insensitive `ai.params` choices, and `speech_engine`. `hangup.reason` and
+  `stream.status_url_method` are closed, because the platform rejects any other value
+  and the handler raises that rejection. `valid_steps` / `valid_contexts` elements must
+  be strings. New defaults are published: `play.volume` 0, and ElevenLabs `stability` .5
+  and `similarity` .75. Conditional and environment-derived defaults are annotated.
+- The bundled SWML `schema.json` validates values the way the engine does:
+  `connect.ringback` / `dial.ringback` / `prompt.play` accept `{url}` and
+  `["https://..."]` and reject `{play: {...}}`; `cond` elements must be
+  `{when, then}` or `{else}` with sections typed; `switch` case values must be
+  SWML sections; play/status URLs are checked against their accepted prefixes;
+  boolean-valued strings (for example `acknowledge_interruptions: "5"`,
+  `pay.postal_code: "94107"`) are no longer limited to a closed spelling list;
+  clamped or ignored ranges (`request.timeout`, the `ai.params` timeouts) are
+  annotations rather than hard maxima; `pay` / `enter_queue` / `detect_machine`
+  reject unknown keys; `live_transcribe` / `live_translate` / `user_event`
+  no longer require `action` / `event`. The typed `AiParams` fields for those
+  strings are `str` instead of `Literal[...]`.
+- The bundled SWML `schema.json` is the current engine-derived schema: SWAIG
+  function `parameters` / `argument` are typed as JSON Schema (plus the
+  `nullable` / `example` / `propertyOrdering` keywords some model APIs accept),
+  `amazon_bedrock` function `data_map` and prompt `pom` are typed, and
+  `connect` / `execute` `result` carry the `cond` / `switch` shapes. The typed
+  `SwaigResponse.response` accepts a string or `{tool_result, tool_prompt}`.
+- The typed `AiParams` config no longer declares `audible_debug`,
+  `audible_latency`, `cache_mode`, `debug`, `enable_accounting` or
+  `verbose_logs`; the SWML schema withholds them.
+
+### Fixed
+- Generated SWML verb methods accept the verb's config as one positional
+  mapping, the form the type stubs declare (`builder.echo({"timeout": 30})`).
+  Keyword arguments still work and are merged over the mapping.
+- The `return` verb is available as `return_()`, the name the type stubs
+  declare. It still emits the `return` key.
+
 ## [3.5.1] - 2026-09-29
 
 Fixes from a review of 3.5.0 made while porting it to the TypeScript SDK:

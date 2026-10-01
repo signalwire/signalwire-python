@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 from collections.abc import Mapping
 
-from .._base import BaseResource, CrudResource, ReadResource
+from .._base import BaseResource, CrudResource, ReadResource, _required_via_extras
 
 if TYPE_CHECKING:
     from .._request_options import RequestOptions
@@ -86,14 +86,15 @@ class VideoConferences(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/video/conferences")
 
+    @_required_via_extras("display_name")
     def create(  # type: ignore[override]
         self,
         *,
         display_name: str,
         name: str | None = None,
         description: str | None = None,
-        join_from: str | None = None,
-        join_until: str | None = None,
+        join_from: str | float | None = None,
+        join_until: str | float | None = None,
         quality: VideoQuality | None = None,
         layout: VideoLayout | None = None,
         size: ConferenceSize | None = None,
@@ -158,8 +159,8 @@ class VideoConferences(
         *,
         display_name: str | None = None,
         description: str | None = None,
-        join_from: str | None = None,
-        join_until: str | None = None,
+        join_from: str | float | None = None,
+        join_until: str | float | None = None,
         quality: VideoQuality | None = None,
         layout: VideoLayout | None = None,
         size: ConferenceSize | None = None,
@@ -244,6 +245,7 @@ class VideoConferences(
             ),
         )
 
+    @_required_via_extras("url")
     def create_stream(
         self,
         id: str,
@@ -311,6 +313,19 @@ class VideoRoomRecordings(BaseResource):
             ),
         )
 
+    def download(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> str:
+        """Return the URL this endpoint redirects to (the ``Location`` of its
+        redirect), without following it or downloading anything; fetch it with any
+        HTTP client. Raises :class:`SignalWireRestError` for an error status.
+        """
+        return self._http.get_redirect_location(
+            self._path(f"{id}.mp4"),
+            params=params or None,
+            request_options=request_options,
+        )
+
 
 class VideoRoomSessions(ReadResource["ListRoomSessionsResponse", "RoomSessionSummary"]):
     """Typed resource for ``/room_sessions`` (generated)."""
@@ -361,15 +376,16 @@ class VideoRoomTokens(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/video/room_tokens")
 
+    @_required_via_extras("room_name")
     def create(
         self,
         *,
         room_name: str,
         user_name: str | None = None,
         permissions: list[RoomTokenPermission] | None = None,
-        join_from: str | None = None,
-        join_until: str | None = None,
-        remove_at: str | None = None,
+        join_from: str | float | None = None,
+        join_until: str | float | None = None,
+        remove_at: str | float | None = None,
         remove_after_seconds_elapsed: int | None = None,
         join_audio_muted: bool | None = None,
         join_video_muted: bool | None = None,
@@ -433,6 +449,7 @@ class VideoRooms(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/video/rooms")
 
+    @_required_via_extras("name")
     def create(  # type: ignore[override]
         self,
         *,
@@ -441,9 +458,9 @@ class VideoRooms(
         description: str | None = None,
         max_members: int | None = None,
         quality: VideoQuality | None = None,
-        join_from: str | None = None,
-        join_until: str | None = None,
-        remove_at: str | None = None,
+        join_from: str | float | None = None,
+        join_until: str | float | None = None,
+        remove_at: str | float | None = None,
         remove_after_seconds_elapsed: int | None = None,
         layout: RoomLayout | None = None,
         record_on_start: bool | None = None,
@@ -493,9 +510,9 @@ class VideoRooms(
         description: str | None = None,
         max_members: int | None = None,
         quality: VideoQuality | None = None,
-        join_from: str | None = None,
-        join_until: str | None = None,
-        remove_at: str | None = None,
+        join_from: str | float | None = None,
+        join_until: str | float | None = None,
+        remove_at: str | float | None = None,
         remove_after_seconds_elapsed: int | None = None,
         layout: RoomLayout | None = None,
         record_on_start: bool | None = None,
@@ -545,6 +562,7 @@ class VideoRooms(
             ),
         )
 
+    @_required_via_extras("url")
     def create_stream(
         self,
         id: str,
@@ -586,7 +604,7 @@ class VideoStreams(BaseResource):
         self,
         id: str,
         *,
-        url: str,
+        url: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,

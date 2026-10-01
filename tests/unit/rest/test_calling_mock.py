@@ -12,6 +12,8 @@ the in-process ``mock_signalwire`` server.  Each test:
 """
 
 from __future__ import annotations
+
+import uuid
 from signalwire.rest.client import RestClient
 from .conftest import _MockHarness
 
@@ -25,7 +27,9 @@ CALLS_PATH = "/api/calling/calls"
 
 
 class TestCallingLifecycle:
-    def test_dial_with_codecs_array(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_dial_with_codecs_array(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         body = signalwire_client.calling.dial(
             url="https://example.com/swml",
             to="+15551234567",
@@ -40,11 +44,16 @@ class TestCallingLifecycle:
         assert last.body.get("command") == "dial"
         assert "id" not in last.body
         assert last.body.get("params", {}).get("codecs") == [
-            "OPUS", "G729", "VP8", "PCMA",
+            "OPUS",
+            "G729",
+            "VP8",
+            "PCMA",
         ]
         assert last.body.get("params", {}).get("to") == "+15551234567"
 
-    def test_dial_with_codecs_string(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_dial_with_codecs_string(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         body = signalwire_client.calling.dial(
             url="https://example.com/swml",
             to="+15551234567",
@@ -55,6 +64,22 @@ class TestCallingLifecycle:
         last = mock.last_request()
         assert last.body.get("command") == "dial"
         assert last.body.get("params", {}).get("codecs") == "OPUS,G729,VP8,PCMA"
+
+    def test_dial_to_script_without_to(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        """The server needs `to` OR `to_script` (Create contract to_or_to_script_is_present),
+        so a dial that runs SWML on the destination leg may omit `to`."""
+        signalwire_client.calling.dial(
+            url="https://example.com/swml",
+            from_="+15559876543",
+            to_script="https://example.com/leg.swml",
+        )
+        last = mock.last_request()
+        assert last.body.get("command") == "dial"
+        params = last.body.get("params", {})
+        assert "to" not in params
+        assert params.get("to_script") == "https://example.com/leg.swml"
 
     def test_update(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.calling.update(id="call-1", status="completed")
@@ -71,7 +96,8 @@ class TestCallingLifecycle:
 
     def test_transfer(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.calling.transfer(
-            "call-123", dest="sip:destination@example.com",
+            "call-123",
+            dest="sip:destination@example.com",
         )
         assert isinstance(body, dict)
         assert "id" in body
@@ -82,7 +108,9 @@ class TestCallingLifecycle:
         assert last.body.get("id") == "call-123"
         assert last.body.get("params", {}).get("dest") == "sip:destination@example.com"
 
-    def test_disconnect(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_disconnect(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         body = signalwire_client.calling.disconnect("call-456")
         assert isinstance(body, dict)
         assert "id" in body
@@ -99,7 +127,9 @@ class TestCallingLifecycle:
 
 
 class TestCallingPlay:
-    def test_play_pause(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_play_pause(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         body = signalwire_client.calling.play_pause("call-1", control_id="ctrl-1")
         assert isinstance(body, dict)
         assert "id" in body
@@ -110,7 +140,9 @@ class TestCallingPlay:
         assert last.body.get("id") == "call-1"
         assert last.body.get("params", {}).get("control_id") == "ctrl-1"
 
-    def test_play_resume(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_play_resume(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         body = signalwire_client.calling.play_resume("call-1", control_id="ctrl-1")
         assert isinstance(body, dict)
         assert "id" in body
@@ -132,9 +164,13 @@ class TestCallingPlay:
         assert last.body.get("id") == "call-1"
         assert last.body.get("params", {}).get("control_id") == "ctrl-1"
 
-    def test_play_volume(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_play_volume(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         body = signalwire_client.calling.play_volume(
-            "call-1", control_id="ctrl-1", volume=2.5,
+            "call-1",
+            control_id="ctrl-1",
+            volume=2.5,
         )
         assert isinstance(body, dict)
         assert "id" in body
@@ -161,9 +197,41 @@ class TestCallingRecord:
         assert last.path == CALLS_PATH
         assert last.body.get("command") == "calling.record"
         assert last.body.get("id") == "call-1"
-        assert last.body.get("params", {}).get("audio") == {"format": "mp3"}
+        # The engine reads the audio settings at params.record.audio (mod_infrastructure
+        # relay_apis.c call_record); `audio=` is kept and sent there.
+        params = dict(last.body.get("params") or {})
+        # relay_apis.c requires a non-empty control_id; the SDK generates one when omitted.
+        assert uuid.UUID(params.pop("control_id"))
+        assert params == {"record": {"audio": {"format": "mp3"}}}
 
-    def test_record_pause(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_record_with_record_param(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.calling.record(
+            "call-1", record={"audio": {"format": "wav"}}, control_id="rec-9"
+        )
+        assert mock.last_request().body.get("params") == {
+            "control_id": "rec-9",
+            "record": {"audio": {"format": "wav"}},
+        }
+
+    def test_record_audio_merges_into_record(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.calling.record(
+            "call-1",
+            record={"audio": {"format": "wav"}},
+            audio={"format": "mp3", "beep": True},
+            control_id="rec-9",
+        )
+        assert mock.last_request().body.get("params") == {
+            "control_id": "rec-9",
+            "record": {"audio": {"format": "mp3", "beep": True}},
+        }
+
+    def test_record_pause(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         body = signalwire_client.calling.record_pause("call-1", control_id="rec-1")
         assert isinstance(body, dict)
         assert "id" in body
@@ -174,7 +242,9 @@ class TestCallingRecord:
         assert last.body.get("id") == "call-1"
         assert last.body.get("params", {}).get("control_id") == "rec-1"
 
-    def test_record_resume(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_record_resume(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         body = signalwire_client.calling.record_resume("call-1", control_id="rec-1")
         assert isinstance(body, dict)
         assert "id" in body
@@ -194,7 +264,9 @@ class TestCallingRecord:
 class TestCallingCollect:
     def test_collect(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.calling.collect(
-            "call-1", initial_timeout=5, digits={"max": 4},
+            "call-1",
+            initial_timeout=5,
+            digits={"max": 4},
         )
         assert isinstance(body, dict)
         assert "id" in body
@@ -205,7 +277,9 @@ class TestCallingCollect:
         assert last.body.get("id") == "call-1"
         assert last.body.get("params", {}).get("initial_timeout") == 5
 
-    def test_collect_stop(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_collect_stop(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         body = signalwire_client.calling.collect_stop("call-1", control_id="col-1")
         assert isinstance(body, dict)
         assert "id" in body
@@ -216,9 +290,12 @@ class TestCallingCollect:
         assert last.body.get("id") == "call-1"
         assert last.body.get("params", {}).get("control_id") == "col-1"
 
-    def test_collect_start_input_timers(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_collect_start_input_timers(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         body = signalwire_client.calling.collect_start_input_timers(
-            "call-1", control_id="col-1",
+            "call-1",
+            control_id="col-1",
         )
         assert isinstance(body, dict)
         assert "id" in body
@@ -238,7 +315,8 @@ class TestCallingCollect:
 class TestCallingDetect:
     def test_detect(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.calling.detect(
-            "call-1", detect={"type": "machine", "params": {}},
+            "call-1",
+            detect={"type": "machine", "params": {}},
         )
         assert isinstance(body, dict)
         assert "id" in body
@@ -249,7 +327,9 @@ class TestCallingDetect:
         assert last.body.get("id") == "call-1"
         assert last.body.get("params", {}).get("detect", {}).get("type") == "machine"
 
-    def test_detect_stop(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_detect_stop(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         body = signalwire_client.calling.detect_stop("call-1", control_id="det-1")
         assert isinstance(body, dict)
         assert "id" in body
@@ -264,7 +344,9 @@ class TestCallingDetect:
 class TestCallingTap:
     def test_tap(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.calling.tap(
-            "call-1", tap={"type": "audio"}, device={"type": "rtp"},
+            "call-1",
+            tap={"type": "audio"},
+            device={"type": "rtp"},
         )
         assert isinstance(body, dict)
         assert "id" in body
@@ -290,7 +372,8 @@ class TestCallingTap:
 class TestCallingStream:
     def test_stream(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.calling.stream(
-            "call-1", url="wss://example.com/audio",
+            "call-1",
+            url="wss://example.com/audio",
         )
         assert isinstance(body, dict)
         assert "id" in body
@@ -301,7 +384,9 @@ class TestCallingStream:
         assert last.body.get("id") == "call-1"
         assert last.body.get("params", {}).get("url") == "wss://example.com/audio"
 
-    def test_stream_stop(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_stream_stop(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         body = signalwire_client.calling.stream_stop("call-1", control_id="stream-1")
         assert isinstance(body, dict)
         assert "id" in body
@@ -324,7 +409,9 @@ class TestCallingDenoise:
         assert last.body.get("command") == "calling.denoise"
         assert last.body.get("id") == "call-1"
 
-    def test_denoise_stop(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_denoise_stop(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         body = signalwire_client.calling.denoise_stop("call-1")
         assert isinstance(body, dict)
         assert "id" in body
@@ -336,9 +423,13 @@ class TestCallingDenoise:
 
 
 class TestCallingTranscribe:
-    def test_transcribe(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_transcribe(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         body = signalwire_client.calling.transcribe(
-            "call-1", control_id="tr-1", status_url="https://example.com/status",
+            "call-1",
+            control_id="tr-1",
+            status_url="https://example.com/status",
         )
         assert isinstance(body, dict)
         assert "id" in body
@@ -349,7 +440,9 @@ class TestCallingTranscribe:
         assert last.body.get("id") == "call-1"
         assert last.body.get("params", {}).get("control_id") == "tr-1"
 
-    def test_transcribe_stop(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_transcribe_stop(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         body = signalwire_client.calling.transcribe_stop("call-1", control_id="tr-1")
         assert isinstance(body, dict)
         assert "id" in body
@@ -399,13 +492,87 @@ class TestCallingAI:
         assert last.body.get("params", {}).get("control_id") == "ai-1"
 
 
+class TestCallingAISidecar:
+    def test_ai_sidecar(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        body = signalwire_client.calling.ai_sidecar(
+            "call-1",
+            lang="en-US",
+            prompt="Suggest answers to the agent.",
+            params={"live_events": True},
+        )
+        assert isinstance(body, dict)
+        assert "id" in body
+        last = mock.last_request()
+        assert last.method == "POST"
+        assert last.path == CALLS_PATH
+        assert last.body.get("command") == "calling.ai_sidecar"
+        assert last.body.get("id") == "call-1"
+        assert last.body.get("params") == {
+            "lang": "en-US",
+            "prompt": "Suggest answers to the agent.",
+            "params": {"live_events": True},
+        }
+
+    def test_ai_sidecar_ask(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        body = signalwire_client.calling.ai_sidecar_ask(
+            "call-1", text="What is the account number?"
+        )
+        assert isinstance(body, dict)
+        last = mock.last_request()
+        assert last.path == CALLS_PATH
+        assert last.body.get("command") == "calling.ai_sidecar.ask"
+        assert last.body.get("id") == "call-1"
+        assert last.body.get("params") == {"text": "What is the account number?"}
+
+    def test_ai_sidecar_poke(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        body = signalwire_client.calling.ai_sidecar_poke(
+            "call-1", text="The caller is verified."
+        )
+        assert isinstance(body, dict)
+        last = mock.last_request()
+        assert last.path == CALLS_PATH
+        assert last.body.get("command") == "calling.ai_sidecar.poke"
+        assert last.body.get("id") == "call-1"
+        assert last.body.get("params") == {"text": "The caller is verified."}
+
+    def test_ai_sidecar_stop(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        body = signalwire_client.calling.ai_sidecar_stop("call-1")
+        assert isinstance(body, dict)
+        last = mock.last_request()
+        assert last.path == CALLS_PATH
+        assert last.body.get("command") == "calling.ai_sidecar.stop"
+        assert last.body.get("id") == "call-1"
+        assert last.body.get("params") == {}
+
+    def test_ai_sidecar_status(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        body = signalwire_client.calling.ai_sidecar_status("call-1")
+        assert isinstance(body, dict)
+        last = mock.last_request()
+        assert last.path == CALLS_PATH
+        assert last.body.get("command") == "calling.ai_sidecar.status"
+        assert last.body.get("id") == "call-1"
+        assert last.body.get("params") == {}
+
+
 # ---------------------------------------------------------------------------
 # Live transcribe / translate
 # ---------------------------------------------------------------------------
 
 
 class TestCallingLive:
-    def test_live_transcribe(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_live_transcribe(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         body = signalwire_client.calling.live_transcribe(
             "call-1",
             action={"start": {"lang": "en-US", "direction": ["local-caller"]}},
@@ -422,7 +589,9 @@ class TestCallingLive:
             == "en-US"
         )
 
-    def test_live_translate(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_live_translate(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         body = signalwire_client.calling.live_translate(
             "call-1",
             action={
@@ -451,7 +620,9 @@ class TestCallingLive:
 
 
 class TestCallingFax:
-    def test_send_fax_stop(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_send_fax_stop(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         body = signalwire_client.calling.send_fax_stop("call-1", control_id="fax-1")
         assert isinstance(body, dict)
         assert "id" in body
@@ -462,7 +633,9 @@ class TestCallingFax:
         assert last.body.get("id") == "call-1"
         assert last.body.get("params", {}).get("control_id") == "fax-1"
 
-    def test_receive_fax_stop(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_receive_fax_stop(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         body = signalwire_client.calling.receive_fax_stop("call-1", control_id="fax-2")
         assert isinstance(body, dict)
         assert "id" in body
@@ -495,9 +668,12 @@ class TestCallingMisc:
         device = last.body.get("params", {}).get("device", {})
         assert device.get("params", {}).get("to") == "sip:other@example.com"
 
-    def test_user_event(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_user_event(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         body = signalwire_client.calling.user_event(
-            "call-1", event={"action": "my-event", "data": {"foo": "bar"}},
+            "call-1",
+            event={"action": "my-event", "data": {"foo": "bar"}},
         )
         assert isinstance(body, dict)
         assert "id" in body

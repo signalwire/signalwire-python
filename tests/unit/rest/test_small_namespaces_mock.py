@@ -22,6 +22,9 @@ Each test:
 """
 
 from __future__ import annotations
+
+import pytest
+from signalwire.rest._base import SignalWireRestError
 from signalwire.rest.client import RestClient
 from .conftest import _MockHarness
 
@@ -111,6 +114,38 @@ class TestRecordings:
         assert last.method == "GET"
         assert last.path == "/api/relay/rest/recordings/rec-123"
 
+    def test_get_asks_for_json(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        """prime-rails' recordings#show negotiates on Accept: `*/*` (or none) redirects to the
+        audio file and only `application/json` renders the recording, so the GET must say JSON
+        (app/controllers/api/relay/rest/recordings_controller.rb, respond_to format.all first)."""
+        signalwire_client.recordings.get("rec-123")
+        last = mock.last_request()
+        assert last.headers.get("accept") == "application/json"
+
+    def test_download_returns_the_redirect_target(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        """GET /recordings/{id}.mp3 answers 302 to a presigned MP3 URL
+        (recordings_controller.rb format.mp3); download() returns that URL, unfollowed."""
+        url = signalwire_client.recordings.download("rec-123")
+        assert isinstance(url, str) and url.startswith("https://")
+        last = mock.last_request()
+        assert (last.method, last.path) == (
+            "GET",
+            "/api/relay/rest/recordings/rec-123.mp3",
+        )
+        assert last.matched_route == "relay-rest.download_recording"
+        assert last.response_status == 302
+
+    def test_download_success_that_is_not_a_redirect_raises(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("relay-rest.download_recording", 200, {"not": "a redirect"})
+        with pytest.raises(SignalWireRestError):
+            signalwire_client.recordings.download("rec-123")
+
     def test_delete(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.recordings.delete("rec-123")
         assert body == {} or isinstance(body, dict)
@@ -145,7 +180,9 @@ class TestShortCodes:
 
     def test_update(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.short_codes.update(
-            "sc-1", name="Marketing SMS", message_handler="relay_context",
+            "sc-1",
+            name="Marketing SMS",
+            message_handler="relay_context",
         )
         assert isinstance(body, dict)
         assert "id" in body
@@ -235,19 +272,26 @@ class TestSipProfile:
 
 
 class TestNumberGroups:
-    def test_list_memberships(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_list_memberships(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         body = signalwire_client.number_groups.list_memberships(
-            "ng-1", page_size=10,
+            "ng-1",
+            page_size=10,
         )
         assert isinstance(body, dict)
         assert "data" in body
         assert isinstance(body["data"], list)
         last = mock.last_request()
         assert last.method == "GET"
-        assert last.path == "/api/relay/rest/number_groups/ng-1/number_group_memberships"
+        assert (
+            last.path == "/api/relay/rest/number_groups/ng-1/number_group_memberships"
+        )
         assert last.query_params.get("page_size") == ["10"]
 
-    def test_delete_membership(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_delete_membership(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         body = signalwire_client.number_groups.delete_membership("mem-1")
         assert body == {} or isinstance(body, dict)
         last = mock.last_request()
@@ -264,7 +308,8 @@ class TestNumberGroups:
 class TestProjectTokens:
     def test_update(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.project.tokens.update(
-            "tok-1", name="renamed-token",
+            "tok-1",
+            name="renamed-token",
         )
         assert isinstance(body, dict)
         assert "id" in body
@@ -291,7 +336,8 @@ class TestProjectTokens:
 class TestDatasphere:
     def test_get_chunk(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.datasphere.documents.get_chunk(
-            "doc-1", "chunk-99",
+            "doc-1",
+            "chunk-99",
         )
         assert isinstance(body, dict)
         # The DatasphereChunk schema has an 'id'.
@@ -307,7 +353,9 @@ class TestDatasphere:
 
 
 class TestQueues:
-    def test_get_member(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_get_member(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         body = signalwire_client.queues.get_member("q-1", "mem-7")
         assert isinstance(body, dict)
         # A queue member has 'queue_id' and 'call_id' per the spec example.

@@ -60,7 +60,7 @@ def main(argv: list[str]) -> int:
 
     psdk = _resolve_porting_sdk()
     sys.path.insert(0, str(psdk / "scripts"))
-    import enumerate_python as ep  # noqa: E402  (path set above)
+    import enumerate_python as ep
 
     # ``enumerate_module`` short-circuits on ``_module_excluded`` and returns an empty
     # entry — which is the whole point of the oracle exclusion and exactly what we need

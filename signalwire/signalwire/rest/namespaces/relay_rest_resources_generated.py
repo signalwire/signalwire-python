@@ -6,15 +6,17 @@
 # unknown / reserved-word wire fields, bound to the resource's spec types.
 from __future__ import annotations
 
+import builtins
 from typing import TYPE_CHECKING, Any, Literal, cast
 from collections.abc import Mapping
 
-from .._base import BaseResource, CrudResource
+from .._base import BaseResource, CrudResource, _required_via_extras
 
 if TYPE_CHECKING:
     from .._request_options import RequestOptions
 
     from .relay_rest_types_generated import (
+        AddressCountryCode,
         AddressListResponse,
         AddressResponse,
         AddressType,
@@ -24,6 +26,7 @@ if TYPE_CHECKING:
         BrandResponse,
         CampaignListResponse,
         CampaignResponse,
+        CompanyVertical,
         CreateCspBrandRequest,
         CreateManagedBrandRequest,
         CreateManagedCampaignRequest,
@@ -32,6 +35,7 @@ if TYPE_CHECKING:
         CreateQueueRequest,
         CreateVerifiedCallerIDRequest,
         HttpMethod,
+        LegalEntityType,
         MfaResponse,
         MfaVerifyResponse,
         NumberGroupListResponse,
@@ -41,6 +45,7 @@ if TYPE_CHECKING:
         OrderListResponse,
         OrderResponse,
         PhoneNumberCallHandlerRequest,
+        PhoneNumberCnamResponse,
         PhoneNumberListResponse,
         PhoneNumberLookupResponse,
         PhoneNumberMessageHandler,
@@ -50,6 +55,7 @@ if TYPE_CHECKING:
         QueueMemberListResponse,
         QueueMemberResponse,
         QueueResponse,
+        Recording,
         RecordingListResponse,
         ShortCodeListResponse,
         ShortCodeMessageHandler,
@@ -81,11 +87,22 @@ class Addresses(BaseResource):
             ),
         )
 
+    @_required_via_extras(
+        "label",
+        "country",
+        "first_name",
+        "last_name",
+        "street_number",
+        "street_name",
+        "city",
+        "state",
+        "postal_code",
+    )
     def create(
         self,
         *,
         label: str,
-        country: str,
+        country: AddressCountryCode,
         first_name: str,
         last_name: str,
         street_number: str,
@@ -95,6 +112,8 @@ class Addresses(BaseResource):
         postal_code: str,
         address_type: AddressType | None = None,
         address_number: str | None = None,
+        emergency_enabled: bool | None = None,
+        auto_correct_address: bool | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -113,6 +132,8 @@ class Addresses(BaseResource):
                 "city": city,
                 "state": state,
                 "postal_code": postal_code,
+                "emergency_enabled": emergency_enabled,
+                "auto_correct_address": auto_correct_address,
             }.items()
             if v is not None
         }
@@ -136,6 +157,54 @@ class Addresses(BaseResource):
             ),
         )
 
+    def update(
+        self,
+        id: str,
+        *,
+        label: str | None = None,
+        country: AddressCountryCode | None = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        street_number: str | None = None,
+        street_name: str | None = None,
+        address_type: AddressType | None = None,
+        address_number: str | None = None,
+        city: str | None = None,
+        state: str | None = None,
+        postal_code: str | None = None,
+        emergency_enabled: bool | None = None,
+        auto_correct_address: bool | None = None,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> AddressResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "label": label,
+                "country": country,
+                "first_name": first_name,
+                "last_name": last_name,
+                "street_number": street_number,
+                "street_name": street_name,
+                "address_type": address_type,
+                "address_number": address_number,
+                "city": city,
+                "state": state,
+                "postal_code": postal_code,
+                "emergency_enabled": emergency_enabled,
+                "auto_correct_address": auto_correct_address,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "AddressResponse",
+            self._http.put(self._path(id), body=body, request_options=request_options),
+        )
+
     def delete(
         self, id: str, *, request_options: RequestOptions | None = None
     ) -> dict[str, Any]:
@@ -151,6 +220,7 @@ class ImportedNumbers(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/relay/rest/imported_phone_numbers")
 
+    @_required_via_extras("number", "number_type")
     def create(
         self,
         *,
@@ -210,6 +280,7 @@ class Mfa(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/relay/rest/mfa")
 
+    @_required_via_extras("to")
     def sms(
         self,
         *,
@@ -247,6 +318,7 @@ class Mfa(BaseResource):
             ),
         )
 
+    @_required_via_extras("to")
     def call(
         self,
         *,
@@ -284,6 +356,7 @@ class Mfa(BaseResource):
             ),
         )
 
+    @_required_via_extras("token")
     def verify(
         self,
         mfa_request_id: str,
@@ -324,6 +397,7 @@ class NumberGroups(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/relay/rest/number_groups")
 
+    @_required_via_extras("name")
     def create(  # type: ignore[override]
         self,
         *,
@@ -388,6 +462,7 @@ class NumberGroups(
             ),
         )
 
+    @_required_via_extras("phone_number_id")
     def add_membership(
         self,
         number_group_id: str,
@@ -453,16 +528,20 @@ class PhoneNumbers(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/relay/rest/phone_numbers")
 
+    @_required_via_extras("number")
     def create(  # type: ignore[override]
         self,
         *,
         number: str,
+        number_type: Literal["local", "tollfree"] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> PhoneNumberResponse:
         body: dict[str, Any] = {
-            k: v for k, v in {"number": number}.items() if v is not None
+            k: v
+            for k, v in {"number": number, "number_type": number_type}.items()
+            if v is not None
         }
         if extras:
             body.update(extras)
@@ -481,7 +560,7 @@ class PhoneNumbers(
         *,
         name: str | None = None,
         call_handler: PhoneNumberCallHandlerRequest | None = None,
-        call_receive_mode: str | None = None,
+        call_receive_mode: Literal["voice", "fax"] | None = None,
         call_request_url: str | None = None,
         call_request_method: Literal["GET", "POST"] | None = None,
         call_fallback_url: str | None = None,
@@ -493,6 +572,7 @@ class PhoneNumbers(
         call_relay_topic: str | None = None,
         call_relay_topic_status_callback_url: str | None = None,
         call_relay_script_url: str | None = None,
+        call_relay_script_url_method: str | None = None,
         call_relay_context: str | None = None,
         call_relay_context_status_callback_url: str | None = None,
         call_relay_application: str | None = None,
@@ -533,6 +613,7 @@ class PhoneNumbers(
                 "call_relay_topic": call_relay_topic,
                 "call_relay_topic_status_callback_url": call_relay_topic_status_callback_url,
                 "call_relay_script_url": call_relay_script_url,
+                "call_relay_script_url_method": call_relay_script_url_method,
                 "call_relay_context": call_relay_context,
                 "call_relay_context_status_callback_url": call_relay_context_status_callback_url,
                 "call_relay_application": call_relay_application,
@@ -573,6 +654,86 @@ class PhoneNumbers(
                 params=params or None,
                 request_options=request_options,
             ),
+        )
+
+    @_required_via_extras("e911_address_id")
+    def assign_e911_address(
+        self,
+        id: str,
+        *,
+        e911_address_id: uuid,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> PhoneNumberResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {"e911_address_id": e911_address_id}.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "PhoneNumberResponse",
+            self._http.post(
+                self._path(id, "e911_address"),
+                body=body,
+                request_options=request_options,
+            ),
+        )
+
+    def remove_e911_address(
+        self, id: str, *, request_options: RequestOptions | None = None
+    ) -> PhoneNumberResponse:
+        return cast(
+            "PhoneNumberResponse",
+            self._http.delete(
+                self._path(id, "e911_address"), request_options=request_options
+            ),
+        )
+
+    def get_cnam(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> PhoneNumberCnamResponse:
+        return cast(
+            "PhoneNumberCnamResponse",
+            self._http.get(
+                self._path(id, "cnam"),
+                params=params or None,
+                request_options=request_options,
+            ),
+        )
+
+    @_required_via_extras("name")
+    def request_cnam(
+        self,
+        id: str,
+        *,
+        name: str,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> PhoneNumberCnamResponse:
+        body: dict[str, Any] = {
+            k: v for k, v in {"name": name}.items() if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "PhoneNumberCnamResponse",
+            self._http.post(
+                self._path(id, "cnam"), body=body, request_options=request_options
+            ),
+        )
+
+    def clear_cnam(
+        self, id: str, *, request_options: RequestOptions | None = None
+    ) -> dict[str, Any]:
+        return cast(
+            "dict[str, Any]",
+            self._http.delete(self._path(id, "cnam"), request_options=request_options),
         )
 
     def set_swml_webhook(
@@ -691,10 +852,11 @@ class Queues(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/relay/rest/queues")
 
-    def create(
+    @_required_via_extras("name")
+    def create(  # type: ignore[override]
         self,
         *,
-        name: str | None = None,
+        name: str,
         max_size: int | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
@@ -807,9 +969,9 @@ class Recordings(BaseResource):
 
     def get(
         self, id: str, *, request_options: RequestOptions | None = None, **params: Any
-    ) -> dict[str, Any]:
+    ) -> Recording:
         return cast(
-            "dict[str, Any]",
+            "Recording",
             self._http.get(
                 self._path(id), params=params or None, request_options=request_options
             ),
@@ -821,6 +983,19 @@ class Recordings(BaseResource):
         return cast(
             "dict[str, Any]",
             self._http.delete(self._path(id), request_options=request_options),
+        )
+
+    def download(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> str:
+        """Return the URL this endpoint redirects to (the ``Location`` of its
+        redirect), without following it or downloading anything; fetch it with any
+        HTTP client. Raises :class:`SignalWireRestError` for an error status.
+        """
+        return self._http.get_redirect_location(
+            self._path(f"{id}.mp3"),
+            params=params or None,
+            request_options=request_options,
         )
 
 
@@ -861,6 +1036,54 @@ class RegistryBrands(BaseResource):
             self._http.get(
                 self._path(id), params=params or None, request_options=request_options
             ),
+        )
+
+    def update(
+        self,
+        id: str,
+        *,
+        name: str | None = None,
+        company_name: str | None = None,
+        contact_email: str | None = None,
+        contact_phone: str | None = None,
+        ein_issuing_country: str | None = None,
+        legal_entity_type: LegalEntityType | None = None,
+        ein: str | None = None,
+        company_vertical: CompanyVertical | None = None,
+        company_website: str | None = None,
+        company_address: str | None = None,
+        csp_brand_reference: str | None = None,
+        status_callback_url: str | None = None,
+        signalwire_contact_emails: builtins.list[str] | str | None = None,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+        **_reserved_kw: Any,
+    ) -> BrandResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "name": name,
+                "company_name": company_name,
+                "contact_email": contact_email,
+                "contact_phone": contact_phone,
+                "ein_issuing_country": ein_issuing_country,
+                "legal_entity_type": legal_entity_type,
+                "ein": ein,
+                "company_vertical": company_vertical,
+                "company_website": company_website,
+                "company_address": company_address,
+                "csp_brand_reference": csp_brand_reference,
+                "status_callback_url": status_callback_url,
+                "signalwire_contact_emails": signalwire_contact_emails,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        body.update(_reserved_kw)
+        return cast(
+            "BrandResponse",
+            self._http.put(self._path(id), body=body, request_options=request_options),
         )
 
     def list_campaigns(
@@ -911,12 +1134,20 @@ class RegistryCampaigns(BaseResource):
         id: str,
         *,
         name: str | None = None,
+        status_callback_url: str | None = None,
+        signalwire_contact_emails: list[str] | str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> CampaignResponse:
         body: dict[str, Any] = {
-            k: v for k, v in {"name": name}.items() if v is not None
+            k: v
+            for k, v in {
+                "name": name,
+                "status_callback_url": status_callback_url,
+                "signalwire_contact_emails": signalwire_contact_emails,
+            }.items()
+            if v is not None
         }
         if extras:
             body.update(extras)
@@ -950,11 +1181,12 @@ class RegistryCampaigns(BaseResource):
             ),
         )
 
+    @_required_via_extras("phone_numbers")
     def create_order(
         self,
         id: str,
         *,
-        phone_numbers: list[str] | None = None,
+        phone_numbers: list[str],
         status_callback_url: str | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
@@ -1041,8 +1273,8 @@ class ShortCodes(BaseResource):
         self,
         id: str,
         *,
-        name: str,
-        message_handler: ShortCodeMessageHandler,
+        name: str | None = None,
+        message_handler: ShortCodeMessageHandler | None = None,
         message_request_url: str | None = None,
         message_request_method: HttpMethod | None = None,
         message_fallback_url: str | None = None,
@@ -1100,6 +1332,7 @@ class SipProfile(BaseResource):
         default_ciphers: list[str] | None = None,
         default_encryption: Literal["required", "optional"] | None = None,
         default_send_as: str | None = None,
+        default_outbound_policy: Literal["passthrough", "block-pstn"] | None = None,
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
@@ -1112,6 +1345,7 @@ class SipProfile(BaseResource):
                 "default_ciphers": default_ciphers,
                 "default_encryption": default_encryption,
                 "default_send_as": default_send_as,
+                "default_outbound_policy": default_outbound_policy,
             }.items()
             if v is not None
         }
@@ -1139,6 +1373,7 @@ class VerifiedCallers(
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/relay/rest/verified_caller_ids")
 
+    @_required_via_extras("number")
     def create(  # type: ignore[override]
         self,
         *,
@@ -1195,6 +1430,7 @@ class VerifiedCallers(
             ),
         )
 
+    @_required_via_extras("verification_code")
     def submit_verification(
         self,
         id: str,

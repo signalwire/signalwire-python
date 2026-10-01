@@ -20,6 +20,7 @@ __all__ = ["test_swaig_main"]
 
 
 def __getattr__(name: str) -> Any:
+    """Import ``test_swaig_main`` on first access, so other commands start fast."""
     # Imported on first use: swaig-test's loader costs about a second, which
     # every other command in this package would otherwise pay at startup
     if name == "test_swaig_main":

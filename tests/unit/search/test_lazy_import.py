@@ -18,7 +18,7 @@ HEAVY = ("sentence_transformers", "nltk", "sklearn", "torch")
 
 
 def _run(code: str) -> list[str]:
-    completed = subprocess.run(
+    completed = subprocess.run(  # noqa: S603  # fixed arguments: this interpreter and a test-literal script
         [sys.executable, "-c", code], capture_output=True, text=True, timeout=180
     )
     assert completed.returncode == 0, completed.stderr
@@ -46,7 +46,10 @@ def test_components_resolve_on_first_use() -> None:
 
 
 @pytest.mark.skipif(
-    any(find_spec(m) is None for m in ("numpy", "sklearn", "sentence_transformers", "nltk")),
+    any(
+        find_spec(m) is None
+        for m in ("numpy", "sklearn", "sentence_transformers", "nltk")
+    ),
     reason="needs the search extras installed",
 )
 def test_available_when_the_dependencies_are_installed() -> None:

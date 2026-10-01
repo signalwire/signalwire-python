@@ -7,7 +7,7 @@ chat service.
 """
 
 import json
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterator
 from typing import Any
 
 import pytest
@@ -446,10 +446,8 @@ async def test_the_relay_streams_rather_than_collects(
     from fastapi.responses import StreamingResponse
 
     client = slow_gateway._client
-    chunks = []
     async with client.raw_post("chat", {"id": "c", "message": "hi"}) as resp:
-        async for chunk in resp.content.iter_any():
-            chunks.append(chunk)
+        chunks = [chunk async for chunk in resp.content.iter_any()]
     assert len(chunks) > 1, f"upstream body arrived in one piece: {chunks!r}"
     assert chunks[0].strip() == b"", "first chunk should be keepalive padding"
 
@@ -826,9 +824,7 @@ def test_an_oversized_message_mints_nothing(service: Any) -> None:
     new-conversation allowance."""
     gw = make_gateway(service, max_new_conversations=1)
     with pytest.raises(GatewayRejection):
-        gw.prepare(
-            {"message": "x" * (MAX_MESSAGE_BYTES + 1)}, origin=None, key=KEY
-        )
+        gw.prepare({"message": "x" * (MAX_MESSAGE_BYTES + 1)}, origin=None, key=KEY)
     _, _, minted = gw.prepare({"message": "hi"}, origin=None, key=KEY)
     assert minted is not None
 
@@ -843,9 +839,7 @@ def test_an_oversized_message_charges_no_turn(service: Any) -> None:
             key=KEY,
         )
     assert err.value.status == 413
-    _, params, _ = gw.prepare(
-        {"message": "hi", "handle": handle}, origin=None, key=KEY
-    )
+    _, params, _ = gw.prepare({"message": "hi", "handle": handle}, origin=None, key=KEY)
     assert params["message"] == "hi"
 
 

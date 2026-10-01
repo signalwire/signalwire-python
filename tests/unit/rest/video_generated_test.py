@@ -199,6 +199,22 @@ class TestVideoWire:
             signalwire_client.video.room_recordings.delete("test-id")
         assert exc.value.status_code == 500
 
+    def test_room_recordings_download(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        signalwire_client.video.room_recordings.download("test-id")
+        last = mock.last_request()
+        assert last.method == "GET"
+        assert last.matched_route == "video.download_room_recording"
+
+    def test_room_recordings_download_error(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        mock.push_scenario("video.download_room_recording", 500, {"error": "x"})
+        with pytest.raises(SignalWireRestError) as exc:
+            signalwire_client.video.room_recordings.download("test-id")
+        assert exc.value.status_code == 500
+
     def test_room_recordings_get(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
@@ -488,7 +504,7 @@ class TestVideoWire:
     def test_streams_update(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.video.streams.update("test-id", url="x")
+        signalwire_client.video.streams.update("test-id")
         last = mock.last_request()
         assert last.method == "PUT"
         assert last.matched_route == "video.update_stream"
@@ -498,5 +514,5 @@ class TestVideoWire:
     ) -> None:
         mock.push_scenario("video.update_stream", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.video.streams.update("test-id", url="x")
+            signalwire_client.video.streams.update("test-id")
         assert exc.value.status_code == 500

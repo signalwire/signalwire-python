@@ -200,7 +200,7 @@ swaig-test agent.py --dump-swml --raw | jq '.sections.main[1].ai.SWAIG.functions
 swaig-test agent.py --dump-swml --fake-full-data
 
 # Customize call configuration
-swaig-test agent.py --dump-swml --call-type sip --from-number +15551234567
+swaig-test agent.py --dump-swml --call-type phone --from-number +15551234567
 
 Multi-Agent Files
 ----------------
@@ -265,8 +265,8 @@ Advanced Data Overrides
 ----------------------
 # Override specific values
 swaig-test agent.py --dump-swml \\
-  --override call.state=answered \\
-  --override call.timeout=60
+  --override call.call_state=answered \\
+  --override call.direction=outbound
 
 # Override with JSON values
 swaig-test agent.py --dump-swml \\
@@ -411,9 +411,9 @@ def main() -> int:
     swml_group = parser.add_argument_group("swml generation options")
     swml_group.add_argument(
         "--call-type",
-        choices=["sip", "webrtc"],
+        choices=["phone", "sip", "webrtc"],
         default="webrtc",
-        help="Call type (default: webrtc)",
+        help="Call device type (default: webrtc)",
     )
     swml_group.add_argument(
         "--call-direction",
@@ -435,7 +435,7 @@ def main() -> int:
         "--override",
         action="append",
         default=[],
-        help="Override value (e.g., --override call.state=answered)",
+        help="Override value (e.g., --override call.call_state=answered)",
     )
     data_group.add_argument(
         "--header",
@@ -937,8 +937,17 @@ def main() -> int:
                     custom_data = (
                         json.loads(args.custom_data) if args.custom_data else None
                     )
+                    # The engine sends the function's description and its parameter
+                    # JSON Schema (argument_desc) on every call.
+                    ensure_params = getattr(func, "_ensure_parameter_structure", None)
                     post_data = generate_comprehensive_post_data(
-                        args.tool_name, function_args, custom_data
+                        args.tool_name,
+                        function_args,
+                        custom_data,
+                        description=str(getattr(func, "description", "") or ""),
+                        argument_desc=ensure_params()
+                        if callable(ensure_params)
+                        else None,
                     )
                 else:
                     # Default behavior - minimal data

@@ -13,50 +13,6 @@ Type definitions for the CLI tools
 from typing import TypedDict, Any
 
 
-class CallData(TypedDict, total=False):
-    """Call data structure for SWML post_data"""
-
-    id: str
-    node_id: str
-    state: str
-    type: str
-    direction: str
-    project_id: str
-    space_id: str
-    from_number: str
-    to_number: str
-    from_: str
-    to: str
-    from_name: str
-    headers: dict[str, str]
-    timeout: int
-    tag: str
-
-
-class VarsData(TypedDict, total=False):
-    """Variables data structure for SWML post_data"""
-
-    userVariables: dict[str, Any]
-    environment: str
-    call_data: dict[str, Any]
-
-
-class PostData(TypedDict, total=False):
-    """Complete post_data structure for SWML requests"""
-
-    call_id: str
-    call: CallData
-    vars: VarsData
-    params: dict[str, Any]
-    project_id: str
-    space_id: str
-    meta_data: dict[str, Any]
-    post_prompt_data: dict[str, Any]
-    error: str | None
-    protocol_error: bool | None
-    parse_error: bool | None
-
-
 class DataMapConfig(TypedDict, total=False):
     """DataMap function configuration"""
 
@@ -83,3 +39,12 @@ class FunctionInfo(TypedDict):
     parameters: dict[str, Any]
     type: str  # 'local', 'external', 'datamap'
     webhook_url: str | None
+
+
+# Deprecated alias (owner ruling 2026-09-29): ``PostData`` described the SWML request body the
+# platform POSTs to a SWML webhook. The engine-derived type is ``SwmlRequestData``; this name is
+# kept so existing imports keep working. ``CallData`` and ``VarsData`` have no single replacement
+# (see CHANGELOG.md).
+from signalwire.rest.namespaces.swml_webhooks_types_generated import SwmlRequestData  # noqa: E402
+
+PostData = SwmlRequestData

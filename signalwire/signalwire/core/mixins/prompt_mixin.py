@@ -180,6 +180,7 @@ class PromptMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at 
         Example::
 
             def on_dynamic_config(query, body, headers, agent):
+                '''Rebuild the contexts from scratch for a transfer request.'''
                 if query.get("transfer"):
                     agent.reset_contexts()
                     ctx = agent.define_contexts().add_context("default")

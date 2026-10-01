@@ -40,7 +40,7 @@ Every API surface is available as a namespace attribute on the client:
 | `client.fabric.cxml_applications` | cXML application resources (no create) |
 | `client.fabric.resources` | Generic resource operations |
 | `client.fabric.addresses` | Fabric addresses (list/get only) |
-| `client.fabric.tokens` | Subscriber/guest/invite/embed token creation |
+| `client.fabric.tokens` | Subscriber/guest/embed token creation |
 
 ### Calling API
 

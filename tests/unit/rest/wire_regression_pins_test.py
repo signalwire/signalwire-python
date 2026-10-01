@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import re
 from importlib.metadata import version as _pkg_version
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
     from signalwire.rest.client import RestClient
@@ -55,7 +55,7 @@ class TestWirePercentEncodingPin:
     # ``list(**HOSTILE)`` splat lands cleanly on ``list``'s ``**params: Any`` query tail:
     # ``list`` now also declares a keyword-only ``request_options`` param before that tail,
     # and mypy would otherwise try to satisfy it from the unpacked ``str`` values.
-    HOSTILE: dict[str, Any] = {
+    HOSTILE: ClassVar[dict[str, Any]] = {
         "filter_label": "a b&c+d=é\N{SNOWMAN}",
     }
 

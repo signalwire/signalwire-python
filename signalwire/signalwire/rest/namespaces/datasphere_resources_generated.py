@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 from collections.abc import Mapping
 
-from .._base import CrudResource
+from .._base import CrudResource, _required_via_extras
 
 if TYPE_CHECKING:
     from .._request_options import RequestOptions
@@ -78,6 +78,7 @@ class DatasphereDocuments(
             ),
         )
 
+    @_required_via_extras("query_string")
     def search(
         self,
         *,

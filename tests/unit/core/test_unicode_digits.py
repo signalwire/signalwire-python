@@ -7,7 +7,7 @@ int()'s ValueError instead of getting the intended handling.
 """
 
 import io
-from typing import Any
+from typing import Any, ClassVar
 from unittest.mock import patch
 
 import pytest
@@ -33,7 +33,9 @@ class _Request:
 
 
 def test_swml_int_gives_its_own_message() -> None:
-    with pytest.raises(ValueError, match="max_participants must be an integer of at least 2"):
+    with pytest.raises(
+        ValueError, match="max_participants must be an integer of at least 2"
+    ):
         _swml_int("max_participants", SUPERSCRIPT_TWO, minimum=2)
 
 
@@ -49,7 +51,10 @@ async def test_the_gateway_still_refuses_a_large_declared_body() -> None:
 
 
 def test_a_conversation_id_ending_in_such_a_digit_gets_a_suffix() -> None:
-    assert HandoffRouter._default_next_id(f"conv.{SUPERSCRIPT_TWO}") == f"conv.{SUPERSCRIPT_TWO}.1"
+    assert (
+        HandoffRouter._default_next_id(f"conv.{SUPERSCRIPT_TWO}")
+        == f"conv.{SUPERSCRIPT_TWO}.1"
+    )
     assert HandoffRouter._default_next_id("conv.2") == "conv.3"
 
 
@@ -63,7 +68,9 @@ def test_cgi_ignores_such_a_content_length(monkeypatch: pytest.MonkeyPatch) -> N
     assert request.method == "POST"
 
 
-def test_config_substitution_keeps_such_a_value_as_text(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_config_substitution_keeps_such_a_value_as_text(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setenv("SW_TEST_DIGIT", SUPERSCRIPT_TWO)
     assert ConfigLoader([]).substitute_vars("${SW_TEST_DIGIT}") == SUPERSCRIPT_TWO
     monkeypatch.setenv("SW_TEST_DIGIT", "42")
@@ -74,7 +81,7 @@ async def test_swml_service_reads_the_body_whatever_content_length_says() -> Non
     from signalwire.core.swml_service import SWMLService
 
     class _BodyRequest:
-        headers = {"content-length": SUPERSCRIPT_TWO}
+        headers: ClassVar[dict[str, str]] = {"content-length": SUPERSCRIPT_TWO}
 
         async def body(self) -> bytes:
             return b"{}"

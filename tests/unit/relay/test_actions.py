@@ -47,6 +47,7 @@ from signalwire.relay.constants import (
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def mock_client() -> MagicMock:
     client = MagicMock()
@@ -70,6 +71,7 @@ async def call(mock_client: MagicMock) -> Call:
 # ---------------------------------------------------------------------------
 # Base Action.__init__
 # ---------------------------------------------------------------------------
+
 
 class TestActionInit:
     """Direct construction of the base Action class — covers Action.__init__."""
@@ -96,6 +98,7 @@ class TestActionInit:
 # PlayAction direct construction
 # ---------------------------------------------------------------------------
 
+
 class TestPlayActionInit:
     """PlayAction.__init__ via direct construction (not via Call.play)."""
 
@@ -114,6 +117,7 @@ class TestPlayActionInit:
 # RecordAction direct construction + pause/resume/stop
 # ---------------------------------------------------------------------------
 
+
 class TestRecordActionInit:
     @pytest.mark.asyncio
     async def test_record_action_init(self, call: Call) -> None:
@@ -124,7 +128,9 @@ class TestRecordActionInit:
         assert RECORD_STATE_NO_INPUT in record_action._terminal_states
 
     @pytest.mark.asyncio
-    async def test_record_action_stop_sends_correct_rpc(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_record_action_stop_sends_correct_rpc(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         record_action = RecordAction(call, "rec-2")
         await record_action.stop()
         mock_client.execute.assert_called_once_with(
@@ -133,7 +139,9 @@ class TestRecordActionInit:
         )
 
     @pytest.mark.asyncio
-    async def test_record_action_pause_sends_correct_rpc(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_record_action_pause_sends_correct_rpc(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         record_action = RecordAction(call, "rec-3")
         await record_action.pause(behavior="silence")
         mock_client.execute.assert_called_once_with(
@@ -147,7 +155,9 @@ class TestRecordActionInit:
         )
 
     @pytest.mark.asyncio
-    async def test_record_action_pause_no_behavior(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_record_action_pause_no_behavior(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         record_action = RecordAction(call, "rec-4")
         await record_action.pause()
         mock_client.execute.assert_called_once_with(
@@ -156,7 +166,9 @@ class TestRecordActionInit:
         )
 
     @pytest.mark.asyncio
-    async def test_record_action_resume_sends_correct_rpc(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_record_action_resume_sends_correct_rpc(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         record_action = RecordAction(call, "rec-5")
         await record_action.resume()
         mock_client.execute.assert_called_once_with(
@@ -169,6 +181,7 @@ class TestRecordActionInit:
 # DetectAction direct construction + stop
 # ---------------------------------------------------------------------------
 
+
 class TestDetectActionInit:
     @pytest.mark.asyncio
     async def test_detect_action_init(self, call: Call) -> None:
@@ -179,7 +192,9 @@ class TestDetectActionInit:
         assert "error" in detect_action._terminal_states
 
     @pytest.mark.asyncio
-    async def test_detect_action_stop_sends_correct_rpc(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_detect_action_stop_sends_correct_rpc(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         detect_action = DetectAction(call, "det-2")
         await detect_action.stop()
         mock_client.execute.assert_called_once_with(
@@ -191,6 +206,7 @@ class TestDetectActionInit:
 # ---------------------------------------------------------------------------
 # CollectAction (play_and_collect) direct construction + stop/volume/start_input_timers
 # ---------------------------------------------------------------------------
+
 
 class TestCollectActionInit:
     @pytest.mark.asyncio
@@ -214,7 +230,9 @@ class TestCollectActionInit:
         )
 
     @pytest.mark.asyncio
-    async def test_collect_action_volume_sends_correct_rpc(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_collect_action_volume_sends_correct_rpc(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         collect_action = CollectAction(call, "col-3")
         await collect_action.volume(7.5)
         mock_client.execute.assert_called_once_with(
@@ -228,7 +246,9 @@ class TestCollectActionInit:
         )
 
     @pytest.mark.asyncio
-    async def test_collect_action_start_input_timers(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_collect_action_start_input_timers(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         collect_action = CollectAction(call, "col-4")
         await collect_action.start_input_timers()
         mock_client.execute.assert_called_once_with(
@@ -240,6 +260,7 @@ class TestCollectActionInit:
 # ---------------------------------------------------------------------------
 # StandaloneCollectAction direct construction + stop/start_input_timers
 # ---------------------------------------------------------------------------
+
 
 class TestStandaloneCollectActionInit:
     @pytest.mark.asyncio
@@ -277,6 +298,7 @@ class TestStandaloneCollectActionInit:
 # FaxAction direct construction
 # ---------------------------------------------------------------------------
 
+
 class TestFaxActionInit:
     @pytest.mark.asyncio
     async def test_fax_action_init_send_fax_prefix(self, call: Call) -> None:
@@ -295,6 +317,7 @@ class TestFaxActionInit:
 # TapAction direct construction + stop
 # ---------------------------------------------------------------------------
 
+
 class TestTapActionInit:
     @pytest.mark.asyncio
     async def test_tap_action_init(self, call: Call) -> None:
@@ -304,7 +327,9 @@ class TestTapActionInit:
         assert "finished" in tap_action._terminal_states
 
     @pytest.mark.asyncio
-    async def test_tap_action_stop_sends_correct_rpc(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_tap_action_stop_sends_correct_rpc(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         tap_action = TapAction(call, "tap-2")
         await tap_action.stop()
         mock_client.execute.assert_called_once_with(
@@ -317,6 +342,7 @@ class TestTapActionInit:
 # StreamAction direct construction + stop
 # ---------------------------------------------------------------------------
 
+
 class TestStreamActionInit:
     @pytest.mark.asyncio
     async def test_stream_action_init(self, call: Call) -> None:
@@ -326,7 +352,9 @@ class TestStreamActionInit:
         assert "finished" in stream_action._terminal_states
 
     @pytest.mark.asyncio
-    async def test_stream_action_stop_sends_correct_rpc(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_stream_action_stop_sends_correct_rpc(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         stream_action = StreamAction(call, "stream-2")
         await stream_action.stop()
         mock_client.execute.assert_called_once_with(
@@ -339,6 +367,7 @@ class TestStreamActionInit:
 # PayAction direct construction + stop
 # ---------------------------------------------------------------------------
 
+
 class TestPayActionInit:
     @pytest.mark.asyncio
     async def test_pay_action_init(self, call: Call) -> None:
@@ -349,7 +378,9 @@ class TestPayActionInit:
         assert "error" in pay_action._terminal_states
 
     @pytest.mark.asyncio
-    async def test_pay_action_stop_sends_correct_rpc(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_pay_action_stop_sends_correct_rpc(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         pay_action = PayAction(call, "pay-2")
         await pay_action.stop()
         mock_client.execute.assert_called_once_with(
@@ -362,6 +393,7 @@ class TestPayActionInit:
 # TranscribeAction direct construction + stop
 # ---------------------------------------------------------------------------
 
+
 class TestTranscribeActionInit:
     @pytest.mark.asyncio
     async def test_transcribe_action_init(self, call: Call) -> None:
@@ -371,7 +403,9 @@ class TestTranscribeActionInit:
         assert "finished" in transcribe_action._terminal_states
 
     @pytest.mark.asyncio
-    async def test_transcribe_action_stop_sends_correct_rpc(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_transcribe_action_stop_sends_correct_rpc(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         transcribe_action = TranscribeAction(call, "trn-2")
         await transcribe_action.stop()
         mock_client.execute.assert_called_once_with(
@@ -384,6 +418,7 @@ class TestTranscribeActionInit:
 # AIAction direct construction + stop
 # ---------------------------------------------------------------------------
 
+
 class TestAIActionInit:
     @pytest.mark.asyncio
     async def test_ai_action_init(self, call: Call) -> None:
@@ -395,7 +430,9 @@ class TestAIActionInit:
         assert "error" in ai_action._terminal_states
 
     @pytest.mark.asyncio
-    async def test_ai_action_stop_sends_correct_rpc(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_ai_action_stop_sends_correct_rpc(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         ai_action = AIAction(call, "ai-2")
         await ai_action.stop()
         mock_client.execute.assert_called_once_with(
@@ -407,6 +444,7 @@ class TestAIActionInit:
 # ---------------------------------------------------------------------------
 # Call.__repr__
 # ---------------------------------------------------------------------------
+
 
 class TestCallRepr:
     """Direct __repr__ invocation so the audit picks up Call.__repr__ as covered."""

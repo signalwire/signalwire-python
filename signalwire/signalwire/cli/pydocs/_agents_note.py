@@ -73,6 +73,7 @@ def init(project: Path, skill: bool = False) -> list[tuple[Path, str]]:
     changes: list[tuple[Path, str]] = []
 
     def write(path: Path, content: str) -> None:
+        """Write ``content`` to ``path`` unless already there; record the change."""
         old = path.read_text(encoding="utf-8") if path.is_file() else None
         if old == content:
             changes.append((path, "unchanged"))

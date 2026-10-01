@@ -18,7 +18,9 @@ def test_large_warns_and_still_loads_base() -> None:
         assert resolve_model_alias("large") == MODEL_ALIASES["base"]
 
 
-@pytest.mark.parametrize("name", ["mini", "base", "sentence-transformers/all-MiniLM-L6-v2"])
+@pytest.mark.parametrize(
+    "name", ["mini", "base", "sentence-transformers/all-MiniLM-L6-v2"]
+)
 def test_other_names_do_not_warn(name: str) -> None:
     with warnings.catch_warnings():
         warnings.simplefilter("error", DeprecationWarning)

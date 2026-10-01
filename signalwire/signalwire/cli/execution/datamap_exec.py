@@ -460,12 +460,15 @@ class _Run:
         self.unresolved: list[tuple[str, str, str]] = []
 
     def log(self, message: str) -> None:
+        """Print ``message`` when the run is verbose."""
         if self.verbose:
             print(message)
 
     def expand(
         self, template: str, data: Any, stage: str, escape_json: bool = False
     ) -> str:
+        """Expand ``template`` against ``data``, noting each unresolved expression and the
+        ``stage`` it was in."""
         found: list[tuple[str, str]] = []
         text = _expand(template, data, escape_json, unresolved=found)
         self.unresolved.extend((raw, path, stage) for raw, path in found)

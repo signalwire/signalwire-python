@@ -109,6 +109,7 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             headers: dict[str, Any],
             agent: Any,
         ) -> None:
+            """Run every registered dynamic config callback, in registration order."""
             for callback in callbacks:
                 callback(query_params, body_params, headers, agent)
 
@@ -176,6 +177,31 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             async def add_security_headers(
                 request: Request, call_next: Callable[[Request], Awaitable[Response]]
             ) -> Response:
+                """
+                HTTP middleware that stamps security headers on every response.
+
+                Runs the downstream handler first, then unconditionally sets:
+
+                - ``X-Content-Type-Options: nosniff``
+                - ``X-Frame-Options: DENY``
+                - ``Referrer-Policy: strict-origin-when-cross-origin``
+
+                and additionally, only when SSL is on (either ``_ssl_enabled``
+                or ``ssl_enabled`` is truthy):
+
+                - ``Strict-Transport-Security: max-age=31536000; includeSubDomains``
+
+                Headers are assigned, not appended, so they override anything a
+                handler set. HSTS is gated because sending it over plain HTTP
+                would pin clients to a scheme this process is not serving.
+
+                Args:
+                    request: The incoming request, passed through untouched.
+                    call_next: The next handler in the middleware chain.
+
+                Returns:
+                    The downstream response with the headers added.
+                """
                 response = await call_next(request)
                 response.headers["X-Content-Type-Options"] = "nosniff"
                 response.headers["X-Frame-Options"] = "DENY"
@@ -208,6 +234,22 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             @app.get("/{full_path:path}")
             @app.post("/{full_path:path}")
             async def handle_all_routes(request: Request, full_path: str) -> Response:
+                """
+                Catch-all for paths the agent's router did not match exactly.
+
+                Registered after the router is included, so the router's
+                canonical endpoints win. The leftovers (the bare route without
+                a trailing slash, doubled or trailing slashes) go to
+                ``_dispatch_unmatched``, which runs the same signature check
+                and dispatches to the same handlers.
+
+                Args:
+                    request: The incoming request.
+                    full_path: The matched path with no leading slash.
+
+                Returns:
+                    The dispatched handler's response, or an error body.
+                """
                 return await self._dispatch_unmatched(request, full_path)
 
             # Log all app routes for debugging
@@ -387,6 +429,29 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             async def add_security_headers(
                 request: Request, call_next: Callable[[Request], Awaitable[Response]]
             ) -> Response:
+                """
+                HTTP middleware that stamps security headers on every response.
+
+                Identical to the middleware installed by ``get_app()`` — the
+                two entry points build independent FastAPI apps, so each
+                registers its own copy. Runs the downstream handler, then
+                unconditionally sets:
+
+                - ``X-Content-Type-Options: nosniff``
+                - ``X-Frame-Options: DENY``
+                - ``Referrer-Policy: strict-origin-when-cross-origin``
+
+                plus, only when ``_ssl_enabled`` or ``ssl_enabled`` is truthy:
+
+                - ``Strict-Transport-Security: max-age=31536000; includeSubDomains``
+
+                Args:
+                    request: The incoming request, passed through untouched.
+                    call_next: The next handler in the middleware chain.
+
+                Returns:
+                    The downstream response with the headers added.
+                """
                 response = await call_next(request)
                 response.headers["X-Content-Type-Options"] = "nosniff"
                 response.headers["X-Frame-Options"] = "DENY"
@@ -415,6 +480,22 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             @app.get("/{full_path:path}")
             @app.post("/{full_path:path}")
             async def handle_all_routes(request: Request, full_path: str) -> Response:
+                """
+                Catch-all for paths the agent's router did not match exactly.
+
+                Registered after the router is included, so the router's
+                canonical endpoints win. The leftovers (the bare route without
+                a trailing slash, doubled or trailing slashes) go to
+                ``_dispatch_unmatched``, which runs the same signature check
+                and dispatches to the same handlers.
+
+                Args:
+                    request: The incoming request.
+                    full_path: The matched path with no leading slash.
+
+                Returns:
+                    The dispatched handler's response, or an error body.
+                """
                 return await self._dispatch_unmatched(request, full_path)
 
             # Log all app routes for debugging
@@ -1658,6 +1739,7 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
 
         Example:
             def my_config(query_params, body_params, headers, agent):
+                '''Add premium features for premium callers and record the tier.'''
                 if query_params.get('tier') == 'premium':
                     agent.add_skill("advanced_search")
                     agent.add_language("English", "en-US", "premium_voice")
@@ -1748,6 +1830,24 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         """
 
         def signal_handler(signum: int, frame: Any) -> None:
+            """
+            Log the shutdown signal, run cleanup, and exit the process.
+
+            Installed for both SIGTERM (what Kubernetes sends) and SIGINT
+            (Ctrl+C). The cleanup block is currently a no-op placeholder — it
+            checks for ``_session_manager`` but performs no teardown — and any
+            exception raised inside it is logged as ``cleanup_error`` and
+            swallowed. Either way the ``finally`` clause calls ``sys.exit(0)``,
+            so the process always terminates with status 0 and cleanup failure
+            never blocks shutdown.
+
+            Because it exits from a signal handler, in-flight requests are not
+            drained.
+
+            Args:
+                signum: The signal number that fired.
+                frame: The interrupted stack frame (unused).
+            """
             self.log.info("shutdown_signal_received", signal=signum)
 
             # Perform cleanup

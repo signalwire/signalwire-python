@@ -121,6 +121,20 @@ class AIVerbHandler(SWMLVerbHandler):
             if not isinstance(contexts, dict):
                 errors.append("'prompt.contexts' must be an object")
 
+        # post_prompt is OPTIONAL, but when present the engine holds it to the
+        # SAME contract as prompt: mod_openai/app_config.c checks
+        # !cJSON_IsObject(assistant_prompt) at :3193 and !cJSON_IsObject(post_prompt)
+        # at :3219 -- same structure, same fatal:true calling.error, and both error
+        # payloads read "must be an object with 'text' or 'pom' field". Validating
+        # one and not the other reported configs VALID that abort the call on the
+        # wire; build_config has always emitted the right shape, so the hole was
+        # only reachable by a caller hand-assembling a config -- which is exactly
+        # how signalwire-go shipped a bare-string post_prompt (go 51934ec).
+        if "post_prompt" in config:
+            post_prompt = config["post_prompt"]
+            if not isinstance(post_prompt, dict):
+                errors.append("'post_prompt' must be an object")
+
         # Validate SWAIG structure if present
         if "SWAIG" in config:
             swaig = config["SWAIG"]

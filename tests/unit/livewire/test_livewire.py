@@ -58,6 +58,7 @@ from signalwire.livewire.plugins import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(autouse=True)
 def _reset_noop_trackers() -> Iterator[None]:
     """Reset all noop trackers between tests so 'log once' does not leak."""
@@ -71,6 +72,7 @@ def _reset_noop_trackers() -> Iterator[None]:
 # ---------------------------------------------------------------------------
 # Agent creation
 # ---------------------------------------------------------------------------
+
 
 class TestAgentCreation:
     """Test Agent class construction and properties."""
@@ -93,7 +95,7 @@ class TestAgentCreation:
 
     def test_creation_with_noop_params(self) -> None:
         """STT, TTS, VAD, turn_detection trigger noop logs."""
-        agent = Agent(
+        Agent(
             instructions="test",
             stt="deepgram",
             tts="cartesia",
@@ -191,6 +193,7 @@ class TestAgentPipelineNodes:
 # function_tool decorator
 # ---------------------------------------------------------------------------
 
+
 class TestFunctionTool:
     """Test the @function_tool decorator."""
 
@@ -261,6 +264,7 @@ class TestFunctionTool:
 # ---------------------------------------------------------------------------
 # AgentSession
 # ---------------------------------------------------------------------------
+
 
 class TestAgentSession:
     """Test AgentSession construction and methods."""
@@ -340,6 +344,7 @@ class TestAgentSession:
 # RunContext
 # ---------------------------------------------------------------------------
 
+
 class TestRunContext:
     """Test RunContext mirrors livekit RunContext."""
 
@@ -362,6 +367,7 @@ class TestRunContext:
 # ---------------------------------------------------------------------------
 # JobContext
 # ---------------------------------------------------------------------------
+
 
 class TestJobContext:
     """Test JobContext noop methods."""
@@ -392,6 +398,7 @@ class TestJobContext:
 # Room / JobProcess
 # ---------------------------------------------------------------------------
 
+
 class TestRoom:
     def test_name(self) -> None:
         assert Room.name == "livewire-room"
@@ -407,6 +414,7 @@ class TestJobProcess:
 # ---------------------------------------------------------------------------
 # Plugin stubs
 # ---------------------------------------------------------------------------
+
 
 class TestPluginStubs:
     """Test that plugin stubs construct without error."""
@@ -440,19 +448,23 @@ class TestPluginStubs:
 # Inference stubs
 # ---------------------------------------------------------------------------
 
+
 class TestInferenceStubs:
     def test_inference_stt(self) -> None:
         from signalwire.livewire import InferenceSTT
+
         stt = InferenceSTT("whisper-large-v3")
         assert stt.model == "whisper-large-v3"
 
     def test_inference_llm(self) -> None:
         from signalwire.livewire import InferenceLLM
+
         llm = InferenceLLM("gpt-4o")
         assert llm.model == "gpt-4o"
 
     def test_inference_tts(self) -> None:
         from signalwire.livewire import InferenceTTS
+
         tts = InferenceTTS("tts-1")
         assert tts.model == "tts-1"
 
@@ -460,6 +472,7 @@ class TestInferenceStubs:
 # ---------------------------------------------------------------------------
 # Noop logging (log once per feature)
 # ---------------------------------------------------------------------------
+
 
 class TestNoopLogging:
     """Verify that noop messages are logged at most once."""
@@ -493,6 +506,7 @@ class TestNoopLogging:
 # Banner and tips
 # ---------------------------------------------------------------------------
 
+
 class TestBannerAndTips:
     """Test banner printing and tip selection."""
 
@@ -512,18 +526,22 @@ class TestBannerAndTips:
 
     def test_print_banner_tty(self) -> None:
         buf = io.StringIO()
-        with patch.object(sys, "stderr", buf):
-            with patch.object(buf, "isatty", return_value=True):
-                _print_banner()
+        with (
+            patch.object(sys, "stderr", buf),
+            patch.object(buf, "isatty", return_value=True),
+        ):
+            _print_banner()
         output = buf.getvalue()
         assert "\033[36m" in output  # cyan
         assert "LiveKit-compatible" in output
 
     def test_print_banner_no_tty(self) -> None:
         buf = io.StringIO()
-        with patch.object(sys, "stderr", buf):
-            with patch.object(buf, "isatty", return_value=False):
-                _print_banner()
+        with (
+            patch.object(sys, "stderr", buf),
+            patch.object(buf, "isatty", return_value=False),
+        ):
+            _print_banner()
         output = buf.getvalue()
         assert "\033[36m" not in output
         assert "LiveKit-compatible" in output
@@ -539,6 +557,7 @@ class TestBannerAndTips:
 # ---------------------------------------------------------------------------
 # Exceptions / signals
 # ---------------------------------------------------------------------------
+
 
 class TestExceptionsAndSignals:
     def test_stop_response_is_exception(self) -> None:
@@ -558,6 +577,7 @@ class TestExceptionsAndSignals:
 # ChatContext
 # ---------------------------------------------------------------------------
 
+
 class TestChatContext:
     def test_basic(self) -> None:
         ctx = ChatContext()
@@ -575,6 +595,7 @@ class TestChatContext:
 # Namespace aliases
 # ---------------------------------------------------------------------------
 
+
 class TestNamespaces:
     def test_voice_namespace(self) -> None:
         assert voice.Agent is Agent
@@ -590,6 +611,7 @@ class TestNamespaces:
 
     def test_inference_namespace(self) -> None:
         from signalwire.livewire import InferenceSTT, InferenceLLM, InferenceTTS
+
         assert inference.STT is InferenceSTT
         assert inference.LLM is InferenceLLM
         assert inference.TTS is InferenceTTS
@@ -598,6 +620,7 @@ class TestNamespaces:
 # ---------------------------------------------------------------------------
 # AgentServer
 # ---------------------------------------------------------------------------
+
 
 class TestAgentServer:
     def test_basic_creation(self) -> None:
@@ -630,17 +653,19 @@ class TestAgentServer:
 # NOT_GIVEN sentinel
 # ---------------------------------------------------------------------------
 
+
 class TestNotGiven:
     def test_sentinel_identity(self) -> None:
         assert NOT_GIVEN is NOT_GIVEN
         assert NOT_GIVEN is not None
         assert NOT_GIVEN is not False
-        assert NOT_GIVEN is not 0
+        assert NOT_GIVEN != 0
 
 
 # ---------------------------------------------------------------------------
 # Integration: AgentSession._build_sw_agent
 # ---------------------------------------------------------------------------
+
 
 class TestBuildSwAgent:
     """Test that _build_sw_agent creates a valid SignalWire AgentBase."""
@@ -672,8 +697,11 @@ class TestBuildSwAgent:
             sw = session._build_sw_agent()
 
         # The tool should be registered
-        tool_names = [f.name for f in sw._tool_registry._swaig_functions.values()
-                      if hasattr(f, "name")]
+        tool_names = [
+            f.name
+            for f in sw._tool_registry._swaig_functions.values()
+            if hasattr(f, "name")
+        ]
         assert "ping" in tool_names
 
     @pytest.mark.asyncio
@@ -706,7 +734,10 @@ class TestGreeting:
         session.say("Hi, this is the weather line.")
         session.say("Which city?")
         ai = _ai_verb(session._build_sw_agent())
-        assert ai["params"]["static_greeting"] == "Hi, this is the weather line. Which city?"
+        assert (
+            ai["params"]["static_greeting"]
+            == "Hi, this is the weather line. Which city?"
+        )
         assert ai["prompt"]["text"] == "You are a weather assistant."
 
     @pytest.mark.asyncio
@@ -838,8 +869,11 @@ class TestRunAppServes:
         async def entrypoint(ctx: JobContext) -> None:
             await ctx.connect()
 
-        with _Served() as served, patch("sys.stderr", new_callable=io.StringIO), \
-             patch("signalwire.livewire._logger") as logger:
+        with (
+            _Served() as served,
+            patch("sys.stderr", new_callable=io.StringIO),
+            patch("signalwire.livewire._logger") as logger,
+        ):
             run_app(server)
 
         assert served.agents == []

@@ -18,6 +18,7 @@ class CreateTokenRequest(TypedDict, total=False):
     name: str
     permissions: list[TokenPermission]
     subproject_id: str
+    project_id: str
 
 
 TokenPermission: TypeAlias = "Literal['calling', 'chat', 'datasphere', 'fax', 'management', 'messaging', 'numbers', 'pubsub', 'storage', 'tasking', 'video']"
@@ -30,6 +31,14 @@ class TokenResponse(TypedDict, total=False):
     name: str
     permissions: list[TokenPermission]
     token: str
+
+
+class TokenUpdateResponse(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    id: str
+    name: str
+    permissions: list[TokenPermission]
 
 
 class TokenStatusCode422(TypedDict, total=False):
@@ -98,4 +107,4 @@ class UpdateTokenRequest(TypedDict, total=False):
 
 
 CreateTokenResponse: TypeAlias = "TokenResponse"
-UpdateTokenResponse: TypeAlias = "TokenResponse"
+UpdateTokenResponse: TypeAlias = "TokenUpdateResponse"

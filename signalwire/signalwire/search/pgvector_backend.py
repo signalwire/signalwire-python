@@ -1126,6 +1126,12 @@ class PgVectorSearchBackend:
         results_map: dict[Any, dict[str, Any]],
         agreement_boost: float,
     ) -> None:
+        """Set each merged result's final score from its per-source scores.
+
+        A chunk the vector search returned keeps its cosine score plus at most
+        ``TIEBREAK_MAX`` for agreement; any other chunk is scaled below the best vector
+        score, so it cannot outrank a closer semantic match.
+        """
         # max, not min: vector search returns `count` rows, so the weakest one
         # is the count-th best cosine and a floor built from it would move with
         # `count` -- making the same candidate score differently depending on

@@ -31,7 +31,7 @@ jobs:
         with:
           repository: signalwire/porting-sdk
           # Publish always builds against porting-sdk main — deliberately NOT the
-          # coordinated-pass PORTING_SDK_REF variable, so a release can never ship from
+          # coordinated-pass .github/porting-sdk-ref pin, so a release can never ship from
           # an unmerged wave branch (see porting-sdk/COORDINATED_PASS.md).
           ref: main
           path: porting-sdk
@@ -54,6 +54,11 @@ jobs:
         working-directory: signalwire-python
         run: |
           pip install -e .
+          # CPU-only torch BEFORE the dev deps: sentence-transformers (requirements-dev.txt)
+          # pulls torch, and PyPI's Linux torch drags ~3 GB of nvidia CUDA wheels the tests
+          # never use (python Test 36823015697: 53 min in this step on 3.10/3.11). With torch
+          # already satisfied, pip keeps the CPU build.
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install -r requirements-dev.txt
 
       - name: Run CI gate script (TEST -> SIGNATURES -> DRIFT -> NO-CHEAT)

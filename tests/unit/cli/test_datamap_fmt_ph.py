@@ -27,7 +27,9 @@ class TestWithoutPhonenumbers:
     def test_a_north_american_number_is_formatted(self) -> None:
         assert _fmt("+1 202 555 0143") == "(202) 555-0143"
 
-    def test_another_value_is_left_with_a_note(self, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_another_value_is_left_with_a_note(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         assert _fmt("12") == "12"
         assert "INVALID NUMBER" in capsys.readouterr().err
 

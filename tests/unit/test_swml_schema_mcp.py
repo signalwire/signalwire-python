@@ -8,13 +8,17 @@ exited on start unless the variable was set (B16).
 """
 
 import importlib.util
-import sys
 from pathlib import Path
 from types import ModuleType
 
 import pytest
 
-SCRIPT = Path(__file__).resolve().parents[2] / "mcp" / "swml-schema-search" / "swml_schema_mcp.py"
+SCRIPT = (
+    Path(__file__).resolve().parents[2]
+    / "mcp"
+    / "swml-schema-search"
+    / "swml_schema_mcp.py"
+)
 
 
 @pytest.fixture
@@ -40,7 +44,9 @@ def test_loads_the_schema_without_the_environment_variable(server: ModuleType) -
     assert "ai" in server.METHODS
 
 
-def test_environment_variable_still_wins(server: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_environment_variable_still_wins(
+    server: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     schema = tmp_path / "custom.json"
     schema.write_text('{"$defs": {"SWMLMethod": {"anyOf": []}}}')
     monkeypatch.setenv("SWML_SCHEMA_PATH", str(schema))

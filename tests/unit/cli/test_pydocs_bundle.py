@@ -85,7 +85,12 @@ def test_files_not_listed_never_ship(tmp_path: Path) -> None:
     (tmp_path / "examples").mkdir()
     (tmp_path / "docs" / "guide.md").write_text("# Guide\n", encoding="utf-8")
     # Local files a developer might have: none of them is in MANIFEST.in
-    for junk in ("examples/.env.production", "examples/debug.log", "docs/notes.md", "examples/config.json"):
+    for junk in (
+        "examples/.env.production",
+        "examples/debug.log",
+        "docs/notes.md",
+        "examples/config.json",
+    ):
         (tmp_path / junk).write_text("secret\n", encoding="utf-8")
     (tmp_path / "MANIFEST.in").write_text("include docs/guide.md\n", encoding="utf-8")
     assert list(iter_doc_files(tmp_path)) == ["docs/guide.md"]
@@ -123,12 +128,20 @@ def test_links_resolve_once_installed() -> None:
             path = target.split("#", 1)[0]
             if not path or re.match(r"^[a-z][a-z0-9+.-]*:", path):
                 continue
-            where = PurePosixPath(os.path.normpath(PurePosixPath("pkg/_docs") / rel).rsplit("/", 1)[0])
+            where = PurePosixPath(
+                os.path.normpath(PurePosixPath("pkg/_docs") / rel).rsplit("/", 1)[0]
+            )
             resolved = PurePosixPath(os.path.normpath(where / path)).as_posix()
             if resolved.startswith("pkg/_docs/"):
-                if resolved[len("pkg/_docs/") :] in shipped or (REPO / resolved[len("pkg/_docs/") :]).is_dir():
+                if (
+                    resolved[len("pkg/_docs/") :] in shipped
+                    or (REPO / resolved[len("pkg/_docs/") :]).is_dir()
+                ):
                     continue
-            elif resolved.startswith("pkg/") and (REPO / "signalwire/signalwire" / resolved[4:]).exists():
+            elif (
+                resolved.startswith("pkg/")
+                and (REPO / "signalwire/signalwire" / resolved[4:]).exists()
+            ):
                 continue
             broken.append(f"{rel}: {target}")
     assert broken == []

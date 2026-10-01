@@ -52,6 +52,7 @@ def version() -> str:
 
 
 def _file_line(root: Path | None, rel: str, purpose: str = "") -> str:
+    """Format a doc-list line for ``rel``, resolved under the docs or package root."""
     if root is None:
         location = rel
     elif rel.startswith("signalwire/"):
@@ -243,6 +244,7 @@ def example_descriptions(root: Path) -> dict[str, tuple[str, str]]:
 
 
 def _docstring_summary(path: Path) -> str:
+    """Return the first non-license line of a file's module docstring."""
     try:
         doc = ast.get_docstring(ast.parse(path.read_text(encoding="utf-8"))) or ""
     except (OSError, SyntaxError, UnicodeDecodeError):
@@ -300,6 +302,7 @@ def render_examples(root: Path | None, wanted: str | None) -> str:
 
 
 def _render_skills(args: list[str]) -> str:
+    """List the built-in skills, or describe the one named in ``args``."""
     from signalwire.skills.registry import skill_registry
 
     if args:
@@ -326,6 +329,7 @@ def _render_skills(args: list[str]) -> str:
 
 
 def _render_skill(name: str) -> str:
+    """Describe skill ``name``: its description, README and parameters."""
     from signalwire.skills.registry import skill_registry
 
     skill_class: Any = skill_registry.get_skill_class(name)
@@ -348,6 +352,7 @@ def _render_skill(name: str) -> str:
 
 
 def _render_prefabs(args: list[str]) -> str:
+    """List the prefabs with their summaries and constructor signatures."""
     import signalwire.prefabs as prefabs
 
     out = ["## Prefabs", ""]
@@ -368,6 +373,7 @@ def _render_prefabs(args: list[str]) -> str:
 
 
 def _render_rest(args: list[str]) -> str:
+    """List the REST client's namespaces and their members."""
     from signalwire.rest import RestClient
 
     # Placeholder credentials: listing the namespaces sends no request
@@ -381,6 +387,7 @@ def _render_rest(args: list[str]) -> str:
 
 
 def _render_env(args: list[str]) -> str:
+    """List the ``SWML_`` and ``SIGNALWIRE_`` variables the code reads."""
     found: dict[str, set[str]] = {}
     base = package_dir()
     for path in source_files():
@@ -427,6 +434,7 @@ def installed_commands() -> list[str]:
 
 
 def _render_cli(args: list[str]) -> str:
+    """List the installed command-line tools with a summary of each."""
     out = ["## Commands", ""]
     out += [
         f"- `{name}`: {COMMAND_SUMMARIES.get(name, 'run it with --help')}"

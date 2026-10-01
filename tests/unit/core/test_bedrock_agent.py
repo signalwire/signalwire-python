@@ -2,7 +2,7 @@
 Tests for BedrockAgent's amazon_bedrock rendering.
 
 BedrockAgent stored max_tokens but never rendered it (B12), and its examples
-used a voice the schema rejects (B14). The platform's Bedrock session reads
+used a voice Bedrock does not offer (B14). The platform's Bedrock session reads
 the prompt's text or pom, voice_id, temperature and top_p, so other prompt
 settings are ignored with a warning. These tests render the document and
 validate it against the SWML schema.
@@ -27,14 +27,25 @@ def _render(agent: BedrockAgent) -> dict[str, Any]:
 
 
 def _bedrock_verb(document: dict[str, Any]) -> dict[str, Any]:
-    return next(v["amazon_bedrock"] for v in document["sections"]["main"] if "amazon_bedrock" in v)
+    return next(
+        v["amazon_bedrock"]
+        for v in document["sections"]["main"]
+        if "amazon_bedrock" in v
+    )
 
 
 @pytest.fixture
 def agent() -> BedrockAgent:
-    agent = BedrockAgent(name="bedrock", route="/bedrock", voice_id="tiffany", max_tokens=512)
+    agent = BedrockAgent(
+        name="bedrock", route="/bedrock", voice_id="tiffany", max_tokens=512
+    )
     agent.set_prompt_text("You are a helpful assistant.")
-    agent.set_prompt_llm_params(presence_penalty=0.3, frequency_penalty=0.2, confidence=0.5, barge_confidence=0.4)
+    agent.set_prompt_llm_params(
+        presence_penalty=0.3,
+        frequency_penalty=0.2,
+        confidence=0.5,
+        barge_confidence=0.4,
+    )
     return agent
 
 
@@ -69,11 +80,26 @@ def test_rendered_document_is_valid_swml(agent: BedrockAgent) -> None:
     assert ok, errors
 
 
-def test_schema_rejects_a_voice_bedrock_does_not_offer() -> None:
+def test_an_unoffered_voice_is_accepted_and_the_offered_ones_are_annotated() -> None:
+    """Bedrock refuses a voice outside its five (bedrock_config.cpp:224), but that refusal
+    happens behind a SWML handler that DISCARDS relay's reply (mod_infrastructure
+    `relay_result_discarded`, swml.c:5450): no SWML error, execution continues, the verb just
+    does not run. Owner ruling 2026-09-27 -- a rejection the handler does not surface is
+    "silently ignored" -> OPEN, with the offered voices stated as `x-known-values`."""
     agent = BedrockAgent(name="bedrock", route="/bedrock", voice_id="inworld.Mark")
     agent.set_prompt_text("You are a helpful assistant.")
-    ok, _ = SchemaUtils().validate_document(_render(agent))
-    assert not ok
+    ok, errors = SchemaUtils().validate_document(_render(agent))
+    assert ok, errors
+    schema = json.loads(
+        (REPO / "signalwire" / "signalwire" / "schema.json").read_text()
+    )
+    body = schema["$defs"]["AmazonBedrock"]["properties"]["amazon_bedrock"]
+    obj = next(a for a in body["anyOf"] if a.get("type") == "object")
+    voice = obj["properties"]["prompt"]["properties"]["voice_id"]
+    arms = [voice, *voice.get("anyOf", [])]
+    known = [a["x-known-values"] for a in arms if "x-known-values" in a]
+    assert known and set(known[0]) == {"tiffany", "matthew", "amy", "lupe", "carlos"}
+    assert not any("enum" in a for a in arms)
 
 
 def test_examples_use_voices_bedrock_offers() -> None:
@@ -144,7 +170,11 @@ def test_no_warning_without_dropped_features(agent: BedrockAgent) -> None:
 
 def test_numeric_strings_are_converted() -> None:
     # Strings aren't in the annotated types, so they're passed as Any
-    settings: dict[str, Any] = {"temperature": "0.5", "top_p": " 0.8 ", "max_tokens": "2048"}
+    settings: dict[str, Any] = {
+        "temperature": "0.5",
+        "top_p": " 0.8 ",
+        "max_tokens": "2048",
+    }
     agent = BedrockAgent(name="bedrock", route="/bedrock", **settings)
     agent.set_prompt_text("You are a helpful assistant.")
     prompt = _bedrock_verb(_render(agent))["prompt"]
@@ -169,13 +199,25 @@ def test_swml_variable_passes_through_for_temperature_and_top_p() -> None:
 @pytest.mark.parametrize(
     ("kwargs", "message"),
     [
-        ({"temperature": "hot"}, "BedrockAgent temperature must be a number, got 'hot'"),
+        (
+            {"temperature": "hot"},
+            "BedrockAgent temperature must be a number, got 'hot'",
+        ),
         ({"top_p": [0.9]}, "BedrockAgent top_p must be a number, got [0.9]"),
         ({"temperature": True}, "BedrockAgent temperature must be a number, got True"),
-        ({"temperature": float("nan")}, "BedrockAgent temperature must be a number, got nan"),
-        ({"max_tokens": "lots"}, "BedrockAgent max_tokens must be an integer, got 'lots'"),
+        (
+            {"temperature": float("nan")},
+            "BedrockAgent temperature must be a number, got nan",
+        ),
+        (
+            {"max_tokens": "lots"},
+            "BedrockAgent max_tokens must be an integer, got 'lots'",
+        ),
         ({"max_tokens": 10.5}, "BedrockAgent max_tokens must be an integer, got 10.5"),
-        ({"max_tokens": "${max}"}, "BedrockAgent max_tokens must be an integer, got '${max}'"),
+        (
+            {"max_tokens": "${max}"},
+            "BedrockAgent max_tokens must be an integer, got '${max}'",
+        ),
     ],
 )
 def test_non_numeric_values_are_refused(kwargs: dict[str, Any], message: str) -> None:
@@ -193,7 +235,9 @@ def test_refused_value_changes_nothing(agent: BedrockAgent) -> None:
     assert prompt["max_tokens"] == 512
 
 
-def test_set_prompt_llm_params_validates_inference_settings(agent: BedrockAgent) -> None:
+def test_set_prompt_llm_params_validates_inference_settings(
+    agent: BedrockAgent,
+) -> None:
     with pytest.raises(ValueError, match="top_p must be a number"):
         agent.set_prompt_llm_params(top_p="high")
     agent.set_prompt_llm_params(temperature="0.3")

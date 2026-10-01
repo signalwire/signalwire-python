@@ -19,16 +19,12 @@ class Project(TypedDict, total=False):
     name: str
     parent_project_id: str | None
     subproject: bool
-    region_preference: str
     protect_recordings: bool
     protect_message_media: bool
     protect_fax_media: bool
     force_https_requests: bool
     created_at: str
     updated_at: str
-
-
-ProjectWithSigningKey: TypeAlias = "dict[str, Any]"
 
 
 class ProjectCreate(TypedDict, total=False):
@@ -43,9 +39,21 @@ class ProjectCreate(TypedDict, total=False):
     protect_message_media: bool
     protect_fax_media: bool
     force_https_requests: bool
+    parent_project_id: str
 
 
-ProjectUpdate: TypeAlias = "ProjectCreate"
+class ProjectUpdate(TypedDict, total=False):
+    """Request body for updating a project's name and settings.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
+
+    name: str
+    protect_recordings: bool
+    protect_message_media: bool
+    protect_fax_media: bool
+    force_https_requests: bool
 
 
 class ProjectList(TypedDict, total=False):
@@ -120,3 +128,9 @@ GetProjectResponse: TypeAlias = "Project"
 UpdateProjectRequest: TypeAlias = "ProjectUpdate"
 UpdateProjectResponse: TypeAlias = "Project"
 RotateSigningKeyResponse: TypeAlias = "ProjectWithSigningKey"
+
+
+# Aliases of one concrete ``dict`` type, emitted unquoted and last so the name stays
+# callable at runtime (``ConnectDeviceSingle(to=...)`` builds a dict, as it did when the
+# name was a TypedDict).
+ProjectWithSigningKey: TypeAlias = dict[str, Any]

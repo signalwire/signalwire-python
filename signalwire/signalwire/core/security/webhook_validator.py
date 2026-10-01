@@ -223,7 +223,7 @@ def validate_webhook_signature(
             secret. ``None`` / empty raises ``ValueError`` — that's a programming
             error, not a validation failure.
         signature: The ``X-SignalWire-Signature`` header value (or
-            ``X-Twilio-Signature`` for cXML compat). Missing / empty returns
+            ``X-Twilio-Signature`` on cXML requests). Missing / empty returns
             False without raising.
         url: The full URL SignalWire POSTed to (scheme, host, optional port,
             path, query). Must match exactly what the platform saw when it
@@ -330,7 +330,7 @@ def validate_request(
     url: str,
     params_or_raw_body: str | Mapping[str, Any] | list[tuple[str, Any]] | None,
 ) -> bool:
-    """Legacy ``@signalwire/compatibility-api`` drop-in entry point.
+    """Legacy entry point: validate a signed request from its raw body or form params.
 
     If ``params_or_raw_body`` is a string, delegates to
     :func:`validate_webhook_signature` (Scheme A then Scheme B with parsed form).

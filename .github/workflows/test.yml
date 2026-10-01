@@ -33,14 +33,21 @@ jobs:
         with:
           path: signalwire-python
 
+      - name: Resolve coordinated refs (branch-local .github/porting-sdk-ref pin; no pin = main)
+        # See porting-sdk/COORDINATED_PASS.md. Every foreign coordinated-set
+        # checkout below takes its ref from this step's outputs.
+        id: coord
+        shell: bash
+        run: bash signalwire-python/.github/coordinated-ref.sh signalwire-python
+
       - name: Checkout porting-sdk (mock_relay + mock_signalwire test harnesses + audit scripts)
         uses: actions/checkout@v7
         with:
           repository: signalwire/porting-sdk
-          # Coordinated-pass pin: `main` normally; set the PORTING_SDK_REF repo variable
-          # to a wave branch (e.g. wave/2-aplus) to test a coordinated porting-sdk change,
-          # and declare it on the PR (see porting-sdk/COORDINATED_PASS.md). No revert commit.
-          ref: ${{ vars.PORTING_SDK_REF || 'main' }}
+          # Coordinated-pass pin: resolved by the `coord` step from the branch-local
+          # .github/porting-sdk-ref pin file; main when the file is absent, so only a branch
+          # that commits the pin is affected (see porting-sdk/COORDINATED_PASS.md).
+          ref: ${{ steps.coord.outputs.ref }}
           path: porting-sdk
           token: ${{ secrets.PORTING_SDK_TOKEN }}
 
@@ -48,6 +55,10 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: |
+            signalwire-python/pyproject.toml
+            signalwire-python/requirements-dev.txt
 
       - name: Install Python test harnesses (mock_relay + mock_signalwire)
         run: |
@@ -67,6 +78,11 @@ jobs:
         working-directory: signalwire-python
         run: |
           pip install -e .
+          # CPU-only torch BEFORE the dev deps: sentence-transformers (requirements-dev.txt)
+          # pulls torch, and PyPI's Linux torch drags ~3 GB of nvidia CUDA wheels the tests
+          # never use (python Test 36823015697: 53 min in this step on 3.10/3.11). With torch
+          # already satisfied, pip keeps the CPU build.
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install -r requirements-dev.txt
 
       - name: Select gate tier (promote to nightly if PR touches docs/examples)

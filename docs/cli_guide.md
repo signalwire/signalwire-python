@@ -935,18 +935,16 @@ swaig-test examples/my_agent.py --dump-swml --verbose
 ```json
 {
   "call": {
+    "project_id": "550e8400-e29b-41d4-a716-446655440003",
+    "space_id": "550e8400-e29b-41d4-a716-446655440004",
     "call_id": "550e8400-e29b-41d4-a716-446655440000",
     "node_id": "test-node-a1b2c3d4",
-    "segment_id": "550e8400-e29b-41d4-a716-446655440001", 
-    "call_session_id": "550e8400-e29b-41d4-a716-446655440002",
-    "tag": "550e8400-e29b-41d4-a716-446655440000",
-    "state": "created",
+    "segment_id": "550e8400-e29b-41d4-a716-446655440001",
+    "call_state": "created",
     "direction": "inbound",
     "type": "webrtc",
     "from": "user-a1b2c3d4@test.domain",
-    "to": "agent-e5f6g7h8@test.domain",
-    "project_id": "550e8400-e29b-41d4-a716-446655440003",
-    "space_id": "550e8400-e29b-41d4-a716-446655440004"
+    "to": "agent-e5f6g7h8@test.domain"
   },
   "vars": {
     "userVariables": {}
@@ -955,21 +953,24 @@ swaig-test examples/my_agent.py --dump-swml --verbose
 }
 ```
 
+The shape is the one the SignalWire engine POSTs to a SWML webhook (the
+engine-derived `webhook_request` contract): `call_state` (not `state`), a closed
+`call` object, and `vars` always present.
+
 ### Call Type Simulation
 
-Support for different call types with appropriate metadata:
+The `call` object's keys depend on the device type, as they do on the wire:
 
 ```bash
-# WebRTC call (default)
+# WebRTC call (default): type, from, to
 swaig-test examples/agent.py --dump-swml --call-type webrtc
 
-# SIP call with phone numbers
+# Phone (PSTN) call: type, from, to, from_number, to_number
+swaig-test examples/agent.py --dump-swml --call-type phone
+
+# SIP call: type, from, to, headers ([{"name": ..., "value": ...}]), sip_data
 swaig-test examples/agent.py --dump-swml --call-type sip
 ```
-
-**SIP vs WebRTC differences:**
-- **SIP**: Uses phone numbers (+15551234567), includes SIP headers
-- **WebRTC**: Uses domain addresses (user@domain), includes WebRTC headers
 
 ### SWML Testing Options
 
@@ -977,7 +978,7 @@ swaig-test examples/agent.py --dump-swml --call-type sip
 |--------|-------------|---------|
 | `--dump-swml` | Generate SWML document with fake call data | `--dump-swml` |
 | `--raw` | Output raw JSON only (pipeable) | `--dump-swml --raw \| jq '.'` |
-| `--call-type` | SIP or WebRTC call simulation | `--call-type sip` |
+| `--call-type` | Device type: phone, sip or webrtc | `--call-type sip` |
 | `--call-direction` | Inbound or outbound call | `--call-direction outbound` |
 | `--call-state` | Call state (created, answered, etc.) | `--call-state answered` |
 | `--call-id` | Override call_id | `--call-id my-test-call` |
@@ -992,7 +993,7 @@ Precise control over fake data using dot notation paths:
 
 ```bash
 # Simple value overrides
-swaig-test examples/agent.py --dump-swml --override call.state=answered --override call.timeout=60
+swaig-test examples/agent.py --dump-swml --override call.call_state=answered --override call.direction=outbound
 
 # JSON overrides for complex data
 swaig-test examples/agent.py --dump-swml --override-json vars.userVariables='{"vip":true,"tier":"gold"}'
@@ -1010,12 +1011,12 @@ swaig-test examples/agent.py --dump-swml --query-params '{"source":"api","debug"
 swaig-test examples/agent.py --dump-swml \
   --override call.project_id=my-project \
   --override call.direction=outbound \
-  --override call.state=answered \
+  --override call.call_state=answered \
   --user-vars '{"vip_customer":true}'
 
 # Complex JSON overrides
 swaig-test examples/agent.py --dump-swml \
-  --override-json call.headers='{"X-Custom":"value"}' \
+  --override-json call.headers='[{"name":"X-Custom","value":"value"}]' \
   --override-json vars.userVariables='{"settings":{"theme":"dark","lang":"en"}}'
 ```
 
@@ -1303,14 +1304,16 @@ swaig-test my_agent.py --exec my_function
 swaig-test my_agent.py --fake-full-data --exec my_function
 ```
 
-**Includes complete post_data with all SignalWire keys:**
-- **Core identification**: `function`, `argument`, `call_id`, `call_session_id`, `node_id`
-- **Metadata**: `meta_data_token`, `meta_data` (function-level shared data)
-- **Global data**: `global_data` (agent configuration and state)
-- **Conversation context**: `call_log`, `raw_call_log` (OpenAI conversation format)
-- **SWML variables**: `prompt_vars` (includes SWML vars + global_data keys)
-- **Permissions**: `swaig_allow_swml`, `swaig_post_conversation`, `swaig_post_swml_vars`
-- **HTTP context**: `http_method`, `webhook_url`, `user_agent`, `request_headers`
+**Produces the body the SignalWire engine POSTs to a SWAIG function** (the engine's
+own field set, nothing invented):
+- **Always sent**: `function`, `argument` (`parsed`, `raw`), `argument_desc` (the function's
+  parameter schema), `description`, `call_id`, `ai_session_id`, `app_name`, `version`,
+  `content_type`, `content_disposition`, `channel_active`, `channel_offhook`, `channel_ready`
+- **Conditional, included as a fully-configured call carries them**: `caller_id_name`,
+  `caller_id_num`, `project_id`, `space_id`, `global_data`, `meta_data_token` + `meta_data`,
+  `call_log` + `raw_call_log` (sent when `swaig_post_conversation` is set)
+- **Not fabricated**: `args` / `input` (data_map path only) and `fatal_error` /
+  `error_reason` (error invocations only)
 
 #### 3. Custom Data Mode
 
@@ -1326,55 +1329,51 @@ swaig-test my_agent.py --custom-data '{"call_id":"test-123","global_data":{"envi
 
 ```json
 {
-  "function": "search_knowledge",
-  "argument": {"query": "SignalWire"},
+  "ai_session_id": "0f8e...",
+  "app_name": "swaig-test",
+  "argument": {
+    "parsed": [{"query": "SignalWire"}],
+    "raw": "{\"query\": \"SignalWire\"}"
+  },
+  "argument_desc": {
+    "type": "object",
+    "properties": {"query": {"type": "string"}}
+  },
   "call_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "call_session_id": "session-uuid",
-  "node_id": "test-node-001",
-  "meta_data_token": "func_hash_token",
-  "meta_data": {
-    "test_mode": true,
-    "function_name": "search_knowledge"
-  },
-  "global_data": {
-    "app_name": "test_application",
-    "environment": "test",
-    "user_preferences": {"language": "en"}
-  },
+  "channel_active": true,
+  "channel_offhook": true,
+  "channel_ready": true,
+  "content_disposition": "SWAIG Function",
+  "content_type": "text/swaig",
+  "description": "Search the knowledge base",
+  "function": "search_knowledge",
+  "version": "2.0",
+  "caller_id_name": "Test Caller",
+  "caller_id_num": "+15559876543",
+  "project_id": "550e8400-e29b-41d4-a716-446655440003",
+  "space_id": "550e8400-e29b-41d4-a716-446655440004",
+  "global_data": {},
+  "meta_data_token": "token-1a2b3c4d",
+  "meta_data": {},
   "call_log": [
-    {
-      "role": "system",
-      "content": "You are a helpful AI assistant..."
-    },
-    {
-      "role": "user",
-      "content": "Please call the search_knowledge function"
-    },
+    {"role": "system", "content": "You are a helpful AI assistant..."},
+    {"role": "user", "content": "Please call the search_knowledge function"},
     {
       "role": "assistant",
       "content": "I'll call the search_knowledge function for you.",
       "tool_calls": [
         {
-          "id": "call_12345678",
+          "id": "call_a1b2c3d4",
           "type": "function",
           "function": {
             "name": "search_knowledge",
-            "arguments": "{\"query\":\"SignalWire\"}"
+            "arguments": "{\"query\": \"SignalWire\"}"
           }
         }
       ]
     }
   ],
-  "raw_call_log": "... complete conversation history ...",
-  "prompt_vars": {
-    "ai_instructions": "You are a helpful assistant",
-    "temperature": 0.7,
-    "app_name": "test_application",
-    "current_timestamp": "2024-01-15T10:30:00Z"
-  },
-  "swaig_allow_swml": true,
-  "swaig_post_conversation": true,
-  "swaig_post_swml_vars": true
+  "raw_call_log": ["... the same conversation, unredacted ..."]
 }
 ```
 
@@ -1576,8 +1575,9 @@ swaig-test examples/dynamic_agent.py --dump-swml \
   --user-vars '{"customer_tier":"premium"}' \
   --verbose
 
-# Test SIP vs WebRTC calls
-swaig-test examples/agent.py --dump-swml --call-type sip --from-number "+15551234567"
+# Test phone vs SIP vs WebRTC calls
+swaig-test examples/agent.py --dump-swml --call-type phone --from-number "+15551234567"
+swaig-test examples/agent.py --dump-swml --call-type sip --from-number "sip:alice@example.com"
 swaig-test examples/agent.py --dump-swml --call-type webrtc --from-number "user@domain.com"
 
 # Test with multi-agent file
@@ -1674,9 +1674,8 @@ swaig-test examples/agent.py --dump-swml \
 # Complex call state testing
 swaig-test examples/agent.py --dump-swml \
   --call-state answered \
-  --override call.timeout=120 \
-  --override call.max_duration=7200 \
-  --override-json call.record='{"enabled":true,"format":"mp3"}' \
+  --override call.direction=outbound \
+  --override-json call.peer='{"call_id":"peer-call-id","node_id":"peer-node-id"}' \
   --user-vars '{"call_reason":"support","priority":"high","customer_id":"CUST-12345"}' \
   --verbose
 
@@ -1753,14 +1752,14 @@ swaig-test examples/ivr_agent.py --dump-swml \
 # Test transfer scenario
 swaig-test examples/ivr_agent.py --dump-swml \
   --call-state answered \
-  --override call.timeout=30 \
+  --override call.direction=inbound \
   --user-vars '{"transfer_reason":"escalation","agent_type":"supervisor"}' \
   --verbose
 
 # Test callback scenario
 swaig-test examples/callback_agent.py --dump-swml \
   --call-direction outbound \
-  --override call.state=created \
+  --override call.call_state=created \
   --user-vars '{"callback_scheduled":"2024-01-15T14:30:00Z","customer_id":"CUST-789"}' \
   --verbose
 ```
@@ -1900,7 +1899,7 @@ For SWML generation issues:
 swaig-test my_agent.py --dump-swml --verbose
 
 # Test with minimal overrides
-swaig-test my_agent.py --dump-swml --override call.state=test --verbose
+swaig-test my_agent.py --dump-swml --override call.call_state=answered --verbose
 
 # Validate JSON structure
 swaig-test my_agent.py --dump-swml --raw | python -m json.tool

@@ -9,6 +9,7 @@ See LICENSE file in the project root for full license information.
 
 import sqlite3
 import json
+from contextlib import closing
 from typing import Any, TYPE_CHECKING
 
 from signalwire.core.logging_config import get_logger
@@ -329,13 +330,11 @@ class SearchIndexMigrator:
             info["type"] = "sqlite"
             info["path"] = index_path
 
-            # try/finally rather than a trailing close(): a corrupt or
-            # partially written index makes any of these statements raise, and
-            # the handle would otherwise be held until GC -- which on Windows
-            # keeps the file locked against the very repair the caller is
-            # probably attempting.
-            conn = sqlite3.connect(index_path)
-            try:
+            # `closing` so the handle is released even when a query raises —
+            # an unclosed handle makes the file undeletable on Windows. A
+            # corrupt or partially written index makes any of these statements
+            # raise, and the handle would otherwise be held until GC.
+            with closing(sqlite3.connect(index_path)) as conn:
                 cursor = conn.cursor()
 
                 # Get config
@@ -348,8 +347,6 @@ class SearchIndexMigrator:
 
                 cursor.execute("SELECT COUNT(DISTINCT filename) FROM chunks")
                 info["total_files"] = cursor.fetchone()[0]
-            finally:
-                conn.close()
 
         else:
             info["type"] = "unknown"

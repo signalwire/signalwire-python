@@ -35,21 +35,34 @@ def _weather() -> dict[str, Any]:
 
 
 def _tenant_agent() -> AgentBase:
-    def configure(query: dict[str, Any], body: dict[str, Any], headers: dict[str, Any],
-                  agent: AgentBase) -> None:
+    def configure(
+        query: dict[str, Any],
+        body: dict[str, Any],
+        headers: dict[str, Any],
+        agent: AgentBase,
+    ) -> None:
         tenant = query.get("tenant")
         if tenant != "trusted":
             return
         for tool in agent.define_tools():
             if isinstance(tool, dict):
                 webhook = tool["data_map"]["webhooks"][0]
-                webhook.setdefault("headers", {})["Authorization"] = "Bearer trusted-key"
+                webhook.setdefault("headers", {})["Authorization"] = (
+                    "Bearer trusted-key"
+                )
             else:
                 tool.secure = False
-                tool.parameters["note"] = {"type": "string", "description": "Trusted only"}
+                tool.parameters["note"] = {
+                    "type": "string",
+                    "description": "Trusted only",
+                }
 
-    agent = AgentBase(name="tenants", route="/agent", basic_auth=AUTH, suppress_logs=True)
-    agent.define_tool(name="lookup", description="Look up", parameters={}, handler=_lookup)
+    agent = AgentBase(
+        name="tenants", route="/agent", basic_auth=AUTH, suppress_logs=True
+    )
+    agent.define_tool(
+        name="lookup", description="Look up", parameters={}, handler=_lookup
+    )
     agent.register_swaig_function(_weather())
     agent.set_dynamic_config_callback(configure)
     return agent
@@ -64,14 +77,21 @@ def _functions(swml: str) -> dict[str, dict[str, Any]]:
 async def test_a_callbacks_tool_changes_stay_with_its_request() -> None:
     agent = _tenant_agent()
     transport = httpx.ASGITransport(app=agent.get_app())
-    async with httpx.AsyncClient(transport=transport, base_url="http://agent.test", auth=AUTH) as client:
-        trusted = _functions((await client.get("/agent", params={"tenant": "trusted"})).text)
-        other = _functions((await client.get("/agent", params={"tenant": "other"})).text)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://agent.test", auth=AUTH
+    ) as client:
+        trusted = _functions(
+            (await client.get("/agent", params={"tenant": "trusted"})).text
+        )
+        other = _functions(
+            (await client.get("/agent", params={"tenant": "other"})).text
+        )
 
     # The trusted request saw its own changes
     assert "note" in trusted["lookup"]["parameters"]["properties"]
     assert trusted["get_weather"]["data_map"]["webhooks"][0]["headers"] == {
-        "Authorization": "Bearer trusted-key"}
+        "Authorization": "Bearer trusted-key"
+    }
     # A later request for another tenant didn't
     assert "note" not in other["lookup"]["parameters"].get("properties", {})
     assert "headers" not in other["get_weather"]["data_map"]["webhooks"][0]

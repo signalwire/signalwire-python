@@ -29,7 +29,6 @@ from typing import Any
 from signalwire.relay.client import RelayClient, _active_clients
 from signalwire.relay.call import Call
 from signalwire.relay.event import RelayEvent
-from signalwire.relay.constants import METHOD_SIGNALWIRE_EVENT
 
 from .conftest import _MockRelayHarness, _RELAY_MOCK_AVAILABLE
 
@@ -249,10 +248,9 @@ async def test_event_ack_sent_back_to_server(
     # (server side received it) with id == evt_id and a result key.
     j = mock_relay.journal()
     acks = [
-        e for e in j
-        if e.direction == "recv"
-        and e.frame.get("id") == evt_id
-        and "result" in e.frame
+        e
+        for e in j
+        if e.direction == "recv" and e.frame.get("id") == evt_id and "result" in e.frame
     ]
     assert acks, (
         f"no event ACK with id={evt_id!r} found in journal; saw recv frames="
@@ -293,7 +291,14 @@ async def test_dial_event_routes_via_tag_when_no_top_level_call_id(
                 device={"type": "phone", "params": {}},
             )
             call = await client.dial(
-                [[{"type": "phone", "params": {"to_number": "+1", "from_number": "+2"}}]],
+                [
+                    [
+                        {
+                            "type": "phone",
+                            "params": {"to_number": "+1", "from_number": "+2"},
+                        }
+                    ]
+                ],
                 tag="ec-tag-route",
                 dial_timeout=5.0,
             )
@@ -333,12 +338,15 @@ async def test_server_ping_acked_by_sdk(
 
     j = mock_relay.journal()
     pongs = [
-        e for e in j
+        e
+        for e in j
         if e.direction == "recv"
         and e.frame.get("id") == ping_id
         and "result" in e.frame
     ]
-    assert pongs, f"SDK did not respond to ping; recv frames seen with id={ping_id!r}: {[e.frame for e in j if e.direction == 'recv' and e.frame.get('id') == ping_id]}"
+    assert pongs, (
+        f"SDK did not respond to ping; recv frames seen with id={ping_id!r}: {[e.frame for e in j if e.direction == 'recv' and e.frame.get('id') == ping_id]}"
+    )
 
 
 # ---------------------------------------------------------------------------

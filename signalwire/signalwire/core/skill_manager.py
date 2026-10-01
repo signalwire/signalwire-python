@@ -19,6 +19,7 @@ class SkillManager:
     """Manages loading and lifecycle of agent skills"""
 
     def __init__(self, agent: "AgentBase"):
+        """Create a manager for ``agent`` with no skills loaded."""
         self.agent = agent
         self.loaded_skills: dict[str, SkillBase] = {}
         self.logger = get_logger("skill_manager")
