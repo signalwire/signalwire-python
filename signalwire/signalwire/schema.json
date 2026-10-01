@@ -14083,7 +14083,7 @@
               "x-effective-range": {
                 "minimum": 0,
                 "maximum": 900,
-                "outside": "replaced by 300 -- the branch resets `timeout` to its seed (actions.c:313); never rejected, never clamped to the nearer bound"
+                "outside": "replaced by 300 -- the branch resets `timeout` to its seed (actions.c:320); never rejected, never clamped to the nearer bound"
               }
             },
             {
@@ -14104,7 +14104,7 @@
                   "x-effective-range": {
                     "minimum": 0,
                     "maximum": 900,
-                    "outside": "replaced by 300 -- the branch resets `timeout` to its seed (actions.c:313); never rejected, never clamped to the nearer bound"
+                    "outside": "replaced by 300 -- the branch resets `timeout` to its seed (actions.c:320); never rejected, never clamped to the nearer bound"
                   }
                 },
                 "timeout_step": {
