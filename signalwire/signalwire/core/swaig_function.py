@@ -209,7 +209,7 @@ class SWAIGFunction:
                 "Sorry, I couldn't complete that action. Please try again or contact support if the issue persists."
             ).to_dict()
 
-    def validate_args(self, args: dict[str, Any]) -> tuple[Any, ...]:
+    def validate_args(self, args: dict[str, Any]) -> tuple[bool, list[str]]:
         """
         Validate the arguments against the parameter schema.
 
