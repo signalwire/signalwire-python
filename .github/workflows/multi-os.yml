@@ -60,6 +60,11 @@ jobs:
           pip install -e porting-sdk/test_harness/mock_relay
           pip install -e porting-sdk/test_harness/mock_signalwire
           pip install -e ./signalwire-python
+          # CPU-only torch BEFORE the dev deps: sentence-transformers (requirements-dev.txt)
+          # pulls torch, and PyPI's Linux torch (macOS/Windows wheels are CPU already) drags ~3 GB of nvidia CUDA wheels the tests
+          # never use (python Test 36823015697: 53 min in this step on 3.10/3.11). With torch
+          # already satisfied, pip keeps the CPU build.
+          if [ "$RUNNER_OS" = "Linux" ]; then pip install torch --index-url https://download.pytorch.org/whl/cpu; fi
           pip install -r signalwire-python/requirements-dev.txt
 
       - name: TEST (unit suite under strict RELAY mock)
