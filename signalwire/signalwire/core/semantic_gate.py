@@ -432,8 +432,12 @@ def apply_gate_fields(
         return
     gate_fillers = fields[fillers_key]
     if gate_fillers is None:
-        # The platform ignores a null gate_fillers
-        del fields[fillers_key]
+        # The platform reads only the first match and ignores a null one, so
+        # every spelling goes: removing only the first would expose another
+        for key in [
+            k for k in fields if isinstance(k, str) and k.lower() == "gate_fillers"
+        ]:
+            del fields[key]
         return
     if not gated:
         raise ValueError(

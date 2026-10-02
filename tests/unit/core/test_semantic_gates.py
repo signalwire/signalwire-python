@@ -346,3 +346,14 @@ class TestPlatformParsingDetails:
             "data_map": {"output": {"response": "x"}}, "gates": [_gate()],
         })
         assert _functions(agent)["lookup"]["gates"][0]["threshold"] == 0.9
+
+    def test_a_null_first_gate_fillers_hides_every_later_spelling(self) -> None:
+        # The platform reads only the first match, and ignores it when null
+        agent = _agent()
+        agent.register_swaig_function({
+            "function": "lookup", "description": "Look up",
+            "data_map": {"output": {"response": "x"}}, "gates": [_gate()],
+            "Gate_Fillers": None, "gate_fillers": {"default": ["Will proceed now"]},
+        })
+        lookup = _functions(agent)["lookup"]
+        assert not [k for k in lookup if k.lower() == "gate_fillers"]
