@@ -541,6 +541,21 @@ agent.update_global_data({
 })
 ```
 
+##### `set_semantic_gates(enabled: Optional[bool] = None, timeout_ms: Optional[int] = None, history: Optional[int] = None) -> AgentBase`
+Set how the call checks its functions' [semantic gates](#semantic-gates). Each argument left as None keeps the platform's default.
+
+**Parameters:**
+- `enabled` (Optional[bool]): False dispatches gated functions without checking their gates. Default True
+- `timeout_ms` (Optional[int]): The time one check may take, 500 to 10000 milliseconds. A check that runs out blocks the call. Default 2500
+- `history` (Optional[int]): How many recent dialogue entries the decision model sees, 0 to 100. Default 20
+
+**Raises:** `ValueError` for a value of the wrong type or out of range.
+
+**Usage:**
+```python
+agent.set_semantic_gates(timeout_ms=4000, history=30)
+```
+
 ### Function Definition
 
 ##### `define_tool`
@@ -555,9 +570,11 @@ def define_tool(
     parameters: Dict[str, Any],
     handler: Callable,
     secure: bool = True,
-    fillers: Optional[Dict[str, List[str]]] = None,
+    fillers: Optional[Dict[str, List[Union[str, List[str]]]]] = None,
     webhook_url: Optional[str] = None,
     is_typed_handler: bool = False,
+    gates: Optional[List[Union[SemanticGate, Dict[str, Any]]]] = None,
+    gate_fillers: Optional[Dict[str, List[Union[str, List[str]]]]] = None,
     **swaig_fields
 ) -> AgentBase
 ```
@@ -568,9 +585,13 @@ def define_tool(
 - `parameters` (Dict[str, Any]): JSON schema for function parameters. If omitted when using the decorator and the handler has type-hinted parameters, the schema is inferred automatically from the type hints.
 - `handler` (Callable): Function to execute when called
 - `secure` (bool): Require security token (default: True)
-- `fillers` (Optional[Dict[str, List[str]]]): Language-specific filler phrases
+- `fillers` (Optional[Dict[str, List[Union[str, List[str]]]]]): Phrases the AI says while the function runs, keyed by language code, `auto` or `default`. The current language's own key is used; without one, the `auto` phrases are translated into that language on first use; without either, `default`. An entry may be a list of phrases, a wait script, spoken one at a time while the call waits
 - `webhook_url` (Optional[str]): Custom webhook URL
+- `gates` (Optional[List[Union[SemanticGate, Dict[str, Any]]]]): Semantic gates, 1 to 8. See [Semantic gates](#semantic-gates)
+- `gate_fillers` (Optional[Dict[str, List[Union[str, List[str]]]]]): What the AI says while the gates are checked, shaped like `fillers`. Only with `gates`
 - `**swaig_fields`: Additional SWAIG function properties
+
+**Raises:** `ValueError` for a gate the platform would refuse, or `gate_fillers` without `gates`.
 
 **Usage:**
 ```python
@@ -595,6 +616,50 @@ agent.define_tool(
     fillers={"en-US": ["Checking weather...", "Looking up forecast..."]}
 )
 ```
+
+##### Semantic gates
+
+A semantic gate is a yes/no question a decision model answers about the call right before the platform dispatches the function. Every gate on the function must pass for it to run. When one doesn't, the function isn't dispatched, and the model gets that gate's `on_fail` output instead, as if a data_map had returned it. The function's `fillers` and `wait_file` start only once its gates pass, so a blocked call never sounds as if the action were under way.
+
+Semantic gates need a platform release that supports them. One that doesn't ignores `gates` with a warning and runs the function ungated, so don't rely on a gate to protect a function until your platform supports them.
+
+The decision model sees three things, under these names: `conversation`, the recent dialogue; `semantic_state`, the call's `global_data.semantic_state`, which `FunctionResult.set_semantic_state()` sets; and `proposed_function`, the function's name, description and arguments. Write each question as one proposition, and name what it's about with those names in backticks. The model reads literally: it doesn't do arithmetic or compare dates, so put a computed result in `semantic_state` instead of asking for it.
+
+```python
+from signalwire import FunctionResult, SemanticGate
+
+agent.define_tool(
+    name="cancel_account",
+    description="Cancel the caller's account.",
+    parameters={},
+    handler=cancel_account,
+    gates=[
+        SemanticGate(
+            "Has the caller explicitly asked to cancel their account in `conversation`?",
+            threshold=0.95,
+            on_fail=FunctionResult(
+                tool_result="cancel_account was not run.",
+                tool_prompt="Ask the caller to confirm that they want to cancel.",
+            ).update_global_data({"cancel_attempted": True}),
+            true_means="The caller says they want to cancel.",
+            false_means="The caller asked about cancelling, or said something else.",
+            id="explicit_request",
+        )
+    ],
+    gate_fillers={"default": ["Let me verify that."]},
+)
+```
+
+`SemanticGate(question, threshold, on_fail, *, id=None, true_means=None, false_means=None)`:
+- `question` (str): The yes/no question, at most 8 KB. Its `${...}` variables are expanded from the call's global data when the gate is checked
+- `threshold` (float): The probability of yes, above 0 and at most 1, at or above which the gate passes
+- `on_fail` (Union[str, FunctionResult, Dict[str, Any]]): What the model gets when this is the first gate that fails: the tool result text, a `FunctionResult`, whose response and actions are used, or a data_map output dict. It needs a response, and in the `tool_result`/`tool_prompt` form a `tool_result`: a blocked call must never read as a success. The `tool_prompt` becomes a system message after the tool result; OpenAI Realtime agents don't use it, so put what they need in the `tool_result`. The actions run as written, without template expansion
+- `id` (Optional[str]): 1 to 64 letters, digits or underscores, unique within the function. Default `gate_<n>`, 1-based
+- `true_means`, `false_means` (Optional[str]): What yes and no mean, at most 2 KB each
+
+Gates are checked by the platform's rules when the tool is defined. The platform refuses the whole function for an invalid gate, so the SDK raises `ValueError` instead. Gates aren't allowed on the hook names `startup_hook`, `hangup_hook` and `check_for_input`, on `end_call`, or on a built-in function's name.
+
+When a gate check can't be completed, because the decision model timed out or failed, the call is blocked too, and the model is told the action couldn't be completed right now. `set_semantic_gates()` sets the time a check may take.
 
 ##### `@AgentBase.tool(name=None, **kwargs)` (Class Decorator)
 Decorator for defining tools as class methods.
@@ -1762,6 +1827,17 @@ result.remove_global_data("temporary_data")
 result.remove_global_data(["temp1", "temp2", "cache_data"])
 ```
 
+##### `set_semantic_state(state: Dict[str, Any]) -> FunctionResult`
+Set the state the call's [semantic gates](#semantic-gates) judge, besides the dialogue: `global_data.semantic_state`. It replaces the state as a whole: to change one field, send the whole state with that field changed, and send `{}` to reset it. Keep it to what the application has established, such as an order the caller confirmed, rather than what the caller claims. Nothing else from the global data reaches the decision model.
+
+**Parameters:**
+- `state` (Dict[str, Any]): The semantic state
+
+**Usage:**
+```python
+result.set_semantic_state({"order": {"item": "large pepperoni", "confirmed": True}})
+```
+
 ##### `set_metadata(data: Dict[str, Any]) -> FunctionResult`
 Set metadata for the conversation.
 
@@ -1789,6 +1865,19 @@ result.remove_metadata(["temporary_flag", "debug_info"])
 ```
 
 ### AI Behavior Control
+
+##### `change_voice(voice: str) -> FunctionResult`
+Change the AI's voice for the rest of the call. The new voice replaces the current language's voice from the next batch of speech on, never mid-utterance, and stays for that language for the rest of the call. It may be on another engine than the current one. A voice that won't open falls back to the fallback voice.
+
+**Parameters:**
+- `voice` (str): The voice as `engine.voice:model`, the form a language's voice takes
+
+**Raises:** `ValueError` if `voice` is empty.
+
+**Usage:**
+```python
+result.change_voice("elevenlabs.rachel")
+```
 
 ##### `set_end_of_speech_timeout(milliseconds: int) -> FunctionResult`
 Adjust how long to wait for speech to end.
@@ -2615,6 +2704,26 @@ Set a top-level `error_keys` field. The platform ignores it, and checks only eac
 **Usage:**
 ```python
 data_map.global_error_keys(['error', 'message', 'code'])
+```
+
+##### `gate(gate: Union[SemanticGate, Dict[str, Any]]) -> DataMap`
+Add a [semantic gate](#semantic-gates), a yes/no precondition a decision model checks right before the platform runs the function. Call once per gate, up to 8. When a gate fails, the data_map doesn't run, and the model gets that gate's `on_fail` output. `to_swaig_function()` raises `ValueError` for a gate the platform would refuse.
+
+**Usage:**
+```python
+data_map.gate(SemanticGate(
+    "Has the caller confirmed the order in `conversation`?",
+    threshold=0.9,
+    on_fail="place_order was not run.",
+))
+```
+
+##### `gate_fillers(fillers: Dict[str, List[Union[str, List[str]]]]) -> DataMap`
+Set what the AI says while the function's gates are checked, shaped like a function's fillers. Only for a function with gates.
+
+**Usage:**
+```python
+data_map.gate_fillers({"default": ["Let me check that."]})
 ```
 
 ### Advanced Configuration

@@ -1,5 +1,25 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Semantic gates: `SemanticGate`, and `gates=` and `gate_fillers=` on
+  `define_tool()`, `@AgentBase.tool` and DataMap (`gate()`,
+  `gate_fillers()`). A gate is a yes/no question a decision model answers
+  about the call before the platform runs the function; when one fails, the
+  function doesn't run and the model gets the gate's `on_fail` output. Gates
+  are checked by the platform's rules when the tool is defined, since the
+  platform refuses a function with an invalid gate. They need a platform
+  release with semantic gates: one without them runs the function ungated.
+- `AgentBase.set_semantic_gates()` sets `semantic_gates_enabled`,
+  `semantic_gate_timeout_ms` and `semantic_gate_history`, and
+  `FunctionResult.set_semantic_state()` sets the state gates judge.
+- `FunctionResult.change_voice()` changes the AI's voice for the rest of the
+  call.
+- Function fillers are typed and documented with the `auto` key, translated
+  into the call's language on first use, and wait scripts, lists of phrases
+  spoken one at a time while the call waits.
+
 ## [3.5.1] - 2026-09-29
 
 Fixes from a review of 3.5.0 made while porting it to the TypeScript SDK:

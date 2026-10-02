@@ -270,6 +270,9 @@ Or give the schema yourself, with a handler that takes `(args, raw_data)`:
   call's SWML.
 - A tool call is a request from the model, not an authorization. Check
   identity, state and business rules in the handler.
+- `gates=[SemanticGate(...)]` adds semantic gates: yes/no questions a
+  decision model answers about the call before the platform runs the tool.
+  A platform release without semantic gates runs the tool ungated.
 """,
     docs=(
         ("docs/swaig_reference.md", "Every FunctionResult method and action"),
@@ -296,6 +299,7 @@ Or give the schema yourself, with a handler that takes `(args, raw_data)`:
         "signalwire.FunctionResult",
         "signalwire.FunctionResult.connect",
         "signalwire.FunctionResult.swml_change_step",
+        "signalwire.SemanticGate",
     ),
     related=("datamap", "contexts", "skills", "security", "pgi"),
 )
