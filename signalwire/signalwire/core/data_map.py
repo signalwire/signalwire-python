@@ -572,7 +572,7 @@ class DataMap:
             function["gates"] = self._gates
         if self._gate_fillers is not None:
             function["gate_fillers"] = dict(self._gate_fillers)
-        apply_gate_fields(function, self.function_name)
+        apply_gate_fields(function, self.function_name, definition=True)
         return function
 
 

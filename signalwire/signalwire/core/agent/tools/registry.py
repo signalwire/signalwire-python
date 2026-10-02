@@ -110,8 +110,7 @@ class ToolRegistry:
             raise ValueError(f"Tool with name '{function_name}' already exists")
 
         # Gates the platform would refuse fail here, not on the call
-        if "gates" in function_dict or "gate_fillers" in function_dict:
-            apply_gate_fields(function_dict, function_name)
+        apply_gate_fields(function_dict, function_name, definition=True)
 
         # Store the raw function dictionary for data_map tools
         # These don't have handlers since they execute on SignalWire's server

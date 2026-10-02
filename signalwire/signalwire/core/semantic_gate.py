@@ -20,6 +20,7 @@ raises ValueError instead of sending a function the platform would drop.
 """
 
 import json
+import math
 import re
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
@@ -134,7 +135,7 @@ class SemanticGate:
             self.criteria["true"] = true_means
         if false_means is not None:
             self.criteria["false"] = false_means
-        self.on_fail = _on_fail(on_fail)
+        self.on_fail: dict[str, Any] = _on_fail(on_fail)
 
     def to_dict(self) -> dict[str, Any]:
         """The gate as the platform reads it."""
@@ -178,27 +179,113 @@ def _utf8_len(text: str) -> int:
     return len(text.encode("utf-8"))
 
 
+# A member a lookup didn't find, as distinct from a JSON null
+_MISSING = object()
+
+# The two-character escapes cJSON prints; any other character below 0x20 is
+# printed as \u00XX
+_SHORT_ESCAPES = {
+    '"': '\\"',
+    "\\": "\\\\",
+    "\b": "\\b",
+    "\f": "\\f",
+    "\n": "\\n",
+    "\r": "\\r",
+    "\t": "\\t",
+}
+
+
+def _first_key(container: dict[str, Any], name: str) -> str | None:
+    """The key cJSON_GetObjectItem() finds for ``name``: the first one equal to
+    it without regard to ASCII case."""
+    for key in container:
+        if isinstance(key, str) and key.lower() == name and key.isascii():
+            return key
+    return None
+
+
+def _item(container: dict[str, Any], name: str) -> Any:
+    key = _first_key(container, name)
+    return _MISSING if key is None else container[key]
+
+
+def _cjson_text(value: Any) -> str:
+    """``value`` as cJSON_PrintUnformatted() prints it in FreeSWITCH."""
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        if math.isnan(value) or math.isinf(value):
+            return "null"
+        # A whole number is printed with %ld, any other with %lf
+        return str(int(value)) if value.is_integer() else f"{value:f}"
+    if isinstance(value, str):
+        escaped = "".join(
+            _SHORT_ESCAPES.get(c, f"\\u{ord(c):04x}" if ord(c) < 0x20 else c)
+            for c in value
+        )
+        return f'"{escaped}"'
+    if isinstance(value, dict):
+        members = (f"{_cjson_text(str(k))}:{_cjson_text(v)}" for k, v in value.items())
+        return "{" + ",".join(members) + "}"
+    if isinstance(value, (list, tuple)):
+        return "[" + ",".join(_cjson_text(v) for v in value) + "]"
+    return _cjson_text(str(value))
+
+
+def _check_text(value: Any) -> str:
+    """Why a string in a gate can't reach the platform intact, or ''."""
+    if isinstance(value, str):
+        if "\x00" in value:
+            # C reads a string up to its first NUL
+            return "contains a NUL character, which the platform reads as the end of the text"
+        try:
+            value.encode("utf-8")
+        except UnicodeEncodeError:
+            return "contains an unpaired surrogate, which isn't valid UTF-8"
+        return ""
+    if isinstance(value, dict):
+        items: list[Any] = [*value.keys(), *value.values()]
+    elif isinstance(value, (list, tuple)):
+        items = list(value)
+    else:
+        return ""
+    for item in items:
+        why = _check_text(item)
+        if why:
+            return why
+    return ""
+
+
 def _check_on_fail(on_fail: Any) -> str:
-    """Why the platform would refuse ``on_fail``, or an empty string."""
+    """Why the platform would refuse ``on_fail``, or an empty string.
+
+    The platform finds ``response``, ``tool_result``, ``tool_prompt`` and
+    ``action`` without regard to case, taking the first match.
+    """
     if not isinstance(on_fail, dict):
         return "on_fail must be an object"
-    response = on_fail.get("response")
+    response = _item(on_fail, "response")
     if isinstance(response, str):
         if not response:
             return "on_fail.response is empty"
     elif isinstance(response, dict):
-        tool_result = response.get("tool_result")
+        tool_result = _item(response, "tool_result")
         if not isinstance(tool_result, str) or not tool_result:
             return "on_fail.response.tool_result is missing or empty"
-        if "tool_prompt" in response and not isinstance(response["tool_prompt"], str):
+        tool_prompt = _item(response, "tool_prompt")
+        if tool_prompt is not _MISSING and not isinstance(tool_prompt, str):
             return "on_fail.response.tool_prompt must be a string"
     else:
         return "on_fail.response is missing"
-    if "action" in on_fail and not isinstance(on_fail["action"], list):
+    action = _item(on_fail, "action")
+    if action is not _MISSING and not isinstance(action, list):
         return "on_fail.action must be an array"
-    # Measured as the platform measures it: compact JSON, non-ASCII as UTF-8
-    compact = json.dumps(on_fail, separators=(",", ":"), ensure_ascii=False)
-    if _utf8_len(compact) > MAX_ON_FAIL_BYTES:
+    # Measured as the platform measures it: cJSON's compact print, in bytes
+    if _utf8_len(_cjson_text(on_fail)) > MAX_ON_FAIL_BYTES:
         return f"on_fail is larger than {MAX_ON_FAIL_BYTES} bytes"
     return ""
 
@@ -226,6 +313,9 @@ def _check_gate(gate: Any) -> str:
     for key in gate:
         if key not in _GATE_KEYS:
             return f"unknown key '{key}'"
+    why = _check_text(gate)
+    if why:
+        return why
     question = gate.get("question")
     if not isinstance(question, str) or not question:
         return "question is missing or empty"
@@ -296,26 +386,56 @@ def gate_definitions(
     return definitions
 
 
-def apply_gate_fields(fields: dict[str, Any], function: str) -> None:
+def apply_gate_fields(
+    fields: dict[str, Any], function: str, *, definition: bool = False
+) -> None:
     """
     Check and normalize ``gates`` and ``gate_fillers`` in a function's fields.
 
-    ``fields`` is a function definition, or the extra fields of one. Its
-    ``gates`` become the dicts the platform reads.
+    Its ``gates`` become the dicts the platform reads. The platform finds
+    both keys without regard to case, taking the first match, so a raw
+    definition's ``Gates`` is checked as its gates.
+
+    Args:
+        fields: A function definition, or the extra fields of one.
+        function: The function's name.
+        definition: True when ``fields`` is a whole function definition sent
+            as written, such as a DataMap's or a raw dict. Then ``gates:
+            None`` is refused, as the platform refuses the function for a
+            JSON null, and a gated function needs a description. Otherwise
+            None means no gates, as keyword arguments do.
 
     Raises:
         ValueError: For gates the platform would refuse, or ``gate_fillers``
             on a function without gates, which the platform ignores.
     """
-    if fields.get("gates") is not None:
-        fields["gates"] = gate_definitions(fields["gates"], function)
-    else:
-        fields.pop("gates", None)
-    gate_fillers = fields.get("gate_fillers")
-    if gate_fillers is None:
-        fields.pop("gate_fillers", None)
+    gates_key = _first_key(fields, "gates") if definition else "gates"
+    gated = False
+    if gates_key is not None and gates_key in fields:
+        if fields[gates_key] is None and not definition:
+            del fields[gates_key]
+        else:
+            fields[gates_key] = gate_definitions(fields[gates_key], function)
+            gated = True
+    if gated and definition:
+        # The platform reads purpose, then description; any string counts
+        purpose = _item(fields, "purpose")
+        if not isinstance(purpose, str) and not isinstance(
+            _item(fields, "description"), str
+        ):
+            raise ValueError(
+                f"{function}: a gated function needs a description; the platform "
+                "refuses it without one"
+            )
+    fillers_key = _first_key(fields, "gate_fillers") if definition else "gate_fillers"
+    if fillers_key is None or fillers_key not in fields:
         return
-    if "gates" not in fields:
+    gate_fillers = fields[fillers_key]
+    if gate_fillers is None:
+        # The platform ignores a null gate_fillers
+        del fields[fillers_key]
+        return
+    if not gated:
         raise ValueError(
             f"{function}: gate_fillers needs gates; the platform ignores them on a "
             "function without gates"

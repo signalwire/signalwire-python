@@ -267,3 +267,82 @@ class TestSemanticGateParams:
     def test_out_of_range_values_are_refused(self, kwargs: dict[str, Any], message: str) -> None:
         with pytest.raises(ValueError, match=message):
             _agent().set_semantic_gates(**kwargs)
+
+
+class TestPlatformParsingDetails:
+    """How the platform reads what it's sent, beyond the documented rules."""
+
+    def _padded_on_fail(self, amount: Any, target: int) -> dict[str, Any]:
+        # A response padded so the on_fail's compact JSON is ``target`` bytes
+        # as Python prints it
+        on_fail: dict[str, Any] = {"response": "", "action": [{"set_global_data": {"amount": amount}}]}
+        base = len(json.dumps(on_fail, separators=(",", ":")))
+        on_fail["response"] = "x" * (target - base)
+        return on_fail
+
+    def test_on_fail_size_is_measured_as_cjson_prints_it(self) -> None:
+        # 0.5 is 0.500000 to cJSON: 8192 bytes to Python, 8197 to the platform
+        on_fail = self._padded_on_fail(0.5, 8192)
+        with pytest.raises(ValueError, match="on_fail is larger than 8192 bytes"):
+            gate_definitions([_gate(on_fail=on_fail)], "refund")
+
+    def test_a_number_cjson_prints_shorter_is_accepted(self) -> None:
+        # 1.23456789 is 1.234568 to cJSON: 8194 bytes to Python, 8192 to the platform
+        on_fail = self._padded_on_fail(1.23456789, 8194)
+        assert gate_definitions([_gate(on_fail=on_fail)], "refund")[0]["on_fail"] == on_fail
+
+    def test_on_fail_members_are_found_without_regard_to_case(self) -> None:
+        assert gate_definitions([_gate(on_fail={"Response": "not run."})], "refund")
+        assert gate_definitions(
+            [_gate(on_fail={"response": {"TOOL_RESULT": "not run."}})], "refund")
+        with pytest.raises(ValueError, match="on_fail.action must be an array"):
+            gate_definitions([_gate(on_fail={"response": "no", "ACTION": {}})], "refund")
+
+    @pytest.mark.parametrize(("gate", "reason"), [
+        (_gate(question="\x00"), "contains a NUL character"),
+        (_gate(criteria={"true": "yes\x00"}), "contains a NUL character"),
+        (_gate(on_fail={"response": "no\x00"}), "contains a NUL character"),
+        (_gate(question="Q \ud800?"), "contains an unpaired surrogate"),
+    ])
+    def test_text_that_cant_reach_the_platform_intact_is_refused(
+        self, gate: dict[str, Any], reason: str
+    ) -> None:
+        with pytest.raises(ValueError, match=reason):
+            gate_definitions([gate], "refund")
+
+    def test_a_raw_definition_with_null_gates_is_refused(self) -> None:
+        # The platform refuses the whole function for "gates": null
+        with pytest.raises(ValueError, match="lookup: gates must be a list"):
+            _agent().register_swaig_function({
+                "function": "lookup", "description": "Look up",
+                "data_map": {"output": {"response": "x"}}, "gates": None,
+            })
+
+    def test_none_gates_as_a_keyword_means_no_gates(self) -> None:
+        agent = _agent()
+        agent.define_tool(name="lookup", description="Look up", parameters={},
+                          handler=_handler, gates=None)
+        assert "gates" not in _functions(agent)["lookup"]
+
+    def test_a_raw_definitions_gates_key_is_found_without_regard_to_case(self) -> None:
+        with pytest.raises(ValueError, match="lookup: gate 1: threshold"):
+            _agent().register_swaig_function({
+                "function": "lookup", "description": "Look up",
+                "data_map": {"output": {"response": "x"}},
+                "Gates": [_gate(threshold=5)],
+            })
+
+    def test_a_gated_raw_definition_needs_a_description(self) -> None:
+        with pytest.raises(ValueError, match="a gated function needs a description"):
+            _agent().register_swaig_function({
+                "function": "lookup", "data_map": {"output": {"response": "x"}},
+                "gates": [_gate()],
+            })
+
+    def test_any_purpose_string_counts_as_the_description(self) -> None:
+        agent = _agent()
+        agent.register_swaig_function({
+            "function": "lookup", "purpose": "",
+            "data_map": {"output": {"response": "x"}}, "gates": [_gate()],
+        })
+        assert _functions(agent)["lookup"]["gates"][0]["threshold"] == 0.9
