@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [3.6.0] - 2026-10-05
 
 ### Added
 - Semantic gates: `SemanticGate`, and `gates=` and `gate_fillers=` on
@@ -19,6 +19,11 @@
 - Function fillers are typed and documented with the `auto` key, translated
   into the call's language on first use, and wait scripts, lists of phrases
   spoken one at a time while the call waits.
+
+### Fixed
+- The Penny tutorial's requirements install `httpx2`, the HTTP client behind
+  starlette's `TestClient`. Since starlette 1.7.0, a fresh install failed 3
+  of Penny's tests. The SDK's dev requirements add it too.
 
 ## [3.5.1] - 2026-09-29
 
