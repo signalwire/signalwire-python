@@ -135,7 +135,7 @@ def list_skills_with_params() -> dict[str, dict[str, Any]]:
     Returns:
         Dict[str, Dict[str, Any]]: Complete skill schema where keys are skill names
 
-    Example:
+    Examples:
         >>> schema = list_skills_with_params()
         >>> print(schema['web_search']['parameters']['api_key'])
         {
@@ -161,7 +161,7 @@ def register_skill(skill_class: "type[SkillBase]") -> None:
     Args:
         skill_class: A class that inherits from SkillBase
 
-    Example:
+    Examples:
         >>> from my_custom_skills import MyWeatherSkill
         >>> register_skill(MyWeatherSkill)
         >>> # Now you can use it in agents:
@@ -182,7 +182,7 @@ def add_skill_directory(path: str) -> None:
     Args:
         path: Path to directory containing skill subdirectories
 
-    Example:
+    Examples:
         >>> add_skill_directory('/opt/custom_skills')
         >>> # Now agent.add_skill('my_custom_skill') will search in this directory
     """
