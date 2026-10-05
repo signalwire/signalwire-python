@@ -823,6 +823,26 @@ class FunctionResult:
         """
         return self.add_action("unset_global_data", keys)
 
+    def set_semantic_state(self, state: dict[str, Any]) -> "FunctionResult":
+        """
+        Set the semantic state the call's semantic gates judge, besides the
+        dialogue.
+
+        The state is ``global_data.semantic_state``, and this replaces it as a
+        whole: to change one field, send the whole state with that field
+        changed, and send ``{}`` to reset it. Keep it to what the application
+        has established, such as an order the caller confirmed, rather than
+        what the caller claims; nothing else from the global data reaches the
+        decision model.
+
+        Args:
+            state: The semantic state
+
+        Returns:
+            self for method chaining
+        """
+        return self.update_global_data({"semantic_state": state})
+
     def set_metadata(self, data: dict[str, Any]) -> "FunctionResult":
         """
         Set metadata scoped to current function's meta_data_token.
@@ -846,6 +866,30 @@ class FunctionResult:
             self for method chaining
         """
         return self.add_action("unset_meta_data", keys)
+
+    def change_voice(self, voice: str) -> "FunctionResult":
+        """
+        Change the AI's voice for the rest of the call.
+
+        The new voice replaces the current language's voice, from the next
+        batch of speech on, never mid-utterance, and stays for that language
+        for the rest of the call. It may be on another engine than the
+        current one. A voice that won't open falls back to the fallback
+        voice.
+
+        Args:
+            voice: The voice as ``engine.voice:model``, the form a language's
+                voice takes, such as ``"elevenlabs.rachel"``
+
+        Returns:
+            self for method chaining
+
+        Raises:
+            ValueError: If voice is empty
+        """
+        if not isinstance(voice, str) or not voice.strip():
+            raise ValueError("voice must be a non-empty string")
+        return self.add_action("change_voice", voice)
 
     def toggle_functions(
         self, function_toggles: list[dict[str, Any]]

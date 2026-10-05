@@ -311,6 +311,54 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
             self._params.update(params)
         return self
 
+    def set_semantic_gates(
+        self,
+        enabled: bool | None = None,
+        timeout_ms: int | None = None,
+        history: int | None = None,
+    ) -> "AgentBase":
+        """
+        Set how the call checks its functions' semantic gates
+
+        Each argument left as None keeps the platform's default.
+
+        Args:
+            enabled: False dispatches gated functions without checking their
+                gates. Default True.
+            timeout_ms: The time one check may take, 500 to 10000
+                milliseconds, preparing the request and any retry included.
+                A check that runs out blocks the call. Default 2500.
+            history: How many recent dialogue entries the decision model
+                sees, 0 to 100. Default 20.
+
+        Returns:
+            Self for method chaining
+
+        Raises:
+            ValueError: If a value has the wrong type or is out of range
+        """
+        if enabled is not None:
+            if not isinstance(enabled, bool):
+                raise ValueError(f"enabled must be a boolean, got {enabled!r}")
+            self._params["semantic_gates_enabled"] = enabled
+        for param, value, low, high in (
+            ("semantic_gate_timeout_ms", timeout_ms, 500, 10000),
+            ("semantic_gate_history", history, 0, 100),
+        ):
+            if value is None:
+                continue
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, int)
+                or not low <= value <= high
+            ):
+                name = "timeout_ms" if param.endswith("timeout_ms") else "history"
+                raise ValueError(
+                    f"{name} must be an integer from {low} to {high}, got {value!r}"
+                )
+            self._params[param] = value
+        return self
+
     def set_global_data(self, data: dict[str, Any]) -> "AgentBase":
         """
         Merge data into the global data available to the AI throughout the conversation.

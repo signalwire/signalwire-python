@@ -13,6 +13,7 @@ from typing import Any
 from collections.abc import Callable
 import inspect
 
+from signalwire.core.semantic_gate import apply_gate_fields
 from signalwire.core.swaig_function import SWAIGFunction
 from signalwire.core.logging_config import get_logger
 
@@ -57,7 +58,7 @@ class ToolRegistry:
             parameters: JSON Schema of parameters
             handler: Function to call when invoked
             secure: Whether to require token validation
-            fillers: Optional dict mapping language codes to arrays of filler phrases (deprecated)
+            fillers: Optional phrases said while the function runs, keyed by language code, "auto" or "default"
             wait_file: Optional URL to audio file to play while function executes
             wait_file_loops: Optional number of times to loop the wait_file
             webhook_url: Optional external webhook URL to use instead of local handling
@@ -96,7 +97,8 @@ class ToolRegistry:
             function_dict: Complete SWAIG function definition dictionary
 
         Raises:
-            ValueError: If function name missing or already exists
+            ValueError: If function name missing or already exists, or its
+                gates are ones the platform would refuse
         """
         function_name = function_dict.get("function")
         if not function_name:
@@ -106,6 +108,9 @@ class ToolRegistry:
 
         if function_name in self._swaig_functions:
             raise ValueError(f"Tool with name '{function_name}' already exists")
+
+        # Gates the platform would refuse fail here, not on the call
+        apply_gate_fields(function_dict, function_name, definition=True)
 
         # Store the raw function dictionary for data_map tools
         # These don't have handlers since they execute on SignalWire's server

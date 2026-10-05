@@ -553,6 +553,13 @@ Stop currently playing background audio.
 result.stop_background_file()
 ```
 
+#### `change_voice(voice)`
+Change the AI's voice for the rest of the call. The voice takes the `engine.voice:model` form a language's voice takes, and may be on another engine. It replaces the current language's voice from the next batch of speech on, never mid-utterance.
+
+```python
+result.change_voice("elevenlabs.rachel")
+```
+
 ---
 
 ### Speech Recognition Settings
@@ -588,6 +595,13 @@ Remove global data variables by key(s).
 ```python
 result.remove_global_data("temporary_data")           # Single key
 result.remove_global_data(["step", "temp_value"])     # Multiple keys
+```
+
+#### `set_semantic_state(state)`
+Set the state the call's semantic gates judge, besides the dialogue: `global_data.semantic_state`. It replaces the state as a whole; send `{}` to reset it. See [Semantic gates](api_reference.md#semantic-gates).
+
+```python
+result.set_semantic_state({"order": {"item": "large pepperoni", "confirmed": True}})
 ```
 
 #### `set_metadata(data)`

@@ -14,6 +14,7 @@ The SDK's installed documentation covers this module: run ``sw-pydocs datamap``,
 from typing import Any
 from re import Pattern
 from .function_result import FunctionResult
+from .semantic_gate import FillerPhrases, SemanticGate, apply_gate_fields
 
 
 class DataMap:
@@ -98,6 +99,8 @@ class DataMap:
         self._webhooks: list[dict[str, Any]] = []
         self._output: dict[str, Any] | None = None
         self._error_keys: list[str] = []
+        self._gates: list[SemanticGate | dict[str, Any]] = []
+        self._gate_fillers: FillerPhrases | None = None
 
     def purpose(self, description: str) -> "DataMap":
         """
@@ -478,12 +481,52 @@ class DataMap:
         self._error_keys = keys
         return self
 
+    def gate(self, gate: SemanticGate | dict[str, Any]) -> "DataMap":
+        """
+        Add a semantic gate: a yes/no precondition a decision model checks
+        right before the platform runs this function
+
+        Every gate must pass for the function to run. When one doesn't, the
+        data_map doesn't run, and the model gets that gate's ``on_fail``
+        output. Call once per gate, up to 8; gates are checked when the
+        function is built, by the platform's rules.
+
+        Args:
+            gate: A SemanticGate, or a gate dict
+
+        Returns:
+            Self for method chaining
+        """
+        self._gates.append(gate)
+        return self
+
+    def gate_fillers(self, fillers: FillerPhrases) -> "DataMap":
+        """
+        Set what the AI says while this function's gates are checked
+
+        Shaped like a function's fillers: phrases keyed by language code,
+        "auto" or "default". Without them, the AI says nothing while the
+        gates are checked. Only for a function with gates.
+
+        Args:
+            fillers: Phrases by language
+
+        Returns:
+            Self for method chaining
+        """
+        self._gate_fillers = fillers
+        return self
+
     def to_swaig_function(self) -> dict[str, Any]:
         """
         Convert this DataMap to a SWAIG function definition
 
         Returns:
             Dictionary with function definition and data_map instead of url
+
+        Raises:
+            ValueError: For gates the platform would refuse, or gate fillers
+                without gates
         """
         # Build parameter schema
         if self._parameters:
@@ -519,12 +562,18 @@ class DataMap:
             data_map["error_keys"] = self._error_keys
 
         # Build final function definition with correct field names
-        return {
+        function: dict[str, Any] = {
             "function": self.function_name,
             "description": self._purpose or f"Execute {self.function_name}",
             "parameters": param_schema,
             "data_map": data_map,
         }
+        if self._gates:
+            function["gates"] = self._gates
+        if self._gate_fillers is not None:
+            function["gate_fillers"] = dict(self._gate_fillers)
+        apply_gate_fields(function, self.function_name, definition=True)
+        return function
 
 
 def create_simple_api_tool(

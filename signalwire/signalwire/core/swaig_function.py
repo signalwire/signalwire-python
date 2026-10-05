@@ -18,6 +18,7 @@ import logging
 
 # Import here to avoid circular imports
 from signalwire.core.function_result import FunctionResult
+from signalwire.core.semantic_gate import apply_gate_fields
 
 if TYPE_CHECKING:
     # The inbound SWAIG function-webhook payload, typed from the spec (a plain dict at
@@ -108,8 +109,12 @@ class SWAIGFunction:
                 — write them as instructions to the model on how to fill
                 in each argument.
             secure: Whether this function requires SWAIG token validation.
-            fillers: Optional dictionary of filler phrases by language code
-                (deprecated, use wait_file).
+            fillers: Optional phrases the AI says while the function runs,
+                keyed by language code, "auto" (translated into the call's
+                language on first use) or "default". An entry may be a list of
+                phrases, a wait script, spoken one at a time while the call
+                waits; the annotation predates wait scripts, so a type
+                checker needs a cast for one.
             wait_file: Optional URL to audio file to play while function
                 executes.
             wait_file_loops: Optional number of times to loop the wait_file.
@@ -120,6 +125,12 @@ class SWAIGFunction:
                 (auto-wrapped).
             **extra_swaig_fields: Additional SWAIG-only fields (meta_data_token,
                 web_hook_auth_*, etc.) to include in the generated definition.
+                ``gates`` (SemanticGate objects or gate dicts) and
+                ``gate_fillers`` are checked by the platform's rules.
+
+        Raises:
+            ValueError: For gates the platform would refuse, or gate_fillers
+                without gates.
         """
         self.name = name
         self.handler = handler
@@ -132,6 +143,7 @@ class SWAIGFunction:
         self.webhook_url = webhook_url
         self.required = required or []
         self.is_typed_handler = is_typed_handler
+        apply_gate_fields(extra_swaig_fields, name)
         self.extra_swaig_fields = extra_swaig_fields
 
         # Mark as external if webhook_url is provided

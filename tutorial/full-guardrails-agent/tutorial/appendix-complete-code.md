@@ -1494,6 +1494,9 @@ Penny needs the SDK and time zone data:
 signalwire-sdk>=3.5.0
 # Time zone data for slim containers that ship without /usr/share/zoneinfo
 tzdata>=2024.1
+# HTTP client for starlette's TestClient, which test_penny.py uses; starlette
+# 1.7 needs it and nothing above installs it
+httpx2>=2.0.0
 ```
 
 ## .env.example

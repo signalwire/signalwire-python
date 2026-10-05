@@ -8,13 +8,14 @@ See LICENSE file in the project root for full license information.
 """
 
 from typing import TYPE_CHECKING, Any
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 import inspect
 import json
 import logging
 
 from signalwire.core.swaig_function import SWAIGFunction, _resolve_awaitable
 from signalwire.core.function_result import FunctionResult
+from signalwire.core.semantic_gate import FillerPhrases, SemanticGate
 from signalwire.core.agent.tools.decorator import ToolDecorator
 from signalwire.core.mixins._mixin_host import _HostTyped
 
@@ -51,6 +52,8 @@ class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
         webhook_url: str | None = None,
         required: list[str] | None = None,
         is_typed_handler: bool = False,
+        gates: Sequence[SemanticGate | dict[str, Any]] | None = None,
+        gate_fillers: FillerPhrases | None = None,
         **swaig_fields: Any,
     ) -> "AgentBase":
         """
@@ -120,9 +123,12 @@ class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
                 logs a warning and is stringified.
             secure: Whether to require SWAIG token validation on the
                 webhook callback.
-            fillers: Optional dict mapping language codes to arrays of
-                filler phrases the AI speaks while the function executes.
-                Format: {"en-US": ["one moment...", "checking..."]}
+            fillers: Optional phrases the AI says while the function runs,
+                keyed by language code, "auto" (translated into the call's
+                language on first use) or "default". An entry may be a list
+                of phrases, a wait script, spoken one at a time while the call
+                waits; the annotation predates wait scripts, so a type
+                checker needs a cast for one. Format: {"en-US": ["one moment...", "checking..."]}
             webhook_url: Optional external webhook URL. If set, the SDK
                 does not handle the call locally — the model's tool call
                 is forwarded to this URL.
@@ -130,12 +136,24 @@ class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
                 be set inside `parameters["required"]`.
             is_typed_handler: Whether the handler uses type-hinted
                 parameters (auto-wrapped from inferred schema).
+            gates: Optional semantic gates, 1 to 8 SemanticGate objects or
+                gate dicts: yes/no preconditions a decision model checks
+                right before the platform dispatches the function. When one
+                fails, the function doesn't run and the model gets that
+                gate's on_fail output. The fillers and wait_file start only
+                once the gates pass.
+            gate_fillers: Optional phrases the AI says while the gates are
+                checked, shaped like ``fillers``. Only with ``gates``.
             **swaig_fields: Additional SWAIG-only fields (e.g.
                 meta_data_token, web_hook_auth_user) included in the
                 generated function definition.
 
         Returns:
             Self for method chaining.
+
+        Raises:
+            ValueError: For gates the platform would refuse, or gate_fillers
+                without gates.
 
         Example:
             agent.define_tool(
@@ -162,6 +180,10 @@ class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
                 handler=self.handle_lookup_account,
             )
         """
+        if gates is not None:
+            swaig_fields["gates"] = gates
+        if gate_fillers is not None:
+            swaig_fields["gate_fillers"] = gate_fillers
         self._tool_registry.define_tool(
             name=name,
             description=description,
