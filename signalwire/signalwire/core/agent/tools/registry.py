@@ -13,7 +13,7 @@ from typing import Any
 from collections.abc import Callable
 import inspect
 
-from signalwire.core.semantic_gate import FillerPhrases, apply_gate_fields
+from signalwire.core.semantic_gate import apply_gate_fields
 from signalwire.core.swaig_function import SWAIGFunction
 from signalwire.core.logging_config import get_logger
 
@@ -41,7 +41,7 @@ class ToolRegistry:
         parameters: dict[str, Any],
         handler: Callable[..., Any],
         secure: bool = True,
-        fillers: FillerPhrases | None = None,
+        fillers: dict[str, list[str]] | None = None,
         wait_file: str | None = None,
         wait_file_loops: int | None = None,
         webhook_url: str | None = None,

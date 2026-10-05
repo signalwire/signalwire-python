@@ -16,9 +16,10 @@
   `FunctionResult.set_semantic_state()` sets the state gates judge.
 - `FunctionResult.change_voice()` changes the AI's voice for the rest of the
   call.
-- Function fillers are typed and documented with the `auto` key, translated
-  into the call's language on first use, and wait scripts, lists of phrases
-  spoken one at a time while the call waits.
+- Function fillers are documented with the `auto` key, translated into the
+  call's language on first use, and wait scripts, lists of phrases spoken one
+  at a time while the call waits. `gate_fillers` is typed for both; `fillers`
+  keeps its annotation, so a wait script there needs a cast.
 
 ### Fixed
 - The Penny tutorial's requirements install `httpx2`, the HTTP client behind

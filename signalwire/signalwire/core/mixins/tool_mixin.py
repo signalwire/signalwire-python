@@ -48,7 +48,7 @@ class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
         parameters: dict[str, Any],
         handler: Callable[..., Any],
         secure: bool = True,
-        fillers: FillerPhrases | None = None,
+        fillers: dict[str, list[str]] | None = None,
         webhook_url: str | None = None,
         required: list[str] | None = None,
         is_typed_handler: bool = False,
@@ -127,7 +127,8 @@ class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
                 keyed by language code, "auto" (translated into the call's
                 language on first use) or "default". An entry may be a list
                 of phrases, a wait script, spoken one at a time while the call
-                waits. Format: {"en-US": ["one moment...", "checking..."]}
+                waits; the annotation predates wait scripts, so a type
+                checker needs a cast for one. Format: {"en-US": ["one moment...", "checking..."]}
             webhook_url: Optional external webhook URL. If set, the SDK
                 does not handle the call locally — the model's tool call
                 is forwarded to this URL.

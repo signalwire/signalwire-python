@@ -18,7 +18,7 @@ import logging
 
 # Import here to avoid circular imports
 from signalwire.core.function_result import FunctionResult
-from signalwire.core.semantic_gate import FillerPhrases, apply_gate_fields
+from signalwire.core.semantic_gate import apply_gate_fields
 
 if TYPE_CHECKING:
     # The inbound SWAIG function-webhook payload, typed from the spec (a plain dict at
@@ -82,7 +82,7 @@ class SWAIGFunction:
         description: str,
         parameters: dict[str, dict[str, Any]] | None = None,
         secure: bool = False,
-        fillers: FillerPhrases | None = None,
+        fillers: dict[str, list[str]] | None = None,
         wait_file: str | None = None,
         wait_file_loops: int | None = None,
         webhook_url: str | None = None,
@@ -113,7 +113,8 @@ class SWAIGFunction:
                 keyed by language code, "auto" (translated into the call's
                 language on first use) or "default". An entry may be a list of
                 phrases, a wait script, spoken one at a time while the call
-                waits.
+                waits; the annotation predates wait scripts, so a type
+                checker needs a cast for one.
             wait_file: Optional URL to audio file to play while function
                 executes.
             wait_file_loops: Optional number of times to loop the wait_file.

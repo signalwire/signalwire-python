@@ -222,7 +222,8 @@ class TestDefiningGatedTools:
 
     def test_fillers_take_the_auto_key_and_wait_scripts(self) -> None:
         agent = _agent()
-        fillers = {"auto": ["One moment", ["Let me look that up", "Still searching"]]}
+        # fillers keeps its 3.5 annotation, list[str], so a wait script is passed as Any
+        fillers: Any = {"auto": ["One moment", ["Let me look that up", "Still searching"]]}
         agent.define_tool(name="search", description="Search", parameters={},
                           handler=_handler, fillers=fillers)
         assert _functions(agent)["search"]["fillers"] == fillers

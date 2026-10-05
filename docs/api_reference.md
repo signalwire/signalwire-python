@@ -570,7 +570,7 @@ def define_tool(
     parameters: Dict[str, Any],
     handler: Callable,
     secure: bool = True,
-    fillers: Optional[Dict[str, List[Union[str, List[str]]]]] = None,
+    fillers: Optional[Dict[str, List[str]]] = None,
     webhook_url: Optional[str] = None,
     is_typed_handler: bool = False,
     gates: Optional[List[Union[SemanticGate, Dict[str, Any]]]] = None,
@@ -585,7 +585,7 @@ def define_tool(
 - `parameters` (Dict[str, Any]): JSON schema for function parameters. If omitted when using the decorator and the handler has type-hinted parameters, the schema is inferred automatically from the type hints.
 - `handler` (Callable): Function to execute when called
 - `secure` (bool): Require security token (default: True)
-- `fillers` (Optional[Dict[str, List[Union[str, List[str]]]]]): Phrases the AI says while the function runs, keyed by language code, `auto` or `default`. The current language's own key is used; without one, the `auto` phrases are translated into that language on first use; without either, `default`. An entry may be a list of phrases, a wait script, spoken one at a time while the call waits
+- `fillers` (Optional[Dict[str, List[str]]]): Phrases the AI says while the function runs, keyed by language code, `auto` or `default`. The current language's own key is used; without one, the `auto` phrases are translated into that language on first use; without either, `default`. An entry may also be a list of phrases, a wait script, spoken one at a time while the call waits; the annotation predates wait scripts, so a type checker needs a cast for one
 - `webhook_url` (Optional[str]): Custom webhook URL
 - `gates` (Optional[List[Union[SemanticGate, Dict[str, Any]]]]): Semantic gates, 1 to 8. See [Semantic gates](#semantic-gates)
 - `gate_fillers` (Optional[Dict[str, List[Union[str, List[str]]]]]): What the AI says while the gates are checked, shaped like `fillers`. Only with `gates`
