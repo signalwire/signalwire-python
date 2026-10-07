@@ -51,9 +51,9 @@ Skipped:
 - `signalwire.cli` and `signalwire.mcp_gateway`: entry points, not library API.
   (`signalwire.skills.mcp_gateway` is a skill plugin and is kept.)
 - any module with a `_private` component in its dotted path.
-- deprecated back-compat shims: modules that call
-  `warnings.warn(..., DeprecationWarning)` at import time (top level, or inside a
-  module-level `if`/`try`). Detected from the AST, so nothing is imported. Today
+- deprecated back-compat shims: modules that issue a DeprecationWarning at
+  import time (top level, or inside a module-level `if`/`try`). Detected from
+  the AST, so nothing is imported. Today
   that is every `rest/namespaces/<name>.py` re-export shim and `rest/call_handler.py`.
 
 `signalwire.prefabs` modules render their public classes only. `gen.sh` prints
