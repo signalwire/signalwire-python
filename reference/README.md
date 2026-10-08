@@ -22,7 +22,7 @@ reference/
   dev-server.sh       generates the pages, then serves them with live reload
   overrides/main.html extends Material's base.html; injects the Fern navbar
   assets/             Fern tokens/CSS/JS + logo/favicon (committed; no shared host yet)
-  _docs/              GENERATED docs tree (one page per signalwire.<subpackage>)  [gitignored]
+  _docs/              GENERATED docs tree (one page per public module, see below) [gitignored]
   _site/              local `mkdocs build` output                                  [gitignored]
   README.md           this file
 ```
@@ -30,6 +30,41 @@ reference/
 The `signalwire` package is nested (`signalwire/signalwire/`). mkdocstrings
 resolves imports from the **editable install**, so `gen.sh` runs `pip install -e .`
 first. Keep that step.
+
+## Page layout
+
+`gen.sh` walks the `signalwire` package tree with griffe (the static analyser
+mkdocstrings itself uses) and writes one page per public module. With
+`use_directory_urls: false`, `x.md` renders to `x.html`:
+
+| Page | Renders |
+|---|---|
+| `api/index.md` | the root `signalwire` package: the functions its `__init__` defines, then a table of the top-level `__all__` exports (the lazy, PEP 562 ones included) cross-referenced to the module that defines each. This is the "root `signalwire` page"; it doubles as the API section's index, so there is no separate `api/signalwire.html`. |
+| `api/<package>/index.md` | the package docstring, an `__all__` summary table linking each export to its page, and the list of subpackages and modules. Whatever the package `__init__` defines itself is rendered here (`signalwire.livewire` defines most of its API there), and so is an export whose definition lives in a `_private` module (`signalwire.rest.SignalWireRestError`), since that module has no page of its own. |
+| `api/<package>/<module>.md` | `::: signalwire.<package>.<module>` — everything public in the module. |
+| `api/<module>.md` | top-level modules (`signalwire.agent_server`). |
+
+Nested packages nest the same way (`api/core/mixins/auth_mixin.html`). Module
+names are used verbatim, underscores included: the `api/<package>/<module>.html`
+URL scheme is frozen because the Fern-retirement redirects target it.
+
+Skipped:
+
+- `signalwire.cli` and `signalwire.mcp_gateway`: entry points, not library API.
+  (`signalwire.skills.mcp_gateway` is a skill plugin and is kept.)
+- any module with a `_private` component in its dotted path.
+- deprecated back-compat shims: modules that issue a DeprecationWarning at
+  import time (top level, or inside a module-level `if`/`try`). Detected from
+  the AST, so nothing is imported. Today
+  that is every `rest/namespaces/<name>.py` re-export shim and `rest/call_handler.py`.
+
+`signalwire.prefabs` modules render their public classes only. `gen.sh` prints
+what it wrote and what it skipped, and the "no API pages generated" guard aborts
+the run when the walk yields no module pages.
+
+The nav is MkDocs' automatic one, built from the docs tree: page titles come from
+front matter (module pages use the short module name, index pages the dotted
+package path), section labels from directory names.
 
 ## Build & serve locally
 
@@ -68,8 +103,8 @@ Two workflows, both plain `actions/setup-python`, no Docker.
 
 `.github/workflows/reference-check.yml` builds on every PR touching `signalwire/`,
 `reference/`, or `pyproject.toml`. It runs `gen.sh --no-install`, whose strict
-`mkdocs build` fails the check on a generator error, a root `signalwire` package
-that will not import, or a new unresolved cross-reference. It does **not** catch a
+`mkdocs build` fails the check on a generator error or a new unresolved
+cross-reference. It does **not** catch a
 submodule with a missing runtime dependency: mkdocstrings analyses statically
 through griffe, so that module still renders a clean page. Build only:
 `contents: read`, never deploys.
