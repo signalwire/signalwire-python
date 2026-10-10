@@ -1,0 +1,103 @@
+"""
+Copyright (c) 2026 SignalWire
+
+This file is part of the SignalWire SDK.
+
+Licensed under the MIT License.
+See LICENSE file in the project root for full license information.
+
+Tests for signalwire.conversation_kit.dates.compute_date — `today` pinned for determinism.
+"""
+
+from datetime import date
+
+from signalwire.conversation_kit import compute_date
+
+
+def test_relative_today_tomorrow():
+    today = date(2026, 6, 28)
+    assert compute_date({"relative": "today"}, today) == today
+    assert compute_date({"relative": "tomorrow"}, today) == date(2026, 6, 29)
+
+
+def test_weekday_this_vs_next_midweek():
+    # Wed 2026-07-01: 'this' = this week's upcoming day; 'next' = the FOLLOWING
+    # calendar week. (On a week-boundary day like Sunday the two collapse, so the
+    # distinction must be pinned mid-week.)
+    wed = date(2026, 7, 1)
+    assert compute_date({"weekday": "saturday", "which": "this"}, wed) == date(
+        2026, 7, 4
+    )
+    assert compute_date({"weekday": "saturday", "which": "next"}, wed) == date(
+        2026, 7, 11
+    )
+    # A bare weekday = the soonest upcoming one (same as 'this').
+    assert compute_date({"weekday": "friday"}, wed) == date(2026, 7, 3)
+
+
+def test_bare_same_weekday_rolls_to_next_week():
+    # 'wednesday' ON a Wednesday -> next week's Wednesday, never today.
+    assert compute_date({"weekday": "wednesday"}, date(2026, 7, 1)) == date(2026, 7, 8)
+
+
+def test_explicit_day_month():
+    today = date(2026, 6, 28)
+    assert compute_date({"day": 4, "month": 7}, today) == date(2026, 7, 4)
+    assert compute_date({"day": 15, "month": 8, "year": 2027}, today) == date(
+        2027, 8, 15
+    )
+
+
+def test_explicit_bare_day_in_past_rolls_to_next_month():
+    # 'the 4th' on Jun 28 -> Jul 4 (next month), not Jun 4.
+    assert compute_date({"day": 4}, date(2026, 6, 28)) == date(2026, 7, 4)
+
+
+def test_explicit_month_in_past_rolls_to_next_year():
+    # 'the 10th of January' from June -> next January.
+    assert compute_date({"day": 10, "month": 1}, date(2026, 6, 28)) == date(2027, 1, 10)
+
+
+def test_in_days_offset():
+    # 'in N days' ('za dwa dni') = today + N, distinct from a day-of-month number.
+    today = date(2026, 7, 1)
+    assert compute_date({"in_days": 1}, today) == date(2026, 7, 2)
+    assert compute_date({"in_days": 2}, today) == date(2026, 7, 3)  # NOT day-of-month 2
+    assert compute_date({"in_days": 7}, today) == date(2026, 7, 8)
+    assert compute_date({"in_days": 0}, today) is None  # a zero offset is not a date
+    # an explicit day-of-month still wins when the caller names a calendar number
+    assert compute_date({"day": 2}, today) == date(2026, 7, 2)
+
+
+def test_bare_day_absent_in_month_rolls_forward():
+    # "the 31st" in a 30-day month resolves to the next month that has a 31st,
+    # not None. Same for "the 30th" in February.
+    assert compute_date({"day": 31}, date(2026, 6, 15)) == date(2026, 7, 31)
+    assert compute_date({"day": 30}, date(2026, 2, 10)) == date(2026, 3, 30)
+    assert compute_date({"day": 29}, date(2026, 2, 1)) == date(
+        2026, 3, 29
+    )  # 2026 not leap
+
+
+def test_out_of_range_month_or_year_is_none():
+    # An explicitly-supplied but invalid month/year is a hard error, never silently
+    # coerced to today's month/year.
+    d = date(2026, 1, 1)
+    assert compute_date({"day": 5, "month": 13}, d) is None
+    assert compute_date({"day": 5, "month": 0}, d) is None
+    assert compute_date({"day": 5, "year": 99}, d) is None
+
+
+def test_bool_is_not_an_int_day_or_offset():
+    # bool ⊂ int in Python — True must NOT read as day/month/in_days = 1.
+    d = date(2026, 1, 1)
+    assert compute_date({"day": True}, d) is None
+    assert compute_date({"in_days": True}, d) is None
+    assert compute_date({"day": 5, "month": True}, d) is None
+
+
+def test_unresolvable_returns_none():
+    today = date(2026, 6, 28)
+    assert compute_date({}, today) is None
+    assert compute_date({"weekday": "funday"}, today) is None
+    assert compute_date({"day": 99}, today) is None
