@@ -86,6 +86,7 @@ class TestBuildSearchMain:
                 chunk_overlap=10,
                 split_newlines=None,
                 index_nlp_backend='nltk',
+                embed_text='content',
                 verbose=False,
                 semantic_threshold=0.5,
                 topic_threshold=0.3,
@@ -143,6 +144,7 @@ class TestBuildSearchMain:
                 chunk_overlap=20,
                 split_newlines=None,
                 index_nlp_backend='nltk',
+                embed_text='content',
                 verbose=True,
                 semantic_threshold=0.5,
                 topic_threshold=0.3,
@@ -575,6 +577,7 @@ class TestArgumentParsing:
                 chunk_overlap=10,
                 split_newlines=2,
                 index_nlp_backend='nltk',
+                embed_text='content',
                 verbose=False,
                 semantic_threshold=0.5,
                 topic_threshold=0.3,
@@ -605,6 +608,7 @@ class TestArgumentParsing:
                 chunk_overlap=10,
                 split_newlines=None,
                 index_nlp_backend='nltk',
+                embed_text='content',
                 verbose=False,
                 semantic_threshold=0.5,
                 topic_threshold=0.3,
@@ -635,12 +639,29 @@ class TestArgumentParsing:
                 chunk_overlap=10,
                 split_newlines=None,
                 index_nlp_backend='nltk',
+                embed_text='content',
                 verbose=False,
                 semantic_threshold=0.5,
                 topic_threshold=0.3,
                 backend='sqlite',
                 connection_string=None
             )
+
+
+    @patch('signalwire.search.index_builder.IndexBuilder')
+    @patch('sys.argv', ['sw-search', './docs', '--embed-text', 'processed'])
+    def test_embed_text_processed_reaches_the_builder(self, mock_builder_class: MagicMock) -> None:
+        """--embed-text processed restores the pre-option embedding text"""
+        mock_builder_class.return_value = Mock()
+
+        with patch('pathlib.Path.exists', return_value=True), \
+             patch('pathlib.Path.is_file', return_value=False), \
+             patch('pathlib.Path.name', 'docs'), \
+             patch('os.path.exists', return_value=True):
+
+            main()
+
+            assert mock_builder_class.call_args.kwargs['embed_text'] == 'processed'
 
 
 class TestVerboseOutput:

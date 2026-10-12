@@ -1,5 +1,25 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- Search indexes embed each chunk's text as written. They used to embed the
+  keyword-search text with the chunk's tags appended, which drops numbers and
+  repeated words: a rate-card row `| Local (10DLC) | $0.00660 | $0.00800 |`
+  was embedded as `local (10dlc)`, with every price gone. Keyword search
+  still uses the processed text, unchanged. On one corpus (23,126 chunks,
+  all-MiniLM-L6-v2, 39 labelled questions, vector ranking), MRR@10 went from
+  0.563 to 0.615. Yours may differ.
+
+### Notes for upgraders
+- Existing `.swsearch` files and pgvector collections keep working: the query
+  side is unchanged, and each index stays internally consistent. Results
+  change only after you rebuild an index.
+- To build the old way, pass `--embed-text processed` to `sw-search`, or
+  `IndexBuilder(embed_text="processed")`. New SQLite indexes record which was
+  used in their `config` table (`embed_text`), and pgvector collections in
+  their config metadata.
+
 ## [3.6.0] - 2026-10-05
 
 ### Added

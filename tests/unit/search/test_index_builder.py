@@ -787,3 +787,72 @@ class TestBuildIndexOverwrite:
         builder = Mock()
         IndexBuilder.build_index(builder, "/data/docs", "my_col", ["md"], overwrite=overwrite)
         assert builder.build_index_from_sources.call_args.kwargs["overwrite"] is overwrite
+
+
+class TestIndexBuilderEmbeddingText:
+    """What the embedding model is given for each chunk.
+
+    It used to be the keyword-search text with the tags appended. That text
+    drops numbers and repeated words, so a rate-card row was embedded with
+    every price removed and pricing questions retrieved the wrong tables.
+    """
+
+    RATE_ROW = "| Local (10DLC) | $0.00660 | $0.00800 |\nToll free calls are billed per minute."
+
+    def _embedded_texts(self, builder: IndexBuilder) -> list[str]:
+        """Run a build over one chunk and return what encode() received."""
+        np = pytest.importorskip("numpy")
+        model = MagicMock()
+        model.encode.return_value = np.zeros(384, dtype=np.float32)
+        model.get_sentence_embedding_dimension.return_value = 384
+        builder.model = model
+        chunk = {"content": self.RATE_ROW, "filename": "rates.md", "tags": ["pricing", "voice"]}
+        with patch.object(builder, "_discover_files_from_sources", return_value=[Path("rates.md")]), \
+             patch.object(builder, "_get_base_directory_for_file", return_value=Path(".")), \
+             patch.object(builder, "_process_file", return_value=[chunk]), \
+             patch.object(builder, "_create_database"):
+            builder.build_index_from_sources([Path("rates.md")], "out.swsearch", ["md"])
+        return [c.args[0] for c in model.encode.call_args_list]
+
+    def test_default_embeds_the_chunk_as_written(self) -> None:
+        texts = self._embedded_texts(IndexBuilder())
+        assert texts == [self.RATE_ROW]
+        assert "$0.00660" in texts[0]
+
+    def test_processed_restores_the_previous_embedding_text(self) -> None:
+        texts = self._embedded_texts(IndexBuilder(embed_text="processed"))
+        assert len(texts) == 1
+        assert "$0.00660" not in texts[0]
+        assert texts[0].endswith(" pricing voice")
+
+    def test_keyword_text_is_unchanged_by_the_option(self) -> None:
+        np = pytest.importorskip("numpy")
+        for mode in ("content", "processed"):
+            builder = IndexBuilder(embed_text=mode)
+            builder.model = MagicMock()
+            builder.model.encode.return_value = np.zeros(384, dtype=np.float32)
+            chunk = {"content": self.RATE_ROW, "filename": "rates.md", "tags": []}
+            with patch.object(builder, "_discover_files_from_sources", return_value=[Path("rates.md")]), \
+                 patch.object(builder, "_get_base_directory_for_file", return_value=Path(".")), \
+                 patch.object(builder, "_process_file", return_value=[chunk]), \
+                 patch.object(builder, "_create_database"):
+                builder.build_index_from_sources([Path("rates.md")], "out.swsearch", ["md"])
+            assert chunk["processed_content"] != chunk["content"]
+            assert "$0.00660" not in chunk["processed_content"]
+
+    def test_invalid_embed_text_is_rejected(self) -> None:
+        with pytest.raises(ValueError, match="embed_text"):
+            IndexBuilder(embed_text="tags")
+
+    def test_sqlite_index_records_how_it_was_embedded(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            out = os.path.join(d, "t.swsearch")
+            IndexBuilder(embed_text="processed")._create_database(
+                out, [{"content": "x", "filename": "a.md", "embedding": b"data"}], ["en"], ["a.md"], ["md"]
+            )
+            conn = sqlite3.connect(out)
+            try:
+                row = conn.execute("SELECT value FROM config WHERE key='embed_text'").fetchone()
+            finally:
+                conn.close()
+        assert row == ("processed",)
