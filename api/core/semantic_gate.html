@@ -1362,6 +1362,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.core.semantic_gate.MAX_VISUAL_INPUT" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MAX_VISUAL_INPUT
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.core.semantic_gate.RESERVED_FUNCTION_NAMES" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1433,6 +1444,17 @@
     <span class="md-ellipsis">
       
         on_fail
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signalwire.core.semantic_gate.SemanticGate.visual_input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        visual_input
       
     </span>
   </a>
@@ -7532,6 +7554,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.core.semantic_gate.MAX_VISUAL_INPUT" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MAX_VISUAL_INPUT
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.core.semantic_gate.RESERVED_FUNCTION_NAMES" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -7603,6 +7636,17 @@
     <span class="md-ellipsis">
       
         on_fail
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signalwire.core.semantic_gate.SemanticGate.visual_input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        visual_input
       
     </span>
   </a>
@@ -7830,6 +7874,26 @@ raises ValueError instead of sending a function the platform would drop.</p>
 
 
 
+<h3 id="signalwire.core.semantic_gate.MAX_VISUAL_INPUT" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">MAX_VISUAL_INPUT</span> <span class="o">=</span> <span class="mi">5</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+<a href="#signalwire.core.semantic_gate.MAX_VISUAL_INPUT" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
 <h3 id="signalwire.core.semantic_gate.RESERVED_FUNCTION_NAMES" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">RESERVED_FUNCTION_NAMES</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s1">'startup_hook'</span><span class="p">,</span> <span class="s1">'hangup_hook'</span><span class="p">,</span> <span class="s1">'check_for_input'</span><span class="p">,</span> <span class="s1">'end_call'</span><span class="p">,</span> <span class="s1">'hangup'</span><span class="p">,</span> <span class="s1">'check_time'</span><span class="p">,</span> <span class="s1">'wait_for_user'</span><span class="p">,</span> <span class="s1">'wait_seconds'</span><span class="p">,</span> <span class="s1">'adjust_response_latency'</span><span class="p">,</span> <span class="s1">'next_step'</span><span class="p">,</span> <span class="s1">'change_context'</span><span class="p">,</span> <span class="s1">'gather_submit'</span><span class="p">,</span> <span class="s1">'get_visual_input'</span><span class="p">,</span> <span class="s1">'get_ideal_strategy'</span><span class="p">,</span> <span class="s1">'pause_conversation'</span><span class="p">})</span></code>
 
@@ -8007,6 +8071,26 @@ for it.</p>
 
 </div>
 
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="signalwire.core.semantic_gate.SemanticGate.visual_input" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">visual_input</span> <span class="o">=</span> <span class="n">visual_input</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#signalwire.core.semantic_gate.SemanticGate.visual_input" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
 
 
 
@@ -8014,7 +8098,7 @@ for it.</p>
 
 
 <h4 id="signalwire.core.semantic_gate.SemanticGate.__init__" class="doc doc-heading">
-            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">question</span><span class="p">,</span> <span class="n">threshold</span><span class="p">,</span> <span class="n">on_fail</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">true_means</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">false_means</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">question</span><span class="p">,</span> <span class="n">threshold</span><span class="p">,</span> <span class="n">on_fail</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">true_means</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">false_means</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">visual_input</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 <a href="#signalwire.core.semantic_gate.SemanticGate.__init__" class="headerlink" title="Permanent link">&para;</a></h4>
 
@@ -8135,6 +8219,29 @@ within the function. Default <code>gate_&lt;n&gt;</code>, 1-based.</p>
             <td>
               <div class="doc-md-description">
                 <p>What no means, at most 2 KB.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>visual_input</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | <span title="int">int</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>How many of the caller's newest video frames the
+decision model sees with this gate, as <code>visual_input</code>:
+True is 1, False or 0 none, or a whole number up to 5. All of
+a function's gates share one request, so each sees as many
+frames as the gate asking for the most. The gate's provider
+must take images; one that doesn't makes the check a
+configuration error, which blocks the call. Default: no
+frames, and the key is left out.</p>
               </div>
             </td>
             <td>
