@@ -719,7 +719,7 @@ agent.register_swaig_function(weather_tool.to_swaig_function())
 
 ### Session Lifecycle Hooks
 
-SignalWire AI agents support special SWAIG functions that are automatically called at specific points in the conversation lifecycle:
+SignalWire AI agents support special SWAIG functions that are automatically called at specific points in the conversation lifecycle. `on_call_start()` and `on_call_end()` (see [Event Handlers](#event-handlers)) define them for you; to write one yourself, use the reserved name:
 
 ##### `startup_hook`
 Called when a new conversation/call begins.
@@ -1373,6 +1373,55 @@ class MyAgent(AgentBase):
         if raw_data and 'post_prompt_data' in raw_data:
             raw_text = raw_data['post_prompt_data'].get('raw', '')
             print(f"Raw summary: {raw_text}")
+```
+
+##### `on_call_start`
+
+Register a handler that runs when the call starts, before the AI's first turn. Use as a decorator or call directly; handlers run in registration order. Wraps the platform's reserved `startup_hook` function.
+
+<!-- snippet: no-compile signature-illustration -->
+```python
+def on_call_start(
+    handler: Callable[[Dict[str, Any]], Optional[FunctionResult]]
+) -> Callable[[Dict[str, Any]], Optional[FunctionResult]]
+```
+
+The handler receives `raw_data`, the SWAIG request (`call_id`, `global_data`, `caller_id_num` and the rest), and may return a `FunctionResult` or `None`:
+- Its actions run at once, in registration order across handlers. `post_process` isn't used.
+- Its response text is added to the conversation as a system message the model reads before it speaks. Several handlers' texts are joined, one per line. Only a plain string response is used.
+
+An exception is logged, not raised, and that handler's result is dropped. The platform waits for the hook before the AI starts, so keep the handler short.
+
+**Usage:**
+```python
+agent = AgentBase("my_agent")
+
+@agent.on_call_start
+def greet_by_name(raw_data):
+    name = raw_data.get("caller_id_name") or "the caller"
+    return FunctionResult(f"The caller's name is {name}.")
+```
+
+##### `on_call_end`
+
+Register a handler that runs when the call ends, with the conversation. Use as a decorator or call directly; handlers run in registration order. Wraps the platform's reserved `hangup_hook` function, and turns on `swaig_post_conversation` so the hook carries the transcript.
+
+<!-- snippet: no-compile signature-illustration -->
+```python
+def on_call_end(
+    handler: Callable[[List[Dict[str, Any]], Dict[str, Any]], None]
+) -> Callable[[List[Dict[str, Any]], Dict[str, Any]], None]
+```
+
+The handler receives `call_log` (the conversation) and `raw_data` (the SWAIG request). Its return value is ignored, and an exception is logged, not raised.
+
+**Usage:**
+```python
+agent = AgentBase("my_agent")
+
+@agent.on_call_end
+def log_length(call_log, raw_data):
+    print(f"Call {raw_data.get('call_id')} ended after {len(call_log)} entries")
 ```
 
 ##### `on_debug_event`

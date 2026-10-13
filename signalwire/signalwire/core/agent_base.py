@@ -749,6 +749,117 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
             handler=_hangup_handler,
         )
 
+    def on_call_start(
+        self, handler: Callable[[dict[str, Any]], "FunctionResult | None"]
+    ) -> Callable[[dict[str, Any]], "FunctionResult | None"]:
+        """
+        Register a handler that runs when the call starts, before the AI speaks.
+
+        Usable as a decorator or called directly. Handlers run in registration
+        order and receive:
+
+            raw_data (dict): the complete SWAIG request, including `call_id`,
+                `global_data` and the caller's details.
+
+        This wraps the platform's reserved `startup_hook` function, the
+        counterpart of the `hangup_hook` behind `on_call_end`. That name is
+        internal: the platform calls it once, after the call is answered and
+        before the AI's first turn, and never offers it to the model as
+        something it could choose.
+
+        The platform waits for the hook before the AI starts, so a slow
+        handler delays the greeting, and it stops waiting for a function after
+        about 10 seconds (observed). Keep handlers short; start long work in
+        the background and send its result into the call later (see
+        `rest.calling.ai_message`).
+
+        A handler may return a `FunctionResult`, or None. What the platform
+        does with the hook's reply:
+        - its actions run at once, in registration order across handlers
+          (for example `update_global_data()` to give the call data before
+          the conversation starts);
+        - its response text is added to the conversation as a system message
+          the model reads before its first turn. The texts of several handlers
+          are joined, one per line. Only a plain string response is used.
+        `post_process` is not used: the combined result runs its actions at
+        once. The platform adds every hook reply to the conversation, so a
+        hook whose handlers return no text still adds a short placeholder
+        line, as any function with an empty reply does.
+
+        Exceptions are caught and logged rather than raised, and that
+        handler's result is dropped, so a failing handler can't stop the call
+        from starting or the other handlers from running.
+
+        Args:
+            handler: Callable taking (raw_data), returning a FunctionResult or
+                None.
+
+        Returns:
+            The handler, so this can be used as a decorator.
+
+        Example:
+            @agent.on_call_start
+            def load_caller(raw_data):
+                caller = lookup(raw_data.get("caller_id_num"))
+                result = FunctionResult(f"The caller's name is {caller.name}.")
+                return result.update_global_data({"customer_id": caller.id})
+        """
+        handlers = self.__dict__.get("_call_start_handlers")
+        if handlers is None:
+            # Rebind rather than mutate -- see the ephemeral-copy contract on
+            # _create_ephemeral_copy; this list is not in the copied set.
+            self._call_start_handlers = [handler]
+            self._ensure_call_start_hook()
+        else:
+            self._call_start_handlers = [*handlers, handler]
+        return handler
+
+    def _ensure_call_start_hook(self) -> None:
+        """Register the reserved startup_hook once."""
+
+        def _startup_handler(args: Any, raw_data: Any) -> FunctionResult:
+            raw = raw_data or {}
+            combined = FunctionResult()
+            texts: list[str] = []
+            for callback in self.__dict__.get("_call_start_handlers") or []:
+                name = getattr(callback, "__name__", repr(callback))
+                # Isolated per handler, as in _ensure_call_end_hook: one failure
+                # must not stop the others.
+                try:
+                    result = callback(raw)
+                except Exception as exc:
+                    self.log.error(
+                        "call_start_handler_failed", error=str(exc), handler=name
+                    )
+                    continue
+                if result is None:
+                    continue
+                if not isinstance(result, FunctionResult):
+                    self.log.warning(
+                        "call_start_handler_result_ignored",
+                        handler=name,
+                        result_type=type(result).__name__,
+                    )
+                    continue
+                if isinstance(result.response, str):
+                    if result.response:
+                        texts.append(result.response)
+                elif result.response:
+                    self.log.warning(
+                        "call_start_handler_structured_response_ignored",
+                        handler=name,
+                    )
+                combined.add_actions(result.action)
+            combined.set_response("\n".join(texts))
+            return combined
+
+        self.define_tool(
+            name="startup_hook",
+            description="Internal: fires when the call starts.",
+            parameters={},
+            handler=_startup_handler,
+        )
+
     def on_debug_event(self, handler: Callable[..., Any]) -> Callable[..., Any]:
         """
         Register a handler for debug webhook events.

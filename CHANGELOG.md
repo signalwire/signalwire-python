@@ -1,5 +1,29 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- `AgentBase.on_call_start()` registers handlers that run when the call
+  starts, before the AI's first turn: the counterpart of `on_call_end()`. It
+  wraps the platform's reserved `startup_hook` function. A handler receives
+  the SWAIG request and may return a `FunctionResult`: its actions run at
+  once, and its response text is added to the conversation as a system
+  message the model reads before it speaks. Handlers run in registration
+  order, and an exception is logged, not raised.
+
+### Documentation
+- How to reject a call from the per-call configuration callback
+  (`add_per_call_config()`): build the agent with `play` and `hangup`
+  post-answer verbs and no tools, and have the callback add the tools and
+  call `clear_post_answer_verbs()` only for a call it accepts. A callback
+  that fails leaves the call rejected. See "Rejecting a Call" in
+  `docs/agent_guide.md`.
+- The SWAIG function webhook timeout: SignalWire stops waiting for a tool
+  after about 10 seconds (observed on live calls) and sends the request
+  again. Tools should answer quickly and send late results into the call with
+  `rest.calling.ai_message()`. See "Slow tools and the webhook timeout" in
+  `docs/agent_guide.md`.
+
 ## [3.7.0] - 2026-10-12
 
 ### Fixed

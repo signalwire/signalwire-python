@@ -346,6 +346,47 @@ An `on_swml_request` override still runs on the event loop, because it can chang
 
 Set `SWML_SYNC_HANDLERS_INLINE=true` to run synchronous handlers and callbacks on the event loop instead, one at a time, as earlier releases did. The serverless entry points call handlers directly, as before.
 
+#### Slow tools and the webhook timeout
+
+SignalWire waits for a SWAIG function's webhook for only a short time: on live calls it stops waiting after about 10 seconds (observed) and sends the same request again. It also sends a request again when it gets an error response (5xx) or can't connect. So a tool that takes longer than that runs more than once, and the caller hears nothing from it in the meantime.
+
+Answer within a few seconds. When the work takes longer, start it in the background, return at once with a reply that tells the model the result is on its way, and send the result into the call when it's ready with the REST API's `calling.ai_message` (`rest.calling.ai_message()` on a `RestClient`):
+
+<!-- snippet: no-run illustrative fragment (`slow_order_lookup` is your own helper; sends a live REST request) -->
+```python
+import threading
+
+from signalwire import AgentBase, FunctionResult, RestClient
+
+rest = RestClient()  # SIGNALWIRE_PROJECT_ID, SIGNALWIRE_API_TOKEN, SIGNALWIRE_SPACE
+
+
+class OrderAgent(AgentBase):
+    @AgentBase.tool(
+        name="check_order",
+        description="Look up an order's shipping status",
+        parameters={"order_id": {"type": "string", "description": "The order number"}},
+    )
+    def check_order(self, args, raw_data):
+        call_id = raw_data.get("call_id")
+        order_id = args.get("order_id")
+
+        def finish():
+            status = slow_order_lookup(order_id)  # may take 30 seconds
+            rest.calling.ai_message(
+                call_id,
+                role="system",
+                message_text=f"Order {order_id} status: {status}. Tell the caller.",
+            )
+
+        threading.Thread(target=finish, daemon=True).start()
+        return FunctionResult(
+            "The lookup has started. Tell the caller you're checking and will have it shortly."
+        )
+```
+
+The message goes into the AI session as the given role (`system`, `user` or `assistant`); `system` keeps the result from reading as something the caller said. Because a request can arrive twice, make tools safe to run twice: for example, key work that's already running by `call_id` and arguments, and join it instead of starting it again. A DataMap function's webhook has its own limits; see [Network Timeout and Retry Logic](datamap_guide.md#132-network-timeout-and-retry-logic) in the DataMap guide.
+
 ### 2. External Webhook Functions
 
 External webhook functions allow you to delegate function execution to external services instead of handling them locally. This is useful when you want to:
@@ -1926,6 +1967,53 @@ class MyAgent(AgentBase):
             agent.set_global_data(config)
 ```
 
+#### Rejecting a Call
+
+The callback can't refuse the request, but it can decide what the call does. To turn away a call the agent shouldn't take, such as one whose caller can't be verified, build the agent so that by default the call hears a message and hangs up, and have the callback undo that only for a call it accepts:
+
+1. In the constructor, add `play` and `hangup` with `add_post_answer_verb()`. They run after the call is answered and before the `ai` verb, so a call that keeps them hangs up before the AI starts. Define no tools on the agent itself.
+2. In the callback, for an accepted call, add the tools and other configuration to the request's copy, then call `clear_post_answer_verbs()` last.
+
+This fails closed. The callback changes only the request's copy, so the next call starts from the goodbye again. If the callback raises, the SDK logs the error and renders the copy as it stands, and since clearing the verbs is the last step, a failure before it leaves the goodbye in place.
+
+The callback runs for every request the call makes: the SWML fetch, and again for each tool call and the post-prompt summary. Only the SWML fetch carries the caller's data, such as the `userVariables` a browser or app client sends with `dial()`; a tool call carries the `call_id` and `global_data`, and `global_data` comes from the call, so it proves nothing. Verify on the SWML fetch, remember the `call_id` (`body["call"]["call_id"]` there, `body["call_id"]` on later requests), and check that on later requests, so a tool call from a call you didn't verify finds no tool to run.
+
+<!-- snippet: no-run illustrative fragment (`signature_is_valid` is your own check) -->
+```python
+from signalwire import AgentBase, FunctionResult
+from signalwire.core.capabilities import user_variables
+
+
+class GatedAgent(AgentBase):
+    def __init__(self):
+        super().__init__(name="gated", route="/")
+        # Callbacks run in worker threads; a set's add and `in` are safe there.
+        # With more than one process, keep this in a shared store instead.
+        self._verified: set[str] = set()
+        self.prompt_add_section("Role", body="You are a helpful assistant.")
+        # Fail closed: every call gets this unless configure() accepts it.
+        self.add_post_answer_verb("play", {"url": "say:Sorry, this call can't be verified. Goodbye."})
+        self.add_post_answer_verb("hangup", {})
+        self.add_per_call_config(self.configure)
+
+    def configure(self, query_params, body_params, headers, agent):
+        call = body_params.get("call")
+        if isinstance(call, dict):  # the SWML fetch that starts the call
+            call_id = call.get("call_id")
+            if call_id and signature_is_valid(user_variables(body_params)):
+                self._verified.add(call_id)
+        else:  # a tool call or the summary
+            call_id = body_params.get("call_id")
+        if call_id not in self._verified:
+            return  # stays a goodbye with no tools
+        agent.define_tool(
+            "lookup", "Look up an account", {}, lambda args, raw: FunctionResult("...")
+        )
+        agent.clear_post_answer_verbs()  # last: a failure above leaves the goodbye
+```
+
+Since the call never reaches the `ai` verb, no tool, `on_call_start` or `on_call_end` handler runs for a rejected call. Forget a verified `call_id` when the call ends (in `on_call_end`, for example) or after a time limit.
+
 #### Error Handling
 
 1. **Graceful Degradation**: fall back to a default configuration if the custom one fails.
@@ -2044,9 +2132,39 @@ These hooks are particularly useful for:
 - Cleaning up temporary resources
 - Saving session data for analytics
 
+#### `on_call_start` and `on_call_end`
+
+`on_call_start()` and `on_call_end()` register handlers for the two hooks. Each can be used as a decorator or called directly, takes any number of handlers that run in registration order, and logs a handler's exception instead of raising it, so one failing handler doesn't stop the others.
+
+<!-- snippet: no-run illustrative fragment (`lookup_caller` and `archive` are your own helpers) -->
+```python
+from signalwire import AgentBase, FunctionResult
+
+agent = AgentBase(name="my-agent")
+
+@agent.on_call_start
+def load_caller(raw_data):
+    caller = lookup_caller(raw_data.get("caller_id_num"))
+    result = FunctionResult(f"The caller is {caller.name}, a {caller.tier} customer.")
+    return result.update_global_data({"customer_id": caller.id})
+
+@agent.on_call_end
+def save_call(call_log, raw_data):
+    archive(raw_data.get("call_id"), call_log)
+```
+
+An `on_call_start` handler receives the SWAIG request (`call_id`, `global_data`, `caller_id_num` and the rest) and may return a `FunctionResult` or `None`. The platform runs the hook once, after the call is answered and before the AI's first turn, and uses its reply:
+
+- The actions run at once, such as `update_global_data()` to give the call data before the conversation starts. Several handlers' actions run in registration order. `post_process` isn't used.
+- The response text is added to the conversation as a system message, so the model reads it before it speaks. Several handlers' texts are joined, one per line. Only a plain string response is used.
+
+The platform waits for the hook before the AI starts, so a slow handler delays the greeting; keep it short (see [Slow tools and the webhook timeout](#slow-tools-and-the-webhook-timeout)).
+
+An `on_call_end` handler receives the conversation (`call_log`) and the SWAIG request. Registering one turns on `swaig_post_conversation`, without which the hook carries no transcript. Its return value is ignored.
+
 #### Implementation
 
-To implement lifecycle hooks, define them as regular SWAIG functions with these specific names.
+To write a hook yourself instead, define a SWAIG function with the reserved name. Use one or the other for each hook: `on_call_start()` and `on_call_end()` define `startup_hook` and `hangup_hook` themselves.
 
 > **Note:** The SDK does not ship built-in session storage. The `update_state`,
 > `get_state`, and `delete_state` methods in the following example are
@@ -2165,7 +2283,7 @@ def hangup_hook(self, args, raw_data):
 2. **Error Handling**: Always implement proper error handling in hooks - failures shouldn't crash the voice session
 3. **Timing**: `startup_hook` is called before the AI starts speaking to the caller
 4. **Session Data**: Any data you need to persist across the session should be stored in external storage (Redis, database, etc.)
-5. **Return Values**: Both hooks must return a `FunctionResult` object
+5. **Return Values**: Both hooks must return a `FunctionResult` object. The `startup_hook`'s actions run and its response text is added to the conversation as a system message; the `hangup_hook`'s response is unused, since the call is over
 
 ### SIP Routing
 
