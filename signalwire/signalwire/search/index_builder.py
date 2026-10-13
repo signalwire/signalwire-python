@@ -56,6 +56,7 @@ class IndexBuilder:
         topic_threshold: float = 0.3,
         backend: str = "sqlite",
         connection_string: str | None = None,
+        embed_text: str = "content",
     ):
         """
         Initialize the index builder
@@ -75,6 +76,26 @@ class IndexBuilder:
             topic_threshold: Similarity threshold for topic chunking (default: 0.3)
             backend: Storage backend ('sqlite' or 'pgvector') (default: 'sqlite')
             connection_string: PostgreSQL connection string for pgvector backend
+            embed_text: What the embedding model sees for each chunk.
+                'content' (default) embeds the chunk text as written.
+                'processed' embeds the keyword-search text instead -- the
+                output of preprocess_document_content with the chunk's tags
+                appended -- which is what every index built before this option
+                used.
+
+                The keyword text is built for full-text matching: it lowercases,
+                drops stopwords and numbers, and keeps each word once. That
+                suits FTS but not an embedding model, which was trained on
+                ordinary prose. A rate-card row "| Local (10DLC) | $0.00660 |
+                $0.00800 |" is embedded as "local (10dlc)", every price gone.
+
+                One measurement, on one corpus (SignalWire's support corpus,
+                23,126 chunks of docs, SDK guides, API reference, pricing and
+                articles; all-MiniLM-L6-v2; 39 hand-labelled questions; vector
+                ranking only): MRR@10 0.563 with 'processed', 0.615 with
+                'content', and 0.562 with content plus tags appended. Your
+                corpus may differ; the option exists so you can measure both.
+                Keyword search uses processed_content either way.
         """
         self.model_name = model_name
         self.chunking_strategy = chunking_strategy
@@ -89,6 +110,7 @@ class IndexBuilder:
         self.topic_threshold = topic_threshold
         self.backend = backend
         self.connection_string = connection_string
+        self.embed_text = embed_text
         # SentenceTransformer instance, loaded lazily in _load_model(); the lib
         # ships no stubs, so this is effectively Any once populated.
         self.model: Any = None
@@ -97,6 +119,11 @@ class IndexBuilder:
         if self.backend not in ["sqlite", "pgvector"]:
             raise ValueError(
                 f"Invalid backend '{self.backend}'. Must be 'sqlite' or 'pgvector'"
+            )
+
+        if self.embed_text not in ("content", "processed"):
+            raise ValueError(
+                f"Invalid embed_text '{self.embed_text}'. Must be 'content' or 'processed'"
             )
 
         # Validate NLP backend
@@ -273,11 +300,14 @@ class IndexBuilder:
 
                 chunk["keywords"] = keywords
 
-                # For embedding, include tags in the text for better semantic matching
-                embedding_text = processed["enhanced_text"]
-                if chunk_tags:
-                    # Append tags to the text for embedding generation
-                    embedding_text += " " + " ".join(chunk_tags)
+                # The embedding sees the chunk as written unless asked for the
+                # keyword text; see embed_text in __init__ for why.
+                if self.embed_text == "content":
+                    embedding_text = chunk["content"]
+                else:
+                    embedding_text = processed["enhanced_text"]
+                    if chunk_tags:
+                        embedding_text += " " + " ".join(chunk_tags)
 
                 # Generate embedding (suppress progress bar)
                 embedding = self.model.encode(embedding_text, show_progress_bar=False)
@@ -707,6 +737,7 @@ class IndexBuilder:
                 "min_chunk_size": str(self.min_chunk_size),
                 "chunk_overlap": str(self.chunk_overlap),
                 "preprocessing_version": "1.0",
+                "embed_text": self.embed_text,
                 "languages": json.dumps(languages),
                 "created_at": datetime.now().isoformat(),
                 "sources": json.dumps(
@@ -930,6 +961,7 @@ class IndexBuilder:
                     "chunk_size": self.chunk_size,
                     "chunk_overlap": self.chunk_overlap,
                     "index_nlp_backend": self.index_nlp_backend,
+                    "embed_text": self.embed_text,
                 },
             }
 

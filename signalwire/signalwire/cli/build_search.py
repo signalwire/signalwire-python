@@ -319,6 +319,17 @@ Documentation: sw-pydocs prints the SDK's installed docs, examples and API.
         ),
     )
 
+    parser.add_argument(
+        "--embed-text",
+        choices=["content", "processed"],
+        default="content",
+        help=(
+            "What the embedding model sees: the chunk as written (content, "
+            "default) or the keyword-search text with tags appended (processed, "
+            "how indexes were built before this option). See IndexBuilder."
+        ),
+    )
+
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
 
     parser.add_argument(
@@ -519,6 +530,7 @@ def main() -> None:
                 chunk_overlap=args.overlap_size,
                 split_newlines=args.split_newlines,
                 index_nlp_backend=args.index_nlp_backend,
+                embed_text=args.embed_text,
                 verbose=args.verbose,
                 semantic_threshold=args.semantic_threshold,
                 topic_threshold=args.topic_threshold,
@@ -629,6 +641,7 @@ def main() -> None:
             chunk_overlap=args.overlap_size,
             split_newlines=args.split_newlines,
             index_nlp_backend=args.index_nlp_backend,
+            embed_text=args.embed_text,
             verbose=args.verbose,
             semantic_threshold=args.semantic_threshold,
             topic_threshold=args.topic_threshold,
