@@ -358,3 +358,51 @@ class TestPlatformParsingDetails:
         })
         lookup = _functions(agent)["lookup"]
         assert not [k for k in lookup if k.lower() == "gate_fillers"]
+
+
+class TestGateVisualInput:
+    """A gate's visual_input: the caller's video frames the decision model
+    sees with it. The platform reads true as 1, false as 0, and a whole
+    number from 0 to 5 (ai_visual_input_count); anything else refuses the
+    function. The SDK refused the key outright in 3.7.0."""
+
+    @pytest.mark.parametrize("value", [True, False, 0, 1, 5, 2.0])
+    def test_values_the_platform_reads_are_accepted(self, value: Any) -> None:
+        gate = gate_definitions([_gate(visual_input=value)], "verify_id")[0]
+        assert gate["visual_input"] == value
+
+    @pytest.mark.parametrize("value", [6, -1, 1.5, "1", None, float("nan")])
+    def test_other_values_are_refused(self, value: Any) -> None:
+        with pytest.raises(ValueError, match=(
+                "verify_id: gate 1: visual_input must be true, false or a whole "
+                "number from 0 to 5")):
+            gate_definitions([_gate(visual_input=value)], "verify_id")
+
+    def test_semantic_gate_sends_it_only_when_set(self) -> None:
+        gate = SemanticGate("Is the caller holding a photo ID up to the camera "
+                            "in `visual_input`?", 0.9, "verify_id was not run.",
+                            visual_input=2)
+        assert gate.to_dict()["visual_input"] == 2
+        assert "visual_input" not in SemanticGate("Q?", 0.9, "no").to_dict()
+
+    def test_a_data_map_gate_is_checked_the_same_way(self) -> None:
+        data_map = (DataMap("verify_id").description("Verify the caller's ID")
+                    .webhook("POST", "https://api.example.com/verify")
+                    .output(FunctionResult("Verified."))
+                    .gate(_gate(visual_input=6)))
+        with pytest.raises(ValueError, match="visual_input must be true, false"):
+            data_map.to_swaig_function()
+
+    def test_a_tool_renders_the_gates_and_its_own_visual_input(self) -> None:
+        agent = _agent()
+        agent.define_tool(
+            name="verify_id", description="Verify the caller's ID", parameters={},
+            handler=_handler, visual_input=1,
+            gates=[SemanticGate("Is the caller holding a photo ID up to the camera "
+                                "in `visual_input`?", 0.9, "verify_id was not run.",
+                                visual_input=True)],
+        )
+        verify = _functions(agent)["verify_id"]
+        assert verify["gates"][0]["visual_input"] is True
+        # The function's own visual_input, frames sent to its webhook, is separate
+        assert verify["visual_input"] == 1

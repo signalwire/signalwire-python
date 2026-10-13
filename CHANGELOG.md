@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Semantic gates take `visual_input`: how many of the caller's newest video
+  frames the decision model sees with the gate, true for 1 or a whole number
+  up to 5. `SemanticGate(visual_input=...)` sets it, and gate dicts are
+  checked by the platform's rule. 3.7.0 refused the key, so a gate that
+  looks at the caller's video could only be written in raw SWML.
+
 ## [3.7.0] - 2026-10-12
 
 ### Fixed

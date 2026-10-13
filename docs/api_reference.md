@@ -650,12 +650,13 @@ agent.define_tool(
 )
 ```
 
-`SemanticGate(question, threshold, on_fail, *, id=None, true_means=None, false_means=None)`:
+`SemanticGate(question, threshold, on_fail, *, id=None, true_means=None, false_means=None, visual_input=None)`:
 - `question` (str): The yes/no question, at most 8 KB. Its `${...}` variables are expanded from the call's global data when the gate is checked
 - `threshold` (float): The probability of yes, above 0 and at most 1, at or above which the gate passes
 - `on_fail` (Union[str, FunctionResult, Dict[str, Any]]): What the model gets when this is the first gate that fails: the tool result text, a `FunctionResult`, whose response and actions are used, or a data_map output dict. It needs a response, and in the `tool_result`/`tool_prompt` form a `tool_result`: a blocked call must never read as a success. The `tool_prompt` becomes a system message after the tool result; OpenAI Realtime agents don't use it, so put what they need in the `tool_result`. The actions run as written, without template expansion
 - `id` (Optional[str]): 1 to 64 letters, digits or underscores, unique within the function. Default `gate_<n>`, 1-based
 - `true_means`, `false_means` (Optional[str]): What yes and no mean, at most 2 KB each
+- `visual_input` (Optional[Union[bool, int]]): How many of the caller's newest video frames the decision model sees with this gate, as `visual_input`: True is 1, False or 0 none, or a whole number up to 5. Name it in the question, as in "Is the caller holding a photo ID up to the camera in `visual_input`?". All of a function's gates share one request, so each sees as many frames as the gate asking for the most. The gate provider must take images; one that doesn't makes the check a configuration error, which blocks the call. Left out by default. A function's own `visual_input`, frames sent to its webhook, is a separate `define_tool()` field
 
 Gates are checked by the platform's rules when the tool is defined. The platform refuses the whole function for an invalid gate, so the SDK raises `ValueError` instead. Gates aren't allowed on the hook names `startup_hook`, `hangup_hook` and `check_for_input`, on `end_call`, or on a built-in function's name.
 
