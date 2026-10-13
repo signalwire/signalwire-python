@@ -1,5 +1,18 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- SQLite search indexes compare the query with every chunk's embedding. Vector
+  search read only the first 10,000 rows (`LIMIT 10000`, no ordering), so in a
+  larger index the chunks after them were never scored and couldn't be found
+  by meaning, however close they were. It now scores every embedding, one
+  matrix product per batch of 4,096, keeping only the best `count` between
+  batches, and reads the content of just those. It's faster too: on 10,000
+  chunks of 384 dimensions a query went from 781 ms to 7 ms, and 100,000
+  chunks take 65 ms. An embedding whose size doesn't match the query is
+  skipped with a warning, as before; an all-zero one scores 0.
+
 ## [3.7.0] - 2026-10-12
 
 ### Fixed

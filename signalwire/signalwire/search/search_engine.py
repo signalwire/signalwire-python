@@ -423,76 +423,110 @@ class SearchEngine:
 
         return keyword_results[:count]
 
+    # Embeddings scored per batch. Each batch is one matrix product, and only the
+    # best `count` so far are kept between batches, so memory stays bounded by the
+    # batch, not the index.
+    VECTOR_BATCH = 4096
+
     def _vector_search(
         self, query_vector: NDArray | Any, count: int
     ) -> list[dict[str, Any]]:
-        """Perform vector similarity search"""
+        """The `count` chunks most similar to `query_vector` (cosine), best first.
+
+        Every chunk with an embedding is scored. This used to read the first
+        10,000 rows (``LIMIT 10000`` with no ORDER BY), so in a larger index the
+        chunks after them were never compared at all and could not be found by
+        meaning however close they were: no error, just missing results.
+        """
         if not np or not cosine_similarity:
+            return []
+        if count <= 0:
             return []
 
         conn = None
         try:
+            q = np.asarray(query_vector, dtype=np.float32).reshape(-1)
+            q_norm = float(np.linalg.norm(q))
+            if q_norm == 0.0:
+                return []
+            q = q / q_norm
+            dims = q.shape[0]
+            expected_bytes = dims * 4
+
             conn = sqlite3.connect(self.index_path)
             cursor = conn.cursor()
-
-            # Get all embeddings (for small datasets, this is fine)
-            # For large datasets, we'd use FAISS or similar
             cursor.execute("""
-                SELECT id, content, embedding, filename, section, tags, metadata
+                SELECT id, embedding
                 FROM chunks
                 WHERE embedding IS NOT NULL AND embedding != ''
-                LIMIT 10000
             """)
 
+            best_ids: NDArray | Any = np.empty(0, dtype=np.int64)
+            best_scores: NDArray | Any = np.empty(0, dtype=np.float32)
+            while True:
+                rows = cursor.fetchmany(self.VECTOR_BATCH)
+                if not rows:
+                    break
+                ids = []
+                blobs = []
+                for chunk_id, blob in rows:
+                    if not blob or len(blob) != expected_bytes:
+                        logger.warning(
+                            f"Skipping chunk {chunk_id}: its embedding has "
+                            f"{len(blob or b'') // 4} dimensions, the query has {dims}"
+                        )
+                        continue
+                    ids.append(chunk_id)
+                    blobs.append(blob)
+                if not ids:
+                    continue
+                matrix = np.frombuffer(b"".join(blobs), dtype=np.float32).reshape(
+                    len(ids), dims
+                )
+                norms = np.linalg.norm(matrix, axis=1)
+                norms[norms == 0] = 1.0  # a zero vector scores 0, not NaN
+                scores = (matrix @ q) / norms
+                best_ids = np.concatenate([best_ids, np.asarray(ids, dtype=np.int64)])
+                best_scores = np.concatenate([best_scores, scores.astype(np.float32)])
+                if len(best_scores) > count:
+                    keep = np.argpartition(-best_scores, count - 1)[:count]
+                    best_ids, best_scores = best_ids[keep], best_scores[keep]
+
+            order = np.argsort(-best_scores, kind="stable")
+            top = [(int(best_ids[k]), float(best_scores[k])) for k in order]
+            if not top:
+                return []
+
+            cursor.execute(
+                "SELECT id, content, filename, section, tags, metadata FROM chunks "
+                "WHERE id IN (SELECT value FROM json_each(?))",
+                (json.dumps([chunk_id for chunk_id, _ in top]),),
+            )
+            rows_by_id = {row[0]: row for row in cursor.fetchall()}
+
             results = []
-            for row in cursor.fetchall():
-                (
-                    chunk_id,
-                    content,
-                    embedding_blob,
-                    filename,
-                    section,
-                    tags_json,
-                    metadata_json,
-                ) = row
-
-                if not embedding_blob:
+            for chunk_id, score in top:
+                row = rows_by_id.get(chunk_id)
+                if row is None:
                     continue
-
-                try:
-                    # Convert embedding back to numpy array
-                    embedding = np.frombuffer(embedding_blob, dtype=np.float32).reshape(
-                        1, -1
-                    )
-
-                    # Calculate similarity
-                    similarity = cosine_similarity(query_vector, embedding)[0][0]
-
-                    results.append(
-                        {
-                            "id": chunk_id,
-                            "content": content,
-                            "score": float(similarity),
-                            "metadata": {
-                                "filename": filename,
-                                "section": section,
-                                "tags": json.loads(tags_json) if tags_json else [],
-                                "metadata": json.loads(metadata_json)
-                                if metadata_json
-                                else {},
-                            },
-                            "search_type": "vector",
-                        }
-                    )
-                except Exception as e:
-                    logger.warning(
-                        f"Error processing embedding for chunk {chunk_id}: {e}"
-                    )
-                    continue
-
-            # Sort by similarity score
-            results.sort(key=lambda x: x["score"], reverse=True)
-            return results[:count]
+                _, content, filename, section, tags_json, metadata_json = row
+                results.append(
+                    {
+                        "id": chunk_id,
+                        "content": content,
+                        "score": score,
+                        "metadata": {
+                            "filename": filename,
+                            "section": section,
+                            "tags": json.loads(tags_json) if tags_json else [],
+                            "metadata": json.loads(metadata_json)
+                            if metadata_json
+                            else {},
+                        },
+                        "search_type": "vector",
+                    }
+                )
+            return results
 
         except Exception as e:
             logger.error(f"Error in vector search: {e}")

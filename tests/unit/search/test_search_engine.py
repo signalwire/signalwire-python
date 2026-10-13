@@ -142,36 +142,18 @@ class TestSearchEngineVectorSearch:
         """Clean up test database"""
         os.unlink(self.db_path)
     
-    @patch('signalwire.search.search_engine.np')
-    @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_vector_search_success(self, mock_cosine_sim: MagicMock, mock_np: MagicMock) -> None:
-        """Test successful vector search"""
-        # Mock numpy and cosine similarity
-        query_array = Mock()
-        query_array.reshape.return_value = [[0.1, 0.2, 0.3]]
-        mock_np.array.return_value = query_array
-        
-        # Mock frombuffer to return proper arrays
-        embedding1 = Mock()
-        embedding1.reshape.return_value = [[0.1, 0.2, 0.3]]
-        embedding2 = Mock()
-        embedding2.reshape.return_value = [[0.4, 0.5, 0.6]]
-        
-        mock_np.frombuffer.side_effect = [embedding1, embedding2]
-        mock_cosine_sim.side_effect = [
-            [[0.95]],  # High similarity for first chunk
-            [[0.75]]   # Lower similarity for second chunk
-        ]
-        
+    def test_vector_search_success(self) -> None:
+        """Both chunks come back, best cosine first, with their content."""
         engine = SearchEngine(backend='sqlite', index_path=self.db_path)
         results = engine._vector_search([[0.1, 0.2, 0.3]], count=2)
 
         assert len(results) == 2
-        assert results[0]['score'] == 0.95
         assert results[0]['content'] == 'Test content 1'
+        assert results[0]['score'] == pytest.approx(1.0, abs=1e-6)
         assert results[0]['search_type'] == 'vector'
-        assert results[1]['score'] == 0.75
         assert results[1]['content'] == 'Test content 2'
+        # cos([0.1, 0.2, 0.3], [0.4, 0.5, 0.6])
+        assert results[1]['score'] == pytest.approx(0.974632, abs=1e-5)
 
     @patch('signalwire.search.search_engine.np', None)
     @patch('signalwire.search.search_engine.cosine_similarity', None)
@@ -1005,90 +987,137 @@ class TestSearch:
 # ---------------------------------------------------------------------------
 
 class TestVectorSearch:
-    """Tests for _vector_search()."""
+    """Tests for _vector_search(), with real numpy over a real index file."""
 
-    @patch('signalwire.search.search_engine.np')
-    @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_returns_sorted_by_score(self, mock_cosine: MagicMock, mock_np: MagicMock, full_db: str) -> None:
+    def test_returns_sorted_by_score(self, full_db: str) -> None:
         """Results are sorted by similarity descending."""
-        # Set up mock so frombuffer returns mock arrays
-        mock_array = Mock()
-        mock_array.reshape.return_value = [[0.0]]
-        mock_np.frombuffer.return_value = mock_array
-        mock_np.float32 = 'float32'
-        # Return decreasing similarities
-        mock_cosine.side_effect = [[[0.5]], [[0.9]], [[0.3]], [[0.7]], [[0.4]], [[0.6]]]
-
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._vector_search([[0.9, 0.1, 0.0, 0.0]], count=6)
         scores = [r['score'] for r in results]
+        assert len(results) == 6
         assert scores == sorted(scores, reverse=True)
+        assert results[0]['content'] == 'Python programming tutorial for beginners'
 
-    @patch('signalwire.search.search_engine.np')
-    @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_limits_count(self, mock_cosine: MagicMock, mock_np: MagicMock, full_db: str) -> None:
-        """Returns at most `count` results."""
-        mock_array = Mock()
-        mock_array.reshape.return_value = [[0.0]]
-        mock_np.frombuffer.return_value = mock_array
-        mock_np.float32 = 'float32'
-        mock_cosine.return_value = [[0.8]]
-
+    def test_limits_count(self, full_db: str) -> None:
+        """Returns exactly `count` results when there are more chunks."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._vector_search([[0.9, 0.1, 0.0, 0.0]], count=2)
-        assert len(results) <= 2
+        assert len(results) == 2
 
-    @patch('signalwire.search.search_engine.np')
-    @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_metadata_parsed_correctly(self, mock_cosine: MagicMock, mock_np: MagicMock, full_db: str) -> None:
+    def test_zero_count_returns_empty(self, full_db: str) -> None:
+        engine = SearchEngine(backend='sqlite', index_path=full_db)
+        assert engine._vector_search([[0.9, 0.1, 0.0, 0.0]], count=0) == []
+
+    def test_metadata_parsed_correctly(self, full_db: str) -> None:
         """Metadata (tags, section, filename) is correctly parsed."""
-        mock_array = Mock()
-        mock_array.reshape.return_value = [[0.0]]
-        mock_np.frombuffer.return_value = mock_array
-        mock_np.float32 = 'float32'
-        mock_cosine.return_value = [[0.95]]
-
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._vector_search([[0.9, 0.1, 0.0, 0.0]], count=1)
         assert len(results) == 1
         md = results[0]['metadata']
-        assert 'filename' in md
-        assert 'section' in md
-        assert isinstance(md['tags'], list)
+        assert md['filename'] == 'docs/python_tutorial.md'
+        assert md['section'] == 'introduction'
+        assert md['tags'] == ['python', 'tutorial', 'beginner']
 
-    @patch('signalwire.search.search_engine.np')
-    @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_skips_empty_embeddings(self, mock_cosine: MagicMock, mock_np: MagicMock, db_no_embeddings: str) -> None:
+    def test_skips_empty_embeddings(self, db_no_embeddings: str) -> None:
         """Chunks with NULL embeddings are skipped."""
-        mock_np.frombuffer.return_value = Mock(reshape=Mock(return_value=[[0.0]]))
-        mock_np.float32 = 'float32'
-        mock_cosine.return_value = [[0.8]]
-
         engine = SearchEngine(backend='sqlite', index_path=db_no_embeddings)
         results = engine._vector_search([[0.1, 0.1, 0.1, 0.1]], count=10)
         assert results == []
 
-    @patch('signalwire.search.search_engine.np')
-    @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_handles_embedding_processing_error(self, mock_cosine: MagicMock, mock_np: MagicMock, full_db: str) -> None:
-        """Gracefully continues when one embedding fails to process."""
-        call_count = [0]
-        def frombuffer_side_effect(*args: Any, **kwargs: Any) -> Mock:
-            call_count[0] += 1
-            if call_count[0] == 2:
-                raise ValueError("corrupt embedding")
-            m = Mock()
-            m.reshape.return_value = [[0.0]]
-            return m
-
-        mock_np.frombuffer.side_effect = frombuffer_side_effect
-        mock_np.float32 = 'float32'
-        mock_cosine.return_value = [[0.8]]
-
-        engine = SearchEngine(backend='sqlite', index_path=full_db)
+    def test_skips_embeddings_of_another_size(self, tmp_path: Path) -> None:
+        """A chunk whose embedding has the wrong number of dimensions is skipped;
+        the rest are still scored."""
+        import struct
+        bad = struct.pack('3f', 1.0, 0.0, 0.0)
+        db = _create_full_test_db(str(tmp_path / 'mixed.db'), extra_chunks=[{
+            'content': 'Wrong-sized embedding', 'embedding': bad,
+            'filename': 'bad.md', 'section': 's', 'tags': '[]', 'metadata': '{}',
+            'language': 'en', 'processed_content': 'wrong-sized embedding',
+        }])
+        engine = SearchEngine(backend='sqlite', index_path=db)
         results = engine._vector_search([[0.9, 0.1, 0.0, 0.0]], count=10)
-        # Should still return results from non-corrupt chunks
-        assert len(results) >= 1
+        contents = [r['content'] for r in results]
+        assert 'Wrong-sized embedding' not in contents
+        assert contents[0] == 'Python programming tutorial for beginners'
+
+    def test_zero_embedding_scores_zero(self, tmp_path: Path) -> None:
+        """An all-zero embedding scores 0 instead of NaN."""
+        import struct
+        zero = struct.pack('4f', 0.0, 0.0, 0.0, 0.0)
+        db = _create_full_test_db(str(tmp_path / 'zero.db'), extra_chunks=[{
+            'content': 'Zero embedding', 'embedding': zero,
+            'filename': 'zero.md', 'section': 's', 'tags': '[]', 'metadata': '{}',
+            'language': 'en', 'processed_content': 'zero embedding',
+        }])
+        engine = SearchEngine(backend='sqlite', index_path=db)
+        results = engine._vector_search([[0.9, 0.1, 0.0, 0.0]], count=10)
+        zero_hit = next(r for r in results if r['content'] == 'Zero embedding')
+        assert zero_hit['score'] == 0.0
+        assert results[-1]['content'] == 'Zero embedding'
+
+    def test_zero_query_returns_empty(self, full_db: str) -> None:
+        engine = SearchEngine(backend='sqlite', index_path=full_db)
+        assert engine._vector_search([[0.0, 0.0, 0.0, 0.0]], count=5) == []
+
+    def test_scores_chunks_past_the_first_ten_thousand(self, tmp_path: Path) -> None:
+        """Regression: the search read only the first 10,000 rows, so a closer
+        chunk stored after them was never compared and could not be found."""
+        import numpy as np
+        db = str(tmp_path / 'big.db')
+        conn = sqlite3.connect(db)
+        conn.execute("CREATE TABLE config (key TEXT, value TEXT)")
+        conn.execute("INSERT INTO config VALUES ('embedding_dimensions', '4')")
+        conn.execute(
+            "CREATE TABLE chunks (id INTEGER PRIMARY KEY, content TEXT, embedding BLOB, "
+            "filename TEXT, section TEXT, tags TEXT, metadata TEXT)"
+        )
+        far = np.array([0.0, 1.0, 0.0, 0.0], dtype=np.float32).tobytes()
+        conn.executemany(
+            "INSERT INTO chunks (content, embedding, filename) VALUES (?, ?, ?)",
+            [(f'filler {i}', far, f'f{i}.md') for i in range(10_000)],
+        )
+        near = np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float32).tobytes()
+        conn.execute(
+            "INSERT INTO chunks (content, embedding, filename) VALUES (?, ?, ?)",
+            ('the answer', near, 'answer.md'),
+        )
+        conn.commit()
+        conn.close()
+
+        engine = SearchEngine(backend='sqlite', index_path=db)
+        results = engine._vector_search([[1.0, 0.0, 0.0, 0.0]], count=3)
+        assert results[0]['content'] == 'the answer'
+        assert results[0]['id'] == 10_001
+        assert results[0]['score'] == pytest.approx(1.0)
+
+    def test_batches_give_the_same_ranking_as_one_pass(self, tmp_path: Path) -> None:
+        """Scoring in small batches keeps exactly the top `count` of a full scan."""
+        import numpy as np
+        rng = np.random.default_rng(3)
+        vecs = rng.standard_normal((257, 8)).astype(np.float32)
+        db = str(tmp_path / 'batched.db')
+        conn = sqlite3.connect(db)
+        conn.execute("CREATE TABLE config (key TEXT, value TEXT)")
+        conn.execute("INSERT INTO config VALUES ('embedding_dimensions', '8')")
+        conn.execute(
+            "CREATE TABLE chunks (id INTEGER PRIMARY KEY, content TEXT, embedding BLOB, "
+            "filename TEXT, section TEXT, tags TEXT, metadata TEXT)"
+        )
+        conn.executemany(
+            "INSERT INTO chunks (id, content, embedding, filename) VALUES (?, ?, ?, ?)",
+            [(i + 1, f'c{i}', v.tobytes(), 'f.md') for i, v in enumerate(vecs)],
+        )
+        conn.commit()
+        conn.close()
+        q = rng.standard_normal(8).astype(np.float32)
+        cos = (vecs @ q) / (np.linalg.norm(vecs, axis=1) * np.linalg.norm(q))
+        expected = [int(i) + 1 for i in np.argsort(-cos)[:10]]
+
+        engine = SearchEngine(backend='sqlite', index_path=db)
+        engine.VECTOR_BATCH = 7
+        results = engine._vector_search([q.tolist()], count=10)
+        assert [r['id'] for r in results] == expected
+        assert [r['score'] for r in results] == pytest.approx([float(cos[i - 1]) for i in expected], abs=1e-5)
 
     @patch('signalwire.search.search_engine.np', None)
     @patch('signalwire.search.search_engine.cosine_similarity', None)
@@ -1097,25 +1126,16 @@ class TestVectorSearch:
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         assert engine._vector_search([[0.1]], count=5) == []
 
-    @patch('signalwire.search.search_engine.np')
-    @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_db_error_returns_empty(self, mock_cosine: MagicMock, mock_np: MagicMock) -> None:
+    def test_db_error_returns_empty(self) -> None:
         """Returns [] when the database cannot be opened."""
         engine = SearchEngine(backend='sqlite', index_path='/no/such/file.db')
-        assert engine._vector_search([[0.1]], count=5) == []
+        assert engine._vector_search([[0.1, 0.0, 0.0, 0.0]], count=5) == []
 
-    @patch('signalwire.search.search_engine.np')
-    @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_search_type_is_vector(self, mock_cosine: MagicMock, mock_np: MagicMock, full_db: str) -> None:
+    def test_search_type_is_vector(self, full_db: str) -> None:
         """All results have search_type == 'vector'."""
-        mock_array = Mock()
-        mock_array.reshape.return_value = [[0.0]]
-        mock_np.frombuffer.return_value = mock_array
-        mock_np.float32 = 'float32'
-        mock_cosine.return_value = [[0.7]]
-
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._vector_search([[0.1, 0.1, 0.1, 0.1]], count=10)
+        assert results
         for r in results:
             assert r['search_type'] == 'vector'
 
