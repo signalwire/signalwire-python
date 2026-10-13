@@ -38,8 +38,10 @@ MAX_GATES = 8
 MAX_QUESTION_BYTES = 8192
 MAX_CRITERIA_BYTES = 2048
 MAX_ON_FAIL_BYTES = 8192
+# The most caller video frames a gate may ask for (AI_VISUAL_INPUT_MAX)
+MAX_VISUAL_INPUT = 5
 
-_GATE_KEYS = ("id", "question", "criteria", "threshold", "on_fail")
+_GATE_KEYS = ("id", "question", "criteria", "threshold", "on_fail", "visual_input")
 _GATE_ID = re.compile(r"[A-Za-z0-9_]{1,64}")
 
 # Hooks the platform calls itself, the function OART intercepts by name, and
@@ -102,6 +104,7 @@ class SemanticGate:
         id: str | None = None,
         true_means: str | None = None,
         false_means: str | None = None,
+        visual_input: bool | int | None = None,
     ) -> None:
         """
         Args:
@@ -122,6 +125,14 @@ class SemanticGate:
                 within the function. Default ``gate_<n>``, 1-based.
             true_means: What yes means, at most 2 KB.
             false_means: What no means, at most 2 KB.
+            visual_input: How many of the caller's newest video frames the
+                decision model sees with this gate, as ``visual_input``:
+                True is 1, False or 0 none, or a whole number up to 5. All of
+                a function's gates share one request, so each sees as many
+                frames as the gate asking for the most. The gate's provider
+                must take images; one that doesn't makes the check a
+                configuration error, which blocks the call. Default: no
+                frames, and the key is left out.
 
         Raises:
             ValueError: If ``on_fail`` has no response: a blocked call must
@@ -136,6 +147,7 @@ class SemanticGate:
         if false_means is not None:
             self.criteria["false"] = false_means
         self.on_fail: dict[str, Any] = _on_fail(on_fail)
+        self.visual_input = visual_input
 
     def to_dict(self) -> dict[str, Any]:
         """The gate as the platform reads it."""
@@ -147,6 +159,8 @@ class SemanticGate:
             gate["criteria"] = dict(self.criteria)
         gate["threshold"] = self.threshold
         gate["on_fail"] = json.loads(json.dumps(self.on_fail))
+        if self.visual_input is not None:
+            gate["visual_input"] = self.visual_input
         return gate
 
 
@@ -341,7 +355,27 @@ def _check_gate(gate: Any) -> str:
         gate_id = gate["id"]
         if not isinstance(gate_id, str) or not _GATE_ID.fullmatch(gate_id):
             return "id must be 1 to 64 letters, digits or underscores"
+    if "visual_input" in gate and not _valid_visual_input(gate["visual_input"]):
+        return (
+            "visual_input must be true, false or a whole number from 0 to "
+            f"{MAX_VISUAL_INPUT}"
+        )
     return ""
+
+
+def _valid_visual_input(value: Any) -> bool:
+    """Whether the platform reads ``value`` as a frame count.
+
+    A boolean, or a JSON number that is whole and from 0 to 5: 2.0 counts as
+    2, and 1.5, -1, 6, null and strings are refused.
+    """
+    if isinstance(value, bool):
+        return True
+    if not isinstance(value, (int, float)):
+        return False
+    if isinstance(value, float) and not (math.isfinite(value) and value.is_integer()):
+        return False
+    return 0 <= value <= MAX_VISUAL_INPUT
 
 
 def gate_definitions(
