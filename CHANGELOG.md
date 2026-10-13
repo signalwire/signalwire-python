@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [3.7.1] - 2026-10-13
 
 ### Added
 - Semantic gates take `visual_input`: how many of the caller's newest video
