@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [3.7.0] - 2026-10-12
 
 ### Fixed
 - Search indexes embed each chunk's text as written. They used to embed the
