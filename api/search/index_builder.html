@@ -4972,6 +4972,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.search.index_builder.IndexBuilder.embed_text" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        embed_text
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.search.index_builder.IndexBuilder.model" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -7698,6 +7709,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.search.index_builder.IndexBuilder.embed_text" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        embed_text
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.search.index_builder.IndexBuilder.model" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -8148,6 +8170,26 @@ See LICENSE file in the project root for full license information.</p>
 
 
 
+<h4 id="signalwire.search.index_builder.IndexBuilder.embed_text" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">embed_text</span> <span class="o">=</span> <span class="n">embed_text</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#signalwire.search.index_builder.IndexBuilder.embed_text" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
 <h4 id="signalwire.search.index_builder.IndexBuilder.model" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">model</span> <span class="o">=</span> <span class="kc">None</span></code>
 
@@ -8191,7 +8233,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h4 id="signalwire.search.index_builder.IndexBuilder.__init__" class="doc doc-heading">
-            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">model_name</span><span class="o">=</span><span class="s1">'sentence-transformers/all-mpnet-base-v2'</span><span class="p">,</span> <span class="n">chunking_strategy</span><span class="o">=</span><span class="s1">'sentence'</span><span class="p">,</span> <span class="n">max_sentences_per_chunk</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">min_chunk_size</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">chunk_overlap</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">split_newlines</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">index_nlp_backend</span><span class="o">=</span><span class="s1">'nltk'</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">semantic_threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">topic_threshold</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s1">'sqlite'</span><span class="p">,</span> <span class="n">connection_string</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">model_name</span><span class="o">=</span><span class="s1">'sentence-transformers/all-mpnet-base-v2'</span><span class="p">,</span> <span class="n">chunking_strategy</span><span class="o">=</span><span class="s1">'sentence'</span><span class="p">,</span> <span class="n">max_sentences_per_chunk</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">min_chunk_size</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">chunk_overlap</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">split_newlines</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">index_nlp_backend</span><span class="o">=</span><span class="s1">'nltk'</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">semantic_threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">topic_threshold</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s1">'sqlite'</span><span class="p">,</span> <span class="n">connection_string</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">embed_text</span><span class="o">=</span><span class="s1">'content'</span><span class="p">)</span></code>
 
 <a href="#signalwire.search.index_builder.IndexBuilder.__init__" class="headerlink" title="Permanent link">&para;</a></h4>
 
@@ -8419,6 +8461,39 @@ heading starts a new chunk (default: 0, split at every heading)</p>
             </td>
             <td>
                   <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>embed_text</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>What the embedding model sees for each chunk.
+'content' (default) embeds the chunk text as written.
+'processed' embeds the keyword-search text instead -- the
+output of preprocess_document_content with the chunk's tags
+appended -- which is what every index built before this option
+used.</p>
+<p>The keyword text is built for full-text matching: it lowercases,
+drops stopwords and numbers, and keeps each word once. That
+suits FTS but not an embedding model, which was trained on
+ordinary prose. A rate-card row "| Local (10DLC) | $0.00660 |
+$0.00800 |" is embedded as "local (10dlc)", every price gone.</p>
+<p>One measurement, on one corpus (SignalWire's support corpus,
+23,126 chunks of docs, SDK guides, API reference, pricing and
+articles; all-MiniLM-L6-v2; 39 hand-labelled questions; vector
+ranking only): MRR@10 0.563 with 'processed', 0.615 with
+'content', and 0.562 with content plus tags appended. Your
+corpus may differ; the option exists so you can measure both.
+Keyword search uses processed_content either way.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;content&#39;</code>
             </td>
           </tr>
       </tbody>
