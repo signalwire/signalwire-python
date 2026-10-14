@@ -1696,6 +1696,20 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         `set_dynamic_config_callback` requires them to find and manually chain
         each other's callbacks, and silently drops one when they don't.
 
+        Rejecting a call: a callback can't refuse the request, but it can
+        decide what the call does. Build the agent to fail closed -- in the
+        constructor, `add_post_answer_verb("play", {"url": "say:..."})` and
+        `add_post_answer_verb("hangup", {})`, and no tools -- so the call
+        hears the message and hangs up before the `ai` verb runs. For a call
+        the callback accepts, add the tools to `agent` and call
+        `agent.clear_post_answer_verbs()` last. A callback that raises is
+        logged and the copy is rendered as it stands, so a failure before
+        that last step leaves the goodbye in place. Callbacks run for every
+        request of the call (the SWML fetch, each tool call, the summary),
+        and only the SWML fetch carries the caller's data (such as
+        `userVariables`): verify there, remember the `call_id`, and check it
+        on later requests. See "Rejecting a Call" in docs/agent_guide.md.
+
         Args:
             callback: Callable taking (query_params, body_params, headers, agent).
                       `agent` is the EPHEMERAL per-request copy; configure that,

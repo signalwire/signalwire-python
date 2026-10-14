@@ -135,7 +135,13 @@ Per-call configuration: `set_dynamic_config_callback()` configures a copy of
 the agent for each request, from its query parameters, body and headers, for
 per-tenant prompts, voices and tools. The callback runs in a worker thread,
 at the same time as other calls' callbacks. Don't keep per-caller state on the
-shared agent instance.
+shared agent instance. To turn a call away, build the agent with `play` and
+`hangup` post-answer verbs and no tools, and have the callback add the tools
+and call `clear_post_answer_verbs()` only for a call it accepts.
+
+Call start and end: `on_call_start()` runs handlers before the AI's first
+turn, and their `FunctionResult` text and actions reach the call;
+`on_call_end()` runs handlers with the transcript when the call ends.
 
 Configuration precedence: constructor arguments, then the config file, then
 environment variables, then defaults.
@@ -175,6 +181,9 @@ environment variables, then defaults.
         "signalwire.AgentBase.set_dynamic_config_callback",
         "signalwire.AgentBase.get_app",
         "signalwire.AgentBase.on_summary",
+        "signalwire.AgentBase.on_call_start",
+        "signalwire.AgentBase.on_call_end",
+        "signalwire.AgentBase.add_per_call_config",
     ),
     related=("prompts", "tools", "contexts", "skills", "pgi", "deploy"),
 )
@@ -273,6 +282,11 @@ Or give the schema yourself, with a handler that takes `(args, raw_data)`:
 - `gates=[SemanticGate(...)]` adds semantic gates: yes/no questions a
   decision model answers about the call before the platform runs the tool.
   A platform release without semantic gates runs the tool ungated.
+- Answer within a few seconds: the caller hears nothing while a tool runs.
+  SignalWire waits up to 120 seconds for a tool's webhook, and sends the
+  request again after a timeout, a failed connection or a 5xx, so a slow tool
+  can run more than once. Start long work in the background, return at once, and
+  send the result into the call with `rest.calling.ai_message()`.
 """,
     docs=(
         ("docs/swaig_reference.md", "Every FunctionResult method and action"),
