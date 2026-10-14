@@ -15,11 +15,35 @@ Uses jsonschema-rs for full JSON Schema validation with type checking.
 import os
 import json
 from pathlib import Path
-from typing import Any, cast
-
-import jsonschema_rs
+from typing import TYPE_CHECKING, Any, cast
 
 from signalwire.core.logging_config import get_logger
+
+# The validator: jsonschema-rs where it's installed, as on every platform but
+# WebAssembly (Pyodide, as on Cloudflare Workers), which it has no build for;
+# otherwise jsonschema, if installed; otherwise only the lightweight checks.
+if TYPE_CHECKING:
+    import jsonschema
+    import jsonschema_rs
+else:
+    try:
+        import jsonschema_rs
+    except ImportError:  # pragma: no cover - exercised by the fallback tests
+        jsonschema_rs = None
+    try:
+        import jsonschema
+    except ImportError:  # pragma: no cover - exercised by the fallback tests
+        jsonschema = None
+
+# The errors validate() raises, from whichever libraries are installed
+_VALIDATION_ERRORS: tuple[type[Exception], ...] = tuple(
+    error
+    for error in (
+        getattr(jsonschema_rs, "ValidationError", None),
+        getattr(jsonschema, "ValidationError", None),
+    )
+    if isinstance(error, type)
+)
 
 
 class SchemaValidationError(Exception):
@@ -78,18 +102,35 @@ class SchemaUtils:
             self.log.debug("first_verbs_extracted", verbs=list(self.verbs.keys())[:5])
 
         # Initialize full schema validator if validation is enabled
-        self._full_validator: jsonschema_rs.Draft202012Validator | None = None
+        self._full_validator: Any = None
         if self._validation_enabled and self.schema:
             self._init_full_validator()
         elif not self._validation_enabled:
             self.log.warning("schema_validation_disabled")
 
     def _init_full_validator(self) -> None:
-        """Initialize the jsonschema-rs validator for full schema validation."""
-        self._full_validator = jsonschema_rs.Draft202012Validator(self.schema)
+        """Initialize the validator for full schema validation.
+
+        jsonschema-rs when it's installed, else jsonschema. With neither, as
+        on WebAssembly without jsonschema, validation falls back to the
+        lightweight checks: verb names and required fields.
+        """
+        if jsonschema_rs is not None:
+            self._full_validator = jsonschema_rs.Draft202012Validator(self.schema)
+            validator = "jsonschema-rs"
+        elif jsonschema is not None:
+            self._full_validator = jsonschema.Draft202012Validator(self.schema)
+            validator = "jsonschema"
+        else:
+            self.log.warning(
+                "schema_validator_unavailable",
+                hint="install jsonschema-rs or jsonschema for full SWML validation; "
+                "only verb names and required fields are checked",
+            )
+            return
         self.log.info(
             "schema_validator_initialized",
-            validator="jsonschema-rs",
+            validator=validator,
             verbs=len(self.verbs),
         )
 
@@ -341,7 +382,7 @@ class SchemaUtils:
         self, verb_name: str, verb_config: dict[str, Any]
     ) -> tuple[bool, list[str]]:
         """
-        Perform full JSON Schema validation using jsonschema-rs.
+        Perform full JSON Schema validation with jsonschema-rs or jsonschema.
 
         Wraps the verb in a minimal SWML document structure for validation
         since the schema requires the full document context.
@@ -372,7 +413,7 @@ class SchemaUtils:
         try:
             self._full_validator.validate(minimal_doc)
             return True, []
-        except jsonschema_rs.ValidationError as e:
+        except _VALIDATION_ERRORS as e:
             error_msg = str(e)
             if len(error_msg) > 500:
                 error_msg = error_msg[:500] + "..."
@@ -384,7 +425,8 @@ class SchemaUtils:
         """
         Perform lightweight validation (verb existence + required fields only).
 
-        This is the fallback when jsonschema-rs is not available.
+        This is the fallback when neither jsonschema-rs nor jsonschema is
+        installed.
 
         Args:
             verb_name: The name of the verb
@@ -481,7 +523,7 @@ class SchemaUtils:
         try:
             self._full_validator.validate(document)
             return True, []
-        except jsonschema_rs.ValidationError as e:
+        except _VALIDATION_ERRORS as e:
             error_msg = str(e)
             if len(error_msg) > 500:
                 error_msg = error_msg[:500] + "..."

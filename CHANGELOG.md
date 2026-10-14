@@ -25,6 +25,14 @@
   nothing meanwhile, so tools should answer quickly and send late results into the call with
   `rest.calling.ai_message()`. See "Slow tools and the webhook timeout" in
   `docs/agent_guide.md`.
+### Fixed
+- The SDK loads on WebAssembly (Pyodide, as on Cloudflare Workers).
+  jsonschema-rs has no WebAssembly build, and `schema_utils` imported it
+  unconditionally. The dependency now skips WebAssembly
+  (`sys_platform != 'emscripten'`), and SWML validation falls back to
+  `jsonschema` when it's installed, or to checking verb names and required
+  fields when it isn't.
+
 ## [3.7.1] - 2026-10-13
 
 ### Added

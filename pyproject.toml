@@ -34,7 +34,9 @@ dependencies = [
     "beautifulsoup4>=4.12.3",
     "pytz>=2023.3",
     "lxml>=4.9.0",
-    "jsonschema-rs>=0.20.0",
+    # No WebAssembly build (Pyodide, as on Cloudflare Workers): there the SDK
+    # validates with jsonschema if it's installed, or checks verb names only
+    "jsonschema-rs>=0.20.0; sys_platform != 'emscripten'",
     "websockets>=12.0",
 ]
 
