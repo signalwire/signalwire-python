@@ -1389,7 +1389,7 @@ def on_call_start(
 
 The handler receives `raw_data`, the SWAIG request (`call_id`, `global_data`, `caller_id_num` and the rest), and may return a `FunctionResult` or `None`:
 - Its actions run at once, in registration order across handlers. `post_process` isn't used.
-- Its response text is added to the conversation as a system message the model reads before it speaks. Several handlers' texts are joined, one per line. Only a plain string response is used.
+- Its response text is added to the conversation as a system message the model reads before it speaks. Several handlers' texts are joined, one per line. Only a plain string response is used. An OpenAI Realtime agent runs the actions but drops the text, so put what its first greeting needs in the prompt from a per-call configuration callback instead.
 
 An exception is logged, not raised, and that handler's result is dropped. The platform waits for the hook before the AI starts, so keep the handler short.
 

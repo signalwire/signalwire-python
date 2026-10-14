@@ -781,10 +781,13 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
           the conversation starts);
         - its response text is added to the conversation as a system message
           the model reads before its first turn. The texts of several handlers
-          are joined, one per line. Only a plain string response is used.
+          are joined, one per line. Only a plain string response is used. An
+          OpenAI Realtime agent runs the actions but drops the text, so put
+          what its first greeting needs in the prompt from a per-call
+          configuration callback instead.
         `post_process` is not used: the combined result runs its actions at
-        once. The platform adds every hook reply to the conversation, so a
-        hook whose handlers return no text still adds a short placeholder
+        once. The text pipeline adds every hook reply to the conversation, so
+        a hook whose handlers return no text still adds a short placeholder
         line, as any function with an empty reply does.
 
         Exceptions are caught and logged rather than raised, and that
