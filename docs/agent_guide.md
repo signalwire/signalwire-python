@@ -2156,7 +2156,7 @@ def save_call(call_log, raw_data):
 An `on_call_start` handler receives the SWAIG request (`call_id`, `global_data`, `caller_id_num` and the rest) and may return a `FunctionResult` or `None`. The platform runs the hook once, after the call is answered and before the AI's first turn, and uses its reply:
 
 - The actions run at once, such as `update_global_data()` to give the call data before the conversation starts. Several handlers' actions run in registration order. `post_process` isn't used.
-- The response text is added to the conversation as a system message, so the model reads it before it speaks. Several handlers' texts are joined, one per line. Only a plain string response is used.
+- The response text is added to the conversation as a system message, so the model reads it before it speaks. Several handlers' texts are joined, one per line. Only a plain string response is used. An OpenAI Realtime agent runs the actions but drops the text, so put what its first greeting needs in the prompt from a per-call configuration callback instead.
 
 The platform waits for the hook before the AI starts, so a slow handler delays the greeting; keep it short (see [Slow tools and the webhook timeout](#slow-tools-and-the-webhook-timeout)).
 
@@ -2283,7 +2283,7 @@ def hangup_hook(self, args, raw_data):
 2. **Error Handling**: Always implement proper error handling in hooks - failures shouldn't crash the voice session
 3. **Timing**: `startup_hook` is called before the AI starts speaking to the caller
 4. **Session Data**: Any data you need to persist across the session should be stored in external storage (Redis, database, etc.)
-5. **Return Values**: Both hooks must return a `FunctionResult` object. The `startup_hook`'s actions run and its response text is added to the conversation as a system message; the `hangup_hook`'s response is unused, since the call is over
+5. **Return Values**: Both hooks must return a `FunctionResult` object. The `startup_hook`'s actions run and its response text is added to the conversation as a system message (except on an OpenAI Realtime agent, which drops the text); the `hangup_hook`'s response is unused, since the call is over
 
 ### SIP Routing
 

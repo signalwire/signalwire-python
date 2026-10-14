@@ -8,8 +8,9 @@
   wraps the platform's reserved `startup_hook` function. A handler receives
   the SWAIG request and may return a `FunctionResult`: its actions run at
   once, and its response text is added to the conversation as a system
-  message the model reads before it speaks. Handlers run in registration
-  order, and an exception is logged, not raised.
+  message the model reads before it speaks, except on an OpenAI Realtime
+  agent, which drops the text. Handlers run in registration order, and an
+  exception is logged, not raised.
 
 ### Documentation
 - How to reject a call from the per-call configuration callback
