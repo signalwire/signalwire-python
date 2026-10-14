@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [3.7.2] - 2026-10-14
 
 ### Added
 - `AgentBase.on_call_start()` registers handlers that run when the call
