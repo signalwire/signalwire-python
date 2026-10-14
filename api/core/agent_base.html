@@ -1137,6 +1137,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.core.agent_base.AgentBase.on_call_start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        on_call_start
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.core.agent_base.AgentBase.on_debug_event" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -7887,6 +7898,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.core.agent_base.AgentBase.on_call_start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        on_call_start
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.core.agent_base.AgentBase.on_debug_event" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -9134,6 +9156,122 @@ failing teardown handler must not turn into a failed hangup.</p>
 def archive(call_log, raw_data):
     conversation_id = raw_data.get("global_data", {}).get("conversation_id")
     store(conversation_id, call_log)</p>
+</details>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="signalwire.core.agent_base.AgentBase.on_call_start" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">on_call_start</span><span class="p">(</span><span class="n">handler</span><span class="p">)</span></code>
+
+<a href="#signalwire.core.agent_base.AgentBase.on_call_start" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Register a handler that runs when the call starts, before the AI speaks.</p>
+<p>Usable as a decorator or called directly. Handlers run in registration
+order and receive:</p>
+<div class="highlight"><pre><span></span><code>raw_data (dict): the complete SWAIG request, including `call_id`,
+    `global_data` and the caller's details.
+</code></pre></div>
+<p>This wraps the platform's reserved <code>startup_hook</code> function, the
+counterpart of the <code>hangup_hook</code> behind <code>on_call_end</code>. That name is
+internal: the platform calls it once, after the call is answered and
+before the AI's first turn, and never offers it to the model as
+something it could choose.</p>
+<p>The platform waits for the hook before the AI starts, so a slow
+handler delays the greeting; it waits up to 120 seconds for a
+function's reply and sends the request again after a timeout or a
+5xx. Keep handlers short; start long work in
+the background and send its result into the call later (see
+<code>rest.calling.ai_message</code>).</p>
+<p>A handler may return a <code>FunctionResult</code>, or None. What the platform
+does with the hook's reply:
+- its actions run at once, in registration order across handlers
+  (for example <code>update_global_data()</code> to give the call data before
+  the conversation starts);
+- its response text is added to the conversation as a system message
+  the model reads before its first turn. The texts of several handlers
+  are joined, one per line. Only a plain string response is used. An
+  OpenAI Realtime agent runs the actions but drops the text, so put
+  what its first greeting needs in the prompt from a per-call
+  configuration callback instead.
+<code>post_process</code> is not used: the combined result runs its actions at
+once. The text pipeline adds every hook reply to the conversation, so
+a hook whose handlers return no text still adds a short placeholder
+line, as any function with an empty reply does.</p>
+<p>Exceptions are caught and logged rather than raised, and that
+handler's result is dropped, so a failing handler can't stop the call
+from starting or the other handlers from running.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>handler</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Callable">Callable</span>[[<span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]], <a class="autorefs autorefs-internal" title="FunctionResult (signalwire.core.function_result.FunctionResult)" href="function_result.html#signalwire.core.function_result.FunctionResult">FunctionResult</a> | None]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Callable taking (raw_data), returning a FunctionResult or
+None.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="collections.abc.Callable">Callable</span>[[<span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]], <a class="autorefs autorefs-internal" title="FunctionResult (signalwire.core.function_result.FunctionResult)" href="function_result.html#signalwire.core.function_result.FunctionResult">FunctionResult</a> | None]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The handler, so this can be used as a decorator.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <p>@agent.on_call_start
+def load_caller(raw_data):
+    caller = lookup(raw_data.get("caller_id_num"))
+    result = FunctionResult(f"The caller's name is {caller.name}.")
+    return result.update_global_data({"customer_id": caller.id})</p>
 </details>
 
     </div>

@@ -8602,6 +8602,19 @@ subclass, or an agent and a mixin, can each register what they own
 without either needing to know the other exists -- which with
 <code>set_dynamic_config_callback</code> requires them to find and manually chain
 each other's callbacks, and silently drops one when they don't.</p>
+<p>Rejecting a call: a callback can't refuse the request, but it can
+decide what the call does. Build the agent to fail closed -- in the
+constructor, <code>add_post_answer_verb("play", {"url": "say:..."})</code> and
+<code>add_post_answer_verb("hangup", {})</code>, and no tools -- so the call
+hears the message and hangs up before the <code>ai</code> verb runs. For a call
+the callback accepts, add the tools to <code>agent</code> and call
+<code>agent.clear_post_answer_verbs()</code> last. A callback that raises is
+logged and the copy is rendered as it stands, so a failure before
+that last step leaves the goodbye in place. Callbacks run for every
+request of the call (the SWML fetch, each tool call, the summary),
+and only the SWML fetch carries the caller's data (such as
+<code>userVariables</code>): verify there, remember the <code>call_id</code>, and check it
+on later requests. See "Rejecting a Call" in docs/agent_guide.md.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
