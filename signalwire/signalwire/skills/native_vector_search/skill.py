@@ -691,7 +691,10 @@ class NativeVectorSearchSkill(SkillBase):
                 self.logger.debug("Remote search returned %d results", len(results))
             else:
                 # For local searches, preprocess the query locally
-                from signalwire.search.query_processor import preprocess_query
+                from signalwire.search.query_processor import (
+                    drop_corpus_terms,
+                    preprocess_query,
+                )
 
                 # Guaranteed non-None here: the guard above returns early when
                 # not use_remote and search_engine is falsy.
@@ -709,7 +712,10 @@ class NativeVectorSearchSkill(SkillBase):
                     extra_kwargs["model_name"] = model_for_query  # Use model from index
 
                 enhanced = preprocess_query(
-                    query,
+                    drop_corpus_terms(
+                        query,
+                        getattr(self.search_engine, "query_stopwords", None) or [],
+                    ),
                     language="en",
                     vector=True,
                     query_nlp_backend=self.query_nlp_backend,

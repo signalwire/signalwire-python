@@ -2325,6 +2325,7 @@ sw-search <source> [<source> ...] [options]
 - `--topic-threshold FLOAT` - Threshold for topic-based chunking (default: 0.3)
 - `--index-nlp-backend BACKEND` - NLP backend for processing: `nltk` (default) or `spacy`
 - `--embed-text {content,processed}` - What the embedding model sees: the chunk as written (`content`, default), or the keyword-search text with tags appended (`processed`), as indexes were built before this option existed
+- `--query-stopwords TERMS` - Comma-separated terms every document is about, such as your product's name. Recorded in the index; search drops them from queries, unless fewer than two content words would remain (so "what is Acme" still searches for Acme)
 - `--split-newlines N` - Split on N or more consecutive newlines, in addition to sentence boundaries
 - `--languages LANGS` - Comma-separated language codes (default: en)
 

@@ -461,13 +461,14 @@ if __name__ == "__main__":
 
 When a user asks a question, the following occurs:
 
-1. The query is converted to a vector embedding.
-2. The search engine compares the query vector to all chunk vectors in the index.
-3. Chunks are scored by cosine similarity.
-4. Keyword and metadata matches boost scores (hybrid scoring).
-5. Top results (above the distance threshold) are returned.
-6. Results are formatted and provided to the LLM.
-7. The LLM generates an answer grounded in the retrieved content.
+1. If the index was built with `--query-stopwords`, those terms are removed from the query, unless fewer than two content words would remain.
+2. The query is converted to a vector embedding.
+3. The search engine compares the query vector to all chunk vectors in the index.
+4. Chunks are scored by cosine similarity.
+5. Keyword and metadata matches boost scores (hybrid scoring).
+6. Top results (above the distance threshold) are returned.
+7. Results are formatted and provided to the LLM.
+8. The LLM generates an answer grounded in the retrieved content.
 
 ### Testing Your Search
 

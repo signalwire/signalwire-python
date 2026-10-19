@@ -57,6 +57,7 @@ class IndexBuilder:
         backend: str = "sqlite",
         connection_string: str | None = None,
         embed_text: str = "content",
+        query_stopwords: list[str] | None = None,
     ):
         """
         Initialize the index builder
@@ -96,6 +97,10 @@ class IndexBuilder:
                 'content', and 0.562 with content plus tags appended. Your
                 corpus may differ; the option exists so you can measure both.
                 Keyword search uses processed_content either way.
+            query_stopwords: Terms every document in the index is about, such
+                as the product's own name. They are recorded in the index, and
+                search drops them from queries; see
+                query_processor.drop_corpus_terms.
         """
         self.model_name = model_name
         self.chunking_strategy = chunking_strategy
@@ -111,6 +116,9 @@ class IndexBuilder:
         self.backend = backend
         self.connection_string = connection_string
         self.embed_text = embed_text
+        self.query_stopwords = [
+            t.strip() for t in (query_stopwords or []) if t and t.strip()
+        ]
         # SentenceTransformer instance, loaded lazily in _load_model(); the lib
         # ships no stubs, so this is effectively Any once populated.
         self.model: Any = None
@@ -738,6 +746,7 @@ class IndexBuilder:
                 "chunk_overlap": str(self.chunk_overlap),
                 "preprocessing_version": "1.0",
                 "embed_text": self.embed_text,
+                "query_stopwords": json.dumps(self.query_stopwords),
                 "languages": json.dumps(languages),
                 "created_at": datetime.now().isoformat(),
                 "sources": json.dumps(
@@ -962,6 +971,7 @@ class IndexBuilder:
                     "chunk_overlap": self.chunk_overlap,
                     "index_nlp_backend": self.index_nlp_backend,
                     "embed_text": self.embed_text,
+                    "query_stopwords": self.query_stopwords,
                 },
             }
 

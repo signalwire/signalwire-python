@@ -330,6 +330,17 @@ Documentation: sw-pydocs prints the SDK's installed docs, examples and API.
         ),
     )
 
+    parser.add_argument(
+        "--query-stopwords",
+        default=None,
+        help=(
+            "Comma-separated terms every document is about, such as your "
+            "product's name. Recorded in the index; search drops them from "
+            "queries unless the query would be left with fewer than two "
+            "content words."
+        ),
+    )
+
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
 
     parser.add_argument(
@@ -353,6 +364,13 @@ Documentation: sw-pydocs prints the SDK's installed docs, examples and API.
     )
 
     return parser
+
+
+def _split_terms(value: str | None) -> list[str] | None:
+    """Split a comma-separated --query-stopwords value; None when not given."""
+    if not value:
+        return None
+    return [t.strip() for t in value.split(",") if t.strip()]
 
 
 def main() -> None:
@@ -531,6 +549,7 @@ def main() -> None:
                 split_newlines=args.split_newlines,
                 index_nlp_backend=args.index_nlp_backend,
                 embed_text=args.embed_text,
+                query_stopwords=_split_terms(args.query_stopwords),
                 verbose=args.verbose,
                 semantic_threshold=args.semantic_threshold,
                 topic_threshold=args.topic_threshold,
@@ -642,6 +661,7 @@ def main() -> None:
             split_newlines=args.split_newlines,
             index_nlp_backend=args.index_nlp_backend,
             embed_text=args.embed_text,
+            query_stopwords=_split_terms(args.query_stopwords),
             verbose=args.verbose,
             semantic_threshold=args.semantic_threshold,
             topic_threshold=args.topic_threshold,

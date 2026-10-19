@@ -523,7 +523,8 @@ Common edits during review:
 
 - Add descriptive chunk IDs (replace auto-generated `chunk_0`, `chunk_1`)
 - Add relevant tags for hybrid search boosting
-- Add URLs to source documentation. In a JSON file that holds several documents, the URL (or a `document` value in the chunk's metadata) also tells search which chunks belong to the same document. Without one, every chunk in the file counts as one document and they push each other down the results.
+- Add URLs to source documentation. In a JSON file that holds several documents, the URL (or a `document` value in the chunk's metadata) also tells search which chunks belong to the same document. Without one, every chunk in the file counts as one document and they push each other down the results. Make the value identify one document: a `source` shared by the whole collection (for example `"source": "docs-site"` on every chunk) makes every file that uses it count as a single document.
+- If every document is about the same product, build with `--query-stopwords "<product name>"`. A name that every document is about carries no information in a query, and only favours the chunks that happen to spell it out. In one product corpus, "<product> call pricing" ranked the phone-number price cards (which mention porting numbers "into <product>") above the per-minute call rates.
 - Set `rank_weight` (between 0 and 1) on secondary chunks, such as commentary next to reference material, so the reference ranks first when both match
 - Add priority levels (`high`, `normal`, `low`)
 - Link related chunks via `related_chunks`
