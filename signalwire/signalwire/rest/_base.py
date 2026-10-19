@@ -10,6 +10,9 @@ HTTP client infrastructure and base resource classes for the REST client.
 """
 
 import os
+import math
+from datetime import timezone
+from email.utils import parsedate_to_datetime
 import time
 from importlib.metadata import PackageNotFoundError, version
 from typing import Any, Generic, TypeVar, cast
@@ -180,14 +183,22 @@ class HttpClient:
             time.sleep(seconds)
 
     def _retry_after_seconds(self, resp: requests.Response) -> float | None:
-        """Parse a ``Retry-After`` header (delta-seconds form) if present."""
+        """Parse a delta-seconds or HTTP-date ``Retry-After`` header."""
         value = resp.headers.get("Retry-After")
         if value is None:
             return None
         try:
-            return float(value)
+            delay = float(value)
         except (TypeError, ValueError):
-            return None  # HTTP-date form: fall back to computed backoff
+            try:
+                retry_at = parsedate_to_datetime(value)
+                if retry_at.tzinfo is None:
+                    retry_at = retry_at.replace(tzinfo=timezone.utc)
+                return max(0.0, retry_at.timestamp() - time.time())
+            except (TypeError, ValueError, OverflowError, OSError):
+                return None
+        # Invalid numeric values must not reach sleep (inf raises there).
+        return delay if math.isfinite(delay) and delay >= 0 else None
 
     def _request(
         self,
