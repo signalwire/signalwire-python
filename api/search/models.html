@@ -4895,10 +4895,32 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.search.models.DOCUMENT_KEYS" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DOCUMENT_KEYS
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.search.models.resolve_model_alias" class="md-nav__link">
     <span class="md-ellipsis">
       
         resolve_model_alias
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signalwire.search.models.document_key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        document_key
       
     </span>
   </a>
@@ -7372,10 +7394,32 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.search.models.DOCUMENT_KEYS" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DOCUMENT_KEYS
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.search.models.resolve_model_alias" class="md-nav__link">
     <span class="md-ellipsis">
       
         resolve_model_alias
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signalwire.search.models.document_key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        document_key
       
     </span>
   </a>
@@ -7501,6 +7545,26 @@ See LICENSE file in the project root for full license information.</p>
 
 </div>
 
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="signalwire.search.models.DOCUMENT_KEYS" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">DOCUMENT_KEYS</span> <span class="o">=</span> <span class="p">(</span><span class="s1">'document'</span><span class="p">,</span> <span class="s1">'url'</span><span class="p">,</span> <span class="s1">'source'</span><span class="p">,</span> <span class="s1">'filename'</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+<a href="#signalwire.search.models.DOCUMENT_KEYS" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
 
 
 
@@ -7570,6 +7634,27 @@ See LICENSE file in the project root for full license information.</p>
           </tr>
       </tbody>
     </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="signalwire.search.models.document_key" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">document_key</span><span class="p">(</span><span class="n">metadata</span><span class="p">)</span></code>
+
+<a href="#signalwire.search.models.document_key" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Identify the document a chunk belongs to, or None if nothing says.</p>
+<p>Used wherever "the same document" matters: resetting heading context
+between documents in a JSON file, and penalising several chunks of one
+document in a result list. One definition, so the two cannot disagree.</p>
 
 
     </div>

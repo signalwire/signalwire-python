@@ -5057,6 +5057,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.search.search_engine.SearchEngine.query_stopwords" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        query_stopwords
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.search.search_engine.SearchEngine.TIEBREAK_MAX" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -7566,6 +7577,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.search.search_engine.SearchEngine.query_stopwords" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        query_stopwords
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.search.search_engine.SearchEngine.TIEBREAK_MAX" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -7885,6 +7907,31 @@ See LICENSE file in the project root for full license information.</p>
 
 
     <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="signalwire.search.search_engine.SearchEngine.query_stopwords" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">query_stopwords</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#signalwire.search.search_engine.SearchEngine.query_stopwords" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Terms the index was built to drop from queries; see drop_corpus_terms.</p>
+<p>SQLite indexes keep them in the config table as a JSON list, pgvector
+collections in collection_config.metadata. A missing or malformed value
+means none, never an error: older indexes simply have no such key.</p>
 
     </div>
 

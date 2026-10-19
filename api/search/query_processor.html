@@ -4995,6 +4995,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.search.query_processor.drop_corpus_terms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        drop_corpus_terms
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.search.query_processor.ensure_nltk_resources" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -7515,6 +7526,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.search.query_processor.drop_corpus_terms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        drop_corpus_terms
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.search.query_processor.ensure_nltk_resources" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -7834,6 +7856,38 @@ Returns numpy array of embeddings</p>
           </tr>
       </tbody>
     </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="signalwire.search.query_processor.drop_corpus_terms" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">drop_corpus_terms</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">terms</span><span class="p">,</span> <span class="n">language</span><span class="o">=</span><span class="s1">'en'</span><span class="p">)</span></code>
+
+<a href="#signalwire.search.query_processor.drop_corpus_terms" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Remove terms that every document in an index is about from a query.</p>
+<p>In a corpus about one product, the product's name carries no information:
+everything is about it. In the query it only rewards the few chunks that
+happen to spell the name out. In SignalWire's own corpus, "SignalWire call
+pricing" ranked the phone-number rate cards first, because each says
+numbers "can be ported into SignalWire", over the per-minute rates the
+question was about. An index declares such terms when it is built
+(<code>--query-stopwords</code>), and search drops them here, before embedding and
+keyword matching.</p>
+<p>A term is kept when dropping it would leave fewer than two content words.
+"What is SignalWire" and a bare "SignalWire" are ABOUT the name, and
+stripping it leaves nothing to search for: measured, a bare "SignalWire"
+fell out of the top 10 without this guard.</p>
+<p>Matching is case-insensitive, on word boundaries, and takes a possessive
+with it. Terms may be phrases.</p>
 
 
     </div>
