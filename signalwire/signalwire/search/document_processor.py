@@ -95,6 +95,7 @@ else:
         magic = None
 
 from signalwire.core.logging_config import get_logger
+from signalwire.search.models import document_key
 
 logger = get_logger(__name__)
 
@@ -1796,11 +1797,7 @@ class DocumentProcessor:
                 # the heading is reset each time, and a scan of 16,894 chunks
                 # found no instance -- but that is a property of those inputs,
                 # not of this loop. Reset when the document changes.
-                doc_key = (
-                    json_metadata.get("url")
-                    or json_metadata.get("source")
-                    or json_metadata.get("filename")
-                )
+                doc_key = document_key(json_metadata)
                 if doc_key != current_doc:
                     current_doc = doc_key
                     current_heading = ""

@@ -523,7 +523,8 @@ Common edits during review:
 
 - Add descriptive chunk IDs (replace auto-generated `chunk_0`, `chunk_1`)
 - Add relevant tags for hybrid search boosting
-- Add URLs to source documentation
+- Add URLs to source documentation. In a JSON file that holds several documents, the URL (or a `document` value in the chunk's metadata) also tells search which chunks belong to the same document. Without one, every chunk in the file counts as one document and they push each other down the results.
+- Set `rank_weight` (between 0 and 1) on secondary chunks, such as commentary next to reference material, so the reference ranks first when both match
 - Add priority levels (`high`, `normal`, `low`)
 - Link related chunks via `related_chunks`
 - Remove low-value chunks (e.g., header-only content)
