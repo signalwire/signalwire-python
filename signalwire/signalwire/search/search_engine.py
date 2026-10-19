@@ -13,6 +13,7 @@ import warnings
 from typing import Any, TYPE_CHECKING
 
 from signalwire.core.logging_config import get_logger
+from signalwire.search.models import document_key
 
 # NDArray is the runtime numpy array type when available, else Any; typed Any
 # because the fallback makes the two branches incompatible to mypy.
@@ -312,8 +313,9 @@ class SearchEngine:
           2. tag filter (optional)
           3. threshold filter on final score (redundant but safe)
           4. exact-match boost (when original_query provided)
+          4b. rank weight — the chunk's own `rank_weight` metadata, if any
           5. content dedup — collapse near-identical chunks, keep highest scorer
-          6. filename diversity — decay 2nd/3rd/4th+ chunks from the same file
+          6. document diversity — decay 2nd/3rd/4th+ chunks of one document
           7. match-type diversity — 40/40/20 hybrid/vector-only/keyword-only
           8. truncate to `count`
         """
@@ -375,6 +377,16 @@ class SearchEngine:
                 for r in final_results:
                     if "vector_score" not in r:
                         r["final_score"] = min(r["final_score"], vector_ceiling * 0.99)
+            final_results.sort(key=lambda x: x["final_score"], reverse=True)
+
+        # 4b. rank weight -- see _rank_weight
+        weighted = False
+        for r in final_results:
+            w = self._rank_weight(r.get("metadata"))
+            if w != 1.0:
+                r["final_score"] *= w
+                weighted = True
+        if weighted:
             final_results.sort(key=lambda x: x["final_score"], reverse=True)
 
         # 5. content dedup (sorted best-first, so the kept copy is the winner)
@@ -1550,10 +1562,36 @@ class SearchEngine:
             deduped.append(result)
         return deduped
 
+    @staticmethod
+    def _rank_weight(metadata: dict[str, Any] | None) -> float:
+        """A chunk's declared rank weight: a number in (0, 1], else 1.0.
+
+        Lets an index say some chunks are secondary sources -- commentary next
+        to reference, say -- so that when both match, the reference wins,
+        without the query having to say which kind it wants. It multiplies the
+        final score, so it only ever demotes: nothing can be weighted above
+        what its relevance earned, which keeps the rule that non-semantic
+        signals may reorder results but not choose them. Values outside
+        (0, 1], booleans and non-numbers are ignored rather than trusted.
+        """
+        w = (metadata or {}).get("rank_weight")
+        if isinstance(w, bool) or not isinstance(w, (int, float)):
+            return 1.0
+        return float(w) if 0.0 < w <= 1.0 else 1.0
+
     def _apply_diversity_penalties(
         self, results: list[dict[str, Any]], target_count: int
     ) -> list[dict[str, Any]]:
-        """Apply penalties to prevent single-file dominance while maintaining quality"""
+        """Apply penalties to prevent single-document dominance while maintaining quality.
+
+        "Document" is document_key(): the chunk's `document`, `url` or `source`
+        metadata before its `filename`. Keying on the file alone treated every
+        chunk of a JSON collection as one document -- 50 separate rate cards in
+        one pricing file decayed each other out of the results, and the
+        per-minute card for "outbound call pricing" fell from 9th by relevance
+        to below the top 20. For one-document-per-file indexes the key is the
+        filename, as before.
+        """
         if not results:
             return results
 
@@ -1570,7 +1608,7 @@ class SearchEngine:
         }
 
         for result in results:
-            filename = (result.get("metadata") or {}).get("filename")
+            filename = document_key(result.get("metadata"))
             if filename is None:
                 # No filename signal - skip penalty logic for this result
                 penalized_result = result.copy()
@@ -1605,28 +1643,32 @@ class SearchEngine:
         # Ensure minimum diversity if we have enough results
         if len(penalized_results) > target_count:
             unique_files = len(
-                {r["metadata"]["filename"] for r in penalized_results[:target_count]}
+                {
+                    document_key(r.get("metadata"))
+                    for r in penalized_results[:target_count]
+                }
             )
 
             # If top results are too homogeneous (e.g., all from 1-2 files)
             if unique_files < min(3, target_count):
                 # Try to inject some diversity
                 selected = penalized_results[:target_count]
-                seen_files = {r["metadata"]["filename"] for r in selected}
+                seen_files = {document_key(r.get("metadata")) for r in selected}
 
                 # Look for high-quality results from other files
                 for result in penalized_results[target_count:]:
                     # Only inject a result from a new file that's reasonably good
                     # (within 50% of top score)
                     if (
-                        result["metadata"]["filename"] not in seen_files
+                        document_key(result.get("metadata")) not in seen_files
                         and result["final_score"] > 0.5 * selected[0]["final_score"]
                     ):
                         # Replace the lowest scoring result from an over-represented file
                         for i in range(len(selected) - 1, -1, -1):
-                            if file_counts[selected[i]["metadata"]["filename"]] > 2:
+                            key = document_key(selected[i].get("metadata"))
+                            if key is not None and file_counts.get(key, 0) > 2:
                                 selected[i] = result
-                                seen_files.add(result["metadata"]["filename"])
+                                seen_files.add(document_key(result.get("metadata")))
                                 break
 
                 penalized_results[:target_count] = selected

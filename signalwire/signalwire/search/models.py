@@ -8,6 +8,8 @@ See LICENSE file in the project root for full license information.
 """
 
 import warnings
+from collections.abc import Mapping
+from typing import Any
 
 # Embedding model configuration
 MODEL_ALIASES = {
@@ -40,3 +42,27 @@ def resolve_model_alias(model_name: str) -> str:
     if model_name == "large":
         warnings.warn(LARGE_ALIAS_DEPRECATION, DeprecationWarning, stacklevel=2)
     return MODEL_ALIASES.get(model_name, model_name)
+
+
+# Metadata keys naming the document a chunk came from, most specific first.
+# `document` lets an index state it outright. Without it, a page URL or a
+# repo:path source is the next-best identity, and the file the chunk was read
+# from is the last resort -- which is right for one-document-per-file indexes
+# and wrong for JSON collections, where one file holds many documents.
+DOCUMENT_KEYS = ("document", "url", "source", "filename")
+
+
+def document_key(metadata: Mapping[str, Any] | None) -> str | None:
+    """Identify the document a chunk belongs to, or None if nothing says.
+
+    Used wherever "the same document" matters: resetting heading context
+    between documents in a JSON file, and penalising several chunks of one
+    document in a result list. One definition, so the two cannot disagree.
+    """
+    if not metadata:
+        return None
+    for key in DOCUMENT_KEYS:
+        value = metadata.get(key)
+        if value:
+            return str(value)
+    return None

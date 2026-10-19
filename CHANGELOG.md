@@ -1,5 +1,26 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Chunks can carry a `rank_weight` between 0 and 1 in their metadata. Search
+  multiplies it into the chunk's score, so an index can mark secondary sources,
+  such as commentary indexed next to reference material, and the reference
+  ranks first when both match. It only demotes: values outside that range are
+  ignored.
+
+### Fixed
+- Search's same-file penalty now applies per document. It used to key on the
+  file a chunk was read from, so in a JSON file holding many documents every
+  chunk counted as one document and pushed the others down: in a pricing
+  collection, 50 rate cards shared one file, and the per-minute card for
+  "outbound call pricing" fell from 9th by relevance to below the top 20. A
+  chunk's document is its `document` metadata, else `url`, else `source`, else
+  its file, the same key the JSON loader already uses to tell documents apart.
+  Indexes with one document per file rank as before.
+- The penalty's diversity pass no longer raises `KeyError` on a result
+  without `filename` metadata.
+
 ## [3.7.2] - 2026-10-14
 
 ### Added
