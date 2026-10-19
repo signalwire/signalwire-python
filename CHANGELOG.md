@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [3.7.3] - 2026-10-19
 
 ### Added
 - `sw-search --query-stopwords` (and `IndexBuilder(query_stopwords=...)`)
