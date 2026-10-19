@@ -39,7 +39,7 @@ else:
     except ImportError:
         SentenceTransformer = None
 
-from .query_processor import preprocess_query, set_global_model
+from .query_processor import drop_corpus_terms, preprocess_query, set_global_model
 from .search_engine import SearchEngine
 from signalwire.core.security_config import SecurityConfig
 from signalwire.core.config_loader import ConfigLoader
@@ -564,17 +564,24 @@ class SearchService:
         # results for this query until the entry is evicted.
         degraded = False
 
+        # Terms the index declares every document is about (its product name,
+        # usually) carry no information and only reward the chunks that spell
+        # them out. See drop_corpus_terms.
+        query_text = drop_corpus_terms(
+            request.query, getattr(search_engine, "query_stopwords", None) or []
+        )
+
         # Enhance query
         try:
             enhanced = preprocess_query(
-                request.query,
+                query_text,
                 language=request.language or "auto",
                 vector=True,
                 model_name=model_name,  # Pass the correct model!
             )
         except Exception as e:
             logger.error(f"Error preprocessing query: {e}")
-            enhanced = {"enhanced_text": request.query, "vector": [], "language": "en"}
+            enhanced = {"enhanced_text": query_text, "vector": [], "language": "en"}
             degraded = True
 
         # Perform search

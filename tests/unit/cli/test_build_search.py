@@ -87,6 +87,7 @@ class TestBuildSearchMain:
                 split_newlines=None,
                 index_nlp_backend='nltk',
                 embed_text='content',
+                query_stopwords=None,
                 verbose=False,
                 semantic_threshold=0.5,
                 topic_threshold=0.3,
@@ -145,6 +146,7 @@ class TestBuildSearchMain:
                 split_newlines=None,
                 index_nlp_backend='nltk',
                 embed_text='content',
+                query_stopwords=None,
                 verbose=True,
                 semantic_threshold=0.5,
                 topic_threshold=0.3,
@@ -578,6 +580,7 @@ class TestArgumentParsing:
                 split_newlines=2,
                 index_nlp_backend='nltk',
                 embed_text='content',
+                query_stopwords=None,
                 verbose=False,
                 semantic_threshold=0.5,
                 topic_threshold=0.3,
@@ -609,6 +612,7 @@ class TestArgumentParsing:
                 split_newlines=None,
                 index_nlp_backend='nltk',
                 embed_text='content',
+                query_stopwords=None,
                 verbose=False,
                 semantic_threshold=0.5,
                 topic_threshold=0.3,
@@ -640,6 +644,7 @@ class TestArgumentParsing:
                 split_newlines=None,
                 index_nlp_backend='nltk',
                 embed_text='content',
+                query_stopwords=None,
                 verbose=False,
                 semantic_threshold=0.5,
                 topic_threshold=0.3,
@@ -662,6 +667,22 @@ class TestArgumentParsing:
             main()
 
             assert mock_builder_class.call_args.kwargs['embed_text'] == 'processed'
+
+
+    @patch('signalwire.search.index_builder.IndexBuilder')
+    @patch('sys.argv', ['sw-search', './docs', '--query-stopwords', 'SignalWire, Acme Cloud ,'])
+    def test_query_stopwords_reach_the_builder(self, mock_builder_class: MagicMock) -> None:
+        """--query-stopwords is split on commas, trimmed, and empties dropped"""
+        mock_builder_class.return_value = Mock()
+
+        with patch('pathlib.Path.exists', return_value=True), \
+             patch('pathlib.Path.is_file', return_value=False), \
+             patch('pathlib.Path.name', 'docs'), \
+             patch('os.path.exists', return_value=True):
+
+            main()
+
+            assert mock_builder_class.call_args.kwargs['query_stopwords'] == ['SignalWire', 'Acme Cloud']
 
 
 class TestVerboseOutput:

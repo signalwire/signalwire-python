@@ -3,6 +3,16 @@
 ## [Unreleased]
 
 ### Added
+- `sw-search --query-stopwords` (and `IndexBuilder(query_stopwords=...)`)
+  records terms every document in the index is about, such as the product's
+  name. The search service and the native_vector_search skill drop them from
+  queries before embedding and keyword search, unless fewer than two content
+  words would remain, so "what is SignalWire" still searches for SignalWire.
+  In a corpus about one product, the name only favours the chunks that spell
+  it out: "SignalWire call pricing" ranked phone-number fees above call rates.
+  On SignalWire's corpus (58 labelled questions) hit@5 went from 0.88 to 0.95
+  and MRR@10 from 0.678 to 0.745; without the guard, a bare "SignalWire" fell
+  out of the top 10.
 - Chunks can carry a `rank_weight` between 0 and 1 in their metadata. Search
   multiplies it into the chunk's score, so an index can mark secondary sources,
   such as commentary indexed next to reference material, and the reference

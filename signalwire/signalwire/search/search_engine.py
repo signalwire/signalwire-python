@@ -95,6 +95,27 @@ class SearchEngine:
                 f"Invalid backend '{backend}'. Must be 'sqlite' or 'pgvector'"
             )
 
+    @property
+    def query_stopwords(self) -> list[str]:
+        """Terms the index was built to drop from queries; see drop_corpus_terms.
+
+        SQLite indexes keep them in the config table as a JSON list, pgvector
+        collections in collection_config.metadata. A missing or malformed value
+        means none, never an error: older indexes simply have no such key.
+        """
+        config: dict[str, Any] = getattr(self, "config", None) or {}
+        raw: Any = config.get("query_stopwords")
+        if raw is None and isinstance(config.get("metadata"), dict):
+            raw = config["metadata"].get("query_stopwords")
+        if isinstance(raw, str):
+            try:
+                raw = json.loads(raw)
+            except ValueError:
+                return []
+        if not isinstance(raw, list):
+            return []
+        return [t for t in raw if isinstance(t, str) and t.strip()]
+
     def _load_config(self) -> dict[str, str]:
         """Load index configuration"""
         conn = None

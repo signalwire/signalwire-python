@@ -370,6 +370,97 @@ stopwords_language_map = {
     "tr": "turkish",
 }
 
+# Used when NLTK's stopword corpus is unavailable, so the guard in
+# drop_corpus_terms still recognises a question with nothing left to say.
+_FALLBACK_STOPWORDS = frozenset(
+    {
+        "a",
+        "an",
+        "and",
+        "are",
+        "as",
+        "at",
+        "be",
+        "by",
+        "can",
+        "do",
+        "does",
+        "for",
+        "from",
+        "how",
+        "i",
+        "in",
+        "is",
+        "it",
+        "its",
+        "me",
+        "my",
+        "of",
+        "on",
+        "or",
+        "the",
+        "this",
+        "that",
+        "to",
+        "vs",
+        "versus",
+        "what",
+        "when",
+        "where",
+        "which",
+        "who",
+        "why",
+        "with",
+        "you",
+        "your",
+    }
+)
+
+
+def drop_corpus_terms(
+    query: str, terms: list[str] | tuple[str, ...], language: str = "en"
+) -> str:
+    """Remove terms that every document in an index is about from a query.
+
+    In a corpus about one product, the product's name carries no information:
+    everything is about it. In the query it only rewards the few chunks that
+    happen to spell the name out. In SignalWire's own corpus, "SignalWire call
+    pricing" ranked the phone-number rate cards first, because each says
+    numbers "can be ported into SignalWire", over the per-minute rates the
+    question was about. An index declares such terms when it is built
+    (`--query-stopwords`), and search drops them here, before embedding and
+    keyword matching.
+
+    A term is kept when dropping it would leave fewer than two content words.
+    "What is SignalWire" and a bare "SignalWire" are ABOUT the name, and
+    stripping it leaves nothing to search for: measured, a bare "SignalWire"
+    fell out of the top 10 without this guard.
+
+    Matching is case-insensitive, on word boundaries, and takes a possessive
+    with it. Terms may be phrases.
+    """
+    if not isinstance(terms, (list, tuple)):
+        return query
+    clean = [t.strip() for t in terms if isinstance(t, str) and t.strip()]
+    if not query or not clean:
+        return query
+    pattern = re.compile(
+        r"(?i)\b(?:"
+        + "|".join(r"\s+".join(map(re.escape, t.split())) for t in clean)
+        + r")(?:'s)?\b"
+    )
+    if not pattern.search(query):
+        return query
+    stripped = re.sub(r"\s+", " ", pattern.sub(" ", query)).strip()
+    try:
+        stop = set(
+            nltk.corpus.stopwords.words(stopwords_language_map.get(language, "english"))
+        )
+    except Exception:  # corpus not downloaded: fall back to a small fixed list
+        stop = set(_FALLBACK_STOPWORDS)
+    content = [w for w in re.findall(r"[^\W_]+", stripped.lower()) if w not in stop]
+    return stripped if len(content) >= 2 else query
+
 
 # Function to ensure NLTK resources are downloaded
 def ensure_nltk_resources() -> None:
