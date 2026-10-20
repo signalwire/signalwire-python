@@ -169,6 +169,8 @@ def _build_mixin(**overrides: Any) -> Any:
     # historically asserted on.
     if "_handle_swaig_request" not in overrides:
         agent._handle_swaig_request = types.MethodType(_SWMLSvc._handle_swaig_request, agent)
+    if "_dispatch_swaig_body" not in overrides:
+        agent._dispatch_swaig_body = types.MethodType(_SWMLSvc._dispatch_swaig_body, agent)
     if "_swaig_render_get_response" not in overrides:
         agent._swaig_render_get_response = types.MethodType(_AgentBase._swaig_render_get_response, agent)
     if "_swaig_pre_dispatch" not in overrides:

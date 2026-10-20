@@ -134,10 +134,9 @@ async def swaig(request: web.Request) -> web.Response:
         request.method, str(request.url), request.headers, await request.read()
     )
     return web.Response(status=status, headers=headers, text=body)
-
-app = web.Application()
-app.router.add_route("*", "/agent/swaig", swaig)
 ```
+
+Route the agent's SWAIG URL (`/agent/swaig` for `route="/agent"`) to this handler for both GET and POST.
 
 ### Prompt Configuration
 
