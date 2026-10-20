@@ -882,6 +882,112 @@ class SWMLService(ToolMixin):
         """
         return self, None
 
+    async def _dispatch_swaig_body(
+        self, request: Any, body: dict[str, Any], req_log: Any
+    ) -> tuple[int, dict[str, Any]]:
+        """Run the SWAIG function a parsed POST body names, framework-free.
+
+        The part of the /swaig endpoint after the HTTP checks: it validates the
+        function name, extracts the arguments, runs the _swaig_pre_dispatch
+        hook (per-call configuration and the token check), calls
+        on_function_call() on the target and shapes the result. The FastAPI
+        endpoint and :meth:`AgentBase.handle_swaig_request` both come through
+        here, so they answer the same request the same way.
+
+        Args:
+            request: What _swaig_pre_dispatch reads the query parameters and
+                headers from: a FastAPI ``Request``, or any object with
+                ``query_params`` and ``headers`` mappings
+            body: The parsed request body
+            req_log: The request's bound logger
+
+        Returns:
+            The HTTP status and the JSON response: 400 for a missing or
+            malformed function name, otherwise 200 with the function's result,
+            a refusal, or the error the function raised
+        """
+        function_name = body.get("function")
+        if not function_name:
+            req_log.warning("missing_function_name")
+            return 400, {"error": "Missing function name"}
+
+        if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", function_name):
+            req_log.warning("invalid_function_name_format", function=function_name)
+            return 400, {"error": f"Invalid function name format: '{function_name}'"}
+
+        req_log = req_log.bind(function=function_name)
+
+        # Argument extraction. Handle both AgentBase's nested
+        # {"argument": {"parsed": [...], "raw": "..."}} shape AND a flat
+        # {"arguments": {...}} shape used by some external integrations.
+        args: dict[str, Any] = {}
+        if "argument" in body and isinstance(body["argument"], dict):
+            if (
+                "parsed" in body["argument"]
+                and isinstance(body["argument"]["parsed"], list)
+                and body["argument"]["parsed"]
+            ):
+                args = body["argument"]["parsed"][0]
+            elif "raw" in body["argument"] and body["argument"]["raw"]:
+                try:
+                    args = json.loads(body["argument"]["raw"])
+                except Exception as e:
+                    req_log.error("error_parsing_raw_arguments", error=str(e))
+        elif "arguments" in body and isinstance(body["arguments"], dict):
+            args = body["arguments"]
+        if not isinstance(args, dict):
+            args = {}
+
+        call_id = body.get("call_id")
+        if call_id:
+            req_log = req_log.bind(call_id=call_id)
+
+        # Per-call configuration and a synchronous handler are user code,
+        # so they run in a worker thread rather than blocking the event
+        # loop. The context variables they set carry over to later steps.
+        if self._swaig_configures_per_call():
+            target, short_circuit = await run_sync_handler(
+                self._swaig_pre_dispatch, request, body, call_id, function_name
+            )
+        else:
+            target, short_circuit = self._swaig_pre_dispatch(
+                request, body, call_id, function_name
+            )
+        if short_circuit is not None:
+            return 200, short_circuit
+
+        try:
+            if self._swaig_handler_is_async(target, function_name):
+                # Only creates the coroutine; no worker thread needed
+                result = target.on_function_call(function_name, args, body)
+            else:
+                result = await run_sync_handler(
+                    target.on_function_call, function_name, args, body
+                )
+            if inspect.isawaitable(result):
+                # An async def handler runs on this request's event loop.
+                result = await result
+            if isinstance(result, FunctionResult):
+                result_dict = result.to_dict()
+            elif isinstance(result, dict):
+                result_dict = result
+            else:
+                req_log.warning(
+                    "unexpected_function_result_type",
+                    function=function_name,
+                    result_type=type(result).__name__,
+                    hint=(
+                        "SWAIG function returned a value that is neither "
+                        "FunctionResult nor dict; falling back to str(result)."
+                    ),
+                )
+                result_dict = {"response": str(result)}
+            req_log.info("function_executed_successfully")
+            return 200, result_dict
+        except Exception as e:
+            req_log.error("function_execution_error", error=str(e))
+            return 200, {"error": str(e), "function": function_name}
+
     async def _handle_swaig_request(
         self, request: Request, response: Response
     ) -> Response | dict[str, Any]:
@@ -938,97 +1044,14 @@ class SWMLService(ToolMixin):
                 req_log.error("error_parsing_request_body", error=str(e))
                 body = {}
 
-            function_name = body.get("function")
-            if not function_name:
-                req_log.warning("missing_function_name")
+            status, payload = await self._dispatch_swaig_body(request, body, req_log)
+            if status != 200:
                 return Response(
-                    content=json.dumps({"error": "Missing function name"}),
-                    status_code=400,
+                    content=json.dumps(payload),
+                    status_code=status,
                     media_type="application/json",
                 )
-
-            if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", function_name):
-                req_log.warning("invalid_function_name_format", function=function_name)
-                return Response(
-                    content=json.dumps(
-                        {"error": f"Invalid function name format: '{function_name}'"}
-                    ),
-                    status_code=400,
-                    media_type="application/json",
-                )
-
-            req_log = req_log.bind(function=function_name)
-
-            # Argument extraction. Handle both AgentBase's nested
-            # {"argument": {"parsed": [...], "raw": "..."}} shape AND a flat
-            # {"arguments": {...}} shape used by some external integrations.
-            args: dict[str, Any] = {}
-            if "argument" in body and isinstance(body["argument"], dict):
-                if (
-                    "parsed" in body["argument"]
-                    and isinstance(body["argument"]["parsed"], list)
-                    and body["argument"]["parsed"]
-                ):
-                    args = body["argument"]["parsed"][0]
-                elif "raw" in body["argument"] and body["argument"]["raw"]:
-                    try:
-                        args = json.loads(body["argument"]["raw"])
-                    except Exception as e:
-                        req_log.error("error_parsing_raw_arguments", error=str(e))
-            elif "arguments" in body and isinstance(body["arguments"], dict):
-                args = body["arguments"]
-            if not isinstance(args, dict):
-                args = {}
-
-            call_id = body.get("call_id")
-            if call_id:
-                req_log = req_log.bind(call_id=call_id)
-
-            # Per-call configuration and a synchronous handler are user code,
-            # so they run in a worker thread rather than blocking the event
-            # loop. The context variables they set carry over to later steps.
-            if self._swaig_configures_per_call():
-                target, short_circuit = await run_sync_handler(
-                    self._swaig_pre_dispatch, request, body, call_id, function_name
-                )
-            else:
-                target, short_circuit = self._swaig_pre_dispatch(
-                    request, body, call_id, function_name
-                )
-            if short_circuit is not None:
-                return short_circuit
-
-            try:
-                if self._swaig_handler_is_async(target, function_name):
-                    # Only creates the coroutine; no worker thread needed
-                    result = target.on_function_call(function_name, args, body)
-                else:
-                    result = await run_sync_handler(
-                        target.on_function_call, function_name, args, body
-                    )
-                if inspect.isawaitable(result):
-                    # An async def handler runs on this request's event loop.
-                    result = await result
-                if isinstance(result, FunctionResult):
-                    result_dict = result.to_dict()
-                elif isinstance(result, dict):
-                    result_dict = result
-                else:
-                    req_log.warning(
-                        "unexpected_function_result_type",
-                        function=function_name,
-                        result_type=type(result).__name__,
-                        hint=(
-                            "SWAIG function returned a value that is neither "
-                            "FunctionResult nor dict; falling back to str(result)."
-                        ),
-                    )
-                    result_dict = {"response": str(result)}
-                req_log.info("function_executed_successfully")
-                return result_dict
-            except Exception as e:
-                req_log.error("function_execution_error", error=str(e))
-                return {"error": str(e), "function": function_name}
+            return payload
 
         except Exception as e:
             req_log.error("request_failed", error=str(e))

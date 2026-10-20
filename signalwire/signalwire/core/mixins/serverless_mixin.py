@@ -331,6 +331,100 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
                 }
             raise
 
+    async def handle_swaig_request(
+        self,
+        method: str,
+        url: str,
+        headers: Mapping[str, str],
+        body: str | bytes = "",
+    ) -> tuple[int, dict[str, str], str]:
+        """
+        Serve one request to the agent's /swaig endpoint from any web server.
+
+        For an application that runs its own server (aiohttp, Flask, a test
+        harness) instead of :meth:`serve`. Route the agent's SWAIG URL to this
+        method and send back what it returns; :meth:`handle_request` does the
+        same for the SWML document. It follows the built-in server's rules:
+        basic auth, the signature check on a POST when a ``signing_key`` is
+        set, per-call configuration, and the per-call token a secure function
+        needs. A POST runs the function its body names and answers with the
+        same JSON as POST /swaig; a GET answers with the SWML document. An
+        ``async def`` handler runs on the caller's event loop, and a
+        synchronous one in a worker thread, so a slow tool doesn't block the
+        server.
+
+        Example:
+            .. code-block:: python
+
+                async def swaig(request: web.Request) -> web.Response:
+                    status, headers, body = await agent.handle_swaig_request(
+                        request.method, str(request.url), request.headers,
+                        await request.read(),
+                    )
+                    return web.Response(status=status, headers=headers, text=body)
+
+        Args:
+            method: The HTTP method, e.g. ``"POST"``.
+            url: The full URL the request arrived on, with its query string.
+                The function token is read from the query, and a signature is
+                checked against the URL.
+            headers: The request headers; names are matched case-insensitively.
+            body: The raw request body, exactly as received (a signature
+                covers its bytes).
+
+        Returns:
+            A ``(status_code, response_headers, body_string)`` triple, like
+            :meth:`handle_request`. The body is JSON: the function's result
+            with status 200, which also carries a refused token or an error
+            the function raised; 400 for a missing or malformed function name;
+            401 for missing or wrong credentials, with a ``WWW-Authenticate``
+            header; 403 for an unsigned POST when a ``signing_key`` is set; and
+            405 for a method other than GET or POST.
+        """
+        json_headers = {"Content-Type": "application/json"}
+        lowered = _lower_headers(headers)
+        refused = self._request_auth_failure(url, lowered)
+        if refused is not None:
+            status, auth_headers, payload = refused
+            return status, {**json_headers, **auth_headers}, payload
+
+        parts = urlsplit(url)
+        request = _ServerlessRequest(
+            method=method.upper(),
+            path=parts.path or "/",
+            query_string=parts.query,
+            url=url,
+            headers=lowered,
+            body=body.decode("utf-8", errors="replace")
+            if isinstance(body, bytes)
+            else body,
+        )
+        view: Any = _RequestView(request.query, lowered)
+        req_log = self.log.bind(
+            endpoint="swaig", method=request.method, path=request.path
+        )
+        try:
+            if request.method == "GET":
+                response = await self._swaig_render_get_response(
+                    view, request.query.get("call_id")
+                )
+                return (
+                    response.status_code,
+                    json_headers,
+                    bytes(response.body).decode("utf-8"),
+                )
+            if request.method != "POST":
+                return 405, json_headers, json.dumps({"error": "Method not allowed"})
+            if self._serverless_signature_rejected(request):
+                return 403, json_headers, json.dumps({"error": "Forbidden"})
+            status, payload = await self._dispatch_swaig_body(
+                view, _json_object(request.body), req_log
+            )
+            return status, json_headers, json.dumps(payload)
+        except Exception as e:
+            req_log.error("request_failed", error=str(e))
+            return 500, json_headers, json.dumps({"error": "Internal server error"})
+
     def _serverless_response(
         self, request: _ServerlessRequest, relative_path: str | None = None
     ) -> tuple[int, str]:

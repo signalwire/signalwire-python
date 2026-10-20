@@ -122,6 +122,23 @@ agent.serve()  # Use constructor defaults
 agent.serve(host="0.0.0.0", port=3000)
 ```
 
+##### `async handle_swaig_request(method: str, url: str, headers: Mapping[str, str], body: str | bytes = "") -> Tuple[int, Dict[str, str], str]`
+Serve the agent's /swaig endpoint from your own web server instead of `serve()`. Pass the request's method, full URL (with its query string), headers and raw body; send back the `(status_code, headers, body)` it returns. It applies basic auth, the signature check when a `signing_key` is set, per-call configuration and the per-call token of a secure function, and answers with the same JSON as POST /swaig. An `async def` handler runs on your event loop; a synchronous one runs in a worker thread. Serve the SWML document with `handle_request()`.
+
+**Usage (aiohttp):**
+```python
+from aiohttp import web
+
+async def swaig(request: web.Request) -> web.Response:
+    status, headers, body = await agent.handle_swaig_request(
+        request.method, str(request.url), request.headers, await request.read()
+    )
+    return web.Response(status=status, headers=headers, text=body)
+
+app = web.Application()
+app.router.add_route("*", "/agent/swaig", swaig)
+```
+
 ### Prompt Configuration
 
 #### Text-Based Prompts

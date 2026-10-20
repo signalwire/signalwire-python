@@ -1,5 +1,19 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- `AgentBase.handle_swaig_request(method, url, headers, body)` serves the
+  agent's /swaig endpoint from an application's own web server (aiohttp,
+  Flask, a test harness) instead of `serve()`. It takes the request as
+  primitives and returns `(status_code, headers, body)`, like
+  `handle_request()` does for the SWML document. It follows the built-in
+  server's rules: basic auth, the signature check when a `signing_key` is
+  set, per-call configuration and the per-call token of a secure function,
+  and it answers a request with the same JSON as POST /swaig, because both
+  run the same dispatch code. An `async def` tool handler runs on the
+  caller's event loop and a synchronous one in a worker thread.
+
 ## [3.7.3] - 2026-10-19
 
 ### Added
