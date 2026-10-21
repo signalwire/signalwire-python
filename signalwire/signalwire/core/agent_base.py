@@ -175,6 +175,12 @@ def _slot_names(klass: type) -> list[str]:
     return names
 
 
+def _conversation_id(body: Any) -> str | None:
+    """A request's ``conversation_id``, if it names one."""
+    value = body.get("conversation_id") if isinstance(body, dict) else None
+    return value if isinstance(value, str) and value else None
+
+
 class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/_proxy_url_base override SWMLService/ServerlessMixin's by MRO order; mypy flags the base-vs-base shape diff but the resolution is deliberate
     AuthMixin,
     WebMixin,
@@ -1793,7 +1799,11 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
             )
 
         token = request.query_params.get("__token") or request.query_params.get("token")
-        rejection = target._tool_token_rejection(function_name, token, call_id)
+        # conversation_id only when the request names one, so an override
+        # written for the three-argument form keeps working
+        conversation_id = _conversation_id(body)
+        extra = {"conversation_id": conversation_id} if conversation_id else {}
+        rejection = target._tool_token_rejection(function_name, token, call_id, **extra)
         if rejection is not None:
             return self, rejection
         return target, None
@@ -1825,7 +1835,11 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         return target
 
     def _tool_token_rejection(
-        self, function_name: str, token: str | None, call_id: str | None
+        self,
+        function_name: str,
+        token: str | None,
+        call_id: str | None,
+        conversation_id: str | None = None,
     ) -> dict[str, Any] | None:
         """Refuse a secure function's call unless it carries a valid token.
 
@@ -1836,10 +1850,16 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         token. Every path that dispatches a SWAIG function, web server or
         serverless, checks it here.
 
+        The token may name the request's ``call_id`` or its
+        ``conversation_id``. A chat session fetches its SWML, and so gets its
+        tokens, under the conversation's id, then sends every request under
+        the chat service's own call id, with the conversation's id beside it.
+
         Args:
             function_name: The function the request asks to run
             token: The token from the request's query string, if any
             call_id: The call the request belongs to, if known
+            conversation_id: The request's ``conversation_id``, if any
 
         Returns:
             The SWAIG response to send instead of running the function, or
@@ -1860,7 +1880,16 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
             token
             and call_id is not None
             and hasattr(self, "_session_manager")
-            and self._session_manager.validate_tool_token(function_name, token, call_id)
+            and (
+                self._session_manager.validate_tool_token(function_name, token, call_id)
+                or (
+                    conversation_id
+                    and conversation_id != call_id
+                    and self._session_manager.validate_tool_token(
+                        function_name, token, conversation_id
+                    )
+                )
+            )
         )
         if is_valid:
             req_log.debug("token_valid")

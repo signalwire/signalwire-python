@@ -425,7 +425,15 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
         # and the token is checked against the agent that will run it
         call_id = _call_id(data)
         target = self._per_call_agent(query, data, headers)
-        rejection = target._tool_token_rejection(function_name, token, call_id)
+        conversation_id = data.get("conversation_id")
+        # conversation_id only when the request names one, so an override
+        # written for the three-argument form keeps working
+        extra = (
+            {"conversation_id": conversation_id}
+            if isinstance(conversation_id, str) and conversation_id
+            else {}
+        )
+        rejection = target._tool_token_rejection(function_name, token, call_id, **extra)
         if rejection is not None:
             return 200, json.dumps(rejection)
 

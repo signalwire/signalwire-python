@@ -1283,7 +1283,10 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             return 400, {"error": "The call_id in the URL and the body differ"}
         call_id = body_call_id or query_call_id
 
-        if not self._post_prompt_token_valid(token, call_id, req_log):
+        conversation_id = body.get("conversation_id")
+        if not isinstance(conversation_id, str) or not conversation_id:
+            conversation_id = None
+        if not self._post_prompt_token_valid(token, call_id, req_log, conversation_id):
             return 403, {"error": "Invalid or missing token"}
 
         # A per-call copy of the agent when dynamic configuration is set.
@@ -1321,9 +1324,16 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         return 200, {"success": True}
 
     def _post_prompt_token_valid(
-        self, token: str | None, call_id: str | None, req_log: Any
+        self,
+        token: str | None,
+        call_id: str | None,
+        req_log: Any,
+        conversation_id: str | None = None,
     ) -> bool:
-        """True when ``token`` is the post-prompt token minted for ``call_id``."""
+        """True when ``token`` is the post-prompt token minted for ``call_id``,
+        or for ``conversation_id``: a chat session's SWML, and so its token, is
+        made for the conversation, and its summary arrives under the chat
+        service's own call id."""
         if not token:
             req_log.warning("token_missing")
             return False
@@ -1334,6 +1344,13 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         try:
             is_valid = bool(
                 self._session_manager.validate_tool_token("post_prompt", token, call_id)
+                or (
+                    conversation_id
+                    and conversation_id != call_id
+                    and self._session_manager.validate_tool_token(
+                        "post_prompt", token, conversation_id
+                    )
+                )
             )
         except Exception as e:
             req_log.error("token_validation_error", error=str(e))
