@@ -5,9 +5,11 @@ The chat service fetches an agent's SWML under the conversation's id, so the
 SDK mints that SWML's tokens (each secure function's, and the post-prompt
 URL's) for the conversation id. It then sends every request under its own
 runtime call id, with the conversation's id as ``conversation_id``. The SDK
-compared the token with ``call_id`` alone, so in chat every secure function
-call and every post-prompt summary was refused (seen in production: a chat
-to voice handoff whose transcript never saved).
+compared the token with ``call_id`` alone, so in chat every post-prompt
+summary was refused (seen in production: a chat to voice handoff whose
+transcript never saved). In that trace the tool calls came under the
+conversation id and passed; a secure function accepts either id too, in case
+a request comes under the runtime one.
 """
 
 import json
