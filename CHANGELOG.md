@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- In a chat session, the post-prompt summary is accepted. The chat service
+  fetches an agent's SWML under the conversation's id, so its tokens carry
+  that id, and posts the summary under its own runtime call id, with the
+  conversation's id as `conversation_id`. The SDK checked the token against
+  `call_id` only, so it refused every chat summary, retried until the service
+  gave up. A token is now accepted when it names the request's `call_id` or
+  its `conversation_id`, for the post-prompt and for secure functions alike;
+  a voice call, where the two are the same, is unchanged.
+
 ## [3.7.3] - 2026-10-19
 
 ### Added
