@@ -363,13 +363,18 @@ class RelayClient:
         # (SIGNALWIRE_REST_CA_FILE is the REST half).
         ssl_context = _build_relay_ssl_context()
 
+        # Pass ssl= only when a custom CA context exists: websockets rejects an
+        # explicit ssl=None for a wss:// URI, and only defaults to the system
+        # trust store when the argument is omitted.
+        connect_kwargs: dict[str, Any] = {}
+        if ssl_context is not None:
+            connect_kwargs["ssl"] = ssl_context
+
         self._ws = await websockets.connect(
             uri,
             ping_interval=None,
             max_size=10 * 1024 * 1024,
-            # ssl_context is None when SIGNALWIRE_RELAY_CA_FILE is unset, which
-            # tells websockets to use its default (system trust store) for wss://.
-            ssl=ssl_context,
+            **connect_kwargs,
         )
         self._connected = True
         self._reconnect_delay = RECONNECT_MIN_DELAY

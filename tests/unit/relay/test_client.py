@@ -233,6 +233,48 @@ class TestRelayCaFile:
         assert ctx is real_ctx
         loader.assert_called_once_with(cafile=str(ca))
 
+    @pytest.mark.asyncio
+    async def test_connect_omits_ssl_without_ca_file(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # websockets rejects an explicit ssl=None for wss://, so the kwarg must
+        # be left out entirely when no CA file is configured (#122).
+        monkeypatch.delenv("SIGNALWIRE_RELAY_CA_FILE", raising=False)
+        _active_clients.clear()
+        with patch(
+            "signalwire.relay.client.websockets.connect",
+            new_callable=AsyncMock,
+            return_value=AutoAuthMockWebSocket(),
+        ) as connect:
+            client = RelayClient(project="p", token="t")
+            await client.connect()
+            await client.disconnect()
+        _active_clients.clear()
+        assert "ssl" not in connect.call_args.kwargs
+
+    @pytest.mark.asyncio
+    async def test_connect_passes_ssl_with_ca_file(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        sentinel_ctx = MagicMock()
+        _active_clients.clear()
+        with (
+            patch(
+                "signalwire.relay.client._build_relay_ssl_context",
+                return_value=sentinel_ctx,
+            ),
+            patch(
+                "signalwire.relay.client.websockets.connect",
+                new_callable=AsyncMock,
+                return_value=AutoAuthMockWebSocket(),
+            ) as connect,
+        ):
+            client = RelayClient(project="p", token="t")
+            await client.connect()
+            await client.disconnect()
+        _active_clients.clear()
+        assert connect.call_args.kwargs["ssl"] is sentinel_ctx
+
     def test_custom_host(self) -> None:
         c = RelayClient(project="p", token="t", host="custom.relay.com")
         assert c.host == "custom.relay.com"
