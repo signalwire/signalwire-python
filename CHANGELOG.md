@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [3.7.4] - 2026-10-21
 
 ### Fixed
 - In a chat session, the post-prompt summary is accepted. The chat service
