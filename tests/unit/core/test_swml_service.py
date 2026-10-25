@@ -1296,6 +1296,31 @@ class TestGetBaseUrl:
         assert url == "http://localhost"
         assert ":80" not in url
 
+    def test_base_url_names_caller_without_walking_the_stack(self) -> None:
+        """The debug event names the caller without inspect.stack().
+
+        Every webhook URL in a SWML render calls _get_base_url, and the
+        debug arguments are built even when debug logging is off.
+        inspect.stack() reads source context for every frame, which cost
+        several milliseconds per render on a server's deep stack.
+        """
+        service = SWMLService(
+            name="url_caller",
+            route="/",
+            host="0.0.0.0",
+            port=3000,
+            schema_validation=False,
+        )
+        service._proxy_url_base = None
+        service.log = Mock()
+        with patch("inspect.stack", side_effect=AssertionError("walked the stack")):
+            service._get_base_url(include_auth=False)
+        first = service.log.debug.call_args_list[0]
+        assert first.args == ("_get_base_url called",)
+        assert first.kwargs["caller"] == (
+            "test_base_url_names_caller_without_walking_the_stack"
+        )
+
 
 class TestBuildFullUrl:
     """Test _build_full_url and _build_webhook_url."""

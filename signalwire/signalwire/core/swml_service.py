@@ -1633,9 +1633,9 @@ class SWMLService(ToolMixin):
             proxy_url_base_from_env=getattr(self, "_proxy_url_base_from_env", False),
             env_var=os.environ.get("SWML_PROXY_URL_BASE"),
             include_auth=include_auth,
-            caller=inspect.stack()[1].function
-            if len(inspect.stack()) > 1
-            else "unknown",
+            # sys._getframe reads one frame; inspect.stack() would build
+            # every frame's source context on each URL, even with debug off.
+            caller=sys._getframe(1).f_code.co_name,
         )
 
         # Check per-request proxy URL (contextvars) first for async safety
