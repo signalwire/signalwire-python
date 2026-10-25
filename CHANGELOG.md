@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- Rendering SWML no longer walks the call stack for every webhook URL.
+  `_get_base_url` named its caller in a debug event with `inspect.stack()`,
+  whose arguments are built even when debug logging is off, and that reads
+  source context for every frame, so the cost grows with the stack's depth:
+  1.1 ms a URL from a shallow stack, 4.7 ms with 40 more frames, and in a
+  load-tested agent server 93% of SWML rendering. It now reads only the
+  calling frame, and a call takes about 30 µs at any depth.
+
 ## [3.7.4] - 2026-10-21
 
 ### Fixed
