@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [3.7.5] - 2026-10-25
 
 ### Fixed
 - Rendering SWML no longer walks the call stack for every webhook URL.
