@@ -1,18 +1,29 @@
 # AUTO-GENERATED from porting-sdk/relay-protocol/*.{params,result}.json — DO NOT EDIT.
 # Regenerate: python3 porting-sdk/scripts/generate_python_rest_types.py
-#
-# One TypedDict per RELAY method's params (<Method>Params) and ack result
-# (<Method>Result), from the canonical switchblade wire schemas. STATIC-ONLY:
-# at runtime each is a plain dict; the wire layer stays untyped and tolerant.
+# (one TypedDict per RELAY method's params / ack result, from the canonical switchblade
+#  wire schemas)
+"""Typed RELAY WebSocket protocol payloads, generated from the wire schemas.
+
+One ``TypedDict`` per RELAY method's request params (``<Method>Params``) and
+acknowledgement result (``<Method>Result``). Static-only: at runtime each is a plain
+``dict``; the wire layer stays untyped and tolerant.
+"""
+
 from __future__ import annotations
 from typing import Any, TypeAlias, TypedDict
 
 
 class CallingAiHoldParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.ai_hold` (params). Extracted from switchblade `PublicCallAiHoldParams.cs`.
+    """Wire schema for the JSON payload of `calling.ai_hold` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallAiHoldParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
+
+    Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+    attributes; read them with item access):
+    - ``async`` (``bool | None``)
     """
 
     # non-identifier field 'async': bool | None
@@ -24,10 +35,16 @@ class CallingAiHoldParams(TypedDict, total=False):
 
 
 class CallingAiMessageParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.ai_message` (params). Extracted from switchblade `PublicCallAiMessageParams.cs`.
+    """Wire schema for the JSON payload of `calling.ai_message` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallAiMessageParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
+
+    Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+    attributes; read them with item access):
+    - ``async`` (``bool | None``)
     """
 
     # non-identifier field 'async': bool | None
@@ -41,10 +58,16 @@ class CallingAiMessageParams(TypedDict, total=False):
 
 
 class CallingAiUnholdParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.ai_unhold` (params). Extracted from switchblade `PublicCallAiUnholdParams.cs`.
+    """Wire schema for the JSON payload of `calling.ai_unhold` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallAiUnholdParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
+
+    Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+    attributes; read them with item access):
+    - ``async`` (``bool | None``)
     """
 
     # non-identifier field 'async': bool | None
@@ -55,10 +78,16 @@ class CallingAiUnholdParams(TypedDict, total=False):
 
 
 class CallingAmazonBedrockParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.amazon_bedrock` (params). Extracted from switchblade `PublicCallAmazonBedrockParams.cs`.
+    """Wire schema for the JSON payload of `calling.amazon_bedrock` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallAmazonBedrockParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
+
+    Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+    attributes; read them with item access):
+    - ``async`` (``bool | None``)
     """
 
     SWAIG: Any
@@ -74,10 +103,12 @@ class CallingAmazonBedrockParams(TypedDict, total=False):
 
 
 class CallingAnswerParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.answer` (params). Extracted from switchblade `PublicCallAnswerParams.cs`.
+    """Wire schema for the JSON payload of `calling.answer` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallAnswerParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -86,10 +117,12 @@ class CallingAnswerParams(TypedDict, total=False):
 
 
 class CallingBeginParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.begin` (params). Extracted from switchblade `PublicCallBeginParams.cs`.
+    """Wire schema for the JSON payload of `calling.begin` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallBeginParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     device: dict[str, Any]
@@ -100,10 +133,12 @@ class CallingBeginParams(TypedDict, total=False):
 
 
 class CallingBindDigitParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.bind_digit` (params). Extracted from switchblade `PublicCallBindDigitParams.cs`.
+    """Wire schema for the JSON payload of `calling.bind_digit` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallBindDigitParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     bind_method: str
@@ -120,10 +155,12 @@ CallingCallParams: TypeAlias = "dict[str, Any]"
 
 
 class CallingClearDigitBindingsParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.clear_digit_bindings` (params). Extracted from switchblade `PublicCallClearDigitBindingsParams.cs`.
+    """Wire schema for the JSON payload of `calling.clear_digit_bindings` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallClearDigitBindingsParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -133,10 +170,16 @@ class CallingClearDigitBindingsParams(TypedDict, total=False):
 
 
 class CallingCollectParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.collect` (params). Extracted from switchblade `PublicCallCollectParams.cs`.
+    """Wire schema for the JSON payload of `calling.collect` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallCollectParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
+
+    Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+    attributes; read them with item access):
+    - ``continue`` (``bool | None``)
     """
 
     call_id: str
@@ -153,10 +196,12 @@ class CallingCollectParams(TypedDict, total=False):
 
 
 class CallingCollectStartInputTimersParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.collect.start_input_timers` (params). Extracted from switchblade `PublicCallCollectStartInputTimersParams.cs`.
+    """Wire schema for the JSON payload of `calling.collect.start_input_timers` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallCollectStartInputTimersParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -165,10 +210,12 @@ class CallingCollectStartInputTimersParams(TypedDict, total=False):
 
 
 class CallingCollectStopParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.collect.stop` (params). Extracted from switchblade `PublicCallCollectStopParams.cs`.
+    """Wire schema for the JSON payload of `calling.collect.stop` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallCollectStopParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -177,10 +224,12 @@ class CallingCollectStopParams(TypedDict, total=False):
 
 
 class CallingConnectParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.connect` (params). Extracted from switchblade `PublicCallConnectParams.cs`.
+    """Wire schema for the JSON payload of `calling.connect` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallConnectParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -193,10 +242,12 @@ class CallingConnectParams(TypedDict, total=False):
 
 
 class CallingDenoiseParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.denoise` (params). Extracted from switchblade `PublicCallDenoiseParams.cs`.
+    """Wire schema for the JSON payload of `calling.denoise` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallDenoiseParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -204,10 +255,12 @@ class CallingDenoiseParams(TypedDict, total=False):
 
 
 class CallingDenoiseStopParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.denoise.stop` (params). Extracted from switchblade `PublicCallDenoiseStopParams.cs`.
+    """Wire schema for the JSON payload of `calling.denoise.stop` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallDenoiseStopParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -215,10 +268,12 @@ class CallingDenoiseStopParams(TypedDict, total=False):
 
 
 class CallingDetectParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.detect` (params). Extracted from switchblade `PublicCallDetectParams.cs`.
+    """Wire schema for the JSON payload of `calling.detect` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallDetectParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -229,10 +284,12 @@ class CallingDetectParams(TypedDict, total=False):
 
 
 class CallingDetectStopParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.detect.stop` (params). Extracted from switchblade `PublicCallDetectStopParams.cs`.
+    """Wire schema for the JSON payload of `calling.detect.stop` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallDetectStopParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -241,10 +298,12 @@ class CallingDetectStopParams(TypedDict, total=False):
 
 
 class CallingDialParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.dial` (params). Extracted from switchblade `PublicCallDialParams.cs`.
+    """Wire schema for the JSON payload of `calling.dial` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallDialParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     devices: list[list[dict[str, Any]]]
@@ -255,10 +314,12 @@ class CallingDialParams(TypedDict, total=False):
 
 
 class CallingDisconnectParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.disconnect` (params). Extracted from switchblade `PublicCallDisconnectParams.cs`.
+    """Wire schema for the JSON payload of `calling.disconnect` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallDisconnectParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -266,10 +327,12 @@ class CallingDisconnectParams(TypedDict, total=False):
 
 
 class CallingEchoParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.echo` (params). Extracted from switchblade `PublicCallEchoParams.cs`.
+    """Wire schema for the JSON payload of `calling.echo` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallEchoParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -280,10 +343,12 @@ class CallingEchoParams(TypedDict, total=False):
 
 
 class CallingEndParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.end` (params). Extracted from switchblade `PublicCallEndParams.cs`.
+    """Wire schema for the JSON payload of `calling.end` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallEndParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -292,10 +357,12 @@ class CallingEndParams(TypedDict, total=False):
 
 
 class CallingJoinConferenceParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.join_conference` (params). Extracted from switchblade `PublicCallJoinConferenceParams.cs`.
+    """Wire schema for the JSON payload of `calling.join_conference` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallJoinConferenceParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     acl: str
@@ -325,10 +392,12 @@ class CallingJoinConferenceParams(TypedDict, total=False):
 
 
 class CallingJoinRoomParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.join_room` (params). Extracted from switchblade `PublicCallJoinRoomParams.cs`.
+    """Wire schema for the JSON payload of `calling.join_room` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallJoinRoomParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -341,10 +410,16 @@ class CallingJoinRoomParams(TypedDict, total=False):
 
 
 class CallingLeaveConferenceParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.leave_conference` (params). Extracted from switchblade `PublicCallLeaveConferenceParams.cs`.
+    """Wire schema for the JSON payload of `calling.leave_conference` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallLeaveConferenceParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
+
+    Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+    attributes; read them with item access):
+    - ``async`` (``bool | None``)
     """
 
     # non-identifier field 'async': bool | None
@@ -354,10 +429,16 @@ class CallingLeaveConferenceParams(TypedDict, total=False):
 
 
 class CallingLeaveRoomParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.leave_room` (params). Extracted from switchblade `PublicCallLeaveRoomParams.cs`.
+    """Wire schema for the JSON payload of `calling.leave_room` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallLeaveRoomParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
+
+    Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+    attributes; read them with item access):
+    - ``async`` (``bool | None``)
     """
 
     # non-identifier field 'async': bool | None
@@ -366,10 +447,16 @@ class CallingLeaveRoomParams(TypedDict, total=False):
 
 
 class CallingLiveTranscribeParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.live_transcribe` (params). Extracted from switchblade `PublicCallLiveTranscribeParams.cs`.
+    """Wire schema for the JSON payload of `calling.live_transcribe` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallLiveTranscribeParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
+
+    Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+    attributes; read them with item access):
+    - ``async`` (``bool | None``)
     """
 
     action: Any
@@ -380,10 +467,16 @@ class CallingLiveTranscribeParams(TypedDict, total=False):
 
 
 class CallingLiveTranslateParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.live_translate` (params). Extracted from switchblade `PublicCallLiveTranslateParams.cs`.
+    """Wire schema for the JSON payload of `calling.live_translate` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallLiveTranslateParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
+
+    Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+    attributes; read them with item access):
+    - ``async`` (``bool | None``)
     """
 
     action: Any
@@ -395,10 +488,12 @@ class CallingLiveTranslateParams(TypedDict, total=False):
 
 
 class CallingPassParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.pass` (params). Extracted from switchblade `PublicCallPassParams.cs`.
+    """Wire schema for the JSON payload of `calling.pass` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallPassParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -406,10 +501,12 @@ class CallingPassParams(TypedDict, total=False):
 
 
 class CallingPayParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.pay` (params). Extracted from switchblade `PublicCallPayParams.cs`.
+    """Wire schema for the JSON payload of `calling.pay` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallPayParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     bank_account_type: Any
@@ -437,10 +534,12 @@ class CallingPayParams(TypedDict, total=False):
 
 
 class CallingPayStopParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.pay.stop` (params). Extracted from switchblade `PublicCallPayStopParams.cs`.
+    """Wire schema for the JSON payload of `calling.pay.stop` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallPayStopParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -449,10 +548,12 @@ class CallingPayStopParams(TypedDict, total=False):
 
 
 class CallingPlayParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.play` (params). Extracted from switchblade `PublicCallPlayParams.cs`.
+    """Wire schema for the JSON payload of `calling.play` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallPlayParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -463,10 +564,12 @@ class CallingPlayParams(TypedDict, total=False):
 
 
 class CallingPlayPauseParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.play.pause` (params). Extracted from switchblade `PublicCallPlayPauseParams.cs`.
+    """Wire schema for the JSON payload of `calling.play.pause` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallPlayPauseParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -475,10 +578,12 @@ class CallingPlayPauseParams(TypedDict, total=False):
 
 
 class CallingPlayResumeParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.play.resume` (params). Extracted from switchblade `PublicCallPlayResumeParams.cs`.
+    """Wire schema for the JSON payload of `calling.play.resume` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallPlayResumeParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -487,10 +592,12 @@ class CallingPlayResumeParams(TypedDict, total=False):
 
 
 class CallingPlayStopParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.play.stop` (params). Extracted from switchblade `PublicCallPlayStopParams.cs`.
+    """Wire schema for the JSON payload of `calling.play.stop` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallPlayStopParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -499,10 +606,12 @@ class CallingPlayStopParams(TypedDict, total=False):
 
 
 class CallingPlayVolumeParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.play.volume` (params). Extracted from switchblade `PublicCallPlayVolumeParams.cs`.
+    """Wire schema for the JSON payload of `calling.play.volume` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallPlayVolumeParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -512,10 +621,12 @@ class CallingPlayVolumeParams(TypedDict, total=False):
 
 
 class CallingPlayAndCollectParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.play_and_collect` (params). Extracted from switchblade `PublicCallPlayAndCollectParams.cs`.
+    """Wire schema for the JSON payload of `calling.play_and_collect` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallPlayAndCollectParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -527,10 +638,12 @@ class CallingPlayAndCollectParams(TypedDict, total=False):
 
 
 class CallingPlayAndCollectStopParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.play_and_collect.stop` (params). Extracted from switchblade `PublicCallPlayAndCollectStopParams.cs`.
+    """Wire schema for the JSON payload of `calling.play_and_collect.stop` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallPlayAndCollectStopParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -539,10 +652,12 @@ class CallingPlayAndCollectStopParams(TypedDict, total=False):
 
 
 class CallingPlayAndCollectVolumeParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.play_and_collect.volume` (params). Extracted from switchblade `PublicCallPlayAndCollectVolumeParams.cs`.
+    """Wire schema for the JSON payload of `calling.play_and_collect.volume` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallPlayAndCollectVolumeParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -552,10 +667,12 @@ class CallingPlayAndCollectVolumeParams(TypedDict, total=False):
 
 
 class CallingQueueEnterParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.queue.enter` (params). Extracted from switchblade `PublicCallQueueEnterParams.cs`.
+    """Wire schema for the JSON payload of `calling.queue.enter` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallQueueEnterParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -567,10 +684,12 @@ class CallingQueueEnterParams(TypedDict, total=False):
 
 
 class CallingQueueLeaveParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.queue.leave` (params). Extracted from switchblade `PublicCallQueueLeaveParams.cs`.
+    """Wire schema for the JSON payload of `calling.queue.leave` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallQueueLeaveParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -582,10 +701,12 @@ class CallingQueueLeaveParams(TypedDict, total=False):
 
 
 class CallingReceiveParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.receive` (params). Extracted from switchblade `PublicCallReceiveParams.cs`.
+    """Wire schema for the JSON payload of `calling.receive` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallReceiveParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     context: str
@@ -593,10 +714,12 @@ class CallingReceiveParams(TypedDict, total=False):
 
 
 class CallingReceiveFaxParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.receive_fax` (params). Extracted from switchblade `PublicCallReceiveFaxParams.cs`.
+    """Wire schema for the JSON payload of `calling.receive_fax` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallReceiveFaxParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -605,10 +728,12 @@ class CallingReceiveFaxParams(TypedDict, total=False):
 
 
 class CallingReceiveFaxStopParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.receive_fax.stop` (params). Extracted from switchblade `PublicCallReceiveFaxStopParams.cs`.
+    """Wire schema for the JSON payload of `calling.receive_fax.stop` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallReceiveFaxStopParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -617,10 +742,12 @@ class CallingReceiveFaxStopParams(TypedDict, total=False):
 
 
 class CallingRecordParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.record` (params). Extracted from switchblade `PublicCallRecordParams.cs`.
+    """Wire schema for the JSON payload of `calling.record` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallRecordParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -630,10 +757,12 @@ class CallingRecordParams(TypedDict, total=False):
 
 
 class CallingRecordPauseParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.record.pause` (params). Extracted from switchblade `PublicCallRecordPauseParams.cs`.
+    """Wire schema for the JSON payload of `calling.record.pause` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallRecordPauseParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     behavior: str
@@ -643,10 +772,12 @@ class CallingRecordPauseParams(TypedDict, total=False):
 
 
 class CallingRecordResumeParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.record.resume` (params). Extracted from switchblade `PublicCallRecordResumeParams.cs`.
+    """Wire schema for the JSON payload of `calling.record.resume` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallRecordResumeParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -655,10 +786,12 @@ class CallingRecordResumeParams(TypedDict, total=False):
 
 
 class CallingRecordStopParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.record.stop` (params). Extracted from switchblade `PublicCallRecordStopParams.cs`.
+    """Wire schema for the JSON payload of `calling.record.stop` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallRecordStopParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -667,10 +800,12 @@ class CallingRecordStopParams(TypedDict, total=False):
 
 
 class CallingReferParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.refer` (params). Extracted from switchblade `PublicCallReferParams.cs`.
+    """Wire schema for the JSON payload of `calling.refer` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallReferParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -679,10 +814,12 @@ class CallingReferParams(TypedDict, total=False):
 
 
 class CallingSendDigitsParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.send_digits` (params). Extracted from switchblade `PublicCallSendDigitsParams.cs`.
+    """Wire schema for the JSON payload of `calling.send_digits` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallSendDigitsParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -692,10 +829,12 @@ class CallingSendDigitsParams(TypedDict, total=False):
 
 
 class CallingSendFaxParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.send_fax` (params). Extracted from switchblade `PublicCallSendFaxParams.cs`.
+    """Wire schema for the JSON payload of `calling.send_fax` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallSendFaxParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -707,10 +846,12 @@ class CallingSendFaxParams(TypedDict, total=False):
 
 
 class CallingSendFaxStopParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.send_fax.stop` (params). Extracted from switchblade `PublicCallSendFaxStopParams.cs`.
+    """Wire schema for the JSON payload of `calling.send_fax.stop` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallSendFaxStopParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -719,10 +860,16 @@ class CallingSendFaxStopParams(TypedDict, total=False):
 
 
 class CallingStreamParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.stream` (params). Extracted from switchblade `PublicCallStreamParams.cs`.
+    """Wire schema for the JSON payload of `calling.stream` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallStreamParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
+
+    Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+    attributes; read them with item access):
+    - ``async`` (``bool | None``)
     """
 
     # non-identifier field 'async': bool | None
@@ -741,10 +888,16 @@ class CallingStreamParams(TypedDict, total=False):
 
 
 class CallingStreamStopParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.stream.stop` (params). Extracted from switchblade `PublicCallStreamStopParams.cs`.
+    """Wire schema for the JSON payload of `calling.stream.stop` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallStreamStopParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
+
+    Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+    attributes; read them with item access):
+    - ``async`` (``bool | None``)
     """
 
     # non-identifier field 'async': bool | None
@@ -755,10 +908,12 @@ class CallingStreamStopParams(TypedDict, total=False):
 
 
 class CallingTapParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.tap` (params). Extracted from switchblade `PublicCallTapParams.cs`.
+    """Wire schema for the JSON payload of `calling.tap` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallTapParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -769,10 +924,12 @@ class CallingTapParams(TypedDict, total=False):
 
 
 class CallingTapStopParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.tap.stop` (params). Extracted from switchblade `PublicCallTapStopParams.cs`.
+    """Wire schema for the JSON payload of `calling.tap.stop` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallTapStopParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -781,10 +938,12 @@ class CallingTapStopParams(TypedDict, total=False):
 
 
 class CallingTransferParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.transfer` (params). Extracted from switchblade `PublicCallTransferParams.cs`.
+    """Wire schema for the JSON payload of `calling.transfer` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallTransferParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -793,10 +952,16 @@ class CallingTransferParams(TypedDict, total=False):
 
 
 class CallingUserEventParams(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.user_event` (params). Extracted from switchblade `PublicCallUserEventParams.cs`.
+    """Wire schema for the JSON payload of `calling.user_event` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallUserEventParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
+
+    Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+    attributes; read them with item access):
+    - ``async`` (``bool | None``)
     """
 
     # non-identifier field 'async': bool | None
@@ -807,10 +972,14 @@ class CallingUserEventParams(TypedDict, total=False):
 
 
 class MessagingSendParams(TypedDict, total=False):
-    """Permissive schema for the messaging.send RPC params. Switchblade forwards the JObject as-is to the messaging gateway, so the schema is derived from the Python relay client (``signalwire/relay/client.py:send_message``). At least one of `body` or `media` is required.
+    """Permissive schema for the messaging.send RPC params.
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Switchblade forwards the JObject as-is to the messaging gateway, so the schema is
+    derived from the Python relay client (``signalwire/relay/client.py:send_message``).
+    At least one of `body` or `media` is required.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     body: str
@@ -823,10 +992,12 @@ class MessagingSendParams(TypedDict, total=False):
 
 
 class SignalwireConnectParams(TypedDict, total=False):
-    """Wire schema for the Blade envelope `signalwire.connect` (params). Extracted from switchblade `Messages/ConnectParams.cs`.
+    """Wire schema for the Blade envelope `signalwire.connect` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `Messages/ConnectParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     agent: str
@@ -839,20 +1010,24 @@ class SignalwireConnectParams(TypedDict, total=False):
 
 
 class SignalwireDisconnectParams(TypedDict, total=False):
-    """Wire schema for the Blade envelope `signalwire.disconnect` (params). Extracted from switchblade `Messages/DisconnectParams.cs`.
+    """Wire schema for the Blade envelope `signalwire.disconnect` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `Messages/DisconnectParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     restart: bool
 
 
 class SignalwireExecuteParams(TypedDict, total=False):
-    """Wire schema for the Blade envelope `signalwire.execute` (params). Extracted from switchblade `Messages/ExecuteParams.cs`.
+    """Wire schema for the Blade envelope `signalwire.execute` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `Messages/ExecuteParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     attempted: list[str]
@@ -866,10 +1041,12 @@ class SignalwireExecuteParams(TypedDict, total=False):
 
 
 class SignalwirePingParams(TypedDict, total=False):
-    """Wire schema for the Blade envelope `signalwire.ping` (params). Extracted from switchblade `Messages/PingParams.cs`.
+    """Wire schema for the Blade envelope `signalwire.ping` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `Messages/PingParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     payload: str
@@ -877,10 +1054,12 @@ class SignalwirePingParams(TypedDict, total=False):
 
 
 class SignalwireReauthenticateParams(TypedDict, total=False):
-    """Wire schema for the Blade envelope `signalwire.reauthenticate` (params). Extracted from switchblade `Messages/ReauthenticateParams.cs`.
+    """Wire schema for the Blade envelope `signalwire.reauthenticate` (params).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `Messages/ReauthenticateParams.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     authentication: dict[str, Any]
@@ -888,10 +1067,12 @@ class SignalwireReauthenticateParams(TypedDict, total=False):
 
 
 class CallingAiHoldResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.ai_hold` (result). Extracted from switchblade `PublicCallAiHoldResult.cs`.
+    """Wire schema for the JSON payload of `calling.ai_hold` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallAiHoldResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -901,10 +1082,12 @@ class CallingAiHoldResult(TypedDict, total=False):
 
 
 class CallingAiMessageResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.ai_message` (result). Extracted from switchblade `PublicCallAiMessageResult.cs`.
+    """Wire schema for the JSON payload of `calling.ai_message` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallAiMessageResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -914,10 +1097,12 @@ class CallingAiMessageResult(TypedDict, total=False):
 
 
 class CallingAiUnholdResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.ai_unhold` (result). Extracted from switchblade `PublicCallAiUnholdResult.cs`.
+    """Wire schema for the JSON payload of `calling.ai_unhold` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallAiUnholdResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -927,10 +1112,12 @@ class CallingAiUnholdResult(TypedDict, total=False):
 
 
 class CallingAmazonBedrockResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.amazon_bedrock` (result). Extracted from switchblade `PublicCallAmazonBedrockResult.cs`.
+    """Wire schema for the JSON payload of `calling.amazon_bedrock` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallAmazonBedrockResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -940,10 +1127,12 @@ class CallingAmazonBedrockResult(TypedDict, total=False):
 
 
 class CallingAnswerResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.answer` (result). Extracted from switchblade `PublicCallAnswerResult.cs`.
+    """Wire schema for the JSON payload of `calling.answer` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallAnswerResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     code: str
@@ -952,10 +1141,12 @@ class CallingAnswerResult(TypedDict, total=False):
 
 
 class CallingBeginResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.begin` (result). Extracted from switchblade `PublicCallBeginResult.cs`.
+    """Wire schema for the JSON payload of `calling.begin` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallBeginResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -967,10 +1158,12 @@ class CallingBeginResult(TypedDict, total=False):
 
 
 class CallingBindDigitResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.bind_digit` (result). Extracted from switchblade `PublicCallBindDigitResult.cs`.
+    """Wire schema for the JSON payload of `calling.bind_digit` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallBindDigitResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -983,10 +1176,12 @@ CallingCallResult: TypeAlias = "dict[str, Any]"
 
 
 class CallingClearDigitBindingsResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.clear_digit_bindings` (result). Extracted from switchblade `PublicCallClearDigitBindingsResult.cs`.
+    """Wire schema for the JSON payload of `calling.clear_digit_bindings` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallClearDigitBindingsResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -996,10 +1191,12 @@ class CallingClearDigitBindingsResult(TypedDict, total=False):
 
 
 class CallingCollectResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.collect` (result). Extracted from switchblade `PublicCallCollectResult.cs`.
+    """Wire schema for the JSON payload of `calling.collect` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallCollectResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1010,10 +1207,12 @@ class CallingCollectResult(TypedDict, total=False):
 
 
 class CallingCollectStartInputTimersResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.collect.start_input_timers` (result). Extracted from switchblade `PublicCallCollectStartInputTimersResult.cs`.
+    """Wire schema for the JSON payload of `calling.collect.start_input_timers` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallCollectStartInputTimersResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1024,10 +1223,12 @@ class CallingCollectStartInputTimersResult(TypedDict, total=False):
 
 
 class CallingCollectStopResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.collect.stop` (result). Extracted from switchblade `PublicCallCollectStopResult.cs`.
+    """Wire schema for the JSON payload of `calling.collect.stop` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallCollectStopResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1038,10 +1239,12 @@ class CallingCollectStopResult(TypedDict, total=False):
 
 
 class CallingConnectResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.connect` (result). Extracted from switchblade `PublicCallConnectResult.cs`.
+    """Wire schema for the JSON payload of `calling.connect` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallConnectResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     code: str
@@ -1051,10 +1254,12 @@ class CallingConnectResult(TypedDict, total=False):
 
 
 class CallingDenoiseResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.denoise` (result). Extracted from switchblade `PublicCallDenoiseResult.cs`.
+    """Wire schema for the JSON payload of `calling.denoise` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallDenoiseResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1064,10 +1269,12 @@ class CallingDenoiseResult(TypedDict, total=False):
 
 
 class CallingDenoiseStopResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.denoise.stop` (result). Extracted from switchblade `PublicCallDenoiseStopResult.cs`.
+    """Wire schema for the JSON payload of `calling.denoise.stop` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallDenoiseStopResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1077,10 +1284,12 @@ class CallingDenoiseStopResult(TypedDict, total=False):
 
 
 class CallingDetectResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.detect` (result). Extracted from switchblade `PublicCallDetectResult.cs`.
+    """Wire schema for the JSON payload of `calling.detect` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallDetectResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1091,10 +1300,12 @@ class CallingDetectResult(TypedDict, total=False):
 
 
 class CallingDetectStopResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.detect.stop` (result). Extracted from switchblade `PublicCallDetectStopResult.cs`.
+    """Wire schema for the JSON payload of `calling.detect.stop` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallDetectStopResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1105,10 +1316,12 @@ class CallingDetectStopResult(TypedDict, total=False):
 
 
 class CallingDialResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.dial` (result). Extracted from switchblade `PublicCallDialResult.cs`.
+    """Wire schema for the JSON payload of `calling.dial` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallDialResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     code: str
@@ -1118,10 +1331,12 @@ class CallingDialResult(TypedDict, total=False):
 
 
 class CallingDisconnectResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.disconnect` (result). Extracted from switchblade `PublicCallDisconnectResult.cs`.
+    """Wire schema for the JSON payload of `calling.disconnect` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallDisconnectResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     code: str
@@ -1130,10 +1345,12 @@ class CallingDisconnectResult(TypedDict, total=False):
 
 
 class CallingEchoResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.echo` (result). Extracted from switchblade `PublicCallEchoResult.cs`.
+    """Wire schema for the JSON payload of `calling.echo` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallEchoResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1143,10 +1360,12 @@ class CallingEchoResult(TypedDict, total=False):
 
 
 class CallingEndResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.end` (result). Extracted from switchblade `PublicCallEndResult.cs`.
+    """Wire schema for the JSON payload of `calling.end` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallEndResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     code: str
@@ -1155,10 +1374,12 @@ class CallingEndResult(TypedDict, total=False):
 
 
 class CallingJoinConferenceResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.join_conference` (result). Extracted from switchblade `PublicCallJoinConferenceResult.cs`.
+    """Wire schema for the JSON payload of `calling.join_conference` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallJoinConferenceResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1169,10 +1390,12 @@ class CallingJoinConferenceResult(TypedDict, total=False):
 
 
 class CallingJoinRoomResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.join_room` (result). Extracted from switchblade `PublicCallJoinRoomResult.cs`.
+    """Wire schema for the JSON payload of `calling.join_room` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallJoinRoomResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1182,10 +1405,12 @@ class CallingJoinRoomResult(TypedDict, total=False):
 
 
 class CallingLeaveConferenceResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.leave_conference` (result). Extracted from switchblade `PublicCallLeaveConferenceResult.cs`.
+    """Wire schema for the JSON payload of `calling.leave_conference` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallLeaveConferenceResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1195,10 +1420,12 @@ class CallingLeaveConferenceResult(TypedDict, total=False):
 
 
 class CallingLeaveRoomResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.leave_room` (result). Extracted from switchblade `PublicCallLeaveRoomResult.cs`.
+    """Wire schema for the JSON payload of `calling.leave_room` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallLeaveRoomResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1208,10 +1435,12 @@ class CallingLeaveRoomResult(TypedDict, total=False):
 
 
 class CallingLiveTranscribeResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.live_transcribe` (result). Extracted from switchblade `PublicCallLiveTranscribeResult.cs`.
+    """Wire schema for the JSON payload of `calling.live_transcribe` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallLiveTranscribeResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1221,10 +1450,12 @@ class CallingLiveTranscribeResult(TypedDict, total=False):
 
 
 class CallingLiveTranslateResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.live_translate` (result). Extracted from switchblade `PublicCallLiveTranslateResult.cs`.
+    """Wire schema for the JSON payload of `calling.live_translate` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallLiveTranslateResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1234,10 +1465,12 @@ class CallingLiveTranslateResult(TypedDict, total=False):
 
 
 class CallingPassResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.pass` (result). Extracted from switchblade `PublicCallPassResult.cs`.
+    """Wire schema for the JSON payload of `calling.pass` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallPassResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1247,10 +1480,12 @@ class CallingPassResult(TypedDict, total=False):
 
 
 class CallingPayResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.pay` (result). Extracted from switchblade `PublicCallPayResult.cs`.
+    """Wire schema for the JSON payload of `calling.pay` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallPayResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1261,10 +1496,12 @@ class CallingPayResult(TypedDict, total=False):
 
 
 class CallingPayStopResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.pay.stop` (result). Extracted from switchblade `PublicCallPayStopResult.cs`.
+    """Wire schema for the JSON payload of `calling.pay.stop` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallPayStopResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1275,10 +1512,12 @@ class CallingPayStopResult(TypedDict, total=False):
 
 
 class CallingPlayPauseResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.play.pause` (result). Extracted from switchblade `PublicCallPlayPauseResult.cs`.
+    """Wire schema for the JSON payload of `calling.play.pause` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallPlayPauseResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1289,10 +1528,12 @@ class CallingPlayPauseResult(TypedDict, total=False):
 
 
 class CallingPlayResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.play` (result). Extracted from switchblade `PublicCallPlayResult.cs`.
+    """Wire schema for the JSON payload of `calling.play` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallPlayResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1303,10 +1544,12 @@ class CallingPlayResult(TypedDict, total=False):
 
 
 class CallingPlayResumeResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.play.resume` (result). Extracted from switchblade `PublicCallPlayResumeResult.cs`.
+    """Wire schema for the JSON payload of `calling.play.resume` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallPlayResumeResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1317,10 +1560,12 @@ class CallingPlayResumeResult(TypedDict, total=False):
 
 
 class CallingPlayStopResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.play.stop` (result). Extracted from switchblade `PublicCallPlayStopResult.cs`.
+    """Wire schema for the JSON payload of `calling.play.stop` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallPlayStopResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1331,10 +1576,12 @@ class CallingPlayStopResult(TypedDict, total=False):
 
 
 class CallingPlayVolumeResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.play.volume` (result). Extracted from switchblade `PublicCallPlayVolumeResult.cs`.
+    """Wire schema for the JSON payload of `calling.play.volume` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallPlayVolumeResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1345,10 +1592,12 @@ class CallingPlayVolumeResult(TypedDict, total=False):
 
 
 class CallingPlayAndCollectResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.play_and_collect` (result). Extracted from switchblade `PublicCallPlayAndCollectResult.cs`.
+    """Wire schema for the JSON payload of `calling.play_and_collect` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallPlayAndCollectResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1359,10 +1608,12 @@ class CallingPlayAndCollectResult(TypedDict, total=False):
 
 
 class CallingPlayAndCollectStopResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.play_and_collect.stop` (result). Extracted from switchblade `PublicCallPlayAndCollectStopResult.cs`.
+    """Wire schema for the JSON payload of `calling.play_and_collect.stop` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallPlayAndCollectStopResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1373,10 +1624,12 @@ class CallingPlayAndCollectStopResult(TypedDict, total=False):
 
 
 class CallingPlayAndCollectVolumeResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.play_and_collect.volume` (result). Extracted from switchblade `PublicCallPlayAndCollectVolumeResult.cs`.
+    """Wire schema for the JSON payload of `calling.play_and_collect.volume` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallPlayAndCollectVolumeResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1387,10 +1640,12 @@ class CallingPlayAndCollectVolumeResult(TypedDict, total=False):
 
 
 class CallingQueueEnterResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.queue.enter` (result). Extracted from switchblade `PublicCallQueueEnterResult.cs`.
+    """Wire schema for the JSON payload of `calling.queue.enter` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallQueueEnterResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1401,10 +1656,12 @@ class CallingQueueEnterResult(TypedDict, total=False):
 
 
 class CallingQueueLeaveResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.queue.leave` (result). Extracted from switchblade `PublicCallQueueLeaveResult.cs`.
+    """Wire schema for the JSON payload of `calling.queue.leave` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallQueueLeaveResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1415,10 +1672,12 @@ class CallingQueueLeaveResult(TypedDict, total=False):
 
 
 class CallingReceiveResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.receive` (result). Extracted from switchblade `PublicCallReceiveResult.cs`.
+    """Wire schema for the JSON payload of `calling.receive` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallReceiveResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     code: str
@@ -1426,10 +1685,12 @@ class CallingReceiveResult(TypedDict, total=False):
 
 
 class CallingReceiveFaxResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.receive_fax` (result). Extracted from switchblade `PublicCallReceiveFaxResult.cs`.
+    """Wire schema for the JSON payload of `calling.receive_fax` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallReceiveFaxResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1440,10 +1701,12 @@ class CallingReceiveFaxResult(TypedDict, total=False):
 
 
 class CallingReceiveFaxStopResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.receive_fax.stop` (result). Extracted from switchblade `PublicCallReceiveFaxStopResult.cs`.
+    """Wire schema for the JSON payload of `calling.receive_fax.stop` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallReceiveFaxStopResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1454,10 +1717,12 @@ class CallingReceiveFaxStopResult(TypedDict, total=False):
 
 
 class CallingRecordPauseResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.record.pause` (result). Extracted from switchblade `PublicCallRecordPauseResult.cs`.
+    """Wire schema for the JSON payload of `calling.record.pause` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallRecordPauseResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1468,10 +1733,12 @@ class CallingRecordPauseResult(TypedDict, total=False):
 
 
 class CallingRecordResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.record` (result). Extracted from switchblade `PublicCallRecordResult.cs`.
+    """Wire schema for the JSON payload of `calling.record` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallRecordResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1483,10 +1750,12 @@ class CallingRecordResult(TypedDict, total=False):
 
 
 class CallingRecordResumeResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.record.resume` (result). Extracted from switchblade `PublicCallRecordResumeResult.cs`.
+    """Wire schema for the JSON payload of `calling.record.resume` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallRecordResumeResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1497,10 +1766,12 @@ class CallingRecordResumeResult(TypedDict, total=False):
 
 
 class CallingRecordStopResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.record.stop` (result). Extracted from switchblade `PublicCallRecordStopResult.cs`.
+    """Wire schema for the JSON payload of `calling.record.stop` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallRecordStopResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1511,10 +1782,12 @@ class CallingRecordStopResult(TypedDict, total=False):
 
 
 class CallingReferResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.refer` (result). Extracted from switchblade `PublicCallReferResult.cs`.
+    """Wire schema for the JSON payload of `calling.refer` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallReferResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     code: str
@@ -1523,10 +1796,12 @@ class CallingReferResult(TypedDict, total=False):
 
 
 class CallingSendDigitsResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.send_digits` (result). Extracted from switchblade `PublicCallSendDigitsResult.cs`.
+    """Wire schema for the JSON payload of `calling.send_digits` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallSendDigitsResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1537,10 +1812,12 @@ class CallingSendDigitsResult(TypedDict, total=False):
 
 
 class CallingSendFaxResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.send_fax` (result). Extracted from switchblade `PublicCallSendFaxResult.cs`.
+    """Wire schema for the JSON payload of `calling.send_fax` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallSendFaxResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1551,10 +1828,12 @@ class CallingSendFaxResult(TypedDict, total=False):
 
 
 class CallingSendFaxStopResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.send_fax.stop` (result). Extracted from switchblade `PublicCallSendFaxStopResult.cs`.
+    """Wire schema for the JSON payload of `calling.send_fax.stop` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallSendFaxStopResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1565,10 +1844,12 @@ class CallingSendFaxStopResult(TypedDict, total=False):
 
 
 class CallingStreamResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.stream` (result). Extracted from switchblade `PublicCallStreamResult.cs`.
+    """Wire schema for the JSON payload of `calling.stream` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallStreamResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1579,10 +1860,12 @@ class CallingStreamResult(TypedDict, total=False):
 
 
 class CallingStreamStopResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.stream.stop` (result). Extracted from switchblade `PublicCallStreamStopResult.cs`.
+    """Wire schema for the JSON payload of `calling.stream.stop` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallStreamStopResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1593,10 +1876,12 @@ class CallingStreamStopResult(TypedDict, total=False):
 
 
 class CallingTapResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.tap` (result). Extracted from switchblade `PublicCallTapResult.cs`.
+    """Wire schema for the JSON payload of `calling.tap` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallTapResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1608,10 +1893,12 @@ class CallingTapResult(TypedDict, total=False):
 
 
 class CallingTapStopResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.tap.stop` (result). Extracted from switchblade `PublicCallTapStopResult.cs`.
+    """Wire schema for the JSON payload of `calling.tap.stop` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallTapStopResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1622,10 +1909,12 @@ class CallingTapStopResult(TypedDict, total=False):
 
 
 class CallingTransferResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.transfer` (result). Extracted from switchblade `PublicCallTransferResult.cs`.
+    """Wire schema for the JSON payload of `calling.transfer` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallTransferResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1635,10 +1924,12 @@ class CallingTransferResult(TypedDict, total=False):
 
 
 class CallingUserEventResult(TypedDict, total=False):
-    """Wire schema for the JSON payload of `calling.user_event` (result). Extracted from switchblade `PublicCallUserEventResult.cs`.
+    """Wire schema for the JSON payload of `calling.user_event` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `PublicCallUserEventResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     call_id: str
@@ -1648,10 +1939,12 @@ class CallingUserEventResult(TypedDict, total=False):
 
 
 class MessagingSendResult(TypedDict, total=False):
-    """Permissive schema for the messaging.send RPC response. The message_id from the response is used to route subsequent messaging.state events.
+    """Permissive schema for the messaging.send RPC response.
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    The message_id from the response is used to route subsequent messaging.state events.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     code: str
@@ -1660,10 +1953,12 @@ class MessagingSendResult(TypedDict, total=False):
 
 
 class SignalwireConnectResult(TypedDict, total=False):
-    """Wire schema for the Blade envelope `signalwire.connect` (result). Extracted from switchblade `Messages/ConnectResult.cs`.
+    """Wire schema for the Blade envelope `signalwire.connect` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `Messages/ConnectResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     accesses: list[dict[str, Any]]
@@ -1687,10 +1982,12 @@ SignalwireDisconnectResult: TypeAlias = "dict[str, Any]"
 
 
 class SignalwireExecuteResult(TypedDict, total=False):
-    """Wire schema for the Blade envelope `signalwire.execute` (result). Extracted from switchblade `Messages/ExecuteResult.cs`.
+    """Wire schema for the Blade envelope `signalwire.execute` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `Messages/ExecuteResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     requester_nodeid: str
@@ -1699,10 +1996,12 @@ class SignalwireExecuteResult(TypedDict, total=False):
 
 
 class SignalwirePingResult(TypedDict, total=False):
-    """Wire schema for the Blade envelope `signalwire.ping` (result). Extracted from switchblade `Messages/PingResult.cs`.
+    """Wire schema for the Blade envelope `signalwire.ping` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `Messages/PingResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     payload: str
@@ -1710,10 +2009,12 @@ class SignalwirePingResult(TypedDict, total=False):
 
 
 class SignalwireReauthenticateResult(TypedDict, total=False):
-    """Wire schema for the Blade envelope `signalwire.reauthenticate` (result). Extracted from switchblade `Messages/ReauthenticateResult.cs`.
+    """Wire schema for the Blade envelope `signalwire.reauthenticate` (result).
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    Extracted from switchblade `Messages/ReauthenticateResult.cs`.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     authentication: str
