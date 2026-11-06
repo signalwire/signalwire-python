@@ -1691,6 +1691,21 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             set, a hint list -- is simply absent, with nothing to indicate it
             was dropped. Use `add_per_call_config` when composing, and reserve
             this method for the single-callback case it was written for.
+
+            It discards callbacks registered with `add_per_call_config` too,
+            and the loss depends on the order of the two calls:
+
+                agent.add_per_call_config(a)            # both run
+                agent.set_dynamic_config_callback(b)    # -> only b runs
+
+                agent.set_dynamic_config_callback(a)    # both run
+                agent.add_per_call_config(b)            # -> a then b
+
+            So a base class that registers with `add_per_call_config`, the
+            composable form, is silently wiped by a subclass that calls this
+            setter afterwards -- the case `add_per_call_config` exists to make
+            safe. If a class cannot know what its bases registered, it should
+            use `add_per_call_config`.
         """
         self._dynamic_config_callback = callback
         return self
