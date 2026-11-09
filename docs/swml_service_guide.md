@@ -462,6 +462,30 @@ router = service.as_router()
 app.include_router(router, prefix="/voice")
 ```
 
+### Hosting a Service Next to Agents
+
+`AgentServer.register()` takes a plain `SWMLService` as well as agents, so a call flow without AI, such as an IVR menu, can share a server with them. SIP routing can send calls to it like any agent:
+
+```python
+from signalwire import AgentBase, AgentServer, SWMLService
+
+support = AgentBase(name="support", route="/support")
+support.prompt_add_section("Role", "You help callers with their accounts.")
+
+menu = SWMLService(name="menu", route="/menu")
+menu.add_verb("answer", {})
+menu.add_verb("hangup", {})
+
+server = AgentServer()
+server.register(support, "/support")
+server.register(menu, "/menu")
+server.setup_sip_routing(route="/sip")
+server.register_sip_username("menu", "/menu")
+server.run()
+```
+
+The service answers at its route with or without a trailing slash, checks its own basic auth credentials, and serves its `/swaig` endpoint and routing callbacks. The agent endpoints (`/post_prompt`, `/check_for_input` and `/debug`) aren't served for it. AgentServer's CGI and Lambda modes need agents.
+
 ### Schema Path Customization
 
 You can specify a custom path to the schema file:

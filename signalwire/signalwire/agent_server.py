@@ -30,6 +30,34 @@ from signalwire.core.logging_config import get_logger
 from signalwire.core.mixins.web_mixin import _as_response
 
 
+# A plain SWMLService registers like an agent but has none of AgentBase's
+# handlers or signature check, so the catch-all answers it the way its own
+# router does.
+
+
+async def _reject_unsigned_post(
+    service: SWMLService, request: Request, relative_path: str
+) -> Response | None:
+    """The 403 for an unsigned POST to an agent with a signing_key, else None."""
+    if isinstance(service, AgentBase):
+        return await service._reject_unsigned_post(request, relative_path)
+    return None
+
+
+async def _handle_root(service: SWMLService, request: Request) -> Response:
+    """The response to a request for a service's root or a routing-callback path."""
+    if isinstance(service, AgentBase):
+        return await service._handle_root_request(request)
+    return await service._handle_request(request, Response())
+
+
+def _service_url(service: SWMLService, route: str) -> str:
+    """The URL a service is served at, without credentials, for the startup log."""
+    if isinstance(service, AgentBase):
+        return service.get_full_url(include_auth=False)
+    return service._get_base_url(include_auth=False) + route
+
+
 class AgentServer:
     """
     Server for hosting multiple SignalWire AI Agents under a single FastAPI application.
@@ -115,7 +143,10 @@ class AgentServer:
         Register an agent with the server
 
         Args:
-            agent: The agent to register
+            agent: The agent to register. A plain SWMLService works too on the
+                web server: it serves its SWML document, its /swaig endpoint
+                and its routing callbacks. The CGI and Lambda modes need an
+                AgentBase.
             route: Optional route to override the agent's default route
 
         Raises:
@@ -144,7 +175,7 @@ class AgentServer:
         self.app.include_router(router, prefix=route)
 
         self.logger.info(
-            "agent_registered", extra={"agent": agent.get_name(), "route": route}
+            "agent_registered", extra={"agent": agent.name, "route": route}
         )
 
         # If SIP routing is enabled and auto-mapping is on, register SIP usernames for this agent
@@ -276,7 +307,7 @@ class AgentServer:
             route: The route to the agent
         """
         # Get the agent name and clean it for use as a SIP username
-        agent_name = agent.get_name().lower()
+        agent_name = agent.name.lower()
         clean_name = re.sub(r"[^a-z0-9_]", "", agent_name)
 
         if clean_name:
@@ -383,7 +414,8 @@ class AgentServer:
         configure_logging()
         # Logging is on now, so warnings the agents' constructors couldn't show are seen.
         for agent in self.agents.values():
-            agent._warn_unsigned_webhooks()
+            if isinstance(agent, AgentBase):
+                agent._warn_unsigned_webhooks()
 
         # Detect execution mode
         mode = get_execution_mode()
@@ -577,13 +609,13 @@ class AgentServer:
             display_host = f"{host}:{port}"
 
         self.logger.info(f"Starting server on {protocol}://{display_host}")
-        for agent in self.agents.values():
+        for route, agent in self.agents.items():
             # include_source defaults False -> 2-tuple at runtime; index to
             # avoid the union-tuple unpack ambiguity mypy sees.
             creds = agent.get_basic_auth_credentials()
             username = creds[0]
-            agent_url = agent.get_full_url(include_auth=False)
-            self.logger.info(f"Agent '{agent.get_name()}' available at:")
+            agent_url = _service_url(agent, route)
+            self.logger.info(f"Agent '{agent.name}' available at:")
             self.logger.info(f"URL: {agent_url}")
             self.logger.info(f"Basic Auth: {username}:(credentials configured)")
 
@@ -752,24 +784,29 @@ class AgentServer:
                 # Check for exact match with registered route
                 if full_path == route.lstrip("/"):
                     # This is a request to an agent's root without trailing slash
-                    rejected = await agent._reject_unsigned_post(request, "")
+                    rejected = await _reject_unsigned_post(agent, request, "")
                     if rejected is not None:
                         return rejected
-                    return await agent._handle_root_request(request)
+                    return await _handle_root(agent, request)
                 if full_path.startswith(route.lstrip("/") + "/"):
                     # This is a request to an agent's sub-path
                     relative_path = full_path[len(route.lstrip("/")) :]
                     relative_path = relative_path.lstrip("/")
-                    rejected = await agent._reject_unsigned_post(request, relative_path)
+                    rejected = await _reject_unsigned_post(
+                        agent, request, relative_path
+                    )
                     if rejected is not None:
                         return rejected
 
                     # Route to appropriate handler based on path
                     if not relative_path or relative_path == "/":
-                        return await agent._handle_root_request(request)
+                        return await _handle_root(agent, request)
 
                     clean_path = relative_path.rstrip("/")
-                    if clean_path == "debug":
+                    # debug, post_prompt and check_for_input are AgentBase's;
+                    # a plain SWMLService has none of them.
+                    is_agent = isinstance(agent, AgentBase)
+                    if clean_path == "debug" and is_agent:
                         return await agent._handle_debug_request(request)
                     if clean_path == "swaig":
                         from fastapi import Response
@@ -780,11 +817,11 @@ class AgentServer:
                         return _as_response(
                             await agent._handle_swaig_request(request, Response())
                         )
-                    if clean_path == "post_prompt":
+                    if clean_path == "post_prompt" and is_agent:
                         return _as_response(
                             await agent._handle_post_prompt_request(request)
                         )
-                    if clean_path == "check_for_input":
+                    if clean_path == "check_for_input" and is_agent:
                         return _as_response(
                             await agent._handle_check_for_input_request(request)
                         )
@@ -795,7 +832,7 @@ class AgentServer:
                             cb_path_clean = callback_path.strip("/")
                             if clean_path == cb_path_clean:
                                 request.state.callback_path = callback_path
-                                return await agent._handle_root_request(request)
+                                return await _handle_root(agent, request)
 
             # No matching agent - check for static files
             if hasattr(self, "_static_directories"):

@@ -1,5 +1,20 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- `AgentServer` hosts a plain `SWMLService` next to its agents. `register()`
+  raised `AttributeError` on the service's missing `get_name()`, after it had
+  already stored the route, so registering again said the route was in use.
+  Its route without a trailing slash, which is where SIP routing redirects a
+  call, answered with a 500, because the catch-all route called handlers only
+  `AgentBase` has; so did its routing-callback paths, and `server.run()`
+  failed the same way. The service now answers at its route with or without
+  the slash, under its own basic auth, and serves its `/swaig` endpoint and
+  routing callbacks. The agent endpoints (`/post_prompt`, `/check_for_input`
+  and `/debug`) return 404 for it, and AgentServer's CGI and Lambda modes
+  still need agents.
+
 ## [3.7.5] - 2026-10-25
 
 ### Fixed
