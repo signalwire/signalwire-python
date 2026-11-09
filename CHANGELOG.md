@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [3.7.6] - 2026-11-08
 
 ### Fixed
 - `AgentServer` hosts a plain `SWMLService` next to its agents. `register()`
