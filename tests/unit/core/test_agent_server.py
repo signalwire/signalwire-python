@@ -38,6 +38,7 @@ from io import StringIO
 from fastapi.testclient import TestClient
 from signalwire.agent_server import AgentServer
 from signalwire.core.agent_base import AgentBase
+from signalwire.core.swml_service import SWMLService
 
 
 class SimpleTestAgent(AgentBase):
@@ -1132,3 +1133,89 @@ class TestAgentServerGunicornCompatibility:
 
         # Health should still work
         assert client.get('/health').status_code == 200
+
+
+def _plain_service() -> SWMLService:
+    """A plain SWMLService that answers and hangs up."""
+    service = SWMLService(
+        name="plain", route="/plain", basic_auth=("u", "p"), schema_validation=False
+    )
+    service.add_verb("answer", {})
+    service.add_verb("hangup", {})
+    return service
+
+
+class TestPlainSWMLService:
+    """A plain SWMLService registered next to an agent.
+
+    It has none of AgentBase's handlers, so before the fix register() raised
+    on get_name(), and the catch-all answered its route without a trailing
+    slash, where SIP routing redirects, with a 500.
+    """
+
+    SIP_CALL = {"call": {"to": "sip:bob@example.com"}}
+
+    def _server(self) -> AgentServer:
+        server = AgentServer(host="127.0.0.1", port=18798)
+        server.register(
+            AgentBase(name="a", route="/a", basic_auth=("u", "p")), "/a"
+        )
+        server.register(_plain_service(), "/plain")
+        server.setup_sip_routing(route="/sip", auto_map=False)
+        server.register_sip_username("bob", "/plain")
+        return server
+
+    def test_register_and_auto_map_use_the_service_name(self) -> None:
+        server = AgentServer()
+        server.setup_sip_routing(route="/sip", auto_map=True)
+        server.register(_plain_service(), "/plain")
+        assert server.get_agent("/plain") is not None
+        assert server._lookup_sip_route("plain") == "/plain"
+
+    def test_sip_call_routed_to_the_service_gets_its_swml(self) -> None:
+        with TestClient(self._server().app) as client:
+            redirect = client.post(
+                "/a/sip", json=self.SIP_CALL, auth=("u", "p"), follow_redirects=False
+            )
+            assert redirect.status_code == 307
+            assert redirect.headers["location"] == "/plain"
+
+            for path in ("/plain", "/plain/"):
+                response = client.post(path, json=self.SIP_CALL, auth=("u", "p"))
+                assert response.status_code == 200, path
+                assert response.json()["sections"]["main"] == [
+                    {"answer": {}},
+                    {"hangup": {}},
+                ]
+
+    def test_service_routing_callback_path_redirects(self) -> None:
+        with TestClient(self._server().app) as client:
+            response = client.post(
+                "/plain/sip",
+                json=self.SIP_CALL,
+                auth=("u", "p"),
+                follow_redirects=False,
+            )
+        assert response.status_code == 307
+        assert response.headers["location"] == "/plain"
+
+    def test_service_route_requires_its_credentials(self) -> None:
+        with TestClient(self._server().app) as client:
+            assert client.post("/plain", json=self.SIP_CALL).status_code == 401
+            assert client.get("/plain", auth=("u", "wrong")).status_code == 401
+            assert client.get("/plain", auth=("u", "p")).status_code == 200
+
+    def test_agent_only_endpoints_are_not_found(self) -> None:
+        with TestClient(self._server().app) as client:
+            for path in ("/plain/debug", "/plain/post_prompt", "/plain/check_for_input"):
+                response = client.post(path, json={}, auth=("u", "p"))
+                assert response.status_code == 404, path
+
+    @patch("signalwire.agent_server.uvicorn")
+    def test_run_starts_with_a_plain_service(self, mock_uvicorn: MagicMock) -> None:
+        server = self._server()
+        with patch(
+            "signalwire.core.logging_config.get_execution_mode", return_value="server"
+        ):
+            server.run()
+        mock_uvicorn.run.assert_called_once()
