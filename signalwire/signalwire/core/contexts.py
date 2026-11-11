@@ -29,7 +29,10 @@ MAX_STEPS_PER_CONTEXT = 100
 #: ``hide``     prior instructions hidden **and** the prior dialogue pulled
 #:              out of the model's context. The only way back in is an
 #:              explicit ``${step_history.*}`` reference in the new prompt.
-HISTORY_MODES = ("keep", "default", "hide")
+#: ``isolate``  like ``hide``, but only while the agent is in this step: the
+#:              earlier dialogue returns when the step is left, and the
+#:              earlier step instructions stay cleared.
+HISTORY_MODES = ("keep", "default", "hide", "isolate")
 
 
 def _validate_history(mode: str) -> str:
@@ -391,9 +394,19 @@ class Step:
                   dialogue out of the model's context. Pair it with a
                   ``${step_history.*}`` reference in this step's text to choose
                   exactly what comes back.
+                - "isolate": like "hide" (the earlier dialogue leaves the
+                  model's context and the earlier step instructions are
+                  cleared), but only while the agent is in this step. When
+                  the agent leaves it, the earlier dialogue comes back and
+                  this step's own turns stay; the earlier instructions stay
+                  cleared, and what an earlier "hide" step hid stays hidden.
+                  Entering the step again isolates it again. Use it for a
+                  step that must see nothing else, such as one that reads
+                  back a confirmation. A platform without isolate treats it
+                  as "default".
 
         Raises:
-            ValueError: if history is not one of the three modes.
+            ValueError: if history is not one of these modes.
 
         Returns:
             Self for method chaining
@@ -942,10 +955,10 @@ class Context:
         for what each mode does.
 
         Args:
-            history: One of "keep", "default", or "hide".
+            history: One of "keep", "default", "hide", or "isolate".
 
         Raises:
-            ValueError: if history is not one of the three modes.
+            ValueError: if history is not one of these modes.
 
         Returns:
             Self for method chaining

@@ -1474,7 +1474,7 @@ class TestContextBuilderReset:
         assert len(builder._contexts) == 0
 
 class TestHistoryMode:
-    """Step/context `history` visibility mode (keep | default | hide)."""
+    """Step/context `history` visibility mode (keep | default | hide | isolate)."""
 
     def test_step_history_emitted(self) -> None:
         step = Step("s").set_text("t").set_history("hide")
@@ -1490,6 +1490,10 @@ class TestHistoryMode:
     def test_step_history_default_is_emitted_when_explicit(self) -> None:
         # Explicit "default" is still written out — it overrides a context default
         assert Step("s").set_text("t").set_history("default").to_dict()["history"] == "default"
+
+    def test_step_history_isolate(self) -> None:
+        step = Step("confirm").set_text("Read back the order.").set_history("isolate")
+        assert step.to_dict()["history"] == "isolate"
 
     def test_step_history_invalid_raises(self) -> None:
         with pytest.raises(ValueError, match="history must be one of"):
@@ -1509,6 +1513,12 @@ class TestHistoryMode:
         ctx = Context("c")
         ctx.add_step("s").set_text("t")
         assert "history" not in ctx.to_dict()
+
+    def test_context_history_isolate(self) -> None:
+        ctx = Context("c")
+        ctx.set_history("isolate")
+        ctx.add_step("s").set_text("t")
+        assert ctx.to_dict()["history"] == "isolate"
 
     def test_context_history_invalid_raises(self) -> None:
         with pytest.raises(ValueError, match="history must be one of"):

@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.7.7] - 2026-11-11
+
+### Added
+- A step's or context's history mode can be `"isolate"`:
+  `step.set_history("isolate")`. While the agent is in the step, the model sees
+  none of the earlier dialogue and none of the earlier step instructions, as
+  with `"hide"`. When the agent leaves the step, the earlier dialogue comes
+  back, and the step's own turns stay; the earlier instructions stay cleared,
+  and what an earlier `"hide"` step hid stays hidden. Entering the step again
+  isolates it again. A confirmation step that reads back an order sees only
+  the order, and the caller's other requests return after it. On a context,
+  it applies to every step that doesn't set its own mode. A platform without
+  isolate treats it as `"default"`.
+
 ## [3.7.6] - 2026-11-08
 
 ### Fixed
