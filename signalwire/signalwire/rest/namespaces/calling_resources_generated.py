@@ -1,9 +1,13 @@
 # AUTO-GENERATED from porting-sdk/rest-apis/calling/openapi.yaml — DO NOT EDIT.
 # Regenerate: python3 porting-sdk/scripts/generate_python_rest_types.py
-#
-# One typed CRUD subclass per full-CRUD resource: closed typed create/update params
-# (explicit spec fields) + an ``extras`` escape hatch and a ``**_reserved_kw`` tail for
-# unknown / reserved-word wire fields, bound to the resource's spec types.
+"""Typed ``calling`` REST resources, generated from the OpenAPI spec.
+
+One resource class per spec collection: closed, typed ``create`` / ``update``
+parameters (the explicit spec fields) and typed sub-operation methods, plus an
+``extras`` escape hatch and a ``**_reserved_kw`` tail for unknown or reserved-word
+wire fields.
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal, cast
@@ -31,7 +35,11 @@ if TYPE_CHECKING:
 
 
 class Calling(BaseResource):
-    """Typed resource for ``/calls`` (generated)."""
+    """Typed resource for ``/calls`` (generated).
+
+    Bound to ``/api/calling/calls``; construct it as ``Calling(http)`` with the client's
+    HTTP transport.
+    """
 
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/calling/calls")
@@ -55,6 +63,44 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``dial`` command.
+
+        Args:
+            from_: The address that initiated the call. Can be either a E.164 formatted
+                number (`+xxxxxxxxxxx`), or a SIP endpoint (`sip:xxx@yyy.zzz`). Sent as
+                the wire key ``from``.
+            to: The address that received the call. Can be either a E.164 formatted
+                number (`+xxxxxxxxxxx`), or a SIP endpoint (`sip:xxx@yyy.zzz`).
+            caller_id: The number, in E.164 format, or identifier of the caller.
+            fallback_url: The Fallback URL to handle the call. This parameter allows you
+                to specify a backup webhook or different route in your code containing
+                SWML instructions for handling the call.
+            status_url: A URL that will recieve status updates of the current call. Any
+                call events defined in `status_events` will be delivered to the defined
+                URL.
+            status_events: The call events that will be monitored and sent to the
+                `status_url` when active.
+            url_method: The HTTP method to use when requesting the URL.
+            url: The URL to handle the call. This parameter allows you to specify a
+                webhook or different route in your code containing SWML instructions for
+                handling the call. Either `url` or `swml` must be included for a new
+                call.
+            codecs: A list of codecs to use for the call. Can be an array of codec
+                strings or a comma-separated string. Valid codecs are: `PCMU`, `PCMA`,
+                `G722`, `G729`, `OPUS`, `VP8`, `H264`. For PSTN calls, `PCMA` and `PCMU`
+                are recommended as many other codecs are not supported by PSTN gateways.
+                If a SIP URI with included codecs is passed in the `to` field along with
+                this parameter, the SIP URI codecs will be prioritized.
+            swml: Inline SWML object containing SWML instructions for handling the call.
+                Either `url` or `swml` must be included for a new call.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v
             for k, v in {
@@ -93,6 +139,30 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``update`` command.
+
+        Args:
+            id: The unique identifying ID of a existing call.
+            fallback_url: The Fallback URL to handle the call. This parameter allows you
+                to specify a backup webhook or different route in your code containing
+                SWML instructions for handling the call.
+            status: Either `canceled` (to cancel a not yet connected call) or
+                `completed` (to end a call that is in progress).
+            status_url: A URL to receive call status update callbacks.
+            url: The URL to handle the call. This parameter allows you to specify a
+                webhook or different route in your code containing SWML instructions for
+                handling the call. Either `url` or `swml` must be included for a new
+                call.
+            swml: Inline SWML object containing SWML instructions for handling the call.
+                Either `url` or `swml` must be included for a new call.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v
             for k, v in {
@@ -123,6 +193,19 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.end`` command.
+
+        Args:
+            call_id: The unique identifying ID of a existing call.
+            reason: Set the reason why the call was hung up.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v for k, v in {"reason": reason}.items() if v is not None
         }
@@ -149,6 +232,22 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.ai_hold`` command.
+
+        Args:
+            call_id: The unique identifying ID of a existing call.
+            timeout: The duration to hold the caller in seconds.
+            prompt: A system message added to the AI conversation before placing the
+                caller on hold. The AI will speak this message to the caller before hold
+                music begins.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v
             for k, v in {"timeout": timeout, "prompt": prompt}.items()
@@ -176,6 +275,20 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.ai_unhold`` command.
+
+        Args:
+            call_id: The unique identifying ID of a existing call.
+            prompt: A system message added to the AI conversation when taking the caller
+                off hold. The AI will use this context when resuming the conversation.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v for k, v in {"prompt": prompt}.items() if v is not None
         }
@@ -204,6 +317,37 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.ai_message`` command.
+
+        Args:
+            call_id: The unique identifying ID of a existing call.
+            role: The role that the message is from. Required when `reset` is not
+                provided. Each role type has a different purpose and will influence how
+                the AI will interpret the message.
+                - `system`: Inject instructions or context that modify the AI's behavior
+                  mid-conversation without the caller hearing it. This could change the
+                  AI's personality, add new constraints, provide context about the
+                  conversation, or give the AI information it should know going forward.
+                - `user`: Inject a message as if the caller said it. This would appear
+                  in the conversation history as coming from the caller, and the AI
+                  would respond to it as if the caller just spoke it.
+                - `assistant`: Inject a message as if the AI said it. This would appear
+                  as an AI response in the conversation history. The AI would treat this
+                  as its own previous response when generating future replies.
+            message_text: The text content that will be sent to the AI. Required when
+                `reset` is not provided.
+            reset: Parameters for resetting the AI conversation state. When provided,
+                `role` and `message_text` are optional.
+            global_data: Arbitrary JSON data to merge into the AI session's global data
+                store.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v
             for k, v in {
@@ -238,6 +382,19 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.live_transcribe`` command.
+
+        Args:
+            call_id: The unique identifying ID of a existing call.
+            action: The transcription action to perform: start, stop, or summarize.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v for k, v in {"action": action}.items() if v is not None
         }
@@ -267,6 +424,22 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.live_translate`` command.
+
+        Args:
+            call_id: The unique identifying ID of a existing call.
+            action: The translation action to perform: start, stop, summarize, or
+                inject.
+            status_url: A URL to receive status update callbacks for the translation
+                session.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v
             for k, v in {"action": action, "status_url": status_url}.items()
@@ -294,6 +467,20 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.transfer`` command.
+
+        Args:
+            call_id: The unique identifying ID of a existing call.
+            dest: The destination to transfer the call to. Can be a SIP URI, phone
+                number, or an inline SWML object.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v for k, v in {"dest": dest}.items() if v is not None
         }
@@ -319,6 +506,19 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.user_event`` command.
+
+        Args:
+            call_id: The unique identifying ID of a existing call.
+            event: Arbitrary JSON event data to fire on the call.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v for k, v in {"event": event}.items() if v is not None
         }
@@ -343,6 +543,18 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.disconnect`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {}
         body: dict[str, Any] = {
             "command": "calling.disconnect",
@@ -369,6 +581,25 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.play`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            play: Array of media objects to play.
+            control_id: Unique identifier for this play operation. Auto-generated if not
+                provided.
+            volume: Volume adjustment in dB. 0 is default.
+            direction: Which leg of the call to play to.
+            loop: Number of times to loop. 0 means infinite.
+            status_url: Webhook URL for play state events.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v
             for k, v in {
@@ -403,6 +634,19 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.play.pause`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            control_id: The control_id of the play operation to pause.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
         }
@@ -428,6 +672,19 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.play.resume`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            control_id: The control_id of the play operation to resume.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
         }
@@ -453,6 +710,19 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.play.stop`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            control_id: The control_id of the play operation to stop.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
         }
@@ -479,6 +749,20 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.play.volume`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            control_id: The control_id of the play operation.
+            volume: Volume adjustment in dB.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v
             for k, v in {"control_id": control_id, "volume": volume}.items()
@@ -508,6 +792,22 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.record`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            control_id: Unique identifier for this recording. Auto-generated if not
+                provided.
+            audio: Audio recording parameters.
+            status_url: Webhook URL for recording state events.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v
             for k, v in {
@@ -539,6 +839,19 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.record.pause`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            control_id: The control_id of the recording to pause.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
         }
@@ -564,6 +877,19 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.record.resume`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            control_id: The control_id of the recording to resume.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
         }
@@ -589,6 +915,19 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.record.stop`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            control_id: The control_id of the recording to stop.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
         }
@@ -619,6 +958,24 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.collect`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            control_id: Unique identifier for this collect operation.
+            initial_timeout: Seconds to wait for first input before timeout.
+            digits: DTMF digit collection parameters.
+            speech: Speech recognition parameters.
+            continuous: Keep collecting after each result.
+            partial_results: Deliver partial recognition results.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v
             for k, v in {
@@ -653,6 +1010,19 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.collect.stop`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            control_id: The control_id of the collect operation to stop.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
         }
@@ -678,6 +1048,19 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.collect.start_input_timers`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            control_id: The control_id of the collect operation.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
         }
@@ -705,6 +1088,21 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.detect`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            detect: Detection configuration.
+            control_id: Unique identifier for this detect operation.
+            timeout: Overall timeout in seconds for the detect operation.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v
             for k, v in {
@@ -736,6 +1134,19 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.detect.stop`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            control_id: The control_id of the detect operation to stop.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
         }
@@ -763,6 +1174,21 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.tap`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            tap: What to tap.
+            device: Target device to send tapped audio to.
+            control_id: Unique identifier for this tap operation.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v
             for k, v in {"control_id": control_id, "tap": tap, "device": device}.items()
@@ -790,6 +1216,19 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.tap.stop`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            control_id: The control_id of the tap operation to stop.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
         }
@@ -820,6 +1259,24 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.stream`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            url: WebSocket URL (wss://) to stream audio to.
+            control_id: Unique identifier for this stream operation.
+            codec: Audio codec for the stream.
+            track: Which audio track(s) to stream.
+            authorization_bearer_token: Bearer token sent in the WebSocket handshake.
+            custom_parameters: Custom key-value pairs sent with the stream.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v
             for k, v in {
@@ -854,6 +1311,19 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.stream.stop`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            control_id: The control_id of the stream to stop.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
         }
@@ -878,6 +1348,18 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.denoise`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {}
         body: dict[str, Any] = {
             "command": "calling.denoise",
@@ -898,6 +1380,18 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.denoise.stop`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {}
         body: dict[str, Any] = {
             "command": "calling.denoise.stop",
@@ -920,6 +1414,20 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.transcribe`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            control_id: Unique identifier for this transcription.
+            status_url: Webhook URL for transcription results.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v
             for k, v in {"control_id": control_id, "status_url": status_url}.items()
@@ -947,6 +1455,19 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.transcribe.stop`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            control_id: The control_id of the transcription to stop.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
         }
@@ -972,6 +1493,19 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.ai.stop`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            control_id: The control_id of the AI session to stop.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
         }
@@ -997,6 +1531,19 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.send_fax.stop`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            control_id: The control_id of the fax send to stop.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
         }
@@ -1022,6 +1569,19 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.receive_fax.stop`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            control_id: The control_id of the fax receive to stop.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
         }
@@ -1048,6 +1608,20 @@ class Calling(BaseResource):
         extras: Mapping[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> CallResponse:
+        """Send the ``calling.refer`` command.
+
+        Args:
+            call_id: The unique identifying ID of an existing call.
+            device: Target device for the REFER.
+            status_url: Webhook URL for REFER state events.
+            extras: Additional wire fields to merge into the request body (fields the
+                spec does not enumerate).
+            request_options: Per-call HTTP options (timeout, retries, headers); never
+                sent on the wire.
+
+        Returns:
+            The call state after the command.
+        """
         params: dict[str, Any] = {
             k: v
             for k, v in {"device": device, "status_url": status_url}.items()

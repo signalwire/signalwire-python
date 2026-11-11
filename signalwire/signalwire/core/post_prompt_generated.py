@@ -1,10 +1,13 @@
 # AUTO-GENERATED from porting-sdk/swaig-specs/post-prompt.yaml — DO NOT EDIT.
 # (vendored from mod_openai; regenerate via
 #  python3 porting-sdk/scripts/generate_python_rest_types.py)
-#
-# The post-prompt callback payload — the call summary + enriched call log the agent's
-# post-prompt handler RECEIVES. STATIC-ONLY: a plain dict at runtime; conditional fields
-# are optional, extra keys tolerated.
+"""TypedDicts for the SWAIG post-prompt callback payload.
+
+The call summary and enriched call log an agent's post-prompt handler receives.
+Static-only: a plain ``dict`` at runtime; conditional fields are optional and extra keys
+are tolerated.
+"""
+
 from __future__ import annotations
 from typing import Any, Literal, TypeAlias, TypedDict
 from typing import TYPE_CHECKING
@@ -16,10 +19,13 @@ if TYPE_CHECKING:
 
 
 class PostPrompt(TypedDict, total=False):
-    """Built by ais_get_post_data (ai_utils.c) + openai_post_process (post_process.c). No `version` field. Open shape: conditional fields appear only when their precondition holds.
+    """The post-prompt callback payload.
 
-    Open shape: extra server keys are permitted and partial payloads are valid;
-    not validated at runtime (a TypedDict is a plain ``dict``).
+    No `version` field. Open shape: conditional fields appear only when their
+    precondition holds.
+
+    Open shape: extra server keys are permitted and partial payloads are valid; not
+    validated at runtime (a TypedDict is a plain ``dict``).
     """
 
     content_type: Literal["text/json"]
