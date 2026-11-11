@@ -417,7 +417,9 @@ class VideoConferences(
     def list_streams(
         self, id: str, *, request_options: RequestOptions | None = None, **params: Any
     ) -> ListStreamsResponse:
-        """**Permissions**.
+        """List Streams by Conference.
+
+        **Permissions**
 
         The API token used to authenticate must have the following scope(s) enabled to
         make a successful request: _Video_.
@@ -452,7 +454,9 @@ class VideoConferences(
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> Stream:
-        """**Permissions**.
+        """Create a Stream for a Conference.
+
+        **Permissions**
 
         The API token used to authenticate must have the following scope(s) enabled to
         make a successful request: _Video_.
@@ -1107,7 +1111,9 @@ class VideoRooms(
     def list_streams(
         self, id: str, *, request_options: RequestOptions | None = None, **params: Any
     ) -> ListStreamsResponse:
-        """**Permissions**.
+        """List Streams by Room.
+
+        **Permissions**
 
         The API token used to authenticate must have the following scope(s) enabled to
         make a successful request: _Video_.
@@ -1142,7 +1148,9 @@ class VideoRooms(
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> Stream:
-        """**Permissions**.
+        """Create a Stream for a Room.
+
+        **Permissions**
 
         The API token used to authenticate must have the following scope(s) enabled to
         make a successful request: _Video_.
@@ -1189,7 +1197,9 @@ class VideoStreams(BaseResource):
     def get(
         self, id: str, *, request_options: RequestOptions | None = None, **params: Any
     ) -> Stream:
-        """**Permissions**.
+        """Find a Stream by ID.
+
+        **Permissions**
 
         The API token used to authenticate must have the following scope(s) enabled to
         make a successful request: _Video_.
@@ -1222,7 +1232,9 @@ class VideoStreams(BaseResource):
         request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> Stream:
-        """**Permissions**.
+        """Update a Stream.
+
+        **Permissions**
 
         The API token used to authenticate must have the following scope(s) enabled to
         make a successful request: _Video_.
@@ -1256,7 +1268,9 @@ class VideoStreams(BaseResource):
     def delete(
         self, id: str, *, request_options: RequestOptions | None = None
     ) -> dict[str, Any]:
-        """**Permissions**.
+        """Delete a Stream.
+
+        **Permissions**
 
         The API token used to authenticate must have the following scope(s) enabled to
         make a successful request: _Video_.
