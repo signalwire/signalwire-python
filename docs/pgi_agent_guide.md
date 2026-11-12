@@ -265,6 +265,7 @@ Use explicit allowed model transitions when the model can choose among safe dest
 - `keep`: retain prior instructions and dialogue.
 - `default`: remove prior step instructions while retaining dialogue; default when unset.
 - `hide`: remove prior instructions and dialogue from the model's view. Use deliberate step-history projections to bring back selected information.
+- `isolate`: like `hide`, but only while the agent is in this step. When the step is left, the earlier dialogue returns and the step's own turns stay; the earlier instructions stay cleared, and what an earlier `hide` step hid stays hidden. Entering the step again isolates it again. Use it for a step that must see nothing else, such as a confirmation read-back. A platform without `isolate` treats it as `default`.
 
 Hidden turns remain in the call log. Do not describe `hide` as deletion. `set_isolated()`, `set_system_prompt()`, `set_user_prompt()`, `set_consolidate()`, and `set_full_reset()` provide additional context-entry controls; verify the chosen combination on the runtime rather than equating them all with a memory wipe. [S03]
 
