@@ -9201,7 +9201,7 @@ contains its own prompt, completion criteria, and function restrictions.</p>
 
 
 <h3 id="signalwire.core.contexts.HISTORY_MODES" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">HISTORY_MODES</span> <span class="o">=</span> <span class="p">(</span><span class="s1">'keep'</span><span class="p">,</span> <span class="s1">'default'</span><span class="p">,</span> <span class="s1">'hide'</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">HISTORY_MODES</span> <span class="o">=</span> <span class="p">(</span><span class="s1">'keep'</span><span class="p">,</span> <span class="s1">'default'</span><span class="p">,</span> <span class="s1">'hide'</span><span class="p">,</span> <span class="s1">'isolate'</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
@@ -10570,7 +10570,17 @@ fresh. Nothing is deleted: the call log keeps every message.</p>
 - "hide": hide the prior instructions <em>and</em> pull the prior
   dialogue out of the model's context. Pair it with a
   <code>${step_history.*}</code> reference in this step's text to choose
-  exactly what comes back.</p>
+  exactly what comes back.
+- "isolate": like "hide" (the earlier dialogue leaves the
+  model's context and the earlier step instructions are
+  cleared), but only while the agent is in this step. When
+  the agent leaves it, the earlier dialogue comes back and
+  this step's own turns stay; the earlier instructions stay
+  cleared, and what an earlier "hide" step hid stays hidden.
+  Entering the step again isolates it again. Use it for a
+  step that must see nothing else, such as one that reads
+  back a confirmation. A platform without isolate treats it
+  as "default".</p>
               </div>
             </td>
             <td>
@@ -10596,7 +10606,7 @@ fresh. Nothing is deleted: the call log keeps every message.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>if history is not one of the three modes.</p>
+                <p>if history is not one of these modes.</p>
               </div>
             </td>
           </tr>
@@ -12447,7 +12457,7 @@ for what each mode does.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>One of "keep", "default", or "hide".</p>
+                <p>One of "keep", "default", "hide", or "isolate".</p>
               </div>
             </td>
             <td>
@@ -12473,7 +12483,7 @@ for what each mode does.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>if history is not one of the three modes.</p>
+                <p>if history is not one of these modes.</p>
               </div>
             </td>
           </tr>
