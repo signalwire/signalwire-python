@@ -185,7 +185,9 @@ class SemanticGate:
 
             Every gate on one function must have the same ``dialogue``,
             ``history`` and ``since``, set or not: they're asked together,
-            about one dialogue.
+            about one dialogue. These keys, like ``unclear`` and
+            ``on_unclear``, need a platform release that has them: one with
+            gates but without a key refuses the function.
 
         Raises:
             ValueError: If ``on_fail`` or ``on_unclear`` has no response: a

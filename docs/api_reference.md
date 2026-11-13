@@ -655,7 +655,7 @@ agent.define_tool(
 
 A semantic gate is a yes/no question a decision model answers about the call right before the platform dispatches the function. Every gate on the function must pass for it to run. When one doesn't, the function isn't dispatched, and the model gets that gate's `on_fail` output instead, as if a data_map had returned it. The function's `fillers` and `wait_file` start only once its gates pass, so a blocked call never sounds as if the action were under way.
 
-Semantic gates need a platform release that supports them. One that doesn't ignores `gates` with a warning and runs the function ungated, so don't rely on a gate to protect a function until your platform supports them.
+Semantic gates need a platform release that supports them. One that doesn't ignores `gates` with a warning and runs the function ungated, so don't rely on a gate to protect a function until your platform supports them. The gate keys added later, `unclear`, `on_unclear`, `dialogue`, `history` and `since`, need a release that has them too: one that has gates but not a key refuses the whole function, since it treats an unknown gate key as an error.
 
 The decision model sees three things, under these names: `conversation`, the recent dialogue; `semantic_state`, the call's `global_data.semantic_state`, which `FunctionResult.set_semantic_state()` sets; and `proposed_function`, the function's name, description and arguments. Write each question as one proposition, and name what it's about with those names in backticks. The model reads literally: it doesn't do arithmetic or compare dates, so put a computed result in `semantic_state` instead of asking for it.
 

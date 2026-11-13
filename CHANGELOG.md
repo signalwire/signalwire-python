@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [3.8.0] - 2026-11-13
 
 ### Added
 - Semantic gates take the platform's newer gate keys. `SemanticGate(...,
@@ -11,7 +11,9 @@
   `on_unclear` is what the model gets for an unclear answer.
   `set_semantic_gates(dialogue=)` sets the agent's `semantic_gate_dialogue`.
   `since=` anchors a gate's dialogue at a mark your code sets with the new
-  `FunctionResult.set_semantic_gate_mark(name)` action.
+  `FunctionResult.set_semantic_gate_mark(name)` action. These keys need a
+  platform release that has them: one with gates but without a key refuses
+  the function, as it treats an unknown gate key as an error.
 - `set_unavailable_function_response(text)` sets what the model is told when
   it calls a tool it can't use now, with `${function}`, `${tools}` and
   `${steps}` (the `unavailable_function_response` param).
