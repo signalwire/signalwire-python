@@ -60,8 +60,10 @@ def expected_answer(
     """
 
     def count(name: str, value: Any) -> int:
-        if isinstance(value, bool) or not isinstance(value, int) or not (
-            1 <= value <= MAX_EXPECTED_DIGITS
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, int)
+            or not (1 <= value <= MAX_EXPECTED_DIGITS)
         ):
             raise ValueError(
                 f"{name} must be a whole number from 1 to {MAX_EXPECTED_DIGITS}, "

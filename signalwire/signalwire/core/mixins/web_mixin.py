@@ -60,6 +60,26 @@ def _as_response(result: "Response | dict[str, Any]") -> "Response":
     return JSONResponse(content=result)
 
 
+async def _call_ai_event_handler(
+    handler: Callable[..., Any],
+    event_type: str,
+    params: dict[str, Any],
+    event: dict[str, Any],
+    req_log: Any,
+) -> None:
+    """Run one on_ai_event handler; an exception is logged, not raised, so
+    one handler can't keep the others from the event."""
+    try:
+        if is_async_callable(handler):
+            result = handler(event_type, params, event)
+        else:
+            result = await run_sync_handler(handler, event_type, params, event)
+        if inspect.isawaitable(result):
+            await result
+    except Exception as e:
+        req_log.error("ai_event_handler_error", error=str(e))
+
+
 class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at runtime; AgentBase under TYPE_CHECKING — intentional split
     """
     Mixin class containing all web server and routing-related methods for AgentBase
@@ -577,6 +597,8 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             return _as_response(await self._handle_check_for_input_request(request))
         if clean_path == "debug_events":
             return _as_response(await self._handle_debug_events_request(request))
+        if clean_path == "ai_events":
+            return _as_response(await self._handle_ai_events_request(request))
 
         # Check for custom routing callbacks
         for callback_path in getattr(self, "_routing_callbacks", None) or {}:
@@ -725,6 +747,18 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         async def handle_debug_events(request: Request) -> Response:
             """Handle POST requests delivering debug webhook events"""
             return _as_response(await self._handle_debug_events_request(request))
+
+        # AI events endpoint (event_webhook_url) - Both versions
+        @router.get("/ai_events")
+        @router.get("/ai_events/")
+        async def handle_ai_events_get(request: Request) -> Response:
+            return _as_response(await self._handle_ai_events_request(request))
+
+        @router.post("/ai_events", dependencies=signed_post_deps)
+        @router.post("/ai_events/", dependencies=signed_post_deps)
+        async def handle_ai_events(request: Request) -> Response:
+            """Handle POST requests delivering AI events (signature-validated when signing_key is set)"""
+            return _as_response(await self._handle_ai_events_request(request))
 
         # MCP server endpoint — exposes @tool functions as MCP tools
         if hasattr(self, "_mcp_server_enabled") and self._mcp_server_enabled:
@@ -1531,6 +1565,78 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
                 except Exception as e:
                     req_log.error("debug_event_handler_error", error=str(e))
 
+            return {"status": "ok"}
+        except Exception as e:
+            req_log.error("request_failed", error=str(e))
+            return Response(
+                content=json.dumps({"error": "Internal server error"}),
+                status_code=500,
+                media_type="application/json",
+            )
+
+    async def _handle_ai_events_request(
+        self, request: Request
+    ) -> Response | dict[str, Any]:
+        """Handle POST requests delivering the platform's AI events
+        (event_webhook_url), to the speech log and on_ai_event handlers"""
+        req_log = self.log.bind(
+            endpoint="ai_events", method=request.method, path=request.url.path
+        )
+        try:
+            if not self._check_basic_auth(request):
+                req_log.warning("unauthorized_access_attempt")
+                return Response(
+                    content=json.dumps({"error": "Unauthorized"}),
+                    status_code=401,
+                    headers={"WWW-Authenticate": "Basic"},
+                    media_type="application/json",
+                )
+            if request.method != "POST":
+                return Response(
+                    content=json.dumps({"error": "POST required"}),
+                    status_code=405,
+                    media_type="application/json",
+                )
+            if not self._check_content_type(request):
+                return Response(
+                    content=json.dumps(
+                        {"error": "Content-Type must be application/json"}
+                    ),
+                    status_code=415,
+                    media_type="application/json",
+                )
+            try:
+                await self._read_body_with_limit(request)
+                event = await request.json()
+            except ValueError:
+                return Response(
+                    content=json.dumps({"error": "Request body too large"}),
+                    status_code=413,
+                    media_type="application/json",
+                )
+            except Exception as e:
+                req_log.error("error_parsing_request_body", error=str(e))
+                return {"status": "error", "message": "invalid JSON"}
+            if not isinstance(event, dict):
+                return {"status": "error", "message": "an event must be an object"}
+
+            event_type = str(event.get("event_type", "unknown"))
+            given = event.get("params")
+            params: dict[str, Any] = given if isinstance(given, dict) else {}
+            req_log.debug(
+                "ai_event", event_type=event_type, call_id=params.get("call_id")
+            )
+
+            from signalwire.core.ai_events import SPEECH_DETECT
+
+            speech_log = getattr(self, "_speech_log", None)
+            if speech_log is not None and event_type == SPEECH_DETECT:
+                speech_log.add(event)
+
+            for handler in getattr(self, "_ai_event_handlers", ()):
+                await _call_ai_event_handler(
+                    handler, event_type, params, event, req_log
+                )
             return {"status": "ok"}
         except Exception as e:
             req_log.error("request_failed", error=str(e))

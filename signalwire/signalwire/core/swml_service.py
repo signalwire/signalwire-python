@@ -71,6 +71,7 @@ from signalwire.core._sync_handlers import (  # noqa: E402
     run_sync_handler,
 )
 from signalwire.core.agent.tools.registry import ToolRegistry  # noqa: E402
+from signalwire.core.tool_middleware import ResendDedupe  # noqa: E402
 from signalwire.core.mixins.tool_mixin import ToolMixin  # noqa: E402
 
 # Maximum request body size (10MB, matches CGI limit). Mirrors WebMixin.
@@ -246,6 +247,12 @@ class SWMLService(ToolMixin):
         # (sidecar, custom verb host, etc.) can register and dispatch SWAIG
         # functions without subclassing AgentBase.
         self._tool_registry = ToolRegistry(self)
+
+        # Middleware around every tool call, and the transport-retry dedupe
+        # that runs first. Created here, not lazily: a per-request copy shares
+        # the master's objects, so every request sees one dedupe.
+        self._tool_middleware: list[Any] = []
+        self._tool_resend_dedupe: ResendDedupe | None = ResendDedupe()
 
         # Pick up any class-decorated @AgentBase.tool / @SWMLService.tool methods
         self._tool_registry.register_class_decorated_tools()

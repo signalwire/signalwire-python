@@ -1938,7 +1938,9 @@ class FunctionResult:
 #: The tool result a handler that raised gets, ``{function}`` its name. A
 #: handler can fail after it did what it was asked, so the model must not
 #: report success or failure.
-TOOL_ERROR_RESULT = "{function} failed before it finished, so whether it took effect is unknown."
+TOOL_ERROR_RESULT = (
+    "{function} failed before it finished, so whether it took effect is unknown."
+)
 #: The tool prompt that goes with TOOL_ERROR_RESULT.
 TOOL_ERROR_PROMPT = (
     "Don't tell the user it worked or that it didn't. Tell them it couldn't be "
@@ -1983,7 +1985,9 @@ class ToolRefusal(Exception):
 
     def result(self) -> FunctionResult:
         """The FunctionResult the model gets."""
-        return FunctionResult(tool_result=self.tool_result, tool_prompt=self.tool_prompt)
+        return FunctionResult(
+            tool_result=self.tool_result, tool_prompt=self.tool_prompt
+        )
 
 
 def settle_result(function: str, result: Any) -> Any:

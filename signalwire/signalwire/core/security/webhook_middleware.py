@@ -56,10 +56,11 @@ SIGNALWIRE_SHA256_SIGNATURE_HEADER = "x-signalwire-sha256-signature"
 TWILIO_COMPAT_SIGNATURE_HEADER = "x-twilio-signature"
 
 # The agent endpoints SignalWire POSTs to, relative to the agent's route and
-# without slashes: the SWML fetch, SWAIG dispatch and the post-prompt summary.
+# without slashes: the SWML fetch, SWAIG dispatch, the post-prompt summary and
+# the AI events (event_webhook_url).
 # With a signing_key set, a POST to any of them needs a valid signature,
 # however the agent is served.
-_SIGNED_POST_PATHS = frozenset({"", "swaig", "post_prompt"})
+_SIGNED_POST_PATHS = frozenset({"", "swaig", "post_prompt", "ai_events"})
 
 
 def validate(

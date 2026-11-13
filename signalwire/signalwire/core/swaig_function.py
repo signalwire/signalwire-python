@@ -10,7 +10,7 @@ SwaigFunction class for defining and managing SWAIG function interfaces
 """
 
 from typing import TYPE_CHECKING, Any
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 import asyncio
 import concurrent.futures
 import inspect
@@ -43,6 +43,7 @@ if TYPE_CHECKING:
     # runtime; TYPE_CHECKING-only so there's no import cost / cycle). Generated from
     # porting-sdk/swaig-specs/swaig-request.yaml (vendored from mod_openai).
     from signalwire.core.swaig_request_generated import SwaigRequest
+    from signalwire.core.tool_middleware import ToolMiddleware
 
 
 def _nullable_spec(spec: Any) -> Any:
@@ -50,7 +51,10 @@ def _nullable_spec(spec: Any) -> Any:
     if not isinstance(spec, dict) or "type" not in spec:
         return spec
     types = spec["type"] if isinstance(spec["type"], list) else [spec["type"]]
-    widened: dict[str, Any] = {**spec, "type": [*types, "null"] if "null" not in types else types}
+    widened: dict[str, Any] = {
+        **spec,
+        "type": [*types, "null"] if "null" not in types else types,
+    }
     if isinstance(spec.get("enum"), list) and None not in spec["enum"]:
         widened["enum"] = [*spec["enum"], None]
     return widened
@@ -119,6 +123,8 @@ class SWAIGFunction:
         is_typed_handler: bool = False,
         vouched: bool = False,
         nullable_optional: bool | None = None,
+        middleware: "Sequence[ToolMiddleware] | None" = None,
+        needs_conversation: bool = False,
         **extra_swaig_fields: Any,
     ) -> None:
         """
@@ -166,6 +172,11 @@ class SWAIGFunction:
                 require, and a null reaches the handler as an argument not
                 given. None (default) follows the agent's
                 ``set_nullable_optional_parameters()``.
+            middleware: Middleware that runs around this tool's calls only,
+                inside the agent's (see ``AgentBase.add_tool_middleware``).
+            needs_conversation: True when the handler reads the
+                conversation; the agent then turns on
+                ``swaig_post_conversation``.
             **extra_swaig_fields: Additional SWAIG-only fields (meta_data_token,
                 web_hook_auth_*, etc.) to include in the generated definition.
                 ``gates`` (SemanticGate objects or gate dicts) and
@@ -188,6 +199,10 @@ class SWAIGFunction:
         self.is_typed_handler = is_typed_handler
         self.vouched = vouched
         self.nullable_optional = nullable_optional
+        # A tuple, so a per-request copy shares the middleware objects
+        # rather than deep-copying their state
+        self.middleware: tuple[ToolMiddleware, ...] = tuple(middleware or ())
+        self.needs_conversation = needs_conversation
         apply_gate_fields(extra_swaig_fields, name)
         self.extra_swaig_fields = extra_swaig_fields
 

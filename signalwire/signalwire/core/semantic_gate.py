@@ -139,8 +139,10 @@ class SemanticGate:
                 output dict. A FunctionResult's response and actions are used;
                 its ``tool_prompt`` becomes a system message after the tool
                 result in the text pipeline, which OpenAI Realtime agents
-                don't use. The actions run as written, without template
-                expansion.
+                don't use. The platform expands its ``${...}`` variables
+                once, from the call's data as a data_map's output is, such as
+                ``${global_data.semantic_state.proposal}``; a platform
+                release from before that sends it as written.
             id: The gate's id, 1 to 64 letters, digits or underscores, unique
                 within the function. Default ``gate_<n>``, 1-based.
             true_means: What yes means, at most 2 KB.

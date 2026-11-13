@@ -21,6 +21,7 @@ from signalwire.core.function_result import (
     tool_error_result,
 )
 from signalwire.core.semantic_gate import FillerPhrases, SemanticGate
+from signalwire.core.tool_middleware import ResendDedupe, ToolMiddleware, run_chain
 from signalwire.core.agent.tools.decorator import ToolDecorator
 from signalwire.core.mixins._mixin_host import _HostTyped
 
@@ -65,6 +66,8 @@ class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
         gate_fillers: FillerPhrases | None = None,
         vouched: bool = False,
         nullable_optional: bool | None = None,
+        middleware: Sequence[ToolMiddleware] | None = None,
+        needs_conversation: bool = False,
         **swaig_fields: Any,
     ) -> "AgentBase":
         """
@@ -168,6 +171,13 @@ class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
                 type, and a null reaches the handler as an argument not
                 given. None (default) follows
                 ``set_nullable_optional_parameters()``.
+            middleware: Middleware that runs around this tool's calls only,
+                inside the agent's (``add_tool_middleware``).
+            needs_conversation: True when the handler reads the
+                conversation, as ``caller_turns(raw_data)`` does. It turns
+                on the agent's ``swaig_post_conversation`` when the SWML is
+                rendered, so every tool request carries the call log, unless
+                it was set to False.
             **swaig_fields: Additional SWAIG-only fields (e.g.
                 meta_data_token, web_hook_auth_user) included in the
                 generated function definition.
@@ -212,6 +222,10 @@ class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
             swaig_fields["vouched"] = True
         if nullable_optional is not None:
             swaig_fields["nullable_optional"] = nullable_optional
+        if middleware:
+            swaig_fields["middleware"] = middleware
+        if needs_conversation:
+            swaig_fields["needs_conversation"] = True
         self._tool_registry.define_tool(
             name=name,
             description=description,
@@ -406,29 +420,118 @@ class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
                     f"Argument validation error for function '{name}': {e}"
                 )
 
-        # A vouched tool runs only when the model vouches for its arguments
-        refusal = func._vouched_refusal(args)
-        if refusal is not None:
-            return refusal
+        nullable_default = self._nullable_optional_default()
 
-        # Call the handler for regular SWAIG functions
+        def dispatch(args: dict[str, Any], raw_data: dict[str, Any]) -> Any:
+            # A vouched tool runs only when the model vouches for its arguments
+            refusal = func._vouched_refusal(args)
+            if refusal is not None:
+                return refusal
+
+            # Call the handler for regular SWAIG functions
+            try:
+                result = func.handler(
+                    func._handler_args(args, nullable_default), raw_data
+                )
+                if inspect.isawaitable(result):
+                    # An async def handler. Return an awaitable, so the caller can
+                    # run it on its own event loop: the /swaig endpoint awaits it,
+                    # and synchronous callers pass it to _resolve_awaitable().
+                    return _complete_async_call(name, result)
+                return settle_result(name, result)
+            except ToolRefusal as declined:
+                return declined.result()
+            except Exception:
+                # Logged, not sent: the text can hold internals, and the model
+                # would read it as the outcome
+                _tool_mixin_logger.exception(f"SWAIG function '{name}' raised")
+                return tool_error_result(name)
+
+        middleware = self._tool_middleware_for(func)
+        if not middleware:
+            return dispatch(args, raw_data or {})
         try:
-            result = func.handler(
-                func._handler_args(args, self._nullable_optional_default()), raw_data
-            )
-            if inspect.isawaitable(result):
-                # An async def handler. Return an awaitable, so the caller can
-                # run it on its own event loop: the /swaig endpoint awaits it,
-                # and synchronous callers pass it to _resolve_awaitable().
-                return _complete_async_call(name, result)
-            return settle_result(name, result)
+            outcome = run_chain(middleware, name, args, raw_data or {}, dispatch)
         except ToolRefusal as declined:
             return declined.result()
         except Exception:
-            # Logged, not sent: the text can hold internals, and the model
-            # would read it as the outcome
-            _tool_mixin_logger.exception(f"SWAIG function '{name}' raised")
+            _tool_mixin_logger.exception(f"Tool middleware for '{name}' raised")
             return tool_error_result(name)
+        if inspect.isawaitable(outcome):
+            return _complete_async_call(name, outcome)
+        return settle_result(name, outcome)
+
+    def _tool_middleware_for(self, func: SWAIGFunction) -> list[Any]:
+        """The middleware around a call of ``func``, outermost first: the
+        resend dedupe, the agent's, then the tool's own."""
+        chain: list[Any] = []
+        dedupe = getattr(self, "_tool_resend_dedupe", None)
+        if dedupe is not None:
+            chain.append(dedupe)
+        chain.extend(getattr(self, "_tool_middleware", ()))
+        chain.extend(getattr(func, "middleware", ()))
+        return chain
+
+    def add_tool_middleware(self, middleware: ToolMiddleware) -> "AgentBase":
+        """
+        Run ``middleware`` around every tool call, after any added before it.
+
+        A middleware is ``fn(name, args, raw_data, call_next)``. It runs before
+        the handler and calls ``call_next(args, raw_data)`` for the rest of the
+        chain and the handler, possibly with changed arguments. What it
+        returns is the call's result: the handler's, a changed one, or its own
+        without calling ``call_next``, as a ``FunctionResult`` or a dict. For
+        an ``async def`` handler ``call_next`` returns an awaitable; an
+        ``async def`` middleware can ``await resolve(call_next(...))``
+        (``signalwire.core.tool_middleware.resolve``) to take either. One that
+        raises ``ToolRefusal`` declines the call, and any other exception
+        gives the model the unknown-outcome result.
+
+        It covers tools defined with ``define_tool``, not DataMap or native
+        tools, which run on the platform. Synchronous handlers for different
+        calls run at once in worker threads, so guard shared state.
+
+        Args:
+            middleware: The middleware.
+
+        Returns:
+            Self for method chaining
+
+        Example:
+            def log_calls(name, args, raw_data, call_next):
+                started = time.monotonic()
+                result = call_next(args, raw_data)
+                log.info("tool", name=name, ms=(time.monotonic() - started) * 1000)
+                return result
+
+            agent.add_tool_middleware(log_calls)
+        """
+        self._tool_middleware.append(middleware)
+        return self
+
+    def set_tool_resend_dedupe(self, enabled: bool = True) -> "AgentBase":
+        """
+        Turn the dedupe of transport retries on or off. It's on by default.
+
+        SignalWire sends a tool request again, with the same body, after a
+        timeout, a failed connection or a 5xx, so a slow tool can run twice.
+        The dedupe answers a retry with the first attempt's result: one that
+        arrives while the first is still running waits for it. A retry is a
+        call with the same ``call_id``, ``tool_call_id`` and function name; a
+        call the model makes again has a new ``tool_call_id`` and runs, and a
+        call without one always runs.
+
+        Args:
+            enabled: False to run every request, retries included.
+
+        Returns:
+            Self for method chaining
+        """
+        if not enabled:
+            self._tool_resend_dedupe = None
+        elif getattr(self, "_tool_resend_dedupe", None) is None:
+            self._tool_resend_dedupe = ResendDedupe()
+        return self
 
     def _execute_swaig_function(
         self,

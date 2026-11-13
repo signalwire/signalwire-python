@@ -15,6 +15,7 @@ Run `sw-pydocs` for a map of the SDK, `sw-pydocs <topic>` for an area, and `sw-p
 - [docs/pgi_agent_guide.md](_docs/docs/pgi_agent_guide.md): How to design agents that stay within their rules
 - [docs/llm_parameters.md](_docs/docs/llm_parameters.md): Model parameters for the prompt and post-prompt
 - [docs/swaig_reference.md](_docs/docs/swaig_reference.md): Every FunctionResult method and action
+- [docs/conversation_patterns.md](_docs/docs/conversation_patterns.md): Confirming a change, the caller's own words, numbers to say
 - [docs/datamap_guide.md](_docs/docs/datamap_guide.md): The DataMap builder, templates, expressions and testing
 - [docs/contexts_guide.md](_docs/docs/contexts_guide.md): Contexts, steps, navigation, gather mode and history
 - [docs/skills_system.md](_docs/docs/skills_system.md): How skills load, and how to write one

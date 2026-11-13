@@ -32,11 +32,42 @@
 - `define_native_tool()` defines a function the platform implements itself,
   sent with `web_hook_url: "native"`, under your own description. A tool from
   `define_tool()` always got the agent's webhook URL, so it couldn't be one.
+- Tool middleware: `add_tool_middleware(fn)` and `define_tool(...,
+  middleware=[...])` run `fn(name, args, raw_data, call_next)` around tool
+  calls.
+- A transport retry of a tool request no longer runs the tool twice. SignalWire
+  sends a request again, with the same `tool_call_id`, after a timeout, a
+  failed connection or a 5xx; the agent answers the retry with the first
+  attempt's result, and one that arrives while the first is still running
+  waits for it. A call the model makes again has a new `tool_call_id` and runs.
+  On by default; `set_tool_resend_dedupe(False)` turns it off.
+- The caller's own words in a handler: `caller_turns(raw_data)`
+  (`signalwire.core.post_prompt`) reads what the caller said from the request's
+  conversation, and `define_tool(..., needs_conversation=True)` turns on
+  `swaig_post_conversation` so requests carry it. `record_speech_finals()` and
+  `speech_finals(call_id)` keep the recognizer's finals with their word
+  confidences, from the platform's `ai.speech_detect` events, and
+  `on_ai_event(handler)` receives every AI event; the agent sets
+  `event_webhook_url` to its new `/ai_events` endpoint for them.
+- `signalwire.speech`: `say_digits`, `say_last_digits`, `say_money` and
+  `number_words` give the words a voice should say for digits and amounts,
+  which `add_pronunciation` can't fix, since the platform normalizes text
+  before its pronunciation rules run.
+- `signalwire.patterns.Proposal` is the platform's confirm pattern: `propose()`
+  reads a change back and records it in `semantic_state` in one action object,
+  and `confirm_gates()` gives the confirm tool the three gates (answered,
+  agreed, read back) judged on the proposal's dialogue, with an `on_fail` that
+  quotes the proposal. `ask_again()` and `complete()` round it out.
+- [Conversation Patterns](docs/conversation_patterns.md), a new guide: the
+  confirm pattern, read-backs callers can interrupt, recording what was done,
+  questions that carry content, the caller's own words, and numbers to say.
 - `ContextBuilder.steps_offering(name)` lists the steps whose function lists
   name a tool. Rendering logs `tool_offered_by_no_step` once for a registered
   tool that no step offers, when every step lists its functions.
 
 ### Changed
+- A semantic gate's `on_fail` is documented as the platform now treats it:
+  its `${...}` variables are expanded once from the call's data.
 - A tool handler that raises now tells the model the function failed before
   it finished, so whether it took effect is unknown, with a tool prompt not to
   tell the caller it worked or that it didn't. It used to return "Error

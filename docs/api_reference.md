@@ -447,6 +447,8 @@ agent.add_pronunciation("API", "A P I")
 agent.add_pronunciation("SWML", "swim-el")
 ```
 
+The platform normalizes the text before these rules run, so a bare number is already words by then: a rule can't make "10001" read digit by digit. Tokens the normalizer treats as designations, such as IDs and codes, pass through unchanged, and rules do see those. To read digits, a ZIP code or an amount of money, give the words instead with `signalwire.speech`: `say_digits("10001")` is "one zero zero zero one". See [Conversation Patterns](conversation_patterns.md#numbers-the-way-a-voice-should-say-them).
+
 ##### `set_pronunciations`
 
 Set multiple pronunciation rules at once.
@@ -580,6 +582,8 @@ def define_tool(
     gate_fillers: Optional[Dict[str, List[Union[str, List[str]]]]] = None,
     vouched: bool = False,
     nullable_optional: Optional[bool] = None,
+    middleware: Optional[List[Callable]] = None,
+    needs_conversation: bool = False,
     **swaig_fields
 ) -> AgentBase
 ```
@@ -596,6 +600,8 @@ def define_tool(
 - `gate_fillers` (Optional[Dict[str, List[Union[str, List[str]]]]]): What the AI says while the gates are checked, shaped like `fillers`. Only with `gates`
 - `vouched` (bool): True for a tool whose arguments must come from the caller, not from the model's guesses. The tool gets a required boolean argument, `data_supplied_by_user`, in which the model says every other argument is what the caller said. Unless it's true, the handler doesn't run, and the model gets "<name> was not run." with the tool prompt "Get the answer from the user before using this tool." The handler never sees the argument. Default False
 - `nullable_optional` (Optional[bool]): True to let the model send null for an optional argument, as providers with strict schemas require. Each argument that isn't required takes null as well as its type, and a null reaches the handler as an argument not given. None follows `set_nullable_optional_parameters()`
+- `middleware` (Optional[List[Callable]]): Middleware that runs around this tool's calls only, inside the agent's. See `add_tool_middleware()`
+- `needs_conversation` (bool): True when the handler reads the conversation, as `caller_turns(raw_data)` does. It turns on the agent's `swaig_post_conversation` when the SWML is rendered, so every tool request carries the call log, unless that was set to False
 - `**swaig_fields`: Additional SWAIG function properties
 
 **Raises:** `ValueError` for a gate the platform would refuse, or `gate_fillers` without `gates`.
@@ -681,7 +687,7 @@ agent.define_tool(
 `SemanticGate(question, threshold, on_fail, *, id=None, true_means=None, false_means=None, visual_input=None, on_unclear=None, unclear=None, dialogue=None, history=None)`:
 - `question` (str): The yes/no question, at most 8 KB. Its `${...}` variables are expanded from the call's global data when the gate is checked
 - `threshold` (float): The probability of yes, above 0 and at most 1, at or above which the gate passes
-- `on_fail` (Union[str, FunctionResult, Dict[str, Any]]): What the model gets when this is the first gate that fails: the tool result text, a `FunctionResult`, whose response and actions are used, or a data_map output dict. It needs a response, and in the `tool_result`/`tool_prompt` form a `tool_result`: a blocked call must never read as a success. The `tool_prompt` becomes a system message after the tool result; OpenAI Realtime agents don't use it, so put what they need in the `tool_result`. The actions run as written, without template expansion
+- `on_fail` (Union[str, FunctionResult, Dict[str, Any]]): What the model gets when this is the first gate that fails: the tool result text, a `FunctionResult`, whose response and actions are used, or a data_map output dict. It needs a response, and in the `tool_result`/`tool_prompt` form a `tool_result`: a blocked call must never read as a success. The `tool_prompt` becomes a system message after the tool result; OpenAI Realtime agents don't use it, so put what they need in the `tool_result`. The platform expands its `${...}` variables once, from the call's data as a data_map's output is, so it can quote what your code stored, such as `${global_data.semantic_state.proposal}`; a platform release from before that sends it as written
 - `id` (Optional[str]): 1 to 64 letters, digits or underscores, unique within the function. Default `gate_<n>`, 1-based
 - `true_means`, `false_means` (Optional[str]): What yes and no mean, at most 2 KB each
 - `visual_input` (Optional[Union[bool, int]]): How many of the caller's newest video frames the decision model sees with this gate, as `visual_input`: True is 1, False or 0 none, or a whole number up to 5. Name it in the question, as in "Is the caller holding a photo ID up to the camera in `visual_input`?". All of a function's gates share one request, so each sees as many frames as the gate asking for the most. The gate provider must take images; one that doesn't makes the check a configuration error, which blocks the call. Left out by default. A function's own `visual_input`, frames sent to its webhook, is a separate `define_tool()` field
@@ -709,6 +715,45 @@ agent.define_native_tool(
 
 ##### `set_nullable_optional_parameters(enabled: bool = True) -> AgentBase`
 Let the model send null for every tool's optional arguments. Some providers' strict schemas make every argument required and refuse a call that leaves one out, so an optional argument must take null instead. With this on, each optional argument of a tool from `define_tool()` takes null as well as its type, and a null reaches the handler as an argument not given. A tool's own `nullable_optional` overrides it. It applies when the SWML is rendered, so it covers tools defined before and after it.
+
+##### `add_tool_middleware(middleware: Callable) -> AgentBase`
+Run `middleware` around every tool call, after any added before it. A middleware is `fn(name, args, raw_data, call_next)`. It runs before the handler, and calls `call_next(args, raw_data)` for the rest of the chain and the handler, possibly with changed arguments. What it returns is the call's result: the handler's, a changed one, or its own without calling `call_next`. For an `async def` handler, `call_next` returns an awaitable; an `async def` middleware can `await resolve(call_next(args, raw_data))`, with `resolve` from `signalwire.core.tool_middleware`, to take either. A middleware that raises `ToolRefusal` declines the call; any other exception gives the model the unknown-outcome result. It covers tools from `define_tool()`, not DataMap or native tools, which run on the platform.
+
+```python
+from time import monotonic
+
+def log_calls(name, args, raw_data, call_next):
+    started = monotonic()
+    result = call_next(args, raw_data)
+    print(name, round((monotonic() - started) * 1000), "ms")
+    return result
+
+agent.add_tool_middleware(log_calls)
+```
+
+##### `set_tool_resend_dedupe(enabled: bool = True) -> AgentBase`
+Turn the dedupe of transport retries on or off; it's on by default. SignalWire sends a tool request again, with the same body, after a timeout, a failed connection or a 5xx, so a slow tool could run twice. The dedupe answers a retry with the first attempt's result, and one that arrives while the first is still running waits for it. A retry is a request with the same `call_id`, `tool_call_id` and function name. A call the model makes again has a new `tool_call_id` and runs, and a request without one always runs. It runs first, before any middleware.
+
+##### `on_ai_event(handler: Callable) -> Callable`
+Register a handler, usable as a decorator, for the AI events the platform posts during calls. The agent sets the call's `event_webhook_url` to its own `/ai_events` endpoint, unless you set `event_webhook_url` yourself, and calls the handler with each event: `handler(event_type, params, event)`. `ai.speech_detect` comes for each final of the caller's speech, with its `text` and the recognizer's `words`, `[{"word", "confidence"}]`. The handler may be sync or async; its return value is ignored and an exception is logged. The endpoint is served by the agent's web server, not in serverless modes. A call with `redact_prompt` set sends no `ai.speech_detect` unless debug is on.
+
+##### `record_speech_finals(max_calls: int = 500, max_finals: int = 200) -> AgentBase`
+Keep each call's recognizer finals, from `ai.speech_detect`, for tool handlers to read with `speech_finals()`. It sets `event_webhook_url` as `on_ai_event()` does. The oldest call's finals go first once `max_calls` calls are kept.
+
+##### `speech_finals(call_id: str, since: Optional[float] = None) -> List[Dict[str, Any]]`
+A call's recognizer finals, oldest first, as `{"text", "words", "timestamp"}`, with `timestamp` in seconds since the epoch. The words are as the recognizer heard them, with their confidences, before hearing hints and number formatting change the text, so a handler can ask again about a word the recognizer wasn't sure of.
+
+```python
+agent.record_speech_finals()
+
+def spell_name(args, raw_data):
+    finals = agent.speech_finals(raw_data["call_id"])
+    doubtful = [w["word"] for f in finals[-1:] for w in f["words"] if w["confidence"] < 0.85]
+    if doubtful:
+        return FunctionResult(tool_result=f"Not sure of: {', '.join(doubtful)}",
+                              tool_prompt="Ask the caller to repeat those letters.")
+    return FunctionResult(tool_result=f"Name: {args['name']}")
+```
 
 ##### `@AgentBase.tool(name=None, **kwargs)` (Class Decorator)
 Decorator for defining tools as class methods.

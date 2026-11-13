@@ -10,8 +10,8 @@ does, and a native tool as actions.c dispatches one: a web_hook_url of
 """
 
 import json
-import logging
 from typing import Any
+from unittest.mock import Mock
 
 import pytest
 
@@ -210,19 +210,19 @@ class TestStepsOffering:
         assert builder.steps_offering("find_store") == [("default", "greet")]
         assert builder.steps_offering("audit_log") == []
 
-    def test_a_tool_no_step_offers_is_logged_once(self, caplog: pytest.LogCaptureFixture) -> None:
+    def test_a_tool_no_step_offers_is_logged_once(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        logger = Mock()
+        monkeypatch.setattr("signalwire.core.contexts._logger", logger)
         agent = self._agent_with_steps(every_step_lists=True)
-        with caplog.at_level(logging.WARNING, logger="signalwire.contexts"):
-            agent._render_swml()
-            agent._render_swml()
-        warned = [r for r in caplog.records if "tool_offered_by_no_step" in r.getMessage()]
-        assert len(warned) == 1
-        assert "audit_log" in warned[0].getMessage()
+        agent._render_swml()
+        agent._render_swml()
+        assert [c.args[0] for c in logger.warning.call_args_list] == ["tool_offered_by_no_step"]
+        assert logger.warning.call_args.kwargs["function"] == "audit_log"
 
     def test_no_warning_when_a_step_inherits_its_functions(
-        self, caplog: pytest.LogCaptureFixture
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        agent = self._agent_with_steps(every_step_lists=False)
-        with caplog.at_level(logging.WARNING, logger="signalwire.contexts"):
-            agent._render_swml()
-        assert not [r for r in caplog.records if "tool_offered_by_no_step" in r.getMessage()]
+        logger = Mock()
+        monkeypatch.setattr("signalwire.core.contexts._logger", logger)
+        self._agent_with_steps(every_step_lists=False)._render_swml()
+        logger.warning.assert_not_called()

@@ -304,6 +304,10 @@ Or give the schema yourself, with a handler that takes `(args, raw_data)`:
             "docs/pgi_agent_guide.md",
             "What a tool may decide, and what code must enforce",
         ),
+        (
+            "docs/conversation_patterns.md",
+            "Confirming a change, the caller's own words, numbers to say",
+        ),
     ),
     examples=(
         "examples/swaig_features_agent.py",
