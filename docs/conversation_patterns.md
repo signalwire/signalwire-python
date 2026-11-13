@@ -11,6 +11,9 @@ Each pattern here keeps a decision in your code that the model would otherwise m
 - [The Caller's Own Words](#the-callers-own-words)
 - [Numbers the Way a Voice Should Say Them](#numbers-the-way-a-voice-should-say-them)
 - [Tool Outcomes the Model Can Trust](#tool-outcomes-the-model-can-trust)
+- [Requests to Come Back To](#requests-to-come-back-to)
+- [What a Caller Spelled](#what-a-caller-spelled)
+- [Testing a Call Flow](#testing-a-call-flow)
 
 ## Confirming a Change
 
@@ -127,6 +130,73 @@ The model reads a tool's result as what happened, so the result must not claim m
 - A dict without a `response` or an `action` is the handler's data, and the model gets it as JSON.
 
 SignalWire sends a tool request again after a timeout, a failed connection or a 5xx, so a slow tool could run twice. The agent answers such a retry with the first attempt's result, and one that arrives while the first is still running waits for it. `set_tool_resend_dedupe(False)` turns this off.
+
+## Requests to Come Back To
+
+A caller in the middle of one task often asks for another: "and can you also check my balance?" Taking it up at once loses the first task, and ignoring it loses the second. `RequestList` keeps such requests in the call's `global_data`. A tool notes each one, and the model tells the caller it's noted for right after this. The step text shows the list, so the agent takes the requests up when the current task is done.
+
+```python
+from signalwire import AgentBase
+from signalwire.patterns import RequestList
+
+agent = AgentBase(name="support", route="/support")
+later = RequestList("later", openers={"balance": "You also asked about your balance."})
+agent.set_global_data(later.defaults())
+
+NOTE = {
+    "type": "object",
+    "properties": {
+        "kind": {"type": "string", "enum": ["balance", "question"]},
+        "about": {"type": "string", "description": "What the caller asked, in a few words"},
+    },
+    "required": ["kind", "about"],
+}
+
+def note_request(args, raw_data):
+    return later.note(raw_data, args["kind"], args["about"])
+
+agent.define_tool("note_request", "Note something the caller asked to do later", NOTE,
+                  note_request)
+ctx = agent.define_contexts().add_context("default")
+ctx.add_step("take_order").set_text("Take the order.\n\n${global_data.later_text}")
+```
+
+`later.next(raw_data)` gives the oldest request with its opener, and `later.done(raw_data)` removes it once it's taken up. The kinds and their openers are yours. A step's text is expanded when the step is entered, so return `refresh_step()` with a note to show the new list at once.
+
+## What a Caller Spelled
+
+A caller spells a name, a code or an email address in many ways: letter by letter, with letter names, with "S as in Sam", with the NATO alphabet, or with "double l". `signalwire.speech.spelling` reads them all from the recognizer's text.
+
+```python
+from signalwire.speech.spelling import read_spelled, spelling_variants, spoken_email
+
+read_spelled("S as in Sam, m i t h")             # ["S", "M", "I", "T", "H"]
+read_spelled("sierra mike india tango hotel")    # ["S", "M", "I", "T", "H"]
+spoken_email("john dot smith at example dot com")  # "john.smith@example.com"
+spelling_variants(["S", "M", "I", "T", "H"], {"S": "F", "M": "N"})
+# ["SMITH", "FMITH", "SNITH", "FNITH"]
+```
+
+The recognizer confuses some letters, and which ones depends on the recognizer and the voice, so `spelling_variants` takes confusion groups you measure on your own calls; none are built in. Its `positions` argument limits the changes to the letters the recognizer was least sure of, which `agent.speech_finals()` gives a confidence for. Look each variant up in your records, in order: the first that matches is the likeliest.
+
+## Testing a Call Flow
+
+`swaig-test` runs one tool call. To test a flow, such as a confirmation across steps, `signalwire.testing.CallSimulator` runs the agent's tools through a simulated call. It reads the agent's rendered SWML as the platform would, and checks each call as the platform does: a tool the current step doesn't offer doesn't run, and a gated tool runs only when your gate callback lets it. Each result's actions change the call: global data and `semantic_state`, the step and context, the functions turned on, `say`, and the end of the call.
+
+```python
+from signalwire.testing import CallSimulator
+
+def test_a_yes_places_the_order():
+    sim = CallSimulator(agent, gates=lambda gate, sim, args: True)
+    sim.caller("A large tea, please.")
+    assert not sim.call("place_order").ran   # not offered until the read-back
+    sim.call("review_order", {"item": "a large tea"})
+    sim.caller("Yes.")
+    assert sim.call("place_order").ran
+    assert sim.semantic_state == {"done": "The a large tea is ordered."}
+```
+
+The gate callback gets each gate and returns True, False, a probability compared with the gate's threshold, or `"unclear"`. Give `stubs` for DataMap tools, which run on the platform. To check changed code against real calls, record tool requests with `RequestRecorder`, which is tool middleware, and run them again with `CallSimulator(agent).replay(requests)`. The requests carry what callers said, so keep a recording where you'd keep call recordings.
 
 ## Related Documentation
 

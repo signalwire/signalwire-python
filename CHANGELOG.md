@@ -58,9 +58,22 @@
   and `confirm_gates()` gives the confirm tool the three gates (answered,
   agreed, read back) judged on the proposal's dialogue, with an `on_fail` that
   quotes the proposal. `ask_again()` and `complete()` round it out.
+- `signalwire.patterns.RequestList` keeps what the caller asked for while the
+  agent was busy, in the call's `global_data`, with step text that lists it,
+  to take up when the current task is done.
+- `signalwire.speech.spelling`: `read_spelled` reads what a caller spelled
+  (letters, letter names, "S as in Sam", NATO words, "double l", digits),
+  `spoken_email` reads an address said aloud, and `spelling_variants` expands
+  letters the recognizer confuses, with groups you supply.
+- `signalwire.testing.CallSimulator` runs an agent's tools through a simulated
+  call, checked as the platform checks them: the step's function list (with
+  the platform's reply for a tool it won't run), the semantic gates from a
+  callback, and each result's actions on the call's state. `RequestRecorder`
+  middleware records tool requests for `CallSimulator.replay()`.
 - [Conversation Patterns](docs/conversation_patterns.md), a new guide: the
   confirm pattern, read-backs callers can interrupt, recording what was done,
-  questions that carry content, the caller's own words, and numbers to say.
+  questions that carry content, the caller's own words, numbers to say,
+  requests to come back to, spelled input, and testing a call flow.
 - `ContextBuilder.steps_offering(name)` lists the steps whose function lists
   name a tool. Rendering logs `tool_offered_by_no_step` once for a registered
   tool that no step offers, when every step lists its functions.

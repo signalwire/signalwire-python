@@ -14,5 +14,6 @@ agent was busy with something else, to come back to.
 """
 
 from signalwire.patterns.proposal import Proposal, current
+from signalwire.patterns.request_list import RequestList
 
-__all__ = ["Proposal", "current"]
+__all__ = ["Proposal", "RequestList", "current"]
