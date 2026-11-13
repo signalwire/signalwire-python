@@ -376,6 +376,28 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
             self._params[param] = value
         return self
 
+    def set_unavailable_function_response(self, text: str) -> "AgentBase":
+        """
+        Set what the model is told when it calls a tool it can't use now.
+
+        Without it, the platform says nothing ran, which steps offer the
+        tool, and which tools are available now. ``text`` takes its place,
+        with ``${function}`` for the tool's name, ``${tools}`` for the tools
+        the request offered, comma-separated, and ``${steps}`` for the
+        current context's steps whose functions include it (empty for a name
+        the agent doesn't have).
+
+        Args:
+            text: The text, as the ``unavailable_function_response`` param.
+
+        Returns:
+            Self for method chaining
+        """
+        if not isinstance(text, str) or not text:
+            raise ValueError("text must be a non-empty string")
+        self._params["unavailable_function_response"] = text
+        return self
+
     def set_global_data(self, data: dict[str, Any]) -> "AgentBase":
         """
         Merge data into the global data available to the AI throughout the conversation.

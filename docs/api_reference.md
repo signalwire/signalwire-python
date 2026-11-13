@@ -684,7 +684,7 @@ agent.define_tool(
 )
 ```
 
-`SemanticGate(question, threshold, on_fail, *, id=None, true_means=None, false_means=None, visual_input=None, on_unclear=None, unclear=None, dialogue=None, history=None)`:
+`SemanticGate(question, threshold, on_fail, *, id=None, true_means=None, false_means=None, visual_input=None, on_unclear=None, unclear=None, dialogue=None, history=None, since=None)`:
 - `question` (str): The yes/no question, at most 8 KB. Its `${...}` variables are expanded from the call's global data when the gate is checked
 - `threshold` (float): The probability of yes, above 0 and at most 1, at or above which the gate passes
 - `on_fail` (Union[str, FunctionResult, Dict[str, Any]]): What the model gets when this is the first gate that fails: the tool result text, a `FunctionResult`, whose response and actions are used, or a data_map output dict. It needs a response, and in the `tool_result`/`tool_prompt` form a `tool_result`: a blocked call must never read as a success. The `tool_prompt` becomes a system message after the tool result; OpenAI Realtime agents don't use it, so put what they need in the `tool_result`. The platform expands its `${...}` variables once, from the call's data as a data_map's output is, so it can quote what your code stored, such as `${global_data.semantic_state.proposal}`; a platform release from before that sends it as written
@@ -695,8 +695,9 @@ agent.define_tool(
 - `on_unclear` (Optional[Union[str, FunctionResult, Dict[str, Any]]]): What the model gets when this is the first gate answered unclear and none failed, in the same forms as `on_fail`. It should ask the caller again. Default: the platform's own, which does
 - `dialogue` (Optional[str]): The dialogue this gate judges, `"window"` or `"proposal"`, in place of the agent's (`set_semantic_gates(dialogue=...)`). A gate about something the caller asked before the proposal started, such as a request made before the account was found, wants `"window"` on an agent that judges its confirmations by the proposal
 - `history` (Optional[int]): How many of the newest dialogue entries this gate judges, a whole number from 1 to 100, in place of the agent's `history`
+- `since` (Optional[str]): The name of a mark your code sets with `FunctionResult.set_semantic_gate_mark(name)`. The gate judges the dialogue from the agent's first turn at or after the mark, at most `history` entries; until the mark is set, its `dialogue` as usual. Use it to anchor a confirmation to the moment your code chose, rather than to the last change of `semantic_state`
 
-Every gate on one function must have the same `dialogue` and `history`, set or not: they're asked together, about one dialogue. The SDK raises `ValueError` for gates that differ, as the platform refuses the function.
+Every gate on one function must have the same `dialogue`, `history` and `since`, set or not: they're asked together, about one dialogue. The SDK raises `ValueError` for gates that differ, as the platform refuses the function.
 
 Gates are checked by the platform's rules when the tool is defined. The platform refuses the whole function for an invalid gate, so the SDK raises `ValueError` instead. Gates aren't allowed on the hook names `startup_hook`, `hangup_hook` and `check_for_input`, on `end_call`, or on a built-in function's name.
 
@@ -710,6 +711,15 @@ agent.define_native_tool(
     "end_call",
     "End the call once the order is placed and the caller has nothing else.",
     {"type": "object", "properties": {"reason": {"type": "string"}}},
+)
+```
+
+##### `set_unavailable_function_response(text: str) -> AgentBase`
+Set what the model is told when it calls a tool it can't use now: one the current step doesn't offer, or one the agent doesn't have. Without it, the platform says nothing ran, which steps offer the tool, and which tools are available now. `text` takes its place, with `${function}` for the tool's name, `${tools}` for the tools the request offered, comma-separated, and `${steps}` for the current context's steps whose functions include it, empty for a name the agent doesn't have. It's the `unavailable_function_response` param.
+
+```python
+agent.set_unavailable_function_response(
+    "Nothing ran: ${function} isn't offered now. Use one of: ${tools}."
 )
 ```
 

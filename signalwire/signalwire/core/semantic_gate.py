@@ -57,6 +57,7 @@ _GATE_KEYS = (
     "visual_input",
     "dialogue",
     "history",
+    "since",
 )
 _GATE_ID = re.compile(r"[A-Za-z0-9_]{1,64}")
 
@@ -125,6 +126,7 @@ class SemanticGate:
         unclear: bool | None = None,
         dialogue: str | None = None,
         history: int | None = None,
+        since: str | None = None,
     ) -> None:
         """
         Args:
@@ -175,10 +177,15 @@ class SemanticGate:
             history: How many of the newest dialogue entries this gate
                 judges, a whole number from 1 to 100, in place of the agent's
                 ``semantic_gate_history``.
+            since: The name of a mark your code sets with
+                ``FunctionResult.set_semantic_gate_mark(name)``: the gate
+                judges the dialogue from the agent's first turn at or after
+                the mark, at most ``history`` entries. Until the mark is set,
+                it judges its ``dialogue`` as usual.
 
-            Every gate on one function must have the same ``dialogue`` and
-            ``history``, set or not: they're asked together, about one
-            dialogue.
+            Every gate on one function must have the same ``dialogue``,
+            ``history`` and ``since``, set or not: they're asked together,
+            about one dialogue.
 
         Raises:
             ValueError: If ``on_fail`` or ``on_unclear`` has no response: a
@@ -200,6 +207,7 @@ class SemanticGate:
         self.unclear = unclear
         self.dialogue = dialogue
         self.history = history
+        self.since = since
 
     def to_dict(self) -> dict[str, Any]:
         """The gate as the platform reads it."""
@@ -221,6 +229,8 @@ class SemanticGate:
             gate["dialogue"] = self.dialogue
         if self.history is not None:
             gate["history"] = self.history
+        if self.since is not None:
+            gate["since"] = self.since
         return gate
 
 
@@ -434,6 +444,10 @@ def _check_gate(gate: Any) -> str:
         return "dialogue must be window or proposal"
     if "history" in gate and not _whole_number_in(gate["history"], 1, MAX_GATE_HISTORY):
         return f"history must be a whole number from 1 to {MAX_GATE_HISTORY}"
+    if "since" in gate and not (
+        isinstance(gate["since"], str) and _GATE_ID.fullmatch(gate["since"])
+    ):
+        return "since must be a mark name of 1 to 64 letters, digits or underscores"
     return ""
 
 
@@ -512,8 +526,8 @@ def gate_definitions(
         # refuses a function whose gates name different ones, set or not
         if definitions and _window(definition) != _window(definitions[0]):
             raise ValueError(
-                f"{function}: gate {index + 1}: dialogue and history must be the "
-                "same on every gate of a function"
+                f"{function}: gate {index + 1}: dialogue, history and since must be "
+                "the same on every gate of a function"
             )
         definitions.append(json.loads(json.dumps(definition)))
     return definitions
@@ -522,7 +536,11 @@ def gate_definitions(
 def _window(gate: dict[str, Any]) -> tuple[Any, ...]:
     """What a gate sets of the dialogue it judges, for comparing gates."""
     history = gate.get("history")
-    return (_gate_dialogue(gate), None if history is None else int(history))
+    return (
+        _gate_dialogue(gate),
+        None if history is None else int(history),
+        gate.get("since"),
+    )
 
 
 def apply_gate_fields(

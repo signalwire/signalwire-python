@@ -159,6 +159,9 @@ class CallSimulator:
         self.waiting_for_user = False
         #: Every tool call so far
         self.calls: list[SimulatedCall] = []
+        #: The semantic gate marks set, by name: the length of the call log
+        #: when each was set, so ``call_log[marks[name]:]`` is since it
+        self.marks: dict[str, int] = {}
         self._toggled: dict[str, bool] = {}
         self._tool_calls = 0
         #: The current context and step, None without contexts
@@ -410,6 +413,8 @@ class CallSimulator:
                     )
         elif key == "back_to_back_functions":
             self.chaining = value
+        elif key == "semantic_gate_mark":
+            self.marks[str(value)] = len(self.call_log)
         elif key == "wait_for_user":
             self.waiting_for_user = bool(value)
         elif key in ("hangup", "stop"):

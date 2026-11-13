@@ -10,6 +10,11 @@
   `ValueError` when they differ. `unclear=True` asks yes, no or unclear, and
   `on_unclear` is what the model gets for an unclear answer.
   `set_semantic_gates(dialogue=)` sets the agent's `semantic_gate_dialogue`.
+  `since=` anchors a gate's dialogue at a mark your code sets with the new
+  `FunctionResult.set_semantic_gate_mark(name)` action.
+- `set_unavailable_function_response(text)` sets what the model is told when
+  it calls a tool it can't use now, with `${function}`, `${tools}` and
+  `${steps}` (the `unavailable_function_response` param).
 - `define_tool(..., vouched=True)` adds a required boolean argument,
   `data_supplied_by_user`, in which the model says every argument came from
   the caller. Unless it's true, the handler doesn't run, and the model is told

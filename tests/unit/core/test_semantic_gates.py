@@ -470,6 +470,8 @@ class TestGateDialogueAndUnclear:
         assert str(caught.value) == f"place_order: gate 1: {reason}"
 
     @pytest.mark.parametrize(("first", "second"), [
+        ({"since": "read_back"}, {}),
+        ({"since": "a"}, {"since": "b"}),
         ({"dialogue": "proposal"}, {}),
         ({}, {"history": 6}),
         ({"dialogue": "window", "history": 6}, {"dialogue": "window", "history": 7}),
@@ -481,8 +483,8 @@ class TestGateDialogueAndUnclear:
         with pytest.raises(ValueError) as caught:
             gate_definitions([_gate(id="a", **first), _gate(id="b", **second)], "place_order")
         assert str(caught.value) == (
-            "place_order: gate 2: dialogue and history must be the same on every "
-            "gate of a function")
+            "place_order: gate 2: dialogue, history and since must be the same on "
+            "every gate of a function")
 
     def test_the_same_dialogue_named_differently_is_the_same(self) -> None:
         gates = gate_definitions(
@@ -499,3 +501,31 @@ class TestGateDialogueAndUnclear:
     def test_the_agent_dialogue_param_is_checked(self, dialogue: Any) -> None:
         with pytest.raises(ValueError, match="dialogue must be one of"):
             _agent().set_semantic_gates(dialogue=dialogue)
+
+
+class TestGateMarks:
+    """A gate's since: the dialogue from a mark the application sets with a
+    semantic_gate_mark action."""
+
+    def test_since_is_sent_only_when_set(self) -> None:
+        gate = SemanticGate("Q?", 0.8, "no", since="read_back")
+        assert gate.to_dict()["since"] == "read_back"
+        assert "since" not in SemanticGate("Q?", 0.8, "no").to_dict()
+
+    @pytest.mark.parametrize("since", ["", "has space", "x" * 65, 3])
+    def test_a_bad_mark_name_is_refused(self, since: Any) -> None:
+        with pytest.raises(ValueError, match="since must be a mark name"):
+            gate_definitions([_gate(since=since)], "place_order")
+
+    def test_the_mark_action(self) -> None:
+        result = FunctionResult("Read it back.").set_semantic_gate_mark("read_back")
+        assert result.to_dict()["action"] == [{"semantic_gate_mark": "read_back"}]
+        with pytest.raises(ValueError, match="mark name"):
+            FunctionResult("x").set_semantic_gate_mark("no spaces allowed")
+
+    def test_the_unavailable_function_response_param(self) -> None:
+        agent = _agent().set_unavailable_function_response(
+            "Nothing ran: ${function} isn't offered now. Use one of ${tools}.")
+        assert agent._params["unavailable_function_response"].startswith("Nothing ran")
+        with pytest.raises(ValueError):
+            _agent().set_unavailable_function_response("")

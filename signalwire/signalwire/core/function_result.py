@@ -945,6 +945,31 @@ class FunctionResult:
         """
         return self.add_action("functions_on_speaker_timeout", enabled)
 
+    def set_semantic_gate_mark(self, name: str) -> "FunctionResult":
+        """
+        Set a mark that semantic gates judge the dialogue from.
+
+        A gate with ``since=name`` judges the dialogue from the agent's
+        first turn at or after the mark, at most its ``history`` entries.
+        The mark is set as of the start of the action object that sets it,
+        so a ``say`` in the same object is the first turn after it; setting
+        it again moves it. Marks last for the call.
+
+        Args:
+            name: 1 to 64 letters, digits or underscores.
+
+        Returns:
+            self for method chaining
+
+        Raises:
+            ValueError: For a name the platform would refuse.
+        """
+        if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9_]{1,64}", name):
+            raise ValueError(
+                f"a mark name is 1 to 64 letters, digits or underscores, got {name!r}"
+            )
+        return self.add_action("semantic_gate_mark", name)
+
     def back_to_back_functions(self, value: bool | str = True) -> "FunctionResult":
         """
         Set whether the model may call another function right after a

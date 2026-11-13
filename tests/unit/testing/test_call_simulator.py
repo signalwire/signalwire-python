@@ -199,3 +199,16 @@ class TestNavigation:
         assert sim.call("next_step", {"step": "next"}).ran and sim.step == "two"
         assert sim.call("next_step", {"step": "two"}).ran is False
         assert sim.call("next_step", {"step": "one"}).ran and sim.step == "one"
+
+
+class TestMarks:
+    def test_a_mark_is_kept_with_its_place_in_the_log(self) -> None:
+        agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
+        agent.define_tool("read_back", "Read back", {}, lambda a, r: FunctionResult(
+            "Read it back.").set_semantic_gate_mark("read_back"))
+        sim = CallSimulator(agent)
+        sim.caller("A tea.")
+        sim.call("read_back")
+        sim.caller("Yes.")
+        since = sim.call_log[sim.marks["read_back"]:]
+        assert [e.get("content") for e in since if e["role"] == "user"] == ["Yes."]

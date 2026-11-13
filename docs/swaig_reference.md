@@ -613,6 +613,13 @@ Set the state the call's semantic gates judge, besides the dialogue: `global_dat
 result.set_semantic_state({"order": {"item": "large pepperoni", "confirmed": True}})
 ```
 
+#### `set_semantic_gate_mark(name)`
+Set a mark that semantic gates with `since=name` judge the dialogue from: the agent's first turn at or after it, at most the gate's `history` entries. The mark is set as of the start of the action object that sets it, so a `say` in the same object is the first turn after it, and setting it again moves it. Marks last for the call. The name is 1 to 64 letters, digits or underscores.
+
+```python
+result.set_semantic_gate_mark("read_back")
+```
+
 #### `set_metadata(data)`
 Set metadata scoped to current function's meta_data_token.
 
