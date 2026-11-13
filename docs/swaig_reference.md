@@ -527,6 +527,15 @@ Stop agent execution completely.
 result.stop()
 ```
 
+#### `refresh_step(step_name)`
+Enter the current step again, so its text shows new global data. A step's text is expanded once, when the step is entered, so its `${global_data.*}` values are the ones from then. After `update_global_data()` changes one, add `refresh_step()` with the current step's name, after the update, and the model gets the step's text again with the new values. It's the same action as `swml_change_step(step_name)`: entering a step starts it over, and its `history` mode applies again.
+
+```python
+result = (FunctionResult("Added the drink.")
+          .update_global_data({"order_total": "$14.50"})
+          .refresh_step("take_order"))
+```
+
 ---
 
 ### Speech & Audio Control
@@ -604,6 +613,13 @@ Set the state the call's semantic gates judge, besides the dialogue: `global_dat
 result.set_semantic_state({"order": {"item": "large pepperoni", "confirmed": True}})
 ```
 
+#### `set_semantic_gate_mark(name)`
+Set a mark that semantic gates with `since=name` judge the dialogue from: the agent's first turn at or after it, at most the gate's `history` entries. The mark is set as of the start of the action object that sets it, so a `say` in the same object is the first turn after it, and setting it again moves it. Marks last for the call. The name is 1 to 64 letters, digits or underscores.
+
+```python
+result.set_semantic_gate_mark("read_back")
+```
+
 #### `set_metadata(data)`
 Set metadata scoped to current function's meta_data_token.
 
@@ -639,6 +655,14 @@ Control whether functions can be called on speaker timeout.
 ```python
 result.enable_functions_on_timeout(True)
 result.enable_functions_on_timeout(False)
+```
+
+#### `back_to_back_functions(value=True)`
+Set whether the model may call another function right after a function result, without answering in words first. `"forever"`, the call's default, chains freely. `False` makes the model answer in words after a function result. `True`, while chaining is off, allows one more chain, and then it's off again; it never lowers `"forever"`. The setting lasts for the call. Realtime models don't read it.
+
+```python
+# A read-back the caller must answer before anything else runs
+result = FunctionResult("Read the order back to the caller.").back_to_back_functions(False)
 ```
 
 #### `enable_extensive_data(enabled=True)`

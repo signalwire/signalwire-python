@@ -282,6 +282,12 @@ Or give the schema yourself, with a handler that takes `(args, raw_data)`:
 - `gates=[SemanticGate(...)]` adds semantic gates: yes/no questions a
   decision model answers about the call before the platform runs the tool.
   A platform release without semantic gates runs the tool ungated.
+- `vouched=True` runs the handler only when the model says every argument
+  came from the caller (a required `data_supplied_by_user`); otherwise the
+  model is told to get the answer from the caller first.
+- Raise `ToolRefusal(tool_result, tool_prompt)` to decline with an outcome you
+  know. Any other exception tells the model the outcome is unknown, so it
+  won't claim success; the exception itself is only logged.
 - Answer within a few seconds: the caller hears nothing while a tool runs.
   SignalWire waits up to 120 seconds for a tool's webhook, and sends the
   request again after a timeout, a failed connection or a 5xx, so a slow tool
@@ -297,6 +303,10 @@ Or give the schema yourself, with a handler that takes `(args, raw_data)`:
         (
             "docs/pgi_agent_guide.md",
             "What a tool may decide, and what code must enforce",
+        ),
+        (
+            "docs/conversation_patterns.md",
+            "Confirming a change, the caller's own words, numbers to say",
         ),
     ),
     examples=(
@@ -314,6 +324,7 @@ Or give the schema yourself, with a handler that takes `(args, raw_data)`:
         "signalwire.FunctionResult.connect",
         "signalwire.FunctionResult.swml_change_step",
         "signalwire.SemanticGate",
+        "signalwire.ToolRefusal",
     ),
     related=("datamap", "contexts", "skills", "security", "pgi"),
 )

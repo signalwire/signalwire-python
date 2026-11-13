@@ -48,7 +48,9 @@ class MCPServerMixin:
 
             # Convert SWAIG parameter format to MCP inputSchema
             if hasattr(func, "_ensure_parameter_structure"):
-                tool["inputSchema"] = func._ensure_parameter_structure()
+                tool["inputSchema"] = func._ensure_parameter_structure(
+                    getattr(self, "_nullable_optional_parameters", False)
+                )
             elif func.parameters:
                 tool["inputSchema"] = func.parameters
             else:

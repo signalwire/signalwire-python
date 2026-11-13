@@ -99,7 +99,9 @@ class TestSwaigEndpoint:
 
     def test_async_handler_error(self, client: TestClient) -> None:
         body = self._post(client, "fails")
-        assert body["response"] == "Error executing function 'fails': upstream timeout"
+        assert body["response"]["tool_result"] == (
+            "fails failed before it finished, so whether it took effect is unknown.")
+        assert "upstream timeout" not in str(body)
 
     def test_sync_handler_unchanged(self, client: TestClient) -> None:
         assert self._post(client, "sync_lookup", {"city": "Rome"})["response"] == "Sync weather in Rome"
@@ -116,7 +118,9 @@ class TestServerless:
     @pytest.mark.parametrize("mixin", [ToolMixin, ServerlessMixin])
     def test_async_handler_error(self, mixin: Any) -> None:
         result = mixin._execute_swaig_function(_agent(), "fails", {}, "call-1")
-        assert result["response"] == "Error executing function 'fails': upstream timeout"
+        assert result["response"]["tool_result"] == (
+            "fails failed before it finished, so whether it took effect is unknown.")
+        assert "upstream timeout" not in str(result)
 
 
 class TestResolveAwaitable:

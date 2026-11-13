@@ -1,5 +1,105 @@
 # Changelog
 
+## [3.8.0] - 2026-11-13
+
+### Added
+- Semantic gates take the platform's newer gate keys. `SemanticGate(...,
+  dialogue=, history=)` sets the dialogue one gate judges, `"window"` or
+  `"proposal"` and 1 to 100 entries, in place of the agent's; every gate of a
+  function must set the same ones, as the platform requires, and the SDK raises
+  `ValueError` when they differ. `unclear=True` asks yes, no or unclear, and
+  `on_unclear` is what the model gets for an unclear answer.
+  `set_semantic_gates(dialogue=)` sets the agent's `semantic_gate_dialogue`.
+  `since=` anchors a gate's dialogue at a mark your code sets with the new
+  `FunctionResult.set_semantic_gate_mark(name)` action. These keys need a
+  platform release that has them: one with gates but without a key refuses
+  the function, as it treats an unknown gate key as an error.
+- `set_unavailable_function_response(text)` sets what the model is told when
+  it calls a tool it can't use now, with `${function}`, `${tools}` and
+  `${steps}` (the `unavailable_function_response` param).
+- `define_tool(..., vouched=True)` adds a required boolean argument,
+  `data_supplied_by_user`, in which the model says every argument came from
+  the caller. Unless it's true, the handler doesn't run, and the model is told
+  to get the answer from the caller first.
+- `ToolRefusal(tool_result, tool_prompt)`: raise it from a handler to decline a
+  call with an outcome the handler knows.
+- `FunctionResult.back_to_back_functions()` sets whether the model may call
+  another function right after a result. The action was in the generated
+  action types but `FunctionResult` couldn't send it.
+- `FunctionResult.refresh_step(name)` enters the current step again, so step
+  text that shows `${global_data.*}` values, which are expanded once on entry,
+  shows the new ones. `Step.set_text()` documents the expansion.
+- `Step.set_expected_answer(digits=)` (or `min_digits=`/`max_digits=`) and a
+  gather question's `expected_answer` tell the recognizer how many digits the
+  caller's answer has, so it ends its wait once they're said.
+- `define_tool(..., nullable_optional=True)` and
+  `set_nullable_optional_parameters()` let the model send null for optional
+  arguments, as strict provider schemas require; a null reaches the handler as
+  an argument not given.
+- `define_native_tool()` defines a function the platform implements itself,
+  sent with `web_hook_url: "native"`, under your own description. A tool from
+  `define_tool()` always got the agent's webhook URL, so it couldn't be one.
+- Tool middleware: `add_tool_middleware(fn)` and `define_tool(...,
+  middleware=[...])` run `fn(name, args, raw_data, call_next)` around tool
+  calls.
+- A transport retry of a tool request no longer runs the tool twice. SignalWire
+  sends a request again, with the same `tool_call_id`, after a timeout, a
+  failed connection or a 5xx; the agent answers the retry with the first
+  attempt's result, and one that arrives while the first is still running
+  waits for it. A call the model makes again has a new `tool_call_id` and runs.
+  On by default; `set_tool_resend_dedupe(False)` turns it off.
+- The caller's own words in a handler: `caller_turns(raw_data)`
+  (`signalwire.core.post_prompt`) reads what the caller said from the request's
+  conversation, and `define_tool(..., needs_conversation=True)` turns on
+  `swaig_post_conversation` so requests carry it. `record_speech_finals()` and
+  `speech_finals(call_id)` keep the recognizer's finals with their word
+  confidences, from the platform's `ai.speech_detect` events, and
+  `on_ai_event(handler)` receives every AI event; the agent sets
+  `event_webhook_url` to its new `/ai_events` endpoint for them.
+- `signalwire.speech`: `say_digits`, `say_last_digits`, `say_money` and
+  `number_words` give the words a voice should say for digits and amounts,
+  which `add_pronunciation` can't fix, since the platform normalizes text
+  before its pronunciation rules run.
+- `signalwire.patterns.Proposal` is the platform's confirm pattern: `propose()`
+  reads a change back and records it in `semantic_state` in one action object,
+  and `confirm_gates()` gives the confirm tool the three gates (answered,
+  agreed, read back) judged on the proposal's dialogue, with an `on_fail` that
+  quotes the proposal. `ask_again()` and `complete()` round it out.
+- `signalwire.patterns.RequestList` keeps what the caller asked for while the
+  agent was busy, in the call's `global_data`, with step text that lists it,
+  to take up when the current task is done.
+- `signalwire.speech.spelling`: `read_spelled` reads what a caller spelled
+  (letters, letter names, "S as in Sam", NATO words, "double l", digits),
+  `spoken_email` reads an address said aloud, and `spelling_variants` expands
+  letters the recognizer confuses, with groups you supply.
+- `signalwire.testing.CallSimulator` runs an agent's tools through a simulated
+  call, checked as the platform checks them: the step's function list (with
+  the platform's reply for a tool it won't run), the semantic gates from a
+  callback, and each result's actions on the call's state. `RequestRecorder`
+  middleware records tool requests for `CallSimulator.replay()`.
+- [Conversation Patterns](docs/conversation_patterns.md), a new guide: the
+  confirm pattern, read-backs callers can interrupt, recording what was done,
+  questions that carry content, the caller's own words, numbers to say,
+  requests to come back to, spelled input, and testing a call flow.
+- `ContextBuilder.steps_offering(name)` lists the steps whose function lists
+  name a tool. Rendering logs `tool_offered_by_no_step` once for a registered
+  tool that no step offers, when every step lists its functions.
+
+### Changed
+- A semantic gate's `on_fail` is documented as the platform now treats it:
+  its `${...}` variables are expanded once from the call's data.
+- A tool handler that raises now tells the model the function failed before
+  it finished, so whether it took effect is unknown, with a tool prompt not to
+  tell the caller it worked or that it didn't. It used to return "Error
+  executing function '<name>': <exception text>" (and `SWAIGFunction.execute()`
+  "Sorry, I couldn't complete that action. Please try again..."), which sent
+  internals to the model and let it guess the outcome. The exception is logged.
+- A handler that returns a dict with neither `response` nor `action` gives the
+  model the dict as JSON, and an empty dict says the outcome is unknown.
+  `SWAIGFunction.execute()` used to answer any dict without a `response`
+  "Function completed successfully", dropping its actions, and the webhook
+  path sent such a dict to the platform without a response.
+
 ## [3.7.7] - 2026-11-11
 
 ### Added

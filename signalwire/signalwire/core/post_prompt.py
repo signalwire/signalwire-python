@@ -51,6 +51,7 @@ from typing import Any
 __all__ = [
     "DIALOGUE_ROLES",
     "NormalizedPostPrompt",
+    "caller_turns",
     "dialogue_turns",
     "normalize_post_prompt",
     "parse_post_prompt_data",
@@ -216,6 +217,56 @@ def dialogue_turns(
             continue
         out.append({"role": entry["role"], "content": content})
     return out
+
+
+def caller_turns(
+    raw_data: Any,
+    since: float | None = None,
+    *,
+    last: int | None = None,
+) -> list[str]:
+    """
+    What the caller said, from a SWAIG request's conversation.
+
+    A tool can check that an argument is something the caller said, not
+    something the model inferred. The request carries the conversation
+    only with ``swaig_post_conversation`` on: define the tool with
+    ``needs_conversation=True``, which turns it on.
+
+    Args:
+        raw_data: The SWAIG request (the handler's ``raw_data``), or a
+            ``call_log`` list.
+        since: Only the turns from this time on: the platform's
+            ``timestamp``, in microseconds since the epoch, of a call log
+            entry.
+        last: Only the newest this many turns.
+
+    Returns:
+        The caller's turns, oldest first, as the recognizer's final text
+        (after hearing hints and number formatting). Empty when the request
+        carries no conversation.
+    """
+    if isinstance(raw_data, dict):
+        call_log = raw_data.get("call_log") or raw_data.get("raw_call_log")
+    else:
+        call_log = raw_data
+    if not isinstance(call_log, (list, tuple)):
+        return []
+    turns: list[str] = []
+    for entry in call_log:
+        if not isinstance(entry, dict) or entry.get("role") != "user":
+            continue
+        content = entry.get("content")
+        if not isinstance(content, str) or not content.strip():
+            continue
+        if since is not None:
+            stamp = entry.get("timestamp")
+            if not isinstance(stamp, (int, float)) or stamp < since:
+                continue
+        turns.append(content)
+    if last is not None:
+        turns = turns[-last:] if last > 0 else []
+    return turns
 
 
 def normalize_post_prompt(body: Any) -> NormalizedPostPrompt:

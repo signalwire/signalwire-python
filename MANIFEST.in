@@ -15,6 +15,7 @@ include docs/cli_guide.md
 include docs/cloud_functions_guide.md
 include docs/configuration.md
 include docs/contexts_guide.md
+include docs/conversation_patterns.md
 include docs/datamap_guide.md
 include docs/developer_pain_points.md
 include docs/llm_parameters.md

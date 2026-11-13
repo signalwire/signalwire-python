@@ -71,6 +71,7 @@ from signalwire.core.security.session_manager import SessionManager
 from signalwire.core.swml_service import SWMLService
 from signalwire.core.function_result import FunctionResult
 from signalwire.pom.pom import PromptObjectModel
+from signalwire.core.ai_events import SpeechLog
 from signalwire.core.skill_manager import SkillManager
 from signalwire.core.logging_config import get_logger, get_execution_mode, _would_emit
 
@@ -450,6 +451,11 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         self._debug_events_enabled = False
         self._debug_events_level = 1
         self._debug_event_handler: Callable[..., Any] | None = None
+
+        # AI events posted to this agent's /ai_events (event_webhook_url)
+        self._ai_event_handlers: list[Callable[..., Any]] = []
+        self._speech_log: SpeechLog | None = None
+        self._ai_events_url: str | None = None
 
         # Initialize verb insertion points for call flow customization.
         # The verb lists hold (verb_name, config) tuples; _answer_config is a dict.
@@ -897,6 +903,103 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         """
         self._debug_event_handler = handler
         return handler
+
+    def on_ai_event(self, handler: Callable[..., Any]) -> Callable[..., Any]:
+        """
+        Register a handler for the AI events the platform posts during calls.
+
+        The agent sets the call's ``event_webhook_url`` to its own
+        ``/ai_events`` endpoint, unless you set ``event_webhook_url``
+        yourself, and calls each handler with every event posted there. An
+        event is ``ai.speech_detect`` for each final of the caller's speech,
+        with its ``text`` and the recognizer's ``words`` and confidences, or
+        one of the platform's other AI events. The endpoint is served by the
+        agent's web server, not in serverless modes.
+
+        The handler receives:
+            event_type (str): The event, such as "ai.speech_detect".
+            params (dict): Its fields, with the ``call_id``.
+            event (dict): The whole event as posted, with its ``timestamp``.
+
+        It may be sync or async. Its return value is ignored, and an
+        exception is logged.
+
+        Args:
+            handler: Callable taking (event_type, params, event).
+
+        Returns:
+            The handler, so this can be used as a decorator.
+
+        Example:
+            @agent.on_ai_event
+            def heard(event_type, params, event):
+                if event_type == "ai.speech_detect":
+                    log.info("caller", call_id=params["call_id"], text=params["text"])
+        """
+        self._ai_event_handlers = [*self._ai_event_handlers, handler]
+        self._warn_if_event_webhook_taken()
+        return handler
+
+    def record_speech_finals(
+        self, max_calls: int = 500, max_finals: int = 200
+    ) -> "AgentBase":
+        """
+        Keep each call's recognizer finals, with their word confidences, for
+        tool handlers to read with ``speech_finals()``.
+
+        A final is what the recognizer heard for one turn of the caller's,
+        from the platform's ``ai.speech_detect`` event: ``{"text", "words",
+        "timestamp"}``, with ``words`` as ``[{"word", "confidence"}]`` as
+        heard, before hearing hints and number formatting change the text. A
+        handler can ask the caller again about a word the recognizer wasn't
+        sure of, such as a letter of a spelled name. Like ``on_ai_event()``,
+        it sets the call's ``event_webhook_url`` to the agent's
+        ``/ai_events``, unless you set it yourself. A call with
+        ``redact_prompt`` sends no finals unless debug is on.
+
+        Args:
+            max_calls: The most calls to keep finals for; the oldest call's
+                go first.
+            max_finals: The most finals to keep for one call.
+
+        Returns:
+            Self for method chaining
+        """
+        if self._speech_log is None:
+            self._speech_log = SpeechLog(max_calls=max_calls, max_finals=max_finals)
+        self._warn_if_event_webhook_taken()
+        return self
+
+    def speech_finals(
+        self, call_id: str, since: float | None = None
+    ) -> list[dict[str, Any]]:
+        """
+        The recognizer's finals for a call, oldest first, once
+        ``record_speech_finals()`` is on: ``{"text", "words", "timestamp"}``.
+
+        Args:
+            call_id: The call, as a tool request's ``raw_data["call_id"]``.
+            since: Only the finals from this time on, in seconds since the
+                epoch.
+
+        Returns:
+            The finals, empty for a call with none or with recording off.
+        """
+        if self._speech_log is None:
+            return []
+        return self._speech_log.finals(call_id, since)
+
+    def _warn_if_event_webhook_taken(self) -> None:
+        url = self._params.get("event_webhook_url")
+        if url is not None and url != self._ai_events_url:
+            self.log.warning(
+                "event_webhook_url_already_set",
+                message=(
+                    "event_webhook_url is set to another URL, so AI events go "
+                    "there and this agent's on_ai_event handlers and speech "
+                    "finals get none"
+                ),
+            )
 
     # ==================== Call Flow Verb Insertion Methods ====================
 
@@ -1402,7 +1505,9 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
                 function_entry = {
                     "function": name,
                     "description": func.description,
-                    "parameters": func._ensure_parameter_structure(),
+                    "parameters": func._ensure_parameter_structure(
+                        agent_to_use._nullable_optional_default()
+                    ),
                 }
 
                 # Add wait_file if present (audio/video file URL)
@@ -1609,6 +1714,25 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
                     agent_to_use._params["debug_webhook_level"] = getattr(
                         agent_to_use, "_debug_events_level", 1
                     )
+
+                # AI events go to this agent's /ai_events when it handles them,
+                # unless event_webhook_url was set to something else
+                if agent_to_use._ai_event_handlers or agent_to_use._speech_log:
+                    current = agent_to_use._params.get("event_webhook_url")
+                    if current is None or current == agent_to_use._ai_events_url:
+                        events_url = agent_to_use._build_webhook_url(
+                            "ai_events",
+                            dict(agent_to_use._swaig_query_params or {}),
+                        )
+                        agent_to_use._params["event_webhook_url"] = events_url
+                        agent_to_use._ai_events_url = events_url
+
+                # A tool that reads the conversation needs it in its requests
+                if "swaig_post_conversation" not in agent_to_use._params and any(
+                    getattr(f, "needs_conversation", False)
+                    for f in agent_to_use._tool_registry._swaig_functions.values()
+                ):
+                    agent_to_use._params["swaig_post_conversation"] = True
 
                 # Add params if any
                 if agent_to_use._params:

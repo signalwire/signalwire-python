@@ -11,6 +11,8 @@ The `swaig-test` CLI tool provides a complete testing environment for:
 
 The tool automatically detects function types, provides appropriate execution environments, and simulates the SignalWire platform locally while making real HTTP requests for DataMap functions.
 
+To test a whole call flow, such as a confirmation across steps, rather than one tool call, use `signalwire.testing.CallSimulator`; see [Conversation Patterns](conversation_patterns.md#testing-a-call-flow).
+
 ## Installed Commands
 
 Installing the SDK adds seven command-line tools:

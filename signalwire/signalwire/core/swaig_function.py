@@ -10,21 +10,54 @@ SwaigFunction class for defining and managing SWAIG function interfaces
 """
 
 from typing import TYPE_CHECKING, Any
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 import asyncio
 import concurrent.futures
 import inspect
 import logging
 
 # Import here to avoid circular imports
-from signalwire.core.function_result import FunctionResult
+from signalwire.core.function_result import (
+    FunctionResult,
+    ToolRefusal,
+    settle_result,
+    tool_error_result,
+)
 from signalwire.core.semantic_gate import apply_gate_fields
+
+#: The argument a vouched tool adds, which the model sets to say every other
+#: argument came from the user
+VOUCHED_PARAMETER = "data_supplied_by_user"
+#: Its description, as the model reads it
+VOUCHED_DESCRIPTION = (
+    "True only when every other argument is what the user said in this call, "
+    "not a guess, an example or something assumed. False when any value did "
+    "not come from the user."
+)
+#: The tool prompt the model gets when it calls a vouched tool without
+#: vouching for its arguments
+VOUCHED_PROMPT = "Get the answer from the user before using this tool."
 
 if TYPE_CHECKING:
     # The inbound SWAIG function-webhook payload, typed from the spec (a plain dict at
     # runtime; TYPE_CHECKING-only so there's no import cost / cycle). Generated from
     # porting-sdk/swaig-specs/swaig-request.yaml (vendored from mod_openai).
     from signalwire.core.swaig_request_generated import SwaigRequest
+    from signalwire.core.tool_middleware import ToolMiddleware
+
+
+def _nullable_spec(spec: Any) -> Any:
+    """A property's schema that also takes null."""
+    if not isinstance(spec, dict) or "type" not in spec:
+        return spec
+    types = spec["type"] if isinstance(spec["type"], list) else [spec["type"]]
+    widened: dict[str, Any] = {
+        **spec,
+        "type": [*types, "null"] if "null" not in types else types,
+    }
+    if isinstance(spec.get("enum"), list) and None not in spec["enum"]:
+        widened["enum"] = [*spec["enum"], None]
+    return widened
 
 
 def _resolve_awaitable(result: Any) -> Any:
@@ -88,6 +121,10 @@ class SWAIGFunction:
         webhook_url: str | None = None,
         required: list[str] | None = None,
         is_typed_handler: bool = False,
+        vouched: bool = False,
+        nullable_optional: bool | None = None,
+        middleware: "Sequence[ToolMiddleware] | None" = None,
+        needs_conversation: bool = False,
         **extra_swaig_fields: Any,
     ) -> None:
         """
@@ -123,6 +160,23 @@ class SWAIGFunction:
             required: Optional list of required parameter names.
             is_typed_handler: Whether the handler uses type-hinted parameters
                 (auto-wrapped).
+            vouched: True to add a required boolean argument,
+                ``data_supplied_by_user`` (VOUCHED_PARAMETER), in which the
+                model says every other argument came from the user. Unless
+                it's true, the handler doesn't run and the model is told to
+                get the answer from the user (VOUCHED_PROMPT). The handler
+                never sees the argument.
+            nullable_optional: True to let the model send null for an
+                optional argument: each argument that isn't required takes
+                null as well as its type, as providers with strict schemas
+                require, and a null reaches the handler as an argument not
+                given. None (default) follows the agent's
+                ``set_nullable_optional_parameters()``.
+            middleware: Middleware that runs around this tool's calls only,
+                inside the agent's (see ``AgentBase.add_tool_middleware``).
+            needs_conversation: True when the handler reads the
+                conversation; the agent then turns on
+                ``swaig_post_conversation``.
             **extra_swaig_fields: Additional SWAIG-only fields (meta_data_token,
                 web_hook_auth_*, etc.) to include in the generated definition.
                 ``gates`` (SemanticGate objects or gate dicts) and
@@ -143,34 +197,103 @@ class SWAIGFunction:
         self.webhook_url = webhook_url
         self.required = required or []
         self.is_typed_handler = is_typed_handler
+        self.vouched = vouched
+        self.nullable_optional = nullable_optional
+        # A tuple, so a per-request copy shares the middleware objects
+        # rather than deep-copying their state
+        self.middleware: tuple[ToolMiddleware, ...] = tuple(middleware or ())
+        self.needs_conversation = needs_conversation
         apply_gate_fields(extra_swaig_fields, name)
         self.extra_swaig_fields = extra_swaig_fields
 
         # Mark as external if webhook_url is provided
         self.is_external = webhook_url is not None
 
-    def _ensure_parameter_structure(self) -> dict[str, Any]:
+    def _ensure_parameter_structure(
+        self, nullable_optional: bool | None = None
+    ) -> dict[str, Any]:
         """
         Ensure the parameters are correctly structured for SWML
+
+        Args:
+            nullable_optional: The agent's default for whether optional
+                arguments take null, used when this function doesn't set
+                its own.
 
         Returns:
             Parameters dict with correct structure
         """
         if not self.parameters:
-            return {"type": "object", "properties": {}}
+            result: dict[str, Any] = {"type": "object", "properties": {}}
+        elif "type" in self.parameters and "properties" in self.parameters:
+            # Already the correct structure
+            result = self.parameters
+        else:
+            # Otherwise, wrap the parameters in the expected structure
+            result = {"type": "object", "properties": self.parameters}
 
-        # Check if we already have the correct structure
-        if "type" in self.parameters and "properties" in self.parameters:
-            return self.parameters
+            # Add required fields if specified
+            if self.required:
+                result["required"] = self.required
 
-        # Otherwise, wrap the parameters in the expected structure
-        result = {"type": "object", "properties": self.parameters}
+        if self._nullable(nullable_optional):
+            required = set(result.get("required", []))
+            result = {
+                **result,
+                "properties": {
+                    key: spec if key in required else _nullable_spec(spec)
+                    for key, spec in result.get("properties", {}).items()
+                },
+            }
 
-        # Add required fields if specified
-        if self.required:
-            result["required"] = self.required
-
+        if self.vouched:
+            result = {
+                **result,
+                "properties": {
+                    **result.get("properties", {}),
+                    VOUCHED_PARAMETER: {
+                        "type": "boolean",
+                        "description": VOUCHED_DESCRIPTION,
+                    },
+                },
+                "required": [
+                    *(r for r in result.get("required", []) if r != VOUCHED_PARAMETER),
+                    VOUCHED_PARAMETER,
+                ],
+            }
         return result
+
+    def _vouched_refusal(self, args: dict[str, Any]) -> FunctionResult | None:
+        """What the model gets for a vouched call it didn't vouch for, or None."""
+        if not self.vouched or (args or {}).get(VOUCHED_PARAMETER) is True:
+            return None
+        return FunctionResult(
+            tool_result=f"{self.name} was not run.", tool_prompt=VOUCHED_PROMPT
+        )
+
+    def _nullable(self, default: bool | None) -> bool:
+        """Whether optional arguments take null: this function's own setting,
+        else the agent's default."""
+        own = self.nullable_optional
+        return bool(default) if own is None else own
+
+    def _handler_args(
+        self, args: dict[str, Any], nullable_optional: bool | None = None
+    ) -> dict[str, Any]:
+        """The arguments the handler gets: a vouched tool's own is removed,
+        and a null for an optional argument that takes null is an argument
+        not given."""
+        if not args:
+            return args
+        drop: set[str] = set()
+        if self.vouched and VOUCHED_PARAMETER in args:
+            drop.add(VOUCHED_PARAMETER)
+        if self._nullable(nullable_optional):
+            required = set(self._ensure_parameter_structure(False).get("required", []))
+            drop.update(k for k, v in args.items() if v is None and k not in required)
+        if not drop:
+            return args
+        return {k: v for k, v in args.items() if k not in drop}
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         """
@@ -196,32 +319,37 @@ class SWAIGFunction:
             if raw_data is None:
                 raw_data = {}  # Provide an empty dict as fallback
 
+            refusal = self._vouched_refusal(args)
+            if refusal is not None:
+                return refusal.to_dict()
+
             # Call the handler with both args and raw_data. An async handler
             # returns an awaitable, which runs to completion here.
-            result = _resolve_awaitable(self.handler(args, raw_data))
+            result = settle_result(
+                self.name,
+                _resolve_awaitable(self.handler(self._handler_args(args), raw_data)),
+            )
 
             # Handle different result types - everything must end up as a FunctionResult
             if isinstance(result, FunctionResult):
-                # Already a FunctionResult - just convert to dict
                 return result.to_dict()
-            if isinstance(result, dict) and "response" in result:
-                # Already in the correct format - use as is
-                return result
             if isinstance(result, dict):
-                # Dictionary without response - create a FunctionResult
-                return FunctionResult("Function completed successfully").to_dict()
+                # A SWAIG result already (settle_result made sure)
+                return result
             # String or other type - create a FunctionResult with the string representation
             return FunctionResult(str(result)).to_dict()
 
+        except ToolRefusal as declined:
+            return declined.result().to_dict()
         except Exception as e:
-            # Log the error for debugging but don't expose details to the AI
+            # Logged, not sent: the text can hold internals, and the model
+            # would read it as the outcome
             logging.error(f"Error executing SWAIG function {self.name}: {e!s}")
-            # Return a generic error message
-            return FunctionResult(
-                "Sorry, I couldn't complete that action. Please try again or contact support if the issue persists."
-            ).to_dict()
+            return tool_error_result(self.name).to_dict()
 
-    def validate_args(self, args: dict[str, Any]) -> tuple[Any, ...]:
+    def validate_args(
+        self, args: dict[str, Any], nullable_optional: bool | None = None
+    ) -> tuple[Any, ...]:
         """
         Validate the arguments against the parameter schema.
 
@@ -230,12 +358,15 @@ class SWAIGFunction:
 
         Args:
             args: Arguments to validate
+            nullable_optional: The agent's default for whether optional
+                arguments take null, used when this function doesn't set
+                its own.
 
         Returns:
             Tuple of (is_valid: bool, errors: list[str])
             If no validation library is available, returns (True, [])
         """
-        schema = self._ensure_parameter_structure()
+        schema = self._ensure_parameter_structure(nullable_optional)
         if not schema or not schema.get("properties"):
             return True, []
 

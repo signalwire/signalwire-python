@@ -376,6 +376,25 @@ step.add_section("Role", "You are a helpful assistant") \
 
 **Note**: You cannot mix `set_text()` with `add_section()` in the same step.
 
+The platform expands a step's variables, such as `${global_data.order_total}`, once, when the step is entered. A later `update_global_data()` doesn't change text the model already has. To show the new value, return `FunctionResult.refresh_step()` with the current step's name after the update. Entering the step starts it over, and its `history` mode applies again.
+
+```python
+result = (FunctionResult("Added the drink.")
+          .update_global_data({"order_total": "$14.50"})
+          .refresh_step("take_order"))
+```
+
+#### Expected Answers
+
+When a step asks for a number with a known length, such as a ZIP code or a PIN, tell the recognizer how many digits to expect. It ends its wait for the number once the caller has said that many. Pass `digits` for an exact count, or `min_digits` and `max_digits` for a range, each from 1 to 64.
+
+```python
+ctx.add_step("get_zip").set_text("Ask for the caller's ZIP code.").set_expected_answer(5)
+ctx.add_step("get_pin").set_text("Ask for the PIN.").set_expected_answer(min_digits=4, max_digits=6)
+```
+
+A gather question takes its own, which replaces the step's while that question is asked: `add_gather_question("zip", "What is your ZIP code?", expected_answer={"digits": 5})`. The `expected_answer()` function in `signalwire.core.contexts` builds one and checks it.
+
 #### Navigation Methods
 
 These calls control where the conversation can go next.
@@ -405,6 +424,13 @@ step.set_functions("none")
 
 # No set_functions() call: the step inherits the previous step's function
 # set (or every registered function, on a context's first step)
+```
+
+`ContextBuilder.steps_offering(name)` returns the `(context, step)` pairs whose function list, or a gather question's, names a tool. A step without `set_functions()` isn't counted, since what it offers depends on the step before it. When every step lists its functions and none lists a registered tool, rendering the SWML logs a `tool_offered_by_no_step` warning for it, once: the model never gets that tool unless a function result turns it on with `toggle_functions()`.
+
+```python
+builder = agent.define_contexts()
+print(builder.steps_offering("place_order"))  # [("default", "confirm")]
 ```
 
 ## Navigation and Flow Control
@@ -685,6 +711,15 @@ Each question has a `type` that controls the JSON schema of the `answer` paramet
 
 # Boolean - yes/no questions
 .add_gather_question("has_passport", "Do you have a valid passport?", type="boolean")
+```
+
+#### Expected Digits
+
+A question whose answer is a number of known length can tell the recognizer how many digits to expect, with `expected_answer`. It applies while that question is asked, in place of the step's `set_expected_answer()`.
+
+<!-- snippet: no-compile method-chain-excerpt -->
+```python
+.add_gather_question("zip", "What is your ZIP code?", expected_answer={"digits": 5})
 ```
 
 #### Confirmation Flow

@@ -52,14 +52,18 @@ if TYPE_CHECKING:
     from signalwire.agent_server import AgentServer
     from signalwire.core.swml_service import SWMLService
     from signalwire.core.swml_builder import SWMLBuilder
-    from signalwire.core.function_result import FunctionResult, SwaigFunctionResult
+    from signalwire.core.function_result import (
+        FunctionResult,
+        SwaigFunctionResult,
+        ToolRefusal,
+    )
     from signalwire.core.swaig_function import SWAIGFunction
     from signalwire.core.semantic_gate import SemanticGate
     from signalwire.agents.bedrock import BedrockAgent
     from signalwire.utils.schema_utils import SchemaValidationError
     from signalwire.web import WebService
 
-__version__ = "3.7.7"
+__version__ = "3.8.0"
 
 # §6.2-python (owner decision: NO packaging split — one package, all deps required;
 # IMPORT-TIME behavior only): the agent/web symbols are lazy-imported via module
@@ -84,6 +88,7 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "SWMLBuilder": ("signalwire.core.swml_builder", "SWMLBuilder"),
     "FunctionResult": ("signalwire.core.function_result", "FunctionResult"),
     "SwaigFunctionResult": ("signalwire.core.function_result", "SwaigFunctionResult"),
+    "ToolRefusal": ("signalwire.core.function_result", "ToolRefusal"),
     "SWAIGFunction": ("signalwire.core.swaig_function", "SWAIGFunction"),
     "SemanticGate": ("signalwire.core.semantic_gate", "SemanticGate"),
     "BedrockAgent": ("signalwire.agents.bedrock", "BedrockAgent"),
@@ -225,6 +230,7 @@ __all__ = [
     "SemanticGate",
     "Step",
     "SwaigFunctionResult",
+    "ToolRefusal",
     "WebService",
     "add_skill_directory",
     "create_expression_tool",

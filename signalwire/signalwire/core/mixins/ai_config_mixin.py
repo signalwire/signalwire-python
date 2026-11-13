@@ -316,6 +316,7 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
         enabled: bool | None = None,
         timeout_ms: int | None = None,
         history: int | None = None,
+        dialogue: str | None = None,
     ) -> "AgentBase":
         """
         Set how the call checks its functions' semantic gates
@@ -330,6 +331,14 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
                 A check that runs out blocks the call. Default 2500.
             history: How many recent dialogue entries the decision model
                 sees, 0 to 100. Default 20.
+            dialogue: Which dialogue the decision model judges: "window",
+                the newest ``history`` entries, or "proposal", those since
+                ``global_data.semantic_state`` last changed (see
+                ``FunctionResult.set_semantic_state``), from the agent's
+                first turn after it: the read-back and the caller's reply.
+                With no ``semantic_state`` set, the window. A gate's own
+                ``dialogue`` and ``history`` take the place of these for its
+                function. Default "window".
 
         Returns:
             Self for method chaining
@@ -341,6 +350,14 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
             if not isinstance(enabled, bool):
                 raise ValueError(f"enabled must be a boolean, got {enabled!r}")
             self._params["semantic_gates_enabled"] = enabled
+        if dialogue is not None:
+            from signalwire.core.semantic_gate import GATE_DIALOGUES
+
+            if not isinstance(dialogue, str) or dialogue not in GATE_DIALOGUES:
+                raise ValueError(
+                    f"dialogue must be one of {GATE_DIALOGUES}, got {dialogue!r}"
+                )
+            self._params["semantic_gate_dialogue"] = dialogue
         for param, value, low, high in (
             ("semantic_gate_timeout_ms", timeout_ms, 500, 10000),
             ("semantic_gate_history", history, 0, 100),
@@ -357,6 +374,28 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
                     f"{name} must be an integer from {low} to {high}, got {value!r}"
                 )
             self._params[param] = value
+        return self
+
+    def set_unavailable_function_response(self, text: str) -> "AgentBase":
+        """
+        Set what the model is told when it calls a tool it can't use now.
+
+        Without it, the platform says nothing ran, which steps offer the
+        tool, and which tools are available now. ``text`` takes its place,
+        with ``${function}`` for the tool's name, ``${tools}`` for the tools
+        the request offered, comma-separated, and ``${steps}`` for the
+        current context's steps whose functions include it (empty for a name
+        the agent doesn't have).
+
+        Args:
+            text: The text, as the ``unavailable_function_response`` param.
+
+        Returns:
+            Self for method chaining
+        """
+        if not isinstance(text, str) or not text:
+            raise ValueError("text must be a non-empty string")
+        self._params["unavailable_function_response"] = text
         return self
 
     def set_global_data(self, data: dict[str, Any]) -> "AgentBase":
