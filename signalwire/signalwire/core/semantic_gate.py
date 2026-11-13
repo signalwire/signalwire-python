@@ -40,8 +40,24 @@ MAX_CRITERIA_BYTES = 2048
 MAX_ON_FAIL_BYTES = 8192
 # The most caller video frames a gate may ask for (AI_VISUAL_INPUT_MAX)
 MAX_VISUAL_INPUT = 5
+# The most dialogue entries a gate's own history may ask for
+MAX_GATE_HISTORY = 100
+# The dialogues a gate can judge: the newest entries, or those since the
+# proposal (semantic_state) last changed
+GATE_DIALOGUES = ("window", "proposal")
 
-_GATE_KEYS = ("id", "question", "criteria", "threshold", "on_fail", "visual_input")
+_GATE_KEYS = (
+    "id",
+    "question",
+    "criteria",
+    "threshold",
+    "on_fail",
+    "on_unclear",
+    "unclear",
+    "visual_input",
+    "dialogue",
+    "history",
+)
 _GATE_ID = re.compile(r"[A-Za-z0-9_]{1,64}")
 
 # Hooks the platform calls itself, the function OART intercepts by name, and
@@ -105,6 +121,10 @@ class SemanticGate:
         true_means: str | None = None,
         false_means: str | None = None,
         visual_input: bool | int | None = None,
+        on_unclear: "str | FunctionResult | dict[str, Any] | None" = None,
+        unclear: bool | None = None,
+        dialogue: str | None = None,
+        history: int | None = None,
     ) -> None:
         """
         Args:
@@ -133,10 +153,34 @@ class SemanticGate:
                 must take images; one that doesn't makes the check a
                 configuration error, which blocks the call. Default: no
                 frames, and the key is left out.
+            on_unclear: What the model gets when this is the first gate
+                answered unclear and none failed, in the same forms as
+                ``on_fail``. It should ask the caller again. Default: the
+                platform's own, which does.
+            unclear: True to ask the decision model yes, no or unclear, where
+                its provider can (OpenAI); a yes under the threshold counts
+                as unclear too. Such a gate wants a lower threshold than a
+                yes/no one. Unclear doesn't run the function: the model gets
+                ``on_unclear``. Two unclear answers in a row for the same
+                function and ``semantic_state`` ask again, and the third is a
+                fail. Default: yes or no.
+            dialogue: The dialogue this gate judges, in place of the agent's
+                ``semantic_gate_dialogue`` (``set_semantic_gates(dialogue=)``):
+                "window", the newest entries, or "proposal", those since
+                ``semantic_state`` last changed. A gate about what the caller
+                asked before the proposal started wants "window" on an agent
+                that judges confirmations by the proposal.
+            history: How many of the newest dialogue entries this gate
+                judges, a whole number from 1 to 100, in place of the agent's
+                ``semantic_gate_history``.
+
+            Every gate on one function must have the same ``dialogue`` and
+            ``history``, set or not: they're asked together, about one
+            dialogue.
 
         Raises:
-            ValueError: If ``on_fail`` has no response: a blocked call must
-                never read as a success.
+            ValueError: If ``on_fail`` or ``on_unclear`` has no response: a
+                blocked call must never read as a success.
         """
         self.question = question
         self.threshold = threshold
@@ -148,6 +192,12 @@ class SemanticGate:
             self.criteria["false"] = false_means
         self.on_fail: dict[str, Any] = _on_fail(on_fail)
         self.visual_input = visual_input
+        self.on_unclear: dict[str, Any] | None = (
+            None if on_unclear is None else _on_fail(on_unclear, "on_unclear")
+        )
+        self.unclear = unclear
+        self.dialogue = dialogue
+        self.history = history
 
     def to_dict(self) -> dict[str, Any]:
         """The gate as the platform reads it."""
@@ -159,13 +209,24 @@ class SemanticGate:
             gate["criteria"] = dict(self.criteria)
         gate["threshold"] = self.threshold
         gate["on_fail"] = json.loads(json.dumps(self.on_fail))
+        if self.on_unclear is not None:
+            gate["on_unclear"] = json.loads(json.dumps(self.on_unclear))
+        if self.unclear is not None:
+            gate["unclear"] = self.unclear
         if self.visual_input is not None:
             gate["visual_input"] = self.visual_input
+        if self.dialogue is not None:
+            gate["dialogue"] = self.dialogue
+        if self.history is not None:
+            gate["history"] = self.history
         return gate
 
 
-def _on_fail(on_fail: "str | FunctionResult | dict[str, Any]") -> dict[str, Any]:
-    """Build an on_fail output object from a string, FunctionResult or dict."""
+def _on_fail(
+    on_fail: "str | FunctionResult | dict[str, Any]", name: str = "on_fail"
+) -> dict[str, Any]:
+    """Build an on_fail or on_unclear output object from a string,
+    FunctionResult or dict."""
     from signalwire.core.function_result import FunctionResult
 
     if isinstance(on_fail, dict):
@@ -180,7 +241,7 @@ def _on_fail(on_fail: "str | FunctionResult | dict[str, Any]") -> dict[str, Any]
     # A blocked call must never read as a success, so the platform requires
     # the text; FunctionResult.to_dict() would fill in "Action completed."
     if not response:
-        raise ValueError("on_fail needs a response saying the function didn't run")
+        raise ValueError(f"{name} needs a response saying the function didn't run")
     output: dict[str, Any] = {"response": response}
     if actions:
         output["action"] = actions
@@ -274,33 +335,34 @@ def _check_text(value: Any) -> str:
     return ""
 
 
-def _check_on_fail(on_fail: Any) -> str:
-    """Why the platform would refuse ``on_fail``, or an empty string.
+def _check_on_fail(on_fail: Any, name: str = "on_fail") -> str:
+    """Why the platform would refuse ``on_fail`` (or ``on_unclear``, which it
+    checks the same way), or an empty string.
 
     The platform finds ``response``, ``tool_result``, ``tool_prompt`` and
     ``action`` without regard to case, taking the first match.
     """
     if not isinstance(on_fail, dict):
-        return "on_fail must be an object"
+        return f"{name} must be an object"
     response = _item(on_fail, "response")
     if isinstance(response, str):
         if not response:
-            return "on_fail.response is empty"
+            return f"{name}.response is empty"
     elif isinstance(response, dict):
         tool_result = _item(response, "tool_result")
         if not isinstance(tool_result, str) or not tool_result:
-            return "on_fail.response.tool_result is missing or empty"
+            return f"{name}.response.tool_result is missing or empty"
         tool_prompt = _item(response, "tool_prompt")
         if tool_prompt is not _MISSING and not isinstance(tool_prompt, str):
-            return "on_fail.response.tool_prompt must be a string"
+            return f"{name}.response.tool_prompt must be a string"
     else:
-        return "on_fail.response is missing"
+        return f"{name}.response is missing"
     action = _item(on_fail, "action")
     if action is not _MISSING and not isinstance(action, list):
-        return "on_fail.action must be an array"
+        return f"{name}.action must be an array"
     # Measured as the platform measures it: cJSON's compact print, in bytes
     if _utf8_len(_cjson_text(on_fail)) > MAX_ON_FAIL_BYTES:
-        return f"on_fail is larger than {MAX_ON_FAIL_BYTES} bytes"
+        return f"{name} is larger than {MAX_ON_FAIL_BYTES} bytes"
     return ""
 
 
@@ -347,6 +409,12 @@ def _check_gate(gate: Any) -> str:
     why = _check_on_fail(gate["on_fail"])
     if why:
         return why
+    if "on_unclear" in gate:
+        why = _check_on_fail(gate["on_unclear"], "on_unclear")
+        if why:
+            return why
+    if "unclear" in gate and not isinstance(gate["unclear"], bool):
+        return "unclear must be true or false"
     if "criteria" in gate:
         why = _check_criteria(gate["criteria"])
         if why:
@@ -360,7 +428,29 @@ def _check_gate(gate: Any) -> str:
             "visual_input must be true, false or a whole number from 0 to "
             f"{MAX_VISUAL_INPUT}"
         )
+    if "dialogue" in gate and _gate_dialogue(gate) is None:
+        return "dialogue must be window or proposal"
+    if "history" in gate and not _whole_number_in(gate["history"], 1, MAX_GATE_HISTORY):
+        return f"history must be a whole number from 1 to {MAX_GATE_HISTORY}"
     return ""
+
+
+def _gate_dialogue(gate: dict[str, Any]) -> str | None:
+    """The dialogue a gate names, as the platform reads it, without regard to
+    case; None when it names none it knows."""
+    dialogue = gate.get("dialogue")
+    if isinstance(dialogue, str) and dialogue.lower() in GATE_DIALOGUES:
+        return dialogue.lower()
+    return None
+
+
+def _whole_number_in(value: Any, low: int, high: int) -> bool:
+    """Whether ``value`` is a JSON number, whole, from ``low`` to ``high``."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    if isinstance(value, float) and not (math.isfinite(value) and value.is_integer()):
+        return False
+    return low <= value <= high
 
 
 def _valid_visual_input(value: Any) -> bool:
@@ -416,8 +506,21 @@ def gate_definitions(
                 f"gate {ids.index(gate_id) + 1}"
             )
         ids.append(gate_id)
+        # The gates are asked together, about one dialogue, so the platform
+        # refuses a function whose gates name different ones, set or not
+        if definitions and _window(definition) != _window(definitions[0]):
+            raise ValueError(
+                f"{function}: gate {index + 1}: dialogue and history must be the "
+                "same on every gate of a function"
+            )
         definitions.append(json.loads(json.dumps(definition)))
     return definitions
+
+
+def _window(gate: dict[str, Any]) -> tuple[Any, ...]:
+    """What a gate sets of the dialogue it judges, for comparing gates."""
+    history = gate.get("history")
+    return (_gate_dialogue(gate), None if history is None else int(history))
 
 
 def apply_gate_fields(

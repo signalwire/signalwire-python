@@ -316,6 +316,7 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
         enabled: bool | None = None,
         timeout_ms: int | None = None,
         history: int | None = None,
+        dialogue: str | None = None,
     ) -> "AgentBase":
         """
         Set how the call checks its functions' semantic gates
@@ -330,6 +331,14 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
                 A check that runs out blocks the call. Default 2500.
             history: How many recent dialogue entries the decision model
                 sees, 0 to 100. Default 20.
+            dialogue: Which dialogue the decision model judges: "window",
+                the newest ``history`` entries, or "proposal", those since
+                ``global_data.semantic_state`` last changed (see
+                ``FunctionResult.set_semantic_state``), from the agent's
+                first turn after it: the read-back and the caller's reply.
+                With no ``semantic_state`` set, the window. A gate's own
+                ``dialogue`` and ``history`` take the place of these for its
+                function. Default "window".
 
         Returns:
             Self for method chaining
@@ -341,6 +350,14 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
             if not isinstance(enabled, bool):
                 raise ValueError(f"enabled must be a boolean, got {enabled!r}")
             self._params["semantic_gates_enabled"] = enabled
+        if dialogue is not None:
+            from signalwire.core.semantic_gate import GATE_DIALOGUES
+
+            if not isinstance(dialogue, str) or dialogue not in GATE_DIALOGUES:
+                raise ValueError(
+                    f"dialogue must be one of {GATE_DIALOGUES}, got {dialogue!r}"
+                )
+            self._params["semantic_gate_dialogue"] = dialogue
         for param, value, low, high in (
             ("semantic_gate_timeout_ms", timeout_ms, 500, 10000),
             ("semantic_gate_history", history, 0, 100),

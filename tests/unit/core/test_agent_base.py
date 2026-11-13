@@ -1511,8 +1511,10 @@ class TestToolRegistration:
             raise RuntimeError("boom")
 
         agent.define_tool("bad_fn", "bad", {}, bad_handler)
-        result = agent.on_function_call("bad_fn", {})
-        assert "Error" in result["response"] or "boom" in result["response"]
+        result = agent.on_function_call("bad_fn", {}).to_dict()
+        assert result["response"]["tool_result"] == (
+            "bad_fn failed before it finished, so whether it took effect is unknown.")
+        assert "boom" not in str(result)
 
     def test_tool_appears_in_rendered_swml(self) -> None:
         agent = self._make()

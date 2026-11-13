@@ -11,6 +11,7 @@ FunctionResult class for handling the response format of SWAIG function calls
 The SDK's installed documentation covers this module: run ``sw-pydocs tools``, or ``sw-pydocs`` for the index.
 """
 
+import json
 import re
 from typing import Any, Literal
 
@@ -495,6 +496,33 @@ class FunctionResult:
         """
         return self.add_action("change_step", step_name)
 
+    def refresh_step(self, step_name: str) -> "FunctionResult":
+        """
+        Enter the current step again, so its text shows new global data.
+
+        A step's text is expanded once, when the step is entered, so its
+        ``${global_data.*}`` values are the ones from then. After
+        ``update_global_data`` changes one, return this with the current
+        step's name, after the update in the same result, and the model
+        gets the step's text again with the new values. Entering a step
+        starts it over: its ``history`` mode applies again, so under "hide"
+        the step's dialogue so far leaves the model's context too.
+
+        The same action as ``swml_change_step(step_name)``.
+
+        Args:
+            step_name: The name of the step the call is in.
+
+        Returns:
+            self for method chaining
+
+        Example:
+            return (FunctionResult("Added the drink.")
+                    .update_global_data({"order_total": "$14.50"})
+                    .refresh_step("take_order"))
+        """
+        return self.swml_change_step(step_name)
+
     def swml_change_context(self, context_name: str) -> "FunctionResult":
         """
         Force the conversation into a different context.
@@ -916,6 +944,34 @@ class FunctionResult:
             self for method chaining
         """
         return self.add_action("functions_on_speaker_timeout", enabled)
+
+    def back_to_back_functions(self, value: bool | str = True) -> "FunctionResult":
+        """
+        Set whether the model may call another function right after a
+        function result, without answering in words first.
+
+        "forever", the call's default, chains freely. False makes the model
+        answer in words after a function result: the request after one goes
+        out with ``tool_choice: "none"``. True, while chaining is off, allows
+        one more chain: the next request after a function result may call
+        one, and then it's off again. True never lowers "forever". The
+        setting lasts for the call. Text pipeline only: a realtime model
+        doesn't read it.
+
+        Args:
+            value: True, False or "forever".
+
+        Returns:
+            self for method chaining
+
+        Raises:
+            ValueError: For any other value, which the platform ignores.
+        """
+        if not isinstance(value, bool) and value != "forever":
+            raise ValueError(
+                f'back_to_back_functions takes True, False or "forever", got {value!r}'
+            )
+        return self.add_action("back_to_back_functions", value)
 
     def enable_extensive_data(self, enabled: bool = True) -> "FunctionResult":
         """
@@ -1877,6 +1933,75 @@ class FunctionResult:
             result["response"] = "Action completed."
 
         return result
+
+
+#: The tool result a handler that raised gets, ``{function}`` its name. A
+#: handler can fail after it did what it was asked, so the model must not
+#: report success or failure.
+TOOL_ERROR_RESULT = "{function} failed before it finished, so whether it took effect is unknown."
+#: The tool prompt that goes with TOOL_ERROR_RESULT.
+TOOL_ERROR_PROMPT = (
+    "Don't tell the user it worked or that it didn't. Tell them it couldn't be "
+    "confirmed, and offer to check or try again."
+)
+#: The tool result for a handler that returned an empty dict.
+TOOL_NO_RESULT = "{function} returned no result, so whether it took effect is unknown."
+
+
+def tool_error_result(function: str) -> FunctionResult:
+    """The result the model gets when ``function``'s handler raised.
+
+    The exception itself is logged, not sent: its text can hold internals,
+    and the model would read it as the outcome.
+    """
+    return FunctionResult(
+        tool_result=TOOL_ERROR_RESULT.format(function=function),
+        tool_prompt=TOOL_ERROR_PROMPT,
+    )
+
+
+class ToolRefusal(Exception):
+    """Raise from a tool handler to decline the call with a known outcome.
+
+    The model gets ``tool_result``, what is true now (nothing was done, and
+    why), and ``tool_prompt``, what to do next, in place of a crash result
+    that says the outcome is unknown. Use it for a precondition the handler
+    checks itself: an item out of stock, an account that isn't found.
+
+    Example:
+        if not stock.available(item):
+            raise ToolRefusal(
+                f"place_order was not run: {item} is out of stock.",
+                "Tell the caller, and offer the similar items in stock.",
+            )
+    """
+
+    def __init__(self, tool_result: str, tool_prompt: str | None = None) -> None:
+        super().__init__(tool_result)
+        self.tool_result = tool_result
+        self.tool_prompt = tool_prompt
+
+    def result(self) -> FunctionResult:
+        """The FunctionResult the model gets."""
+        return FunctionResult(tool_result=self.tool_result, tool_prompt=self.tool_prompt)
+
+
+def settle_result(function: str, result: Any) -> Any:
+    """Shape what ``function``'s handler returned into a result the model can
+    read as it is, without claiming an outcome the handler didn't report.
+
+    None keeps its long-standing "Function executed successfully". A dict
+    with a ``response`` or an ``action`` is a SWAIG result already. Any other
+    dict is the handler's data: the model gets it as JSON. An empty dict says
+    the outcome is unknown.
+    """
+    if result is None:
+        return FunctionResult("Function executed successfully")
+    if isinstance(result, dict) and "response" not in result and "action" not in result:
+        if not result:
+            return {"response": TOOL_NO_RESULT.format(function=function)}
+        return {"response": json.dumps(result, default=str)}
+    return result
 
 
 # Backwards-compatible alias. Older docs, skill READMEs, and external

@@ -258,8 +258,11 @@ class TestOnFunctionCall:
         func = _make_swaig_function("my_tool", handler=handler)
         mock_registry._swaig_functions = {"my_tool": func}
 
-        result = host.on_function_call("my_tool", {})
-        assert "Error" in result["response"]
+        result = host.on_function_call("my_tool", {}).to_dict()
+        # The outcome is unknown, and the exception text isn't sent
+        assert result["response"]["tool_result"] == (
+            "my_tool failed before it finished, so whether it took effect is unknown.")
+        assert "handler crash" not in str(result)
 
 
 # ===========================================================================
@@ -335,10 +338,11 @@ class TestExecuteSwaigFunction:
         mock_registry._swaig_functions = {"tool": func}
 
         result = host._execute_swaig_function("tool")
-        # on_function_call catches the exception and returns {"response": "Error..."}
-        # which _execute_swaig_function passes through as a dict result
-        assert "response" in result
-        assert "Error" in result["response"]
+        # on_function_call catches the exception and returns the unknown-outcome
+        # result, which _execute_swaig_function converts to a dict
+        assert result["response"]["tool_result"] == (
+            "tool failed before it finished, so whether it took effect is unknown.")
+        assert "boom" not in str(result)
 
     def test_empty_args_creates_empty_raw_data_argument(self, host: MockToolHost, mock_registry: Mock) -> None:
         handler = Mock(return_value=FunctionResult("ok"))

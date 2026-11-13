@@ -14,7 +14,12 @@ import json
 import logging
 
 from signalwire.core.swaig_function import SWAIGFunction, _resolve_awaitable
-from signalwire.core.function_result import FunctionResult
+from signalwire.core.function_result import (
+    FunctionResult,
+    ToolRefusal,
+    settle_result,
+    tool_error_result,
+)
 from signalwire.core.semantic_gate import FillerPhrases, SemanticGate
 from signalwire.core.agent.tools.decorator import ToolDecorator
 from signalwire.core.mixins._mixin_host import _HostTyped
@@ -24,16 +29,20 @@ if TYPE_CHECKING:
 
 _tool_mixin_logger = logging.getLogger(__name__)
 
+#: The web_hook_url that has the platform run its own implementation of a
+#: function, by name
+NATIVE_WEBHOOK_URL = "native"
+
 
 async def _complete_async_call(name: str, pending: Awaitable[Any]) -> Any:
     """Await an async handler, and shape its outcome like a synchronous call's."""
     try:
-        result = await pending
-    except Exception as e:
-        return {"response": f"Error executing function '{name}': {e!s}"}
-    if result is None:
-        return FunctionResult("Function executed successfully")
-    return result
+        return settle_result(name, await pending)
+    except ToolRefusal as declined:
+        return declined.result()
+    except Exception:
+        _tool_mixin_logger.exception(f"SWAIG function '{name}' raised")
+        return tool_error_result(name)
 
 
 class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at runtime; AgentBase under TYPE_CHECKING — intentional split
@@ -54,6 +63,8 @@ class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
         is_typed_handler: bool = False,
         gates: Sequence[SemanticGate | dict[str, Any]] | None = None,
         gate_fillers: FillerPhrases | None = None,
+        vouched: bool = False,
+        nullable_optional: bool | None = None,
         **swaig_fields: Any,
     ) -> "AgentBase":
         """
@@ -144,6 +155,19 @@ class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
                 once the gates pass.
             gate_fillers: Optional phrases the AI says while the gates are
                 checked, shaped like ``fillers``. Only with ``gates``.
+            vouched: True for a tool whose arguments must come from the
+                user, not from the model's guesses. The tool gets a required
+                boolean argument, ``data_supplied_by_user``, in which the
+                model says they did. Unless it's true, the handler doesn't
+                run, and the model gets "<name> was not run." with the tool
+                prompt "Get the answer from the user before using this
+                tool." The handler never sees the argument.
+            nullable_optional: True to let the model send null for an
+                optional argument, as providers with strict schemas require:
+                each argument that isn't required takes null as well as its
+                type, and a null reaches the handler as an argument not
+                given. None (default) follows
+                ``set_nullable_optional_parameters()``.
             **swaig_fields: Additional SWAIG-only fields (e.g.
                 meta_data_token, web_hook_auth_user) included in the
                 generated function definition.
@@ -184,6 +208,10 @@ class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
             swaig_fields["gates"] = gates
         if gate_fillers is not None:
             swaig_fields["gate_fillers"] = gate_fillers
+        if vouched:
+            swaig_fields["vouched"] = True
+        if nullable_optional is not None:
+            swaig_fields["nullable_optional"] = nullable_optional
         self._tool_registry.define_tool(
             name=name,
             description=description,
@@ -197,6 +225,67 @@ class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
             **swaig_fields,
         )
         return self
+
+    def define_native_tool(
+        self,
+        name: str,
+        description: str,
+        parameters: dict[str, Any] | None = None,
+        **swaig_fields: Any,
+    ) -> "AgentBase":
+        """
+        Define a function the platform implements itself, under your own
+        description and parameters.
+
+        The platform runs its own implementation of a function whose
+        ``web_hook_url`` is "native", by name, and never calls a webhook.
+        A tool defined with ``define_tool`` gets the agent's webhook URL, so
+        it can't be one. Use this to describe a function the platform
+        implements, such as ``end_call``, in your own words, or to put it
+        in a step's function list.
+
+        Args:
+            name: The function's name, one the platform implements.
+            description: The description the model reads.
+            parameters: The JSON schema of its arguments, as the platform's
+                implementation reads them. Default: none.
+            **swaig_fields: Other SWAIG fields, such as fillers.
+
+        Returns:
+            Self for method chaining
+        """
+        definition: dict[str, Any] = {
+            "function": name,
+            "description": description,
+            "parameters": parameters or {"type": "object", "properties": {}},
+            **swaig_fields,
+            "web_hook_url": NATIVE_WEBHOOK_URL,
+        }
+        return self.register_swaig_function(definition)
+
+    def set_nullable_optional_parameters(self, enabled: bool = True) -> "AgentBase":
+        """
+        Let the model send null for any tool's optional arguments.
+
+        Some providers' strict schemas make every argument required and
+        refuse a call that leaves one out, so an optional argument has to
+        take null instead. With this on, each optional argument of every
+        tool defined with ``define_tool`` takes null as well as its type, and
+        a null reaches the handler as an argument not given. A tool's own
+        ``nullable_optional`` overrides it. It applies when the SWML is
+        rendered, so it covers tools defined before or after it.
+
+        Args:
+            enabled: True to turn it on, False to turn it off.
+
+        Returns:
+            Self for method chaining
+        """
+        self._nullable_optional_parameters = enabled
+        return self
+
+    def _nullable_optional_default(self) -> bool:
+        return bool(getattr(self, "_nullable_optional_parameters", False))
 
     def register_swaig_function(self, function_dict: dict[str, Any]) -> "AgentBase":
         """
@@ -305,7 +394,9 @@ class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
         # Validate arguments against the parameter schema (soft validation - warn but proceed)
         if hasattr(func, "validate_args") and args:
             try:
-                is_valid, errors = func.validate_args(args)
+                is_valid, errors = func.validate_args(
+                    args, self._nullable_optional_default()
+                )
                 if not is_valid:
                     _tool_mixin_logger.warning(
                         f"Argument validation failed for function '{name}': {'; '.join(errors)}"
@@ -315,21 +406,29 @@ class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
                     f"Argument validation error for function '{name}': {e}"
                 )
 
+        # A vouched tool runs only when the model vouches for its arguments
+        refusal = func._vouched_refusal(args)
+        if refusal is not None:
+            return refusal
+
         # Call the handler for regular SWAIG functions
         try:
-            result = func.handler(args, raw_data)
+            result = func.handler(
+                func._handler_args(args, self._nullable_optional_default()), raw_data
+            )
             if inspect.isawaitable(result):
                 # An async def handler. Return an awaitable, so the caller can
                 # run it on its own event loop: the /swaig endpoint awaits it,
                 # and synchronous callers pass it to _resolve_awaitable().
                 return _complete_async_call(name, result)
-            if result is None:
-                # If the handler returns None, create a default response
-                result = FunctionResult("Function executed successfully")
-            return result
-        except Exception as e:
-            # If the handler raises an exception, return an error response
-            return {"response": f"Error executing function '{name}': {e!s}"}
+            return settle_result(name, result)
+        except ToolRefusal as declined:
+            return declined.result()
+        except Exception:
+            # Logged, not sent: the text can hold internals, and the model
+            # would read it as the outcome
+            _tool_mixin_logger.exception(f"SWAIG function '{name}' raised")
+            return tool_error_result(name)
 
     def _execute_swaig_function(
         self,

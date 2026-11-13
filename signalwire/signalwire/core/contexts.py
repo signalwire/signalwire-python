@@ -17,6 +17,10 @@ The SDK's installed documentation covers this module: run ``sw-pydocs contexts``
 
 from typing import Optional, Any
 
+from signalwire.core.logging_config import get_logger
+
+_logger = get_logger("contexts")
+
 MAX_CONTEXTS = 50
 MAX_STEPS_PER_CONTEXT = 100
 
@@ -33,6 +37,62 @@ MAX_STEPS_PER_CONTEXT = 100
 #:              earlier dialogue returns when the step is left, and the
 #:              earlier step instructions stay cleared.
 HISTORY_MODES = ("keep", "default", "hide", "isolate")
+
+
+#: The most digits an expected answer can name
+MAX_EXPECTED_DIGITS = 64
+_EXPECTED_ANSWER_KEYS = frozenset({"digits", "min_digits", "max_digits"})
+
+
+def expected_answer(
+    digits: int | None = None,
+    *,
+    min_digits: int | None = None,
+    max_digits: int | None = None,
+) -> dict[str, int]:
+    """
+    An ``expected_answer`` as the platform reads it: ``{"digits": N}``, or
+    ``{"min_digits": a, "max_digits": b}`` with a at most b, each count from 1
+    to 64. The platform logs and ignores any other shape.
+
+    Raises:
+        ValueError: For a shape or count the platform would ignore.
+    """
+
+    def count(name: str, value: Any) -> int:
+        if isinstance(value, bool) or not isinstance(value, int) or not (
+            1 <= value <= MAX_EXPECTED_DIGITS
+        ):
+            raise ValueError(
+                f"{name} must be a whole number from 1 to {MAX_EXPECTED_DIGITS}, "
+                f"got {value!r}"
+            )
+        return value
+
+    if digits is not None:
+        if min_digits is not None or max_digits is not None:
+            raise ValueError(
+                "expected_answer takes digits, or min_digits and max_digits, not both"
+            )
+        return {"digits": count("digits", digits)}
+    if min_digits is None or max_digits is None:
+        raise ValueError(
+            "expected_answer needs digits, or both min_digits and max_digits"
+        )
+    low, high = count("min_digits", min_digits), count("max_digits", max_digits)
+    if low > high:
+        raise ValueError(f"min_digits ({low}) must be at most max_digits ({high})")
+    return {"min_digits": low, "max_digits": high}
+
+
+def _check_expected_answer(value: Any) -> dict[str, int]:
+    """A given expected_answer dict, checked by the platform's rules."""
+    if not isinstance(value, dict) or not value or set(value) - _EXPECTED_ANSWER_KEYS:
+        raise ValueError(
+            'expected_answer must be {"digits": N} or '
+            '{"min_digits": a, "max_digits": b}'
+        )
+    return expected_answer(**value)
 
 
 def _validate_history(mode: str) -> str:
@@ -53,6 +113,7 @@ class GatherQuestion:
         prompt: str | None = None,
         functions: list[str] | None = None,
         isolated: bool | None = None,
+        expected_answer: dict[str, int] | None = None,
     ):
         self.key = key
         self.question = question
@@ -62,6 +123,10 @@ class GatherQuestion:
         self.functions = functions
         # Tri-state: None means "inherit the gather_info default"
         self.isolated = isolated
+        # While this question is asked, it replaces the step's expected answer
+        self.expected_answer = (
+            None if expected_answer is None else _check_expected_answer(expected_answer)
+        )
 
     def to_dict(self) -> dict[str, Any]:
         """Convert question to dictionary for SWML generation"""
@@ -77,6 +142,8 @@ class GatherQuestion:
         # Emitted even when False, so it can override an isolated gather
         if self.isolated is not None:
             d["isolated"] = self.isolated
+        if self.expected_answer is not None:
+            d["expected_answer"] = dict(self.expected_answer)
         return d
 
 
@@ -108,7 +175,8 @@ class GatherInfo:
         Args:
             key: Key name for storing the answer in global_data
             question: The question text to ask
-            **kwargs: Optional fields - type, confirm, prompt, functions, isolated
+            **kwargs: Optional fields - type, confirm, prompt, functions,
+                isolated, expected_answer
 
         Returns:
             Self for method chaining
@@ -121,6 +189,7 @@ class GatherInfo:
             prompt=kwargs.get("prompt"),
             functions=kwargs.get("functions"),
             isolated=kwargs.get("isolated"),
+            expected_answer=kwargs.get("expected_answer"),
         )
         self._questions.append(q)
         return self
@@ -166,6 +235,9 @@ class Step:
         # Visibility of everything that came before this step
         self._history: str | None = None
 
+        # The recognizer's hint for a number the caller is asked for
+        self._expected_answer: dict[str, int] | None = None
+
         # Reset object for context switching from steps
         self._reset_system_prompt: str | None = None
         self._reset_user_prompt: str | None = None
@@ -175,6 +247,12 @@ class Step:
     def set_text(self, text: str) -> "Step":
         """
         Set the step's prompt text directly
+
+        The platform expands the text's variables, such as
+        ``${global_data.order_total}``, once, when the step is entered. A
+        later ``update_global_data`` doesn't change text the model already
+        has: return ``FunctionResult.refresh_step(name)`` after it to enter
+        the step again with the new values.
 
         Args:
             text: The prompt text for this step
@@ -469,6 +547,7 @@ class Step:
         prompt: str | None = None,
         functions: list[str] | None = None,
         isolated: bool | None = None,
+        expected_answer: dict[str, int] | None = None,
     ) -> "Step":
         """
         Add a question to this step's gather_info configuration.
@@ -506,6 +585,11 @@ class Step:
                 question. True hides the sibling Q&A while this question is
                 asked; False keeps it visible even in an isolated gather.
                 None (default) inherits the gather's setting.
+            expected_answer: The number of digits the answer has, for the
+                recognizer, as ``set_expected_answer`` takes it:
+                ``{"digits": 5}`` or ``{"min_digits": 4, "max_digits": 6}``
+                (``expected_answer()`` builds one). While this question is
+                asked, it replaces the step's.
 
         Returns:
             Self for method chaining.
@@ -520,6 +604,39 @@ class Step:
             prompt=prompt,
             functions=functions,
             isolated=isolated,
+            expected_answer=expected_answer,
+        )
+        return self
+
+    def set_expected_answer(
+        self,
+        digits: int | None = None,
+        *,
+        min_digits: int | None = None,
+        max_digits: int | None = None,
+    ) -> "Step":
+        """
+        Tell the recognizer how many digits the caller's answer in this step
+        has, such as a ZIP code or a PIN.
+
+        The recognizer ends its wait for a number once the caller has said
+        that many digits. A gather question's own expected answer replaces
+        this while that question is asked. Pass ``digits`` for an exact count, or
+        ``min_digits`` and ``max_digits`` for a range, each from 1 to 64.
+
+        Args:
+            digits: The exact number of digits.
+            min_digits: The fewest digits, with ``max_digits``.
+            max_digits: The most digits, with ``min_digits``.
+
+        Returns:
+            Self for method chaining
+
+        Raises:
+            ValueError: For a count or combination the platform would ignore.
+        """
+        self._expected_answer = expected_answer(
+            digits, min_digits=min_digits, max_digits=max_digits
         )
         return self
 
@@ -635,6 +752,9 @@ class Step:
 
         if self._history is not None:
             step_dict["history"] = self._history
+
+        if self._expected_answer is not None:
+            step_dict["expected_answer"] = dict(self._expected_answer)
 
         # Add reset object if any reset parameters are set
         reset_obj: dict[str, Any] = {}
@@ -1317,6 +1437,9 @@ class ContextBuilder:
         self._agent = agent
         self._contexts: dict[str, Context] = {}
         self._context_order: list[str] = []
+        # Tools already reported as offered by no step, so a render on every
+        # request doesn't repeat the warning
+        self._unoffered_warned: set[str] = set()
 
     def reset(self) -> "ContextBuilder":
         """
@@ -1540,6 +1663,60 @@ class ContextBuilder:
                                     f"{available}"
                                 )
 
+                self._warn_unoffered_tools(registered)
+
+    def steps_offering(self, function: str) -> list[tuple[str, str]]:
+        """
+        The steps whose function list offers ``function``, as
+        ``(context, step)`` pairs in order, including a gather question's
+        functions.
+
+        A step without ``set_functions()`` keeps whatever was active before
+        it, so it isn't counted: what it offers depends on the step the call
+        came from. The platform's reply to a call of a tool the current step
+        doesn't offer names the same steps.
+
+        Args:
+            function: The function's name.
+
+        Returns:
+            The (context name, step name) pairs, empty when no step lists it.
+        """
+        return [
+            (context_name, step_name)
+            for context_name in self._context_order
+            for step_name, step in self._contexts[context_name]._steps.items()
+            if _step_offers(step, function)
+        ]
+
+    def _warn_unoffered_tools(self, registered: dict[str, Any]) -> None:
+        """Log, once per tool, a tool that no step can offer: when every step
+        lists its functions and none lists it, the model never gets it,
+        unless a function result turns it on."""
+        from signalwire.core.semantic_gate import RESERVED_FUNCTION_NAMES
+
+        steps = [step for c in self._contexts.values() for step in c._steps.values()]
+        if not steps or any(step._functions is None for step in steps):
+            return
+        for name in registered:
+            if (
+                name in self._unoffered_warned
+                or name in RESERVED_FUNCTION_NAMES
+                or name in RESERVED_NATIVE_TOOL_NAMES
+                or self.steps_offering(name)
+            ):
+                continue
+            self._unoffered_warned.add(name)
+            _logger.warning(
+                "tool_offered_by_no_step",
+                function=name,
+                hint=(
+                    "Every step lists its functions and none lists this one, so "
+                    "the model never gets it unless a function result turns it "
+                    "on (toggle_functions). Add it to the steps that need it."
+                ),
+            )
+
     def to_dict(self) -> dict[str, Any]:
         """Convert all contexts to dictionary for SWML generation"""
         self.validate()
@@ -1549,6 +1726,17 @@ class ContextBuilder:
             for context_name in self._context_order
             for context_name, context in [(context_name, self._contexts[context_name])]
         }
+
+
+def _step_offers(step: "Step", function: str) -> bool:
+    """Whether a step's own function list, or one of its gather questions',
+    names ``function``."""
+    if isinstance(step._functions, list) and function in step._functions:
+        return True
+    gather = step._gather_info
+    return gather is not None and any(
+        q.functions and function in q.functions for q in gather._questions
+    )
 
 
 def create_simple_context(name: str = "default") -> Context:

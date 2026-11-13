@@ -1,5 +1,54 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Semantic gates take the platform's newer gate keys. `SemanticGate(...,
+  dialogue=, history=)` sets the dialogue one gate judges, `"window"` or
+  `"proposal"` and 1 to 100 entries, in place of the agent's; every gate of a
+  function must set the same ones, as the platform requires, and the SDK raises
+  `ValueError` when they differ. `unclear=True` asks yes, no or unclear, and
+  `on_unclear` is what the model gets for an unclear answer.
+  `set_semantic_gates(dialogue=)` sets the agent's `semantic_gate_dialogue`.
+- `define_tool(..., vouched=True)` adds a required boolean argument,
+  `data_supplied_by_user`, in which the model says every argument came from
+  the caller. Unless it's true, the handler doesn't run, and the model is told
+  to get the answer from the caller first.
+- `ToolRefusal(tool_result, tool_prompt)`: raise it from a handler to decline a
+  call with an outcome the handler knows.
+- `FunctionResult.back_to_back_functions()` sets whether the model may call
+  another function right after a result. The action was in the generated
+  action types but `FunctionResult` couldn't send it.
+- `FunctionResult.refresh_step(name)` enters the current step again, so step
+  text that shows `${global_data.*}` values, which are expanded once on entry,
+  shows the new ones. `Step.set_text()` documents the expansion.
+- `Step.set_expected_answer(digits=)` (or `min_digits=`/`max_digits=`) and a
+  gather question's `expected_answer` tell the recognizer how many digits the
+  caller's answer has, so it ends its wait once they're said.
+- `define_tool(..., nullable_optional=True)` and
+  `set_nullable_optional_parameters()` let the model send null for optional
+  arguments, as strict provider schemas require; a null reaches the handler as
+  an argument not given.
+- `define_native_tool()` defines a function the platform implements itself,
+  sent with `web_hook_url: "native"`, under your own description. A tool from
+  `define_tool()` always got the agent's webhook URL, so it couldn't be one.
+- `ContextBuilder.steps_offering(name)` lists the steps whose function lists
+  name a tool. Rendering logs `tool_offered_by_no_step` once for a registered
+  tool that no step offers, when every step lists its functions.
+
+### Changed
+- A tool handler that raises now tells the model the function failed before
+  it finished, so whether it took effect is unknown, with a tool prompt not to
+  tell the caller it worked or that it didn't. It used to return "Error
+  executing function '<name>': <exception text>" (and `SWAIGFunction.execute()`
+  "Sorry, I couldn't complete that action. Please try again..."), which sent
+  internals to the model and let it guess the outcome. The exception is logged.
+- A handler that returns a dict with neither `response` nor `action` gives the
+  model the dict as JSON, and an empty dict says the outcome is unknown.
+  `SWAIGFunction.execute()` used to answer any dict without a `response`
+  "Function completed successfully", dropping its actions, and the webhook
+  path sent such a dict to the platform without a response.
+
 ## [3.7.7] - 2026-11-11
 
 ### Added

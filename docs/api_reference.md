@@ -541,19 +541,22 @@ agent.update_global_data({
 })
 ```
 
-##### `set_semantic_gates(enabled: Optional[bool] = None, timeout_ms: Optional[int] = None, history: Optional[int] = None) -> AgentBase`
+##### `set_semantic_gates(enabled: Optional[bool] = None, timeout_ms: Optional[int] = None, history: Optional[int] = None, dialogue: Optional[str] = None) -> AgentBase`
 Set how the call checks its functions' [semantic gates](#semantic-gates). Each argument left as None keeps the platform's default.
 
 **Parameters:**
 - `enabled` (Optional[bool]): False dispatches gated functions without checking their gates. Default True
 - `timeout_ms` (Optional[int]): The time one check may take, 500 to 10000 milliseconds. A check that runs out blocks the call. Default 2500
 - `history` (Optional[int]): How many recent dialogue entries the decision model sees, 0 to 100. Default 20
+- `dialogue` (Optional[str]): Which dialogue the decision model judges: `"window"`, the newest `history` entries, or `"proposal"`, the entries since `global_data.semantic_state` last changed, from the agent's first turn after it. With `"proposal"`, a gate that confirms a read-back sees the read-back and the caller's reply, not the requests before it. With no `semantic_state` set, the window. Default `"window"`
+
+A gate's own `dialogue` and `history` take the place of these for its function.
 
 **Raises:** `ValueError` for a value of the wrong type or out of range.
 
 **Usage:**
 ```python
-agent.set_semantic_gates(timeout_ms=4000, history=30)
+agent.set_semantic_gates(timeout_ms=4000, history=30, dialogue="proposal")
 ```
 
 ### Function Definition
@@ -575,6 +578,8 @@ def define_tool(
     is_typed_handler: bool = False,
     gates: Optional[List[Union[SemanticGate, Dict[str, Any]]]] = None,
     gate_fillers: Optional[Dict[str, List[Union[str, List[str]]]]] = None,
+    vouched: bool = False,
+    nullable_optional: Optional[bool] = None,
     **swaig_fields
 ) -> AgentBase
 ```
@@ -589,9 +594,32 @@ def define_tool(
 - `webhook_url` (Optional[str]): Custom webhook URL
 - `gates` (Optional[List[Union[SemanticGate, Dict[str, Any]]]]): Semantic gates, 1 to 8. See [Semantic gates](#semantic-gates)
 - `gate_fillers` (Optional[Dict[str, List[Union[str, List[str]]]]]): What the AI says while the gates are checked, shaped like `fillers`. Only with `gates`
+- `vouched` (bool): True for a tool whose arguments must come from the caller, not from the model's guesses. The tool gets a required boolean argument, `data_supplied_by_user`, in which the model says every other argument is what the caller said. Unless it's true, the handler doesn't run, and the model gets "<name> was not run." with the tool prompt "Get the answer from the user before using this tool." The handler never sees the argument. Default False
+- `nullable_optional` (Optional[bool]): True to let the model send null for an optional argument, as providers with strict schemas require. Each argument that isn't required takes null as well as its type, and a null reaches the handler as an argument not given. None follows `set_nullable_optional_parameters()`
 - `**swaig_fields`: Additional SWAIG function properties
 
 **Raises:** `ValueError` for a gate the platform would refuse, or `gate_fillers` without `gates`.
+
+What the handler returns is what the model reads as the outcome, so the SDK keeps it honest:
+- A `FunctionResult`, or a dict with a `response` or an `action`, is sent as it is.
+- Any other dict is the handler's data, and the model gets it as JSON. An empty dict tells the model the outcome is unknown.
+- `None` gets "Function executed successfully".
+- A handler that raises `ToolRefusal(tool_result, tool_prompt=None)` declines the call with an outcome it knows: the model gets that result and prompt.
+- Any other exception is logged, not sent. The model is told the function failed before it finished, so whether it took effect is unknown, and not to tell the caller it worked or that it didn't. The exception's text could hold internals, and the model would read it as the outcome.
+
+```python
+from signalwire import FunctionResult, ToolRefusal
+
+def place_order(args, raw_data):
+    item = args["item"]
+    if item not in IN_STOCK:  # your inventory
+        raise ToolRefusal(
+            f"place_order was not run: {item} is out of stock.",
+            "Tell the caller, and offer the similar items in stock.",
+        )
+    order_id = create_order(item)  # your order system
+    return FunctionResult(tool_result=f"Order {order_id} is placed.")
+```
 
 **Usage:**
 ```python
@@ -650,17 +678,37 @@ agent.define_tool(
 )
 ```
 
-`SemanticGate(question, threshold, on_fail, *, id=None, true_means=None, false_means=None, visual_input=None)`:
+`SemanticGate(question, threshold, on_fail, *, id=None, true_means=None, false_means=None, visual_input=None, on_unclear=None, unclear=None, dialogue=None, history=None)`:
 - `question` (str): The yes/no question, at most 8 KB. Its `${...}` variables are expanded from the call's global data when the gate is checked
 - `threshold` (float): The probability of yes, above 0 and at most 1, at or above which the gate passes
 - `on_fail` (Union[str, FunctionResult, Dict[str, Any]]): What the model gets when this is the first gate that fails: the tool result text, a `FunctionResult`, whose response and actions are used, or a data_map output dict. It needs a response, and in the `tool_result`/`tool_prompt` form a `tool_result`: a blocked call must never read as a success. The `tool_prompt` becomes a system message after the tool result; OpenAI Realtime agents don't use it, so put what they need in the `tool_result`. The actions run as written, without template expansion
 - `id` (Optional[str]): 1 to 64 letters, digits or underscores, unique within the function. Default `gate_<n>`, 1-based
 - `true_means`, `false_means` (Optional[str]): What yes and no mean, at most 2 KB each
 - `visual_input` (Optional[Union[bool, int]]): How many of the caller's newest video frames the decision model sees with this gate, as `visual_input`: True is 1, False or 0 none, or a whole number up to 5. Name it in the question, as in "Is the caller holding a photo ID up to the camera in `visual_input`?". All of a function's gates share one request, so each sees as many frames as the gate asking for the most. The gate provider must take images; one that doesn't makes the check a configuration error, which blocks the call. Left out by default. A function's own `visual_input`, frames sent to its webhook, is a separate `define_tool()` field
+- `unclear` (Optional[bool]): True to ask yes, no or unclear, where the gate's provider can (OpenAI). A yes under the threshold counts as unclear too, so such a gate wants a lower threshold than a yes/no one. Unclear doesn't run the function: the model gets `on_unclear`. Two unclear answers in a row for the same function and `semantic_state` ask again; the third is a fail, so the caller isn't asked the same thing forever. Default: yes or no
+- `on_unclear` (Optional[Union[str, FunctionResult, Dict[str, Any]]]): What the model gets when this is the first gate answered unclear and none failed, in the same forms as `on_fail`. It should ask the caller again. Default: the platform's own, which does
+- `dialogue` (Optional[str]): The dialogue this gate judges, `"window"` or `"proposal"`, in place of the agent's (`set_semantic_gates(dialogue=...)`). A gate about something the caller asked before the proposal started, such as a request made before the account was found, wants `"window"` on an agent that judges its confirmations by the proposal
+- `history` (Optional[int]): How many of the newest dialogue entries this gate judges, a whole number from 1 to 100, in place of the agent's `history`
+
+Every gate on one function must have the same `dialogue` and `history`, set or not: they're asked together, about one dialogue. The SDK raises `ValueError` for gates that differ, as the platform refuses the function.
 
 Gates are checked by the platform's rules when the tool is defined. The platform refuses the whole function for an invalid gate, so the SDK raises `ValueError` instead. Gates aren't allowed on the hook names `startup_hook`, `hangup_hook` and `check_for_input`, on `end_call`, or on a built-in function's name.
 
 When a gate check can't be completed, because the decision model timed out or failed, the call is blocked too, and the model is told the action couldn't be completed right now. `set_semantic_gates()` sets the time a check may take.
+
+##### `define_native_tool(name: str, description: str, parameters: Optional[Dict[str, Any]] = None, **swaig_fields) -> AgentBase`
+Define a function the platform implements itself, under your own description and parameters. The platform runs its own implementation, by name, of a function whose `web_hook_url` is `"native"`, and calls no webhook. A tool from `define_tool()` gets the agent's webhook URL, so it can't be one. Use it to describe a function the platform implements, such as `end_call`, in your own words, or to list it in a step's functions.
+
+```python
+agent.define_native_tool(
+    "end_call",
+    "End the call once the order is placed and the caller has nothing else.",
+    {"type": "object", "properties": {"reason": {"type": "string"}}},
+)
+```
+
+##### `set_nullable_optional_parameters(enabled: bool = True) -> AgentBase`
+Let the model send null for every tool's optional arguments. Some providers' strict schemas make every argument required and refuse a call that leaves one out, so an optional argument must take null instead. With this on, each optional argument of a tool from `define_tool()` takes null as well as its type, and a null reaches the handler as an argument not given. A tool's own `nullable_optional` overrides it. It applies when the SWML is rendered, so it covers tools defined before and after it.
 
 ##### `@AgentBase.tool(name=None, **kwargs)` (Class Decorator)
 Decorator for defining tools as class methods.

@@ -1402,7 +1402,9 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
                 function_entry = {
                     "function": name,
                     "description": func.description,
-                    "parameters": func._ensure_parameter_structure(),
+                    "parameters": func._ensure_parameter_structure(
+                        agent_to_use._nullable_optional_default()
+                    ),
                 }
 
                 # Add wait_file if present (audio/video file URL)
