@@ -97,6 +97,11 @@ class SemanticGate:
     dates, so put a computed result in ``semantic_state`` instead of asking
     for it.
 
+    Every gate on one function must have the same ``dialogue``, ``history``
+    and ``since``, set or not: they're asked together, about one dialogue.
+    These keys, like ``unclear`` and ``on_unclear``, need a platform release
+    that has them: one with gates but without a key refuses the function.
+
     Example:
         SemanticGate(
             "Has the caller explicitly asked to cancel their account in "
@@ -182,12 +187,6 @@ class SemanticGate:
                 judges the dialogue from the agent's first turn at or after
                 the mark, at most ``history`` entries. Until the mark is set,
                 it judges its ``dialogue`` as usual.
-
-            Every gate on one function must have the same ``dialogue``,
-            ``history`` and ``since``, set or not: they're asked together,
-            about one dialogue. These keys, like ``unclear`` and
-            ``on_unclear``, need a platform release that has them: one with
-            gates but without a key refuses the function.
 
         Raises:
             ValueError: If ``on_fail`` or ``on_unclear`` has no response: a
