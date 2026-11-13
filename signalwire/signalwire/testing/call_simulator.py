@@ -46,6 +46,8 @@ if TYPE_CHECKING:
 GateCallback = Callable[[dict[str, Any], "CallSimulator", dict[str, Any]], Any]
 
 _NAVIGATION = ("next_step", "change_context")
+# The most gate marks the platform keeps for a call
+_MAX_MARKS = 16
 _VARIABLE = re.compile(r"\$\{([A-Za-z0-9_.]+)\}")
 
 
@@ -193,21 +195,19 @@ class CallSimulator:
         return self.global_data.get("semantic_state")
 
     def offered(self) -> list[str]:
-        """The tools the model is offered now, as the current step allows."""
-        offered = {
+        """The tools the model is offered now, as the current step allows,
+        in the agent's order, with the navigation tools after them."""
+        offered = [
             name
-            for name in self._step_functions
-            if name in self.functions and self._toggled.get(name, True)
-        }
-        offered |= {
-            name for name, on in self._toggled.items() if on and name in self.functions
-        }
+            for name in self.functions
+            if self._toggled.get(name, name in self._step_functions)
+        ]
         step = self._step()
         if step and step.get("valid_steps"):
-            offered.add("next_step")
+            offered.append("next_step")
         if self._valid_contexts():
-            offered.add("change_context")
-        return sorted(offered)
+            offered.append("change_context")
+        return offered
 
     # -- tool calls ------------------------------------------------------
 
@@ -414,7 +414,11 @@ class CallSimulator:
         elif key == "back_to_back_functions":
             self.chaining = value
         elif key == "semantic_gate_mark":
+            # The platform keeps a call's 16 newest names; setting one moves it
+            self.marks.pop(str(value), None)
             self.marks[str(value)] = len(self.call_log)
+            while len(self.marks) > _MAX_MARKS:
+                del self.marks[next(iter(self.marks))]
         elif key == "wait_for_user":
             self.waiting_for_user = bool(value)
         elif key in ("hangup", "stop"):
@@ -476,12 +480,16 @@ class CallSimulator:
         return [name for name in self.functions if name not in RESERVED_FUNCTION_NAMES]
 
     def _steps_offering(self, name: str) -> list[str]:
+        """The current context's other steps whose functions include
+        ``name``, in step order."""
         if self.context is None:
             return []
         return [
             str(step.get("name"))
             for step in self._contexts[self.context].get("steps", [])
-            if isinstance(step.get("functions"), list) and name in step["functions"]
+            if step.get("name") != self.step
+            and isinstance(step.get("functions"), list)
+            and name in step["functions"]
         ]
 
     def _unavailable(self, name: str) -> str:
@@ -503,8 +511,8 @@ class CallSimulator:
         else:
             text = f"Nothing ran: there is no tool named {name}."
         if offered:
-            return f"{text} The tools available now are: {tools}."
-        return f"{text} No tools are available now."
+            return f"{text} The tools available now are: {tools}.\n"
+        return f"{text} No tools are available now.\n"
 
     def _log(self, entry: dict[str, Any]) -> None:
         self.call_log.append({**entry, "timestamp": int(time.time() * 1_000_000)})

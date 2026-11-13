@@ -66,12 +66,12 @@ class TestSteps:
         assert (refused.ran, refused.blocked_by) == (False, "step")
         assert refused.response == (
             "Nothing ran: place_order isn't available at this point in the call. "
-            "The steps that offer it: confirm. The tools available now are: review_order.")
+            "The steps that offer it: confirm. The tools available now are: review_order.\n")
 
     def test_an_unknown_tool(self) -> None:
         assert CallSimulator(_shop()).call("refund").response == (
             "Nothing ran: there is no tool named refund. "
-            "The tools available now are: review_order.")
+            "The tools available now are: review_order.\n")
 
     def test_the_agents_own_unavailable_response(self) -> None:
         agent = _shop()
@@ -133,7 +133,7 @@ class TestActions:
             [{"function": "secret", "active": True}, {"function": "unlock", "active": False}]))
         agent.define_tool("secret", "Secret", {}, lambda a, r: "shh")
         sim = CallSimulator(agent)
-        assert sim.offered() == ["secret", "unlock"]
+        assert sim.offered() == ["unlock", "secret"]
         sim.call("unlock")
         assert sim.offered() == ["secret"]
 
@@ -212,3 +212,37 @@ class TestMarks:
         sim.caller("Yes.")
         since = sim.call_log[sim.marks["read_back"]:]
         assert [e.get("content") for e in since if e["role"] == "user"] == ["Yes."]
+
+
+class TestPlatformReplyDetails:
+    def test_the_current_step_isnt_among_the_steps_that_offer_it(self) -> None:
+        agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
+        agent.define_tool("lookup", "Look up", {}, lambda a, r: "ok")
+        agent.define_tool("other", "Other", {}, lambda a, r: "ok")
+        ctx = agent.define_contexts().add_context("default")
+        # A step that lists a tool and is in it has used it up; no other step offers it
+        ctx.add_step("one").set_text("One").set_functions(["lookup", "other"])
+        sim = CallSimulator(agent, global_data={})
+        sim._toggled["lookup"] = False
+        assert sim.call("lookup").response == (
+            "Nothing ran: lookup isn't available at this point in the call. "
+            "The tools available now are: other.\n")
+
+    def test_no_tools_at_all(self) -> None:
+        agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
+        agent.define_tool("lookup", "Look up", {}, lambda a, r: "ok")
+        ctx = agent.define_contexts().add_context("default")
+        ctx.add_step("one").set_text("One").set_functions("none")
+        assert CallSimulator(agent).call("lookup").response == (
+            "Nothing ran: lookup isn't available at this point in the call. "
+            "No tools are available now.\n")
+
+    def test_a_call_keeps_sixteen_marks(self) -> None:
+        agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
+        agent.define_tool("mark", "Mark", {"type": "object", "properties": {
+            "name": {"type": "string"}}}, lambda a, r: FunctionResult("ok").set_semantic_gate_mark(
+                a["name"]))
+        sim = CallSimulator(agent)
+        for n in range(17):
+            sim.call("mark", {"name": f"m{n}"})
+        assert len(sim.marks) == 16 and "m0" not in sim.marks
