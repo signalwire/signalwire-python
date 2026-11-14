@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [3.9.0] - 2026-11-13
 
 ### Added
 - Rendering logs `tool_named_but_not_offered`, once each, when a step that lists
