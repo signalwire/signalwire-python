@@ -2064,6 +2064,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.core.contexts.named_tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        named_tools
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.core.contexts.create_simple_context" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -9624,6 +9635,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.core.contexts.named_tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        named_tools
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.core.contexts.create_simple_context" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -11772,7 +11794,11 @@ to be repopulated with new content.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Set system prompt for context switching when this step navigates to a context</p>
+        <p>Set the system prompt this step's reset loads.</p>
+<p>A step with any reset setting is terminal: when the call enters it,
+the platform runs the reset in place of the step's text, and step
+mode ends there. Use it for a step that hands the call over to a new
+prompt.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -11844,7 +11870,11 @@ to be repopulated with new content.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Set user prompt for context switching when this step navigates to a context</p>
+        <p>Set the user message this step's reset adds.</p>
+<p>A step with any reset setting is terminal: when the call enters it,
+the platform runs the reset in place of the step's text, and step
+mode ends there. Use it for a step that hands the call over to a new
+prompt.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -11916,7 +11946,12 @@ to be repopulated with new content.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Set whether to consolidate conversation when this step switches contexts</p>
+        <p>Set whether this step's reset consolidates the conversation into a
+summary.</p>
+<p>A step with any reset setting is terminal: when the call enters it,
+the platform runs the reset in place of the step's text, and step
+mode ends there. Use it for a step that hands the call over to a new
+prompt.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -11988,7 +12023,12 @@ to be repopulated with new content.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Set whether to do full reset when this step switches contexts</p>
+        <p>Set whether this step's reset replaces the system prompt, seeded with
+the consolidated summary, rather than adding to it.</p>
+<p>A step with any reset setting is terminal: when the call enters it,
+the platform runs the reset in place of the step's text, and step
+mode ends there. Use it for a step that hands the call over to a new
+prompt.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -13271,9 +13311,10 @@ for what each mode does.</p>
 
         <p>Mark this context as isolated — entering it wipes conversation history.</p>
 <p>When <code>isolated=True</code> and the context is entered via change_context,
-the runtime calls ai_conversation_restart() and the entire conversation
-array is wiped. The model starts fresh with only the new context's
-system_prompt + step instructions, with no memory of prior turns.</p>
+the runtime calls ai_conversation_restart(), which drops every
+conversation entry but the first, the base system prompt. The model
+starts fresh with the base prompt and the new context's step
+instructions, with no memory of prior turns.</p>
 <p>EXCEPTION — <code>reset</code> overrides the wipe:
     If the context also has a <code>reset</code> configuration (set via the
     Step.set_reset_*() methods on a step that switches into this
@@ -14152,8 +14193,8 @@ can navigate the flow:</p>
 <li><code>next_step(step: enum)</code>        — present when valid_steps is set</li>
 <li><code>change_context(context: enum)</code> — present when valid_contexts is set</li>
 </ul>
-<p>Their <code>enum</code> schemas are rewritten on every turn to match whatever
-valid_steps / valid_contexts apply to the current step. You do NOT need
+<p>Their <code>enum</code> schemas are rewritten when a step loads, to match whatever
+valid_steps / valid_contexts apply to that step. You do NOT need
 to define these tools yourself; they appear automatically.</p>
 <p>A third native tool — <code>gather_submit</code> — is injected during gather_info
 questioning (see Step.set_gather_info / add_gather_question).</p>
@@ -14565,6 +14606,97 @@ to 64. The platform logs and ignores any other shape.</p>
             <td>
               <div class="doc-md-description">
                 <p>For a shape or count the platform would ignore.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="signalwire.core.contexts.named_tools" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">named_tools</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">tools</span><span class="p">)</span></code>
+
+<a href="#signalwire.core.contexts.named_tools" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>The tool names <code>text</code> names.</p>
+<p>A name with an underscore, such as <code>place_order</code>, counts as a whole
+word anywhere. A one-word name, such as <code>help</code>, counts only in
+backticks or before "(", since it's also an ordinary word.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>text</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The text: a step's, a prompt's or a tool result's.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>tools</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Iterable">Iterable</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The tool names to look for.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="set">set</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The names it finds.</p>
               </div>
             </td>
           </tr>

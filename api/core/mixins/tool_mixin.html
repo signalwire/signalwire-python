@@ -9165,7 +9165,9 @@ The dedupe answers a retry with the first attempt's result: one that
 arrives while the first is still running waits for it. A retry is a
 call with the same <code>call_id</code>, <code>tool_call_id</code> and function name; a
 call the model makes again has a new <code>tool_call_id</code> and runs, and a
-call without one always runs.</p>
+call without one always runs. The record is kept in this process, so
+with several processes or replicas a retry that reaches another one
+runs the tool again.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
