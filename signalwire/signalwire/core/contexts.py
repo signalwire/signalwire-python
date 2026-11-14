@@ -16,6 +16,7 @@ The SDK's installed documentation covers this module: run ``sw-pydocs contexts``
 """
 
 import re
+import warnings
 from collections.abc import Iterable
 from typing import Optional, Any
 
@@ -1739,14 +1740,13 @@ class ContextBuilder:
             ):
                 continue
             self._unoffered_warned.add(name)
-            _logger.warning(
+            _design_warning(
                 "tool_offered_by_no_step",
+                f"no step offers the tool {name!r}: every step lists its "
+                "functions and none lists it, so the model never gets it unless "
+                "a function result turns it on (toggle_functions). Add it to the "
+                "steps that need it.",
                 function=name,
-                hint=(
-                    "Every step lists its functions and none lists this one, so "
-                    "the model never gets it unless a function result turns it "
-                    "on (toggle_functions). Add it to the steps that need it."
-                ),
             )
 
     def _warn_inert_resets(self) -> None:
@@ -1771,14 +1771,13 @@ class ContextBuilder:
             key: tuple[str, ...] = ("context", context_name)
             if unused and not has_system_prompt and key not in self._mention_warned:
                 self._mention_warned.add(key)
-                _logger.warning(
+                _design_warning(
                     "context_reset_without_system_prompt",
+                    f"context {context_name!r} sets {', '.join(unused)} without a "
+                    "system_prompt: the platform runs a context's reset only when "
+                    "it has one, so these do nothing. Add set_system_prompt().",
                     context=context_name,
                     settings=unused,
-                    hint=(
-                        "The platform runs a context's reset only when it has a "
-                        "system_prompt, so these do nothing; add set_system_prompt()."
-                    ),
                 )
             for step_name, step in context._steps.items():
                 key = ("step", context_name, step_name)
@@ -1790,14 +1789,13 @@ class ContextBuilder:
                 ):
                     continue
                 self._mention_warned.add(key)
-                _logger.warning(
+                _design_warning(
                     "step_reset_is_terminal",
+                    f"step {step_name!r} in context {context_name!r} has a reset, "
+                    "so it's terminal: the platform runs the reset in place of its "
+                    "text, and step mode ends there.",
                     context=context_name,
                     step=step_name,
-                    hint=(
-                        "A step with a reset is terminal: the platform runs the "
-                        "reset in place of its text and step mode ends there."
-                    ),
                 )
 
     def _warn_tool_mentions(self, registered: dict[str, Any]) -> None:
@@ -1835,17 +1833,16 @@ class ContextBuilder:
                         if key in self._mention_warned:
                             continue
                         self._mention_warned.add(key)
-                        _logger.warning(
+                        _design_warning(
                             "tool_named_but_not_offered",
+                            f"step {step_name!r} in context {context_name!r} "
+                            f"names the tool {tool!r} in its {where}, but doesn't "
+                            "offer it: the model reads the name and may call a "
+                            "tool it doesn't have. Name only the step's own tools.",
                             context=context_name,
                             step=step_name,
                             where=where,
                             function=tool,
-                            hint=(
-                                "The model reads this name in a step that doesn't "
-                                "offer the tool. Name only the step's own tools; "
-                                "move the work to the step that offers it."
-                            ),
                         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -1857,6 +1854,16 @@ class ContextBuilder:
             for context_name in self._context_order
             for context_name, context in [(context_name, self._contexts[context_name])]
         }
+
+
+def _design_warning(event: str, message: str, **fields: Any) -> None:
+    """A design problem found when the SWML is rendered, reported twice: to
+    the SDK's logger, for production logs, and as a Python warning, which a
+    developer sees with no logging set up (printed once per message by
+    default, and listed in pytest's summary). Silence the second with
+    ``warnings.filterwarnings("ignore", message="SignalWire ")``."""
+    _logger.warning(event, hint=message, **fields)
+    warnings.warn(f"SignalWire {event}: {message}", UserWarning, stacklevel=2)
 
 
 def named_tools(text: str | None, tools: Iterable[str]) -> set[str]:
