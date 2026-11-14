@@ -519,7 +519,9 @@ class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
         arrives while the first is still running waits for it. A retry is a
         call with the same ``call_id``, ``tool_call_id`` and function name; a
         call the model makes again has a new ``tool_call_id`` and runs, and a
-        call without one always runs.
+        call without one always runs. The record is kept in this process, so
+        with several processes or replicas a retry that reaches another one
+        runs the tool again.
 
         Args:
             enabled: False to run every request, retries included.

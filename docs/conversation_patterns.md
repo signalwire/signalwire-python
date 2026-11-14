@@ -129,7 +129,7 @@ The model reads a tool's result as what happened, so the result must not claim m
 - Any other exception tells the model the function failed before it finished, so whether it took effect is unknown, and not to tell the caller it worked or that it didn't. The exception is logged, not sent.
 - A dict without a `response` or an `action` is the handler's data, and the model gets it as JSON.
 
-SignalWire sends a tool request again after a timeout, a failed connection or a 5xx, so a slow tool could run twice. The agent answers such a retry with the first attempt's result, and one that arrives while the first is still running waits for it. `set_tool_resend_dedupe(False)` turns this off.
+SignalWire sends a tool request again after a timeout, a failed connection or a 5xx, so a slow tool could run twice. The agent answers such a retry with the first attempt's result, and one that arrives while the first is still running waits for it. `set_tool_resend_dedupe(False)` turns this off. The record is kept in the agent's process: with several processes or replicas, a retry that reaches another one runs the tool again, so make tools that change things safe to run twice.
 
 ## Requests to Come Back To
 
@@ -196,7 +196,7 @@ def test_a_yes_places_the_order():
     assert sim.semantic_state == {"done": "The a large tea is ordered."}
 ```
 
-The gate callback gets each gate and returns True, False, a probability compared with the gate's threshold, or `"unclear"`. Give `stubs` for DataMap tools, which run on the platform. To check changed code against real calls, record tool requests with `RequestRecorder`, which is tool middleware, and run them again with `CallSimulator(agent).replay(requests)`. The requests carry what callers said, so keep a recording where you'd keep call recordings.
+The gate callback gets each gate and returns True, False, a probability compared with the gate's threshold, or `"unclear"`. With `check_tool_mentions=True`, a call whose result names a tool that the step it leaves the call in doesn't offer raises `ToolMentionError`: the model would read the name and might call a tool it doesn't have. Give `stubs` for DataMap tools, which run on the platform. To check changed code against real calls, record tool requests with `RequestRecorder`, which is tool middleware, and run them again with `CallSimulator(agent).replay(requests)`. The requests carry what callers said, so keep a recording where you'd keep call recordings.
 
 ## Related Documentation
 

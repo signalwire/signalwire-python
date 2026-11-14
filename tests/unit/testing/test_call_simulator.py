@@ -246,3 +246,26 @@ class TestPlatformReplyDetails:
         for n in range(17):
             sim.call("mark", {"name": f"m{n}"})
         assert len(sim.marks) == 16 and "m0" not in sim.marks
+
+
+class TestToolMentionCheck:
+    def test_a_result_naming_a_tool_the_next_step_lacks_fails(self) -> None:
+        from signalwire.testing import ToolMentionError
+
+        agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
+        agent.define_tool("find_store", "Find", {}, lambda a, r: FunctionResult(
+            tool_result="Store 12.", tool_prompt="Now call place_order.").swml_change_step("pick"))
+        agent.define_tool("place_order", "Order", {}, lambda a, r: "ok")
+        agent.define_tool("pick_time", "Pick", {}, lambda a, r: FunctionResult(
+            "Picked. Next, place_order.").swml_change_step("order"))
+        ctx = agent.define_contexts().add_context("default")
+        ctx.add_step("find").set_text("Find.").set_functions(["find_store"])
+        ctx.add_step("pick").set_text("Pick.").set_functions(["pick_time"])
+        ctx.add_step("order").set_text("Order.").set_functions(["place_order"])
+        sim = CallSimulator(agent, check_tool_mentions=True)
+        with pytest.raises(ToolMentionError, match="names place_order, which step 'pick'"):
+            sim.call("find_store")
+        # Naming the tool of the step the result moves the call to is fine
+        assert sim.call("pick_time").ran
+        # Off by default
+        CallSimulator(agent).call("find_store")

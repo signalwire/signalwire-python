@@ -32,6 +32,7 @@ from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from signalwire.core.contexts import named_tools
 from signalwire.core.function_result import FunctionResult
 from signalwire.core.semantic_gate import RESERVED_FUNCTION_NAMES
 from signalwire.core.swaig_function import _resolve_awaitable
@@ -49,6 +50,10 @@ _NAVIGATION = ("next_step", "change_context")
 # The most gate marks the platform keeps for a call
 _MAX_MARKS = 16
 _VARIABLE = re.compile(r"\$\{([A-Za-z0-9_.]+)\}")
+
+
+class ToolMentionError(AssertionError):
+    """A tool result named a tool the step it left the call in doesn't offer."""
 
 
 class SimulatedCall:
@@ -122,6 +127,7 @@ class CallSimulator:
         gates: GateCallback | None = None,
         stubs: Mapping[str, Callable[[dict[str, Any]], Any]] | None = None,
         global_data: Mapping[str, Any] | None = None,
+        check_tool_mentions: bool = False,
     ) -> None:
         """
         Args:
@@ -133,11 +139,19 @@ class CallSimulator:
                 tools, by name: ``fn(args)`` returning a FunctionResult, a
                 dict or text.
             global_data: Global data to start with, over the agent's own.
+            check_tool_mentions: True to fail a call whose result, or the
+                gate output that blocked it, names a tool the step it leaves
+                the call in doesn't offer, after its own step or context
+                change: the model reads the name and may call a tool it
+                doesn't have. Raises ``ToolMentionError``. Names are found
+                as ``ContextBuilder`` finds them in step text
+                (``signalwire.core.contexts.named_tools``).
         """
         self.agent = agent
         self.call_id = call_id
         self._gates = gates
         self._stubs = dict(stubs or {})
+        self._check_tool_mentions = check_tool_mentions
         ai = _ai_verb(json.loads(agent._render_swml(call_id)))
         self.params: dict[str, Any] = copy.deepcopy(ai.get("params", {}))
         #: The call's global data
@@ -255,7 +269,19 @@ class CallSimulator:
             outcome = self._dispatch(name, args)
         self._log({"role": "tool", "content": outcome.response})
         self.calls.append(outcome)
+        if self._check_tool_mentions and outcome.blocked_by != "step":
+            self._check_mentions(outcome)
         return outcome
+
+    def _check_mentions(self, outcome: SimulatedCall) -> None:
+        text = f"{outcome.response} {outcome.tool_prompt or ''}"
+        named = named_tools(text, self._tools()) - set(self.offered())
+        if named:
+            where = f"step {self.step!r}" if self.step else "the call"
+            raise ToolMentionError(
+                f"{outcome.name}'s result names {', '.join(sorted(named))}, which "
+                f"{where} doesn't offer: {text.strip()!r}"
+            )
 
     def replay(self, requests: Iterable[Mapping[str, Any]]) -> list[SimulatedCall]:
         """

@@ -15,6 +15,8 @@ contains its own prompt, completion criteria, and function restrictions.
 The SDK's installed documentation covers this module: run ``sw-pydocs contexts``, or ``sw-pydocs`` for the index.
 """
 
+import re
+from collections.abc import Iterable
 from typing import Optional, Any
 
 from signalwire.core.logging_config import get_logger
@@ -1093,9 +1095,10 @@ class Context:
         Mark this context as isolated — entering it wipes conversation history.
 
         When `isolated=True` and the context is entered via change_context,
-        the runtime calls ai_conversation_restart() and the entire conversation
-        array is wiped. The model starts fresh with only the new context's
-        system_prompt + step instructions, with no memory of prior turns.
+        the runtime calls ai_conversation_restart(), which drops every
+        conversation entry but the first, the base system prompt. The model
+        starts fresh with the base prompt and the new context's step
+        instructions, with no memory of prior turns.
 
         EXCEPTION — `reset` overrides the wipe:
             If the context also has a `reset` configuration (set via the
@@ -1442,6 +1445,8 @@ class ContextBuilder:
         # Tools already reported as offered by no step, so a render on every
         # request doesn't repeat the warning
         self._unoffered_warned: set[str] = set()
+        # Tool names in text where the step doesn't offer them, reported once
+        self._mention_warned: set[tuple[str, ...]] = set()
 
     def reset(self) -> "ContextBuilder":
         """
@@ -1666,6 +1671,7 @@ class ContextBuilder:
                                 )
 
                 self._warn_unoffered_tools(registered)
+                self._warn_tool_mentions(registered)
 
     def steps_offering(self, function: str) -> list[tuple[str, str]]:
         """
@@ -1719,6 +1725,54 @@ class ContextBuilder:
                 ),
             )
 
+    def _warn_tool_mentions(self, registered: dict[str, Any]) -> None:
+        """Log, once each, a registered tool named where the step doesn't
+        offer it: in its text, its criteria, its context's prompt (which goes
+        before every step's text), a gather question, or a gate's output on
+        one of its tools. The model reads the name and may call a tool it
+        doesn't have. A step without a function list is skipped: what it
+        offers depends on the step before it."""
+        from signalwire.core.semantic_gate import RESERVED_FUNCTION_NAMES
+
+        tools = [
+            name
+            for name in registered
+            if name not in RESERVED_FUNCTION_NAMES
+            and name not in RESERVED_NATIVE_TOOL_NAMES
+        ]
+        if not tools:
+            return
+        for context_name in self._context_order:
+            context = self._contexts[context_name]
+            prompt = context._render_prompt()
+            for step_name, step in context._steps.items():
+                if not isinstance(step._functions, list) and step._functions not in (
+                    "none",
+                    [],
+                ):
+                    continue
+                offered = (
+                    set(step._functions) if isinstance(step._functions, list) else set()
+                )
+                for where, text, also in _step_texts(step, prompt, registered, offered):
+                    for tool in sorted(named_tools(text, tools) - offered - also):
+                        key = (context_name, step_name, where, tool)
+                        if key in self._mention_warned:
+                            continue
+                        self._mention_warned.add(key)
+                        _logger.warning(
+                            "tool_named_but_not_offered",
+                            context=context_name,
+                            step=step_name,
+                            where=where,
+                            function=tool,
+                            hint=(
+                                "The model reads this name in a step that doesn't "
+                                "offer the tool. Name only the step's own tools; "
+                                "move the work to the step that offers it."
+                            ),
+                        )
+
     def to_dict(self) -> dict[str, Any]:
         """Convert all contexts to dictionary for SWML generation"""
         self.validate()
@@ -1728,6 +1782,94 @@ class ContextBuilder:
             for context_name in self._context_order
             for context_name, context in [(context_name, self._contexts[context_name])]
         }
+
+
+def named_tools(text: str | None, tools: Iterable[str]) -> set[str]:
+    """
+    The tool names ``text`` names.
+
+    A name with an underscore, such as ``place_order``, counts as a whole
+    word anywhere. A one-word name, such as ``help``, counts only in
+    backticks or before "(", since it's also an ordinary word.
+
+    Args:
+        text: The text: a step's, a prompt's or a tool result's.
+        tools: The tool names to look for.
+
+    Returns:
+        The names it finds.
+    """
+    if not text:
+        return set()
+    found: set[str] = set()
+    for name in tools:
+        escaped = re.escape(name)
+        if "_" in name:
+            pattern = rf"(?<![A-Za-z0-9_]){escaped}(?![A-Za-z0-9_])"
+        else:
+            pattern = rf"`{escaped}`|(?<![A-Za-z0-9_]){escaped}\("
+        if re.search(pattern, text):
+            found.add(name)
+    return found
+
+
+def _gate_texts(definition: Any) -> list[tuple[str, str]]:
+    """Each gate's output text on a tool, as (gate id, text)."""
+    if isinstance(definition, dict):
+        gates = definition.get("gates") or []
+    else:
+        gates = (getattr(definition, "extra_swaig_fields", None) or {}).get(
+            "gates"
+        ) or []
+    texts: list[tuple[str, str]] = []
+    for index, gate in enumerate(gates):
+        if not isinstance(gate, dict):
+            continue
+        gate_id = str(gate.get("id", f"gate_{index + 1}"))
+        for key in ("on_fail", "on_unclear"):
+            output = gate.get(key)
+            response = output.get("response") if isinstance(output, dict) else None
+            if isinstance(response, dict):
+                response = " ".join(
+                    str(response.get(k, "")) for k in ("tool_result", "tool_prompt")
+                )
+            if isinstance(response, str) and response:
+                texts.append((f"{gate_id} {key}", response))
+    return texts
+
+
+def _step_texts(
+    step: "Step",
+    context_prompt: str | None,
+    registered: dict[str, Any],
+    offered: set[str],
+) -> list[tuple[str, str, set[str]]]:
+    """What the model reads in a step, as (where, text, tools also offered
+    there): its text, criteria and context prompt, its gather questions, and
+    the gate outputs of the tools it offers."""
+    try:
+        text: str | None = step._render_text()
+    except ValueError:
+        text = None
+    texts: list[tuple[str, str, set[str]]] = [
+        ("text", text or "", set()),
+        ("criteria", step._step_criteria or "", set()),
+        ("context prompt", context_prompt or "", set()),
+    ]
+    gather = step._gather_info
+    if gather is not None:
+        texts.extend(
+            (
+                f"gather question {question.key}",
+                f"{question.question} {question.prompt or ''}",
+                set(question.functions or ()),
+            )
+            for question in gather._questions
+        )
+    for tool in sorted(offered):
+        for gate, output in _gate_texts(registered.get(tool)):
+            texts.append((f"{tool} gate {gate}", output, set()))
+    return texts
 
 
 def _step_offers(step: "Step", function: str) -> bool:

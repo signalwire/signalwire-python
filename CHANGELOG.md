@@ -1,5 +1,28 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Rendering logs `tool_named_but_not_offered`, once each, when a step that lists
+  its functions names a registered tool it doesn't offer: in its text, its
+  criteria, its context's prompt, a gather question, or a gate's output on one
+  of its tools. The model reads the name and may call a tool it doesn't have.
+  `signalwire.core.contexts.named_tools()` finds the names; a one-word name
+  counts only in backticks or before "(".
+- `CallSimulator(agent, check_tool_mentions=True)` raises `ToolMentionError`
+  when a call's result names a tool the step it leaves the call in doesn't
+  offer.
+
+### Fixed
+- The docs said a slow tool can run more than once on a retry; since 3.8.0 the
+  agent answers a retry with the first attempt's result. They now say the
+  record is kept per process, so with several replicas a retry that reaches
+  another one runs the tool again.
+- `Context.set_isolated` says what the platform does: it drops every entry but
+  the base prompt, rather than the whole conversation.
+- The Contexts and Steps Guide's gather question table lists
+  `expected_answer`.
+
 ## [3.8.0] - 2026-11-13
 
 ### Added

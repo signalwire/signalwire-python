@@ -428,6 +428,8 @@ step.set_functions("none")
 
 `ContextBuilder.steps_offering(name)` returns the `(context, step)` pairs whose function list, or a gather question's, names a tool. A step without `set_functions()` isn't counted, since what it offers depends on the step before it. When every step lists its functions and none lists a registered tool, rendering the SWML logs a `tool_offered_by_no_step` warning for it, once: the model never gets that tool unless a function result turns it on with `toggle_functions()`.
 
+Name only a step's own tools in what the model reads in that step. When a step lists its functions, rendering also logs a `tool_named_but_not_offered` warning, once each, for a registered tool named in the step's text, its criteria, its context's prompt (which goes before every step's text), a gather question, or a gate's output on one of its tools, when the step doesn't offer it. A name with an underscore counts anywhere; a one-word name counts only in backticks or before "(". Tool results are built at run time, so check those in tests with `CallSimulator(agent, check_tool_mentions=True)`.
+
 ```python
 builder = agent.define_contexts()
 print(builder.steps_offering("place_order"))  # [("default", "confirm")]
@@ -875,6 +877,7 @@ Flow:
 | `prompt` | str | None | Additional instruction text for this question |
 | `functions` | list | None | Function names to make visible for this question only |
 | `isolated` | bool \| None | None | Override the gather's `isolated` default for this one question. True hides the sibling Q&A while this question is asked; False keeps it visible even in an isolated gather. None inherits the gather's setting. |
+| `expected_answer` | dict \| None | None | The number of digits the answer has, for the recognizer: `{"digits": 5}` or `{"min_digits": 4, "max_digits": 6}`. It replaces the step's `set_expected_answer()` while this question is asked. |
 
 ## Real-World Examples
 

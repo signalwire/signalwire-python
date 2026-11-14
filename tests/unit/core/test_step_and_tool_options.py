@@ -226,3 +226,66 @@ class TestStepsOffering:
         monkeypatch.setattr("signalwire.core.contexts._logger", logger)
         self._agent_with_steps(every_step_lists=False)._render_swml()
         logger.warning.assert_not_called()
+
+
+class TestToolMentions:
+    """A tool named where the step doesn't offer it: the model reads the name
+    and may call a tool it doesn't have."""
+
+    def _agent(self) -> AgentBase:
+        agent = _agent()
+        for name in ("find_store", "place_order", "help"):
+            agent.define_tool(name, name, {}, lambda a, r: "ok")
+        return agent
+
+    def _warnings(self, agent: AgentBase, monkeypatch: pytest.MonkeyPatch) -> list[dict[str, Any]]:
+        logger = Mock()
+        monkeypatch.setattr("signalwire.core.contexts._logger", logger)
+        agent._render_swml()
+        agent._render_swml()
+        return [c.kwargs for c in logger.warning.call_args_list
+                if c.args[0] == "tool_named_but_not_offered"]
+
+    def test_step_text_criteria_and_context_prompt(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        agent = self._agent()
+        ctx = agent.define_contexts().add_context("default")
+        ctx.set_prompt("You take orders. Call place_order only after a read-back.")
+        ctx.add_step("greet").set_text("Greet them, then use find_store.").set_functions(
+            ["find_store"]).set_step_criteria("place_order has been called")
+        ctx.add_step("confirm").set_text("Confirm, then call place_order.").set_functions(
+            ["place_order"])
+        warned = {(w["step"], w["where"], w["function"]) for w in self._warnings(agent, monkeypatch)}
+        assert warned == {("greet", "criteria", "place_order"),
+                          ("greet", "context prompt", "place_order")}
+
+    def test_gate_output_and_gather_questions(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from signalwire import SemanticGate
+
+        agent = _agent()
+        agent.define_tool("find_store", "Find", {}, lambda a, r: "ok")
+        agent.define_tool("place_order", "Order", {}, lambda a, r: "ok", gates=[
+            SemanticGate("Q?", 0.8, "place_order was not run. Call find_store first.", id="g")])
+        ctx = agent.define_contexts().add_context("default")
+        step = ctx.add_step("confirm").set_text("Confirm.").set_functions(["place_order"])
+        step.set_gather_info(output_key="o")
+        step.add_gather_question("zip", "Your ZIP? Use find_store.", functions=["find_store"])
+        step.add_gather_question("size", "Size? Then find_store.")
+        warned = {(w["where"], w["function"]) for w in self._warnings(agent, monkeypatch)}
+        assert warned == {("place_order gate g on_fail", "find_store"),
+                          ("gather question size", "find_store")}
+
+    def test_one_word_names_count_only_as_code(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        agent = self._agent()
+        ctx = agent.define_contexts().add_context("default")
+        ctx.add_step("greet").set_text("Offer help. If stuck, call `help`.").set_functions(
+            ["find_store"])
+        warned = [(w["where"], w["function"]) for w in self._warnings(agent, monkeypatch)]
+        assert warned == [("text", "help")]
+
+    def test_a_step_that_inherits_its_functions_is_skipped(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        agent = self._agent()
+        ctx = agent.define_contexts().add_context("default")
+        ctx.add_step("greet").set_text("Use place_order.")
+        assert self._warnings(agent, monkeypatch) == []
