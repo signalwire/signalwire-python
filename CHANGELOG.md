@@ -1,5 +1,38 @@
 # Changelog
 
+## [3.9.0] - 2026-11-13
+
+### Added
+- Rendering logs `tool_named_but_not_offered`, once each, when a step that lists
+  its functions names a registered tool it doesn't offer: in its text, its
+  criteria, its context's prompt, a gather question, or a gate's output on one
+  of its tools. The model reads the name and may call a tool it doesn't have.
+  `signalwire.core.contexts.named_tools()` finds the names; a one-word name
+  counts only in backticks or before "(".
+- `FunctionResult.no_barge_next_response()` has the next spoken reply play
+  whole, with what the caller says during it held until after it.
+- Rendering logs `step_reset_is_terminal` for a step with a reset, whose text
+  the platform never runs, and `context_reset_without_system_prompt` for a
+  context's consolidate, full_reset or user_prompt, which act only with a
+  system_prompt.
+- `CallSimulator(agent, check_tool_mentions=True)` raises `ToolMentionError`
+  when a call's result names a tool the step it leaves the call in doesn't
+  offer.
+
+### Fixed
+- The docs said a slow tool can run more than once on a retry; since 3.8.0 the
+  agent answers a retry with the first attempt's result. They now say the
+  record is kept per process, so with several replicas a retry that reaches
+  another one runs the tool again.
+- `Context.set_isolated` says what the platform does: it drops every entry but
+  the base prompt, rather than the whole conversation.
+- The Contexts and Steps Guide's gather question table lists
+  `expected_answer`.
+- The step reset methods say what the platform does (a step with a reset is
+  terminal), and the guide shows their arguments. The gather preamble is sent
+  with every question, not once. The `next_step` schema is rewritten when a
+  step loads, not every turn.
+
 ## [3.8.0] - 2026-11-13
 
 ### Added

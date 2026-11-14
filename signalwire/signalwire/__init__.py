@@ -63,7 +63,7 @@ if TYPE_CHECKING:
     from signalwire.utils.schema_utils import SchemaValidationError
     from signalwire.web import WebService
 
-__version__ = "3.8.0"
+__version__ = "3.9.0"
 
 # §6.2-python (owner decision: NO packaging split — one package, all deps required;
 # IMPORT-TIME behavior only): the agent/web symbols are lazy-imported via module

@@ -18,6 +18,7 @@ from signalwire.testing.call_simulator import (
     CallSimulator,
     RequestRecorder,
     SimulatedCall,
+    ToolMentionError,
 )
 
-__all__ = ["CallSimulator", "RequestRecorder", "SimulatedCall"]
+__all__ = ["CallSimulator", "RequestRecorder", "SimulatedCall", "ToolMentionError"]

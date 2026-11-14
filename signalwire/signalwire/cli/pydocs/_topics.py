@@ -290,9 +290,11 @@ Or give the schema yourself, with a handler that takes `(args, raw_data)`:
   won't claim success; the exception itself is only logged.
 - Answer within a few seconds: the caller hears nothing while a tool runs.
   SignalWire waits up to 120 seconds for a tool's webhook, and sends the
-  request again after a timeout, a failed connection or a 5xx, so a slow tool
-  can run more than once. Start long work in the background, return at once, and
-  send the result into the call with `rest.calling.ai_message()`.
+  request again after a timeout, a failed connection or a 5xx. The agent
+  answers a retry with the first attempt's result, but only in the process
+  that got it: with several replicas, make tools that change things safe to
+  run twice. Start long work in the background, return at once, and send the
+  result into the call with `rest.calling.ai_message()`.
 """,
     docs=(
         ("docs/swaig_reference.md", "Every FunctionResult method and action"),

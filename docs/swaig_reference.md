@@ -657,6 +657,13 @@ result.enable_functions_on_timeout(True)
 result.enable_functions_on_timeout(False)
 ```
 
+#### `no_barge_next_response()`
+Have the next spoken reply play whole, such as a read-back the caller should hear in full before answering. Until a reply that speaks has played, the caller's words neither cut it nor cancel its request: they're held and delivered after it.
+
+```python
+result = FunctionResult("Read the order back to the caller.").no_barge_next_response()
+```
+
 #### `back_to_back_functions(value=True)`
 Set whether the model may call another function right after a function result, without answering in words first. `"forever"`, the call's default, chains freely. `False` makes the model answer in words after a function result. `True`, while chaining is off, allows one more chain, and then it's off again; it never lowers `"forever"`. The setting lasts for the call. Realtime models don't read it.
 
