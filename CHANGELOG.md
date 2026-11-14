@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [3.9.1] - 2026-11-14
 
 ### Fixed
 - The render-time design warnings (`tool_offered_by_no_step`,
