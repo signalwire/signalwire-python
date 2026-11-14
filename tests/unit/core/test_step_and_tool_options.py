@@ -289,3 +289,38 @@ class TestToolMentions:
         ctx = agent.define_contexts().add_context("default")
         ctx.add_step("greet").set_text("Use place_order.")
         assert self._warnings(agent, monkeypatch) == []
+
+
+class TestInertResets:
+    def _warned(self, agent: AgentBase, monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, Any]]:
+        logger = Mock()
+        monkeypatch.setattr("signalwire.core.contexts._logger", logger)
+        agent._render_swml()
+        agent._render_swml()
+        return [(c.args[0], c.kwargs) for c in logger.warning.call_args_list]
+
+    def test_a_step_with_a_reset_is_terminal(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        agent = _agent()
+        ctx = agent.define_contexts().add_context("default")
+        ctx.add_step("hand_off").set_text("Never shown.").set_reset_system_prompt("You're support.")
+        ctx.add_step("after").set_text("After.")
+        warned = self._warned(agent, monkeypatch)
+        assert [(name, w["step"]) for name, w in warned] == [("step_reset_is_terminal", "hand_off")]
+
+    def test_context_resets_need_a_system_prompt(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        agent = _agent()
+        builder = agent.define_contexts()
+        builder.add_context("default").add_step("s").set_text("S")
+        billing = builder.add_context("billing").set_consolidate(True).set_user_prompt("Billing.")
+        billing.add_step("b").set_text("B")
+        prompted = builder.add_context("support").set_consolidate(True).set_system_prompt("Support.")
+        prompted.add_step("p").set_text("P")
+        warned = self._warned(agent, monkeypatch)
+        assert [(name, w["context"], w["settings"]) for name, w in warned] == [
+            ("context_reset_without_system_prompt", "billing", ["consolidate", "user_prompt"])]
+
+
+class TestNoBargeNextResponse:
+    def test_the_action(self) -> None:
+        assert FunctionResult("Read it back.").no_barge_next_response().to_dict()["action"] == [
+            {"no_barge_next_response": True}]

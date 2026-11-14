@@ -346,18 +346,19 @@ class Step:
     def set_functions(self, functions: Union[List[str], str]) -> Step
         """Restrict available functions ('none' or list of function names)"""
 
-    # Reset behavior when entering step
-    def set_reset_system_prompt(self) -> Step
-        """Reset system prompt when entering this step"""
+    # Reset: a step with any of these is terminal. When the call enters it,
+    # the platform runs the reset in place of the step's text, and step mode ends.
+    def set_reset_system_prompt(self, system_prompt: str) -> Step
+        """The system prompt the reset loads"""
 
-    def set_reset_user_prompt(self) -> Step
-        """Reset user prompt when entering this step"""
+    def set_reset_user_prompt(self, user_prompt: str) -> Step
+        """The user message the reset adds"""
 
-    def set_reset_consolidate(self) -> Step
-        """Consolidate conversation when entering this step"""
+    def set_reset_consolidate(self, consolidate: bool) -> Step
+        """Whether the reset summarizes the conversation into one message"""
 
-    def set_reset_full_reset(self) -> Step
-        """Full conversation reset when entering this step"""
+    def set_reset_full_reset(self, full_reset: bool) -> Step
+        """Whether the reset replaces the system prompt, seeded with the summary"""
 ```
 
 #### Content Methods
@@ -680,7 +681,7 @@ This collects three pieces of information and stores them under `caller_info` in
 
 #### The Gather Prompt (Preamble)
 
-The gather `prompt` is injected once as a persistent message when the first question begins:
+The gather `prompt` is sent with every question, as a system message ahead of the question's own, and each copy replaces the one before. Under the `keep` history mode it's sent with the first question only, and that copy stays:
 
 ```python
 ctx.add_step("collect_profile") \
@@ -863,7 +864,7 @@ Flow:
 |-----------|------|---------|-------------|
 | `output_key` | str | None | Key in global_data to store answers under. If None, answers stored at top level. |
 | `completion_action` | str | None | Where to go when all questions are answered: `"next_step"` to advance sequentially, or a specific step name (e.g. `"process_results"`) to jump to that step. If None, returns to normal step mode. The target is validated: `"next_step"` requires a following step, and named steps must exist in the context. |
-| `prompt` | str | None | Preamble text injected once as a persistent message when entering the gather step. |
+| `prompt` | str | None | Preamble text sent with every question, ahead of the question's own message; each copy replaces the one before, except under the `keep` history mode, where only the first question's copy is sent and it stays. |
 | `isolated` | bool | `False` | Default for every question in this gather. When True, a question is asked with the sibling Q&A hidden from the model, so it must ask rather than derive the answer from an earlier one. A question's own `isolated` overrides this default. The hidden turns remain in the call log. |
 
 **`add_gather_question()` Parameters:**

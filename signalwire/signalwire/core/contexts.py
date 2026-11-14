@@ -658,7 +658,12 @@ class Step:
 
     def set_reset_system_prompt(self, system_prompt: str) -> "Step":
         """
-        Set system prompt for context switching when this step navigates to a context
+        Set the system prompt this step's reset loads.
+
+        A step with any reset setting is terminal: when the call enters it,
+        the platform runs the reset in place of the step's text, and step
+        mode ends there. Use it for a step that hands the call over to a new
+        prompt.
 
         Args:
             system_prompt: New system prompt for context switching
@@ -671,7 +676,12 @@ class Step:
 
     def set_reset_user_prompt(self, user_prompt: str) -> "Step":
         """
-        Set user prompt for context switching when this step navigates to a context
+        Set the user message this step's reset adds.
+
+        A step with any reset setting is terminal: when the call enters it,
+        the platform runs the reset in place of the step's text, and step
+        mode ends there. Use it for a step that hands the call over to a new
+        prompt.
 
         Args:
             user_prompt: User message to inject for context switching
@@ -684,7 +694,13 @@ class Step:
 
     def set_reset_consolidate(self, consolidate: bool) -> "Step":
         """
-        Set whether to consolidate conversation when this step switches contexts
+        Set whether this step's reset consolidates the conversation into a
+        summary.
+
+        A step with any reset setting is terminal: when the call enters it,
+        the platform runs the reset in place of the step's text, and step
+        mode ends there. Use it for a step that hands the call over to a new
+        prompt.
 
         Args:
             consolidate: Whether to consolidate previous conversation
@@ -697,7 +713,13 @@ class Step:
 
     def set_reset_full_reset(self, full_reset: bool) -> "Step":
         """
-        Set whether to do full reset when this step switches contexts
+        Set whether this step's reset replaces the system prompt, seeded with
+        the consolidated summary, rather than adding to it.
+
+        A step with any reset setting is terminal: when the call enters it,
+        the platform runs the reset in place of the step's text, and step
+        mode ends there. Use it for a step that hands the call over to a new
+        prompt.
 
         Args:
             full_reset: Whether to completely rewrite system prompt vs inject
@@ -1406,8 +1428,8 @@ class ContextBuilder:
       - ``next_step(step: enum)``        — present when valid_steps is set
       - ``change_context(context: enum)`` — present when valid_contexts is set
 
-    Their `enum` schemas are rewritten on every turn to match whatever
-    valid_steps / valid_contexts apply to the current step. You do NOT need
+    Their `enum` schemas are rewritten when a step loads, to match whatever
+    valid_steps / valid_contexts apply to that step. You do NOT need
     to define these tools yourself; they appear automatically.
 
     A third native tool — ``gather_submit`` — is injected during gather_info
@@ -1673,6 +1695,8 @@ class ContextBuilder:
                 self._warn_unoffered_tools(registered)
                 self._warn_tool_mentions(registered)
 
+        self._warn_inert_resets()
+
     def steps_offering(self, function: str) -> list[tuple[str, str]]:
         """
         The steps whose function list offers ``function``, as
@@ -1724,6 +1748,57 @@ class ContextBuilder:
                     "on (toggle_functions). Add it to the steps that need it."
                 ),
             )
+
+    def _warn_inert_resets(self) -> None:
+        """Log, once each, reset settings that don't do what they read as: a
+        step with a reset is terminal, so its text never runs; and a
+        context's consolidate, full_reset and user_prompt act only with a
+        system_prompt, whose presence runs the context's reset."""
+        for context_name in self._context_order:
+            context = self._contexts[context_name]
+            unused = [
+                name
+                for name, value in (
+                    ("consolidate", context._consolidate),
+                    ("full_reset", context._full_reset),
+                    ("user_prompt", context._user_prompt),
+                )
+                if value
+            ]
+            has_system_prompt = bool(
+                context._system_prompt or context._system_prompt_sections
+            )
+            key: tuple[str, ...] = ("context", context_name)
+            if unused and not has_system_prompt and key not in self._mention_warned:
+                self._mention_warned.add(key)
+                _logger.warning(
+                    "context_reset_without_system_prompt",
+                    context=context_name,
+                    settings=unused,
+                    hint=(
+                        "The platform runs a context's reset only when it has a "
+                        "system_prompt, so these do nothing; add set_system_prompt()."
+                    ),
+                )
+            for step_name, step in context._steps.items():
+                key = ("step", context_name, step_name)
+                if key in self._mention_warned or not (
+                    step._reset_system_prompt is not None
+                    or step._reset_user_prompt is not None
+                    or step._reset_consolidate
+                    or step._reset_full_reset
+                ):
+                    continue
+                self._mention_warned.add(key)
+                _logger.warning(
+                    "step_reset_is_terminal",
+                    context=context_name,
+                    step=step_name,
+                    hint=(
+                        "A step with a reset is terminal: the platform runs the "
+                        "reset in place of its text and step mode ends there."
+                    ),
+                )
 
     def _warn_tool_mentions(self, registered: dict[str, Any]) -> None:
         """Log, once each, a registered tool named where the step doesn't

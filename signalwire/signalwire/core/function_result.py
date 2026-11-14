@@ -970,6 +970,22 @@ class FunctionResult:
             )
         return self.add_action("semantic_gate_mark", name)
 
+    def no_barge_next_response(self) -> "FunctionResult":
+        """
+        Have the next spoken reply play whole, such as a read-back the caller
+        should hear in full before answering.
+
+        From the start of the next request until a reply that speaks has
+        played, the caller's words neither cut the reply nor cancel its
+        request: they're held and delivered after it. For semantic gates, an
+        answer begun during the reply reads as cutting it at that point, as
+        a barge would.
+
+        Returns:
+            self for method chaining
+        """
+        return self.add_action("no_barge_next_response", True)
+
     def back_to_back_functions(self, value: bool | str = True) -> "FunctionResult":
         """
         Set whether the model may call another function right after a
