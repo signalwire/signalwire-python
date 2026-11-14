@@ -324,3 +324,19 @@ class TestNoBargeNextResponse:
     def test_the_action(self) -> None:
         assert FunctionResult("Read it back.").no_barge_next_response().to_dict()["action"] == [
             {"no_barge_next_response": True}]
+
+
+class TestDesignWarningsAreVisible:
+    """A developer who hasn't set up logging still sees design warnings: the
+    SDK's logger has only a NullHandler until configure_logging() runs."""
+
+    def test_they_are_python_warnings_too(self) -> None:
+        agent = _agent()
+        agent.define_tool("find_store", "Find", {}, lambda a, r: "ok")
+        agent.define_tool("place_order", "Order", {}, lambda a, r: "ok")
+        ctx = agent.define_contexts().add_context("default")
+        ctx.add_step("greet").set_text("Then call place_order.").set_functions(["find_store"])
+        ctx.add_step("order").set_text("Order.").set_functions(["place_order"])
+        with pytest.warns(UserWarning, match="SignalWire tool_named_but_not_offered: step "
+                          "'greet' in context 'default' names the tool 'place_order'"):
+            agent._render_swml()

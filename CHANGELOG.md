@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- The render-time design warnings (`tool_offered_by_no_step`,
+  `tool_named_but_not_offered`, `step_reset_is_terminal`,
+  `context_reset_without_system_prompt`) are also raised as Python warnings.
+  They went only to the SDK's logger, which is silent until logging is set up,
+  so a developer rendering an agent in a script or a test never saw them. Python
+  prints each once, and pytest lists them in its summary;
+  `warnings.filterwarnings("ignore", message="SignalWire ")` silences them.
+
 ## [3.9.0] - 2026-11-13
 
 ### Added
