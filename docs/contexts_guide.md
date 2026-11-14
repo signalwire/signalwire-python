@@ -431,6 +431,8 @@ step.set_functions("none")
 
 Name only a step's own tools in what the model reads in that step. When a step lists its functions, rendering also logs a `tool_named_but_not_offered` warning, once each, for a registered tool named in the step's text, its criteria, its context's prompt (which goes before every step's text), a gather question, or a gate's output on one of its tools, when the step doesn't offer it. A name with an underscore counts anywhere; a one-word name counts only in backticks or before "(". Tool results are built at run time, so check those in tests with `CallSimulator(agent, check_tool_mentions=True)`.
 
+The render-time warnings (`tool_offered_by_no_step`, `tool_named_but_not_offered`, `step_reset_is_terminal` and `context_reset_without_system_prompt`) go to the SDK's logger and are also raised as Python warnings, so you see them before any logging is set up: Python prints each one once, and pytest lists them in its summary. To silence them, use `warnings.filterwarnings("ignore", message="SignalWire ")`.
+
 ```python
 builder = agent.define_contexts()
 print(builder.steps_offering("place_order"))  # [("default", "confirm")]
