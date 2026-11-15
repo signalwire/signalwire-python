@@ -1,5 +1,33 @@
 # Changelog
 
+## [3.10.1] - 2026-11-15
+
+### Fixed
+- The docs for `refresh_step()`, `Step.set_text()` and `RequestList` still
+  said a step's text is expanded only once, on entry, which 3.10.0's own
+  history section contradicts. Current platform releases (mod_openai 7afb159)
+  expand it again before a request when a value it reads changes;
+  `refresh_step()` is for earlier releases and realtime models, which keep
+  the values from entry. Reported by the TypeScript port.
+- `CallSimulator` against mod_openai 7afb159, found by the TypeScript port's
+  differential test:
+  - An end step took its history mode's pass. The platform runs none there,
+    since steps end, so `hide` on an end step no longer takes the caller's
+    earlier words. The end step's text goes in ahead of its context's prompt,
+    as the platform builds it.
+  - A step with a reset showed its text. The platform runs the reset in its
+    place: a new context, or a consolidation into a summary. The simulator
+    doesn't model either, so `model_view()` and `gate_conversation()` raise
+    `NotImplementedError` once the call has entered such a step.
+  - Unsetting `semantic_state` (`remove_global_data("semantic_state")`) kept
+    the proposal; it now leaves none, so gates judge the window.
+  - A change of `semantic_state` is detected as the platform does, on the
+    printed JSON: another key order, or `true` in place of `1`, is a new
+    proposal.
+- `Step.set_history()` said a `post_process` change keeps nothing; it keeps
+  its call and everything stored from it on. It also says an end step takes
+  no history pass, as the Contexts and Steps Guide does.
+
 ## [3.10.0] - 2026-11-15
 
 ### Added

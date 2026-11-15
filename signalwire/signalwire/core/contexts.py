@@ -258,10 +258,12 @@ class Step:
         Set the step's prompt text directly
 
         The platform expands the text's variables, such as
-        ``${global_data.order_total}``, once, when the step is entered. A
-        later ``update_global_data`` doesn't change text the model already
-        has: return ``FunctionResult.refresh_step(name)`` after it to enter
-        the step again with the new values.
+        ``${global_data.order_total}``, when the step is entered, and
+        current releases expand it again before a request whenever a value
+        it reads has changed. Earlier releases, and a realtime model, keep
+        the values from entry: there, return
+        ``FunctionResult.refresh_step(name)`` after a later
+        ``update_global_data`` to enter the step again with the new values.
 
         Args:
             text: The prompt text for this step
@@ -470,11 +472,13 @@ class Step:
         the next request to the model, and governs everything before it. The
         exchange that entered the step stays under "hide", "isolate" and
         "spoken", as the step's start: the call whose action changed the step,
-        its result, notes and say. A change by next_step, or by a
-        post_process action, keeps nothing; platform releases before this keep
-        nothing under "hide" and "isolate". The mode doesn't affect this
-        step's own turns, which accumulate fresh. Nothing is deleted: the call
-        log keeps every message.
+        its result, notes and say. A post_process action's change, which runs
+        after the model's reply, keeps its call and everything stored from it
+        on, the reply included. A change by next_step keeps nothing; platform
+        releases before this keep nothing under "hide" and "isolate". An end
+        step, or one with a reset, takes no history pass: steps end there.
+        The mode doesn't affect this step's own turns, which accumulate fresh.
+        Nothing is deleted: the call log keeps every message.
 
         Args:
             history: One of:
