@@ -196,7 +196,7 @@ def test_a_yes_places_the_order():
     assert sim.semantic_state == {"done": "The a large tea is ordered."}
 ```
 
-The gate callback gets each gate and returns True, False, a probability compared with the gate's threshold, or `"unclear"`. With `check_tool_mentions=True`, a call whose result names a tool that the step it leaves the call in doesn't offer raises `ToolMentionError`: the model would read the name and might call a tool it doesn't have. Give `stubs` for DataMap tools, which run on the platform. To check changed code against real calls, record tool requests with `RequestRecorder`, which is tool middleware, and run them again with `CallSimulator(agent).replay(requests)`. The requests carry what callers said, so keep a recording where you'd keep call recordings.
+The gate callback gets each gate and returns True, False, a probability compared with the gate's threshold, or `"unclear"`. `sim.gate_conversation(gate)` gives the dialogue that gate would judge: the spoken turns the model sees, chosen by its window, proposal or mark. `sim.model_view()` gives what the model gets now, after each step's history mode. With `check_tool_mentions=True`, a call whose result names a tool that the step it leaves the call in doesn't offer raises `ToolMentionError`: the model would read the name and might call a tool it doesn't have. Give `stubs` for DataMap tools, which run on the platform. To check changed code against real calls, record tool requests with `RequestRecorder`, which is tool middleware, and run them again with `CallSimulator(agent).replay(requests)`. The requests carry what callers said, so keep a recording where you'd keep call recordings.
 
 ## Related Documentation
 

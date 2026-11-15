@@ -1491,6 +1491,14 @@ class TestHistoryMode:
         # Explicit "default" is still written out — it overrides a context default
         assert Step("s").set_text("t").set_history("default").to_dict()["history"] == "default"
 
+    def test_step_history_spoken(self) -> None:
+        step = Step("next").set_text("Help with the next request.").set_history("spoken")
+        assert step.to_dict()["history"] == "spoken"
+        ctx = Context("c")
+        ctx.set_history("spoken")
+        ctx.add_step("s").set_text("t")
+        assert ctx.to_dict()["history"] == "spoken"
+
     def test_step_history_isolate(self) -> None:
         step = Step("confirm").set_text("Read back the order.").set_history("isolate")
         assert step.to_dict()["history"] == "isolate"

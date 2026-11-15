@@ -39,7 +39,11 @@ MAX_STEPS_PER_CONTEXT = 100
 #: ``isolate``  like ``hide``, but only while the agent is in this step: the
 #:              earlier dialogue returns when the step is left, and the
 #:              earlier step instructions stay cleared.
-HISTORY_MODES = ("keep", "default", "hide", "isolate")
+#: ``spoken``   prior instructions hidden, and every earlier tool call, tool
+#:              result and turn-scoped system note (tool_prompts and the like)
+#:              pulled out for the rest of the call; every spoken turn, the
+#:              caller's and the agent's, stays.
+HISTORY_MODES = ("keep", "default", "hide", "isolate", "spoken")
 
 
 #: The most digits an expected answer can name
@@ -462,10 +466,15 @@ class Step:
         """
         Control what the model still sees when this step is entered.
 
-        The mode applies at the moment this step is entered and governs
-        everything that came before it — including the turn that triggered the
-        transition. It does not affect this step's own turns, which accumulate
-        fresh. Nothing is deleted: the call log keeps every message.
+        The mode applies when the step's instructions are injected, before
+        the next request to the model, and governs everything before it. The
+        exchange that entered the step stays under "hide", "isolate" and
+        "spoken", as the step's start: the call whose action changed the step,
+        its result, notes and say. A change by next_step, or by a
+        post_process action, keeps nothing; platform releases before this keep
+        nothing under "hide" and "isolate". The mode doesn't affect this
+        step's own turns, which accumulate fresh. Nothing is deleted: the call
+        log keeps every message.
 
         Args:
             history: One of:
@@ -487,6 +496,17 @@ class Step:
                   step that must see nothing else, such as one that reads
                   back a confirmation. A platform without isolate treats it
                   as "default".
+                - "spoken": keep the conversation, drop the work. Earlier step
+                  instructions are cleared, and every earlier tool call, tool
+                  result and turn-scoped system note (tool_prompts, ai-msg
+                  injections, a gather's preamble) leaves the model's context
+                  for the rest of the call. Every spoken turn stays: the
+                  caller's, the agent's replies and ``say`` actions. An
+                  assistant turn that spoke and called a tool keeps its words.
+                  Use it at a stage boundary where the caller's earlier
+                  requests must stay but the finished stage's tool results
+                  shouldn't. A platform without spoken treats it as
+                  "default", which keeps the tool exchanges.
 
         Raises:
             ValueError: if history is not one of these modes.
@@ -1102,7 +1122,8 @@ class Context:
         for what each mode does.
 
         Args:
-            history: One of "keep", "default", "hide", or "isolate".
+            history: One of "keep", "default", "hide", "isolate", or
+                "spoken".
 
         Raises:
             ValueError: if history is not one of these modes.

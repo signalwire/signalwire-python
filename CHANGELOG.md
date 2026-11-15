@@ -1,5 +1,28 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- History mode `"spoken"` for a step or context: earlier step instructions,
+  and every earlier tool call, tool result and turn-scoped system note, leave
+  the model's context for the rest of the call, while every spoken turn stays.
+  Use it at a stage boundary where the caller's earlier requests must stay but
+  the finished stage's tool results shouldn't. The platform side is mod_openai
+  [commit]; a release without it treats the value as `"default"`.
+- History modes `"hide"` and `"isolate"`, like `"spoken"`, keep the exchange
+  that entered the step: the call whose action changed it, its result, notes
+  and say. A step entered from a tool kept nothing of it before, not even the
+  read-back the caller just heard. This is the platform's change (mod_openai
+  [commit]); the SDK's docs and `CallSimulator` follow it.
+- `CallSimulator.model_view()` gives the entries the model gets now, after
+  each step's history mode, and `CallSimulator.gate_conversation(gate)` the
+  dialogue a semantic gate judges: the same spoken turns, by its window,
+  proposal or mark. The simulator now logs each step's injected instructions
+  and each result's tool prompt, and sets a proposal or mark as of the start of
+  its action object, as the platform does.
+- The Contexts and Steps Guide has a section on history between steps: what
+  each mode removes, and which to use at a stage boundary.
+
 ## [3.9.1] - 2026-11-14
 
 ### Fixed
