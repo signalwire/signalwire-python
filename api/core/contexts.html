@@ -9765,7 +9765,7 @@ contains its own prompt, completion criteria, and function restrictions.</p>
 
 
 <h3 id="signalwire.core.contexts.HISTORY_MODES" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">HISTORY_MODES</span> <span class="o">=</span> <span class="p">(</span><span class="s1">'keep'</span><span class="p">,</span> <span class="s1">'default'</span><span class="p">,</span> <span class="s1">'hide'</span><span class="p">,</span> <span class="s1">'isolate'</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">HISTORY_MODES</span> <span class="o">=</span> <span class="p">(</span><span class="s1">'keep'</span><span class="p">,</span> <span class="s1">'default'</span><span class="p">,</span> <span class="s1">'hide'</span><span class="p">,</span> <span class="s1">'isolate'</span><span class="p">,</span> <span class="s1">'spoken'</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
@@ -11146,10 +11146,15 @@ the conversation when this step exits.</p>
     <div class="doc doc-contents ">
 
         <p>Control what the model still sees when this step is entered.</p>
-<p>The mode applies at the moment this step is entered and governs
-everything that came before it — including the turn that triggered the
-transition. It does not affect this step's own turns, which accumulate
-fresh. Nothing is deleted: the call log keeps every message.</p>
+<p>The mode applies when the step's instructions are injected, before
+the next request to the model, and governs everything before it. The
+exchange that entered the step stays under "hide", "isolate" and
+"spoken", as the step's start: the call whose action changed the step,
+its result, notes and say. A change by next_step, or by a
+post_process action, keeps nothing; platform releases before this keep
+nothing under "hide" and "isolate". The mode doesn't affect this
+step's own turns, which accumulate fresh. Nothing is deleted: the call
+log keeps every message.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -11190,7 +11195,18 @@ fresh. Nothing is deleted: the call log keeps every message.</p>
   Entering the step again isolates it again. Use it for a
   step that must see nothing else, such as one that reads
   back a confirmation. A platform without isolate treats it
-  as "default".</p>
+  as "default".
+- "spoken": keep the conversation, drop the work. Earlier step
+  instructions are cleared, and every earlier tool call, tool
+  result and turn-scoped system note (tool_prompts, ai-msg
+  injections, a gather's preamble) leaves the model's context
+  for the rest of the call. Every spoken turn stays: the
+  caller's, the agent's replies and <code>say</code> actions. An
+  assistant turn that spoke and called a tool keeps its words.
+  Use it at a stage boundary where the caller's earlier
+  requests must stay but the finished stage's tool results
+  shouldn't. A platform without spoken treats it as
+  "default", which keeps the tool exchanges.</p>
               </div>
             </td>
             <td>
@@ -13237,7 +13253,8 @@ for what each mode does.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>One of "keep", "default", "hide", or "isolate".</p>
+                <p>One of "keep", "default", "hide", "isolate", or
+"spoken".</p>
               </div>
             </td>
             <td>

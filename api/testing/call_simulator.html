@@ -7716,6 +7716,39 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#signalwire.testing.call_simulator.CallSimulator.history_mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        history_mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signalwire.testing.call_simulator.CallSimulator.model_view" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        model_view
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signalwire.testing.call_simulator.CallSimulator.gate_conversation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gate_conversation
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -8576,6 +8609,39 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#signalwire.testing.call_simulator.CallSimulator.history_mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        history_mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signalwire.testing.call_simulator.CallSimulator.model_view" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        model_view
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signalwire.testing.call_simulator.CallSimulator.gate_conversation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gate_conversation
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -8715,8 +8781,9 @@ when the test's gate callback lets it. A result's actions change the
 simulated call: global data and <code>semantic_state</code>, the step and context,
 which functions are on, <code>say</code>, and the end of the call.</p>
 <p>It's an approximation of the platform, for testing your code's decisions.
-It doesn't run a model, DataMap tools (give a stub), gather questions, or
-the gates' decision model (give a callback).</p>
+It doesn't run a model, DataMap tools (give a stub), gather questions,
+consolidation, the sliding window, or the gates' decision model (give a
+callback).</p>
 
 
 
@@ -9533,7 +9600,8 @@ as <code>ContextBuilder</code> finds them in step text
 
     <div class="doc doc-contents ">
 
-        <p>The agent says <code>text</code>, as the model's reply.</p>
+        <p>The agent says <code>text</code>, as the model's reply. The actions of a
+<code>post_process</code> result waiting for it run after it.</p>
 
 
     </div>
@@ -9576,7 +9644,10 @@ step doesn't offer, or one the platform doesn't know, doesn't run,
 and the model gets the platform's reply naming the tools it has. A
 gated tool runs only when every gate passes. Otherwise the tool's
 handler runs with a request like the platform's, and its result's
-actions change the call.</p>
+actions change the call. A result with <code>post_process</code> runs its
+actions after the model's reply to it, as the platform does: give the
+reply with <code>agent_says</code>. A newer such result replaces actions still
+waiting.</p>
 
 
     <p><span class="doc-section-title">Returns:</span></p>
@@ -9678,6 +9749,105 @@ results it gave on real calls.</p>
           </tr>
       </tbody>
     </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="signalwire.testing.call_simulator.CallSimulator.history_mode" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">history_mode</span><span class="p">()</span></code>
+
+<a href="#signalwire.testing.call_simulator.CallSimulator.history_mode" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>The current step's history mode: its own, its context's, or
+"default".</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="signalwire.testing.call_simulator.CallSimulator.model_view" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">model_view</span><span class="p">()</span></code>
+
+<a href="#signalwire.testing.call_simulator.CallSimulator.model_view" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>The conversation entries the model gets now, oldest first, after the
+history modes of the steps entered so far.</p>
+<p>At each step's injection, the platform first restores what an
+isolate step hid, then applies the new step's mode to everything
+before it:</p>
+<ul>
+<li><code>keep</code>: nothing leaves.</li>
+<li><code>default</code>: earlier step instructions leave.</li>
+<li><code>hide</code>: earlier instructions, and every earlier spoken turn, tool
+  call, tool result and system note, leave for the rest of the call.</li>
+<li><code>isolate</code>: as <code>hide</code>, until the call leaves the step.</li>
+<li><code>spoken</code>: earlier instructions, and every earlier tool call, tool
+  result and system note, leave for the rest of the call; every
+  spoken turn stays.</li>
+</ul>
+<p><code>hide</code>, <code>isolate</code> and <code>spoken</code> keep the exchange that entered
+the step, as its start: the call whose action changed it, its result,
+notes and say, and caller words stored before the step was injected.
+For a <code>post_process</code> action's change, which runs after the model's
+reply, that's the call and everything stored from it on, the reply
+included. A change by <code>next_step</code> keeps nothing. After that they're
+ordinary entries, which each later step's mode treats like the rest.</p>
+<p>It's the view for the model's next request: a step entered by a
+<code>say</code> or another action outside a tool call is injected before it,
+as the platform injects a step before the next request. A result's
+<code>say</code> is the agent's turn after the call's result and notes: the
+platform holds it until the next caller or agent turn, past system
+entries such as a step's instructions, or to the end. The current
+step's instructions are its text expanded with the global data now,
+as the platform expands it again when a value it reads changes;
+<code>call_log</code> keeps the text as it went in. An end step, or one with a
+reset, keeps the text it went in with, and brings back what an
+<code>isolate</code> step hid, as steps end there. The base prompt isn't
+included.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="signalwire.testing.call_simulator.CallSimulator.gate_conversation" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">gate_conversation</span><span class="p">(</span><span class="n">gate</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+<a href="#signalwire.testing.call_simulator.CallSimulator.gate_conversation" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>The dialogue a semantic gate judges now, as <code>"role: text"</code> lines,
+oldest first: the spoken turns the model sees (<code>model_view</code>),
+chosen as the platform chooses them.</p>
+<p>With the gate's <code>since</code> mark set, the turns from the agent's first
+turn at or after the mark. Otherwise, with <code>dialogue</code> "proposal"
+(the gate's, or the agent's <code>semantic_gate_dialogue</code>) and a
+proposal marked, the turns from the agent's first turn after
+<code>semantic_state</code> last changed. Otherwise the window. Then at most
+<code>history</code> of the newest (the gate's, the agent's
+<code>semantic_gate_history</code>, or 20).</p>
+<p>Give it to a gate callback: <code>gates=lambda gate, sim, args:
+judge(gate["question"], sim.gate_conversation(gate))</code>.</p>
 
 
     </div>
