@@ -10968,14 +10968,17 @@ in the current context.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Enter the current step again, so its text shows new global data.</p>
-<p>A step's text is expanded once, when the step is entered, so its
-<code>${global_data.*}</code> values are the ones from then. After
-<code>update_global_data</code> changes one, return this with the current
-step's name, after the update in the same result, and the model
-gets the step's text again with the new values. Entering a step
-starts it over: its <code>history</code> mode applies again, so under "hide"
-the step's dialogue so far leaves the model's context too.</p>
+        <p>Enter the current step again: it starts over, its text expanded
+with the global data now.</p>
+<p>The platform expands a step's <code>${global_data.*}</code> values when the
+step is entered. Current releases expand the text again before a
+request whenever a value it reads has changed, so new global data
+reaches the model without this. Earlier releases, and a realtime
+model, keep the values from entry: there, return this with the
+current step's name, after <code>update_global_data</code> in the same
+result, to show the new ones. Entering a step starts it over: its
+<code>history</code> mode applies again, so under "hide" the step's dialogue
+so far leaves the model's context too.</p>
 <p>The same action as <code>swml_change_step(step_name)</code>.</p>
 
 

@@ -8122,9 +8122,11 @@ step's text can show it, as <code>${global_data.&lt;key&gt;_text}</code>.</p>
     return later.note(raw_data, args["kind"], args["about"])</p>
 <p>ctx.add_step("take_order").set_text(
     "Take the caller's order.\n\n${global_data.later_text}")</p>
-</details>        <p>A step's text is expanded when the step is entered, so the list it
-shows is the one from then; the model hears of each new request in the
-tool result. Return <code>refresh_step()</code> with the note to show it at once.</p>
+</details>        <p>The model hears of each new request in the tool result. Current
+platform releases expand the step's text again when the list changes,
+so it shows at the next request. Earlier releases, and a realtime
+model, keep the list from the step's entry: return <code>refresh_step()</code>
+with the note there to show it at once.</p>
 
 
 

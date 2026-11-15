@@ -9806,7 +9806,9 @@ notes and say, and caller words stored before the step was injected.
 For a <code>post_process</code> action's change, which runs after the model's
 reply, that's the call and everything stored from it on, the reply
 included. A change by <code>next_step</code> keeps nothing. After that they're
-ordinary entries, which each later step's mode treats like the rest.</p>
+ordinary entries, which each later step's mode treats like the rest.
+An end step takes no pass: steps end there, so what an <code>isolate</code>
+step hid is back, and earlier instructions stay.</p>
 <p>It's the view for the model's next request: a step entered by a
 <code>say</code> or another action outside a tool call is injected before it,
 as the platform injects a step before the next request. A result's
@@ -9815,10 +9817,34 @@ platform holds it until the next caller or agent turn, past system
 entries such as a step's instructions, or to the end. The current
 step's instructions are its text expanded with the global data now,
 as the platform expands it again when a value it reads changes;
-<code>call_log</code> keeps the text as it went in. An end step, or one with a
-reset, keeps the text it went in with, and brings back what an
-<code>isolate</code> step hid, as steps end there. The base prompt isn't
-included.</p>
+<code>call_log</code> keeps the text as it went in. An end step keeps the text
+it went in with. The base prompt isn't included.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="NotImplementedError">NotImplementedError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Once the call has entered a step with a
+reset, which starts a new context or consolidates the
+conversation into a summary, in place of the step's text: the
+simulation doesn't follow it.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9848,6 +9874,30 @@ proposal marked, the turns from the agent's first turn after
 <code>semantic_gate_history</code>, or 20).</p>
 <p>Give it to a gate callback: <code>gates=lambda gate, sim, args:
 judge(gate["question"], sim.gate_conversation(gate))</code>.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="NotImplementedError">NotImplementedError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Once the call has entered a step with a
+reset, as for <code>model_view</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
