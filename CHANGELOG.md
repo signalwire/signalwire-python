@@ -19,7 +19,7 @@
   dialogue a semantic gate judges: the same spoken turns, by its window,
   proposal or mark. The simulator now logs each step's injected instructions
   and each result's tool prompt, sets a proposal or mark as of the start of
-  its action object, and gives the model a result's `say` after the call's
+  the result's action list, and gives the model a result's `say` after the call's
   result and notes, held to the next caller or agent turn, as the platform
   does.
 - The Contexts and Steps Guide has a section on history between steps: what
@@ -40,6 +40,15 @@
 - `CallSimulator.model_view()` shows the current step's text expanded with
   the global data now, as the platform expands it again before a request;
   `call_log` keeps the text as it went in.
+- A function result's proposal (`set_semantic_state`) or mark
+  (`set_semantic_gate_mark`) dates from the start of the result's whole
+  action list, so a `say` anywhere in the result is in the proposal's or the
+  mark's dialogue, and a change anywhere in the list keeps what the list
+  added, before the change too (mod_openai [commit]). Before it, each dated
+  from its own action object, and `result.say(read_back)` followed by
+  `set_semantic_state(...)` left the read-back out of the proposal's
+  dialogue. The docs say so, and `CallSimulator` follows the new rule.
+  `Proposal` writes both in one action object, which works on either.
 - `update_settings()` documents that the platform merges the keys named into
   the current settings (mod_openai [commit]; before it, every key not named
   went back to the model's default). The API reference's example no longer

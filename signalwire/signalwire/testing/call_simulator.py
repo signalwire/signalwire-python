@@ -470,12 +470,12 @@ class CallSimulator:
         self._run(actions)
 
     def _run(self, actions: list[Any]) -> None:
+        # A proposal or mark is set as of the start of the result's action
+        # list, so a say anywhere in the list is after it
+        self._action_start = len(self.call_log)
         for action in actions:
             if not isinstance(action, dict):
                 continue
-            # A proposal or mark is set as of the start of its action object,
-            # so a say in the same object is after it
-            self._action_start = len(self.call_log)
             for key, value in action.items():
                 self._apply_one(key, value)
 

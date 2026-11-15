@@ -607,14 +607,14 @@ result.remove_global_data(["step", "temp_value"])     # Multiple keys
 ```
 
 #### `set_semantic_state(state)`
-Set the state the call's semantic gates judge, besides the dialogue: `global_data.semantic_state`. It replaces the state as a whole; send `{}` to reset it. See [Semantic gates](api_reference.md#semantic-gates).
+Set the state the call's semantic gates judge, besides the dialogue: `global_data.semantic_state`. It replaces the state as a whole; send `{}` to reset it. A change starts a proposal, the dialogue of a gate with `dialogue="proposal"`, as of the start of the result's action list, so a `say` anywhere in the same result, such as the read-back, is in it. Platform releases before this start it at its own action object: set the state before `say` there, or use `Proposal` (see [Conversation Patterns](conversation_patterns.md#confirming-a-change)), which works on both. See [Semantic gates](api_reference.md#semantic-gates).
 
 ```python
 result.set_semantic_state({"order": {"item": "large pepperoni", "confirmed": True}})
 ```
 
 #### `set_semantic_gate_mark(name)`
-Set a mark that semantic gates with `since=name` judge the dialogue from: the agent's first turn at or after it, at most the gate's `history` entries. The mark is set as of the start of the action object that sets it, so a `say` in the same object is the first turn after it, and setting it again moves it. Marks last for the call. The name is 1 to 64 letters, digits or underscores.
+Set a mark that semantic gates with `since=name` judge the dialogue from: the agent's first turn at or after it, at most the gate's `history` entries. The mark is set as of the start of the result's action list, so a `say` anywhere in the same result is after it, and setting it again moves it. Platform releases before this set it as of the start of its own action object: set it before `say` there. Marks last for the call. The name is 1 to 64 letters, digits or underscores.
 
 ```python
 result.set_semantic_gate_mark("read_back")

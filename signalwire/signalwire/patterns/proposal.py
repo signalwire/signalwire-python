@@ -10,7 +10,9 @@ A change the caller says yes to before a tool carries it out.
 
 This is the platform's confirm pattern. A function proposes the change: it
 reads it back and records it in ``semantic_state``, in one action object,
-so the proposal's dialogue starts with the read-back. The confirm tool's
+so the proposal's dialogue starts with the read-back on any platform
+release, including those that date a proposal from its own action object
+rather than the result's action list. The confirm tool's
 semantic gates, judged on that dialogue (``dialogue="proposal"``), check
 three things: that the caller's latest turn is an answer, that the answer
 is a yes, and that what they answered was a read-back of this change. The

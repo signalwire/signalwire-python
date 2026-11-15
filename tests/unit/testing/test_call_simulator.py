@@ -572,3 +572,28 @@ class TestGateConversation:
         assert sim.gate_conversation({"since": "rb"}) == [
             "assistant: Is that right?", "user: Yes."]
         assert sim.gate_conversation({"since": "unset"})[0] == "user: Earlier words."
+
+    def test_a_say_before_the_state_in_the_same_result_is_in_the_proposal(self) -> None:
+        # The proposal dates from the start of the result's action list, so
+        # the order of its action objects doesn't matter
+        agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
+        agent.define_tool("review", "Review", {}, lambda a, r: FunctionResult(
+            "Read back.").say("That's a tea. Is that right?").set_semantic_state(
+                {"proposal": "a tea"}))
+        sim = CallSimulator(agent)
+        sim.caller("A tea, and my balance later.")
+        sim.call("review")
+        sim.caller("Yes.")
+        assert sim.gate_conversation({"dialogue": "proposal"}) == [
+            "assistant: That's a tea. Is that right?", "user: Yes."]
+
+    def test_a_say_before_the_mark_in_the_same_result_is_after_it(self) -> None:
+        agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
+        agent.define_tool("review", "Review", {}, lambda a, r: FunctionResult(
+            "Read back.").say("Is that right?").set_semantic_gate_mark("rb"))
+        sim = CallSimulator(agent)
+        sim.caller("Earlier words.")
+        sim.call("review")
+        sim.caller("Yes.")
+        assert sim.gate_conversation({"since": "rb"}) == [
+            "assistant: Is that right?", "user: Yes."]
