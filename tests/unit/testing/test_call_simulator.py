@@ -322,7 +322,10 @@ class TestModelView:
             ("user", "Thanks."),
         ]
 
-    def test_a_post_process_change_keeps_nothing(self) -> None:
+    def test_a_post_process_change_keeps_its_call_and_the_reply(self) -> None:
+        # The actions run after the model's reply to the result; the change
+        # keeps the call and everything stored from it on (mod_openai
+        # delayed_call_id, ai_conversation_tag_call_cause)
         agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
         agent.define_tool("lookup", "Look up", {}, lambda a, r: FunctionResult(
             "Order 7.", post_process=True).swml_change_step("next"))
@@ -332,7 +335,53 @@ class TestModelView:
         sim = CallSimulator(agent)
         sim.caller("Where's my order?")
         sim.call("lookup")
-        assert [e["content"] for e in sim.model_view()] == ["Next."]
+        assert sim.step == "first"
+        sim.agent_says("Order 7 is on its way.")
+        assert sim.step == "next"
+        sim.caller("Thanks.")
+        assert [e["content"] for e in sim.model_view()] == [
+            "", "Order 7.", "Order 7 is on its way.", "Thanks.", "Next."]
+
+    def test_post_process_actions_wait_for_the_reply(self) -> None:
+        agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
+        agent.define_tool("finish", "Finish", {}, lambda a, r: FunctionResult(
+            "Done.", post_process=True).hangup())
+        agent.define_tool("bye", "Bye", {}, lambda a, r: FunctionResult(
+            "Bye.", post_process=True).say("Goodbye."))
+        sim = CallSimulator(agent)
+        sim.call("finish")
+        assert not sim.ended
+        # A newer post_process result replaces actions still waiting
+        sim.call("bye")
+        sim.agent_says("Thanks for calling.")
+        assert not sim.ended
+        assert sim.call_log[-1]["content"] == "Goodbye."
+
+    def test_the_step_text_is_expanded_again_when_a_value_changes(self) -> None:
+        agent = self._agent(None)
+        agent.define_tool("move", "Move", {}, lambda a, r: FunctionResult(
+            "Moved.").update_global_data({"store": "Elm Street"}))
+        ctx = agent._contexts_builder._contexts["default"]  # type: ignore[union-attr]
+        ctx._steps["next"].set_functions(["move"])
+        sim = CallSimulator(agent)
+        sim.call("lookup")
+        sim.call("move")
+        view = [e["content"] for e in sim.model_view()]
+        # In place, nothing appended; the call log keeps the text as it went in
+        assert view.count("Help at Elm Street.") == 1
+        assert "Help at Main Street." not in view
+        assert [e["content"] for e in sim.call_log].count("Help at Main Street.") == 1
+
+    def test_an_end_step_keeps_the_text_it_went_in_with(self) -> None:
+        agent = self._agent(None)
+        agent.define_tool("move", "Move", {}, lambda a, r: FunctionResult(
+            "Moved.").update_global_data({"store": "Elm Street"}))
+        ctx = agent._contexts_builder._contexts["default"]  # type: ignore[union-attr]
+        ctx._steps["next"].set_functions(["move"]).set_end(True)
+        sim = CallSimulator(agent)
+        sim.call("lookup")
+        sim.call("move")
+        assert "Help at Main Street." in [e["content"] for e in sim.model_view()]
 
     def test_isolate_restores_when_the_step_is_left(self) -> None:
         agent = self._agent("isolate")

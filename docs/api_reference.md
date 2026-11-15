@@ -2112,17 +2112,18 @@ result.enable_extensive_data(True)
 ```
 
 ##### `update_settings(settings: Dict[str, Any]) -> FunctionResult`
-Update various AI settings.
+Update the model's settings for the rest of the call.
 
 **Parameters:**
-- `settings` (Dict[str, Any]): Settings to update
+- `settings` (Dict[str, Any]): Settings to update: the model's parameters, such as `temperature`, `top-p` or `max-tokens`, and `confidence` or `barge-confidence`
+
+Each key you name replaces its current value; every other setting keeps its value, including the ones set for the prompt. A key the model doesn't take is ignored. A key can't be removed: set it to the value you want, such as the model's default. Platform releases before this reset every key you don't name to the model's default.
 
 **Usage:**
 ```python
 result.update_settings({
     "temperature": 0.8,
-    "max_tokens": 150,
-    "end_of_speech_timeout": 800
+    "max-tokens": 150
 })
 ```
 

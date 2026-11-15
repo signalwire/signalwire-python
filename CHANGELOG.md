@@ -21,7 +21,27 @@
   and each result's tool prompt, and sets a proposal or mark as of the start of
   its action object, as the platform does.
 - The Contexts and Steps Guide has a section on history between steps: what
-  each mode removes, and which to use at a stage boundary.
+  each mode removes, and which to use at a stage boundary. It also covers the
+  platform's other history changes in the same mod_openai commit: a
+  consolidation's summary stays under `hide` and `spoken`; consolidation and
+  the sliding window keep the current step's instructions; and the step's
+  text is expanded again, in place, when a value it reads changes.
+
+### Changed
+- `CallSimulator` runs a `post_process` result's actions after the model's
+  reply to it, at the next `agent_says()`, as the platform does; a newer such
+  result replaces actions still waiting. They ran at once before, so a test
+  that checks a `post_process` hangup or step change right after the call now
+  needs the reply first. The change keeps the call and everything stored from
+  it on, the reply included, under `hide`, `isolate` and `spoken` (mod_openai
+  [commit]; it kept nothing before).
+- `CallSimulator.model_view()` shows the current step's text expanded with
+  the global data now, as the platform expands it again before a request;
+  `call_log` keeps the text as it went in.
+- `update_settings()` documents that the platform merges the keys named into
+  the current settings (mod_openai [commit]; before it, every key not named
+  went back to the model's default). The API reference's example no longer
+  uses `end_of_speech_timeout`, which isn't a model setting.
 
 ### Fixed
 - The render-time design warnings were logged again on every request when the

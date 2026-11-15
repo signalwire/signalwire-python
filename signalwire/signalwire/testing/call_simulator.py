@@ -18,8 +18,9 @@ simulated call: global data and ``semantic_state``, the step and context,
 which functions are on, ``say``, and the end of the call.
 
 It's an approximation of the platform, for testing your code's decisions.
-It doesn't run a model, DataMap tools (give a stub), gather questions, or
-the gates' decision model (give a callback).
+It doesn't run a model, DataMap tools (give a stub), gather questions,
+consolidation, the sliding window, or the gates' decision model (give a
+callback).
 """
 
 from __future__ import annotations
@@ -187,13 +188,19 @@ class CallSimulator:
         self._isolated: set[int] = set()
         self._cleared: set[int] = set()
         self._inject_pending = False
-        # Where the call that's running started, and where the exchange that
-        # entered the current step starts: spoken, hide and isolate keep it.
-        # None when nothing is kept: a change by next_step, or by a
-        # post_process action, which runs after the call and result are in
+        # Where the call whose actions are running started, and where the
+        # exchange that entered the current step starts: spoken, hide and
+        # isolate keep it. None when nothing is kept: a change by next_step
         self._call_start: int | None = None
         self._entered_at: int | None = 0
-        self._post_process = False
+        # A post_process result's actions, waiting for the model's reply,
+        # and where their call started
+        self._deferred: tuple[list[Any], int | None] | None = None
+        # The current step's instruction entry and its text before expansion,
+        # and each instruction's text as the model gets it now, when the
+        # platform expanded it again
+        self._instruction: tuple[int, str] | None = None
+        self._shown: dict[int, str] = {}
         # Where the proposal (semantic_state's last change) starts in call_log
         self._proposal_at: int | None = None
         self._action_start = 0
@@ -219,9 +226,15 @@ class CallSimulator:
         return self
 
     def agent_says(self, text: str) -> CallSimulator:
-        """The agent says ``text``, as the model's reply."""
+        """The agent says ``text``, as the model's reply. The actions of a
+        ``post_process`` result waiting for it run after it."""
         self._inject()
         self._log({"role": "assistant", "content": text}, "spoken")
+        if self._deferred is not None:
+            actions, self._call_start = self._deferred
+            self._deferred = None
+            self._run(actions)
+            self._call_start = None
         return self
 
     @property
@@ -255,7 +268,10 @@ class CallSimulator:
         and the model gets the platform's reply naming the tools it has. A
         gated tool runs only when every gate passes. Otherwise the tool's
         handler runs with a request like the platform's, and its result's
-        actions change the call.
+        actions change the call. A result with ``post_process`` runs its
+        actions after the model's reply to it, as the platform does: give the
+        reply with ``agent_says``. A newer such result replaces actions still
+        waiting.
 
         Returns:
             What the call came to.
@@ -445,8 +461,14 @@ class CallSimulator:
 
     def _apply(self, result: dict[str, Any]) -> None:
         actions = result.get("action", [])
-        self._post_process = bool(result.get("post_process"))
-        for action in actions if isinstance(actions, list) else [actions]:
+        actions = actions if isinstance(actions, list) else [actions]
+        if result.get("post_process") and actions:
+            self._deferred = (actions, self._call_start)
+            return
+        self._run(actions)
+
+    def _run(self, actions: list[Any]) -> None:
+        for action in actions:
             if not isinstance(action, dict):
                 continue
             # A proposal or mark is set as of the start of its action object,
@@ -454,7 +476,6 @@ class CallSimulator:
             self._action_start = len(self.call_log)
             for key, value in action.items():
                 self._apply_one(key, value)
-        self._post_process = False
 
     def _apply_one(self, key: str, value: Any) -> None:
         if key == "say":
@@ -514,13 +535,11 @@ class CallSimulator:
         self.step = name
         # The platform injects the step's instructions, and applies its
         # history mode, before the next request to the model: for a tool
-        # that changed the step, the follow-up right after its result.
-        # That call, its result and notes are stored after the change, so
-        # they're the new step's start
+        # that changed the step, the follow-up right after its result. The
+        # call is the new step's start, with everything stored from it on:
+        # for a post_process change, the reply and the caller's words too
         self._inject_pending = True
-        if self._post_process:
-            self._entered_at = None
-        elif self._call_start is not None:
+        if self._call_start is not None:
             self._entered_at = self._call_start
         else:
             self._entered_at = len(self.call_log)
@@ -630,18 +649,25 @@ class CallSimulator:
         ``hide``, ``isolate`` and ``spoken`` keep the exchange that entered
         the step, as its start: the call whose action changed it, its result,
         notes and say, and caller words stored before the step was injected.
-        A change by ``next_step``, or by a ``post_process`` action, keeps
-        nothing. After that they're ordinary entries, which each later
-        step's mode treats like the rest.
+        For a ``post_process`` action's change, which runs after the model's
+        reply, that's the call and everything stored from it on, the reply
+        included. A change by ``next_step`` keeps nothing. After that they're
+        ordinary entries, which each later step's mode treats like the rest.
 
         It's the view for the model's next request: a step entered by a
         ``say`` or another action outside a tool call is injected before it,
-        as the platform injects a step before the next request. The base
-        prompt isn't included.
+        as the platform injects a step before the next request. The current
+        step's instructions are its text expanded with the global data now,
+        as the platform expands it again when a value it reads changes;
+        ``call_log`` keeps the text as it went in. An end step keeps the text
+        it went in with. The base prompt isn't included.
         """
         self._inject()
         return [
-            {k: v for k, v in entry.items() if k != "timestamp"}
+            {
+                **{k: v for k, v in entry.items() if k != "timestamp"},
+                **({"content": self._shown[index]} if index in self._shown else {}),
+            }
             for index, entry in enumerate(self.call_log)
             if index not in self._hidden
             and index not in self._isolated
@@ -697,9 +723,12 @@ class CallSimulator:
         ]
 
     def _inject(self) -> None:
-        """Inject the current step's instructions, applying its history
-        mode to what came before, once a step change is pending."""
+        """Before a request to the model: inject the current step's
+        instructions, applying its history mode to what came before, once a
+        step change is pending; otherwise expand the current step's text
+        again."""
         if not self._inject_pending:
+            self._refresh()
             return
         self._inject_pending = False
         self._isolated.clear()
@@ -730,10 +759,23 @@ class CallSimulator:
             if part
         )
         data = {"global_data": self.global_data}
+        self._instruction = None if step.get("end") else (len(self.call_log), text)
         self._log(
             {"role": "system", "content": _expand(text, data, missing="")},
             "instruction",
         )
+
+    def _refresh(self) -> None:
+        # The platform rewrites the step's instruction entry in place when its
+        # expansion changes; the call log keeps the text as it went in
+        if self._instruction is None:
+            return
+        index, text = self._instruction
+        expanded = _expand(text, {"global_data": self.global_data}, missing="")
+        if expanded == self.call_log[index]["content"]:
+            self._shown.pop(index, None)
+        else:
+            self._shown[index] = expanded
 
 
 class RequestRecorder:

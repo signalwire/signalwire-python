@@ -1053,6 +1053,12 @@ class FunctionResult:
         - barge-confidence: Float (0.0 to 1.0)
         - temperature: Float (0.0 to 2.0, clamped to 1.5)
 
+        Each key named replaces its current value; every other setting keeps
+        its value, the prompt's own included. A key the model doesn't take is
+        ignored. A key can't be removed: to undo one, set it to the value you
+        want, such as the model's default. Platform releases before the merge
+        reset every key not named to the model's default.
+
         Args:
             settings: Dictionary of settings to update
 
