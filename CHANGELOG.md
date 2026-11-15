@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [3.10.1] - 2026-11-15
 
 ### Fixed
 - The docs for `refresh_step()`, `Step.set_text()` and `RequestList` still
