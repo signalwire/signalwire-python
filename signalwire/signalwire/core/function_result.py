@@ -863,6 +863,13 @@ class FunctionResult:
         what the caller claims; nothing else from the global data reaches the
         decision model.
 
+        A change starts a proposal, the dialogue of a gate with
+        ``dialogue="proposal"``, as of the start of the result's action list,
+        so a ``say`` anywhere in the same result, such as the read-back, is in
+        it. Platform releases before the whole-list rule start it at its own
+        action object: set the state before ``say`` there, or use
+        ``signalwire.patterns.Proposal``, which works on both.
+
         Args:
             state: The semantic state
 
@@ -951,9 +958,11 @@ class FunctionResult:
 
         A gate with ``since=name`` judges the dialogue from the agent's
         first turn at or after the mark, at most its ``history`` entries.
-        The mark is set as of the start of the action object that sets it,
-        so a ``say`` in the same object is the first turn after it; setting
-        it again moves it. Marks last for the call.
+        The mark is set as of the start of the result's action list, so a
+        ``say`` anywhere in the same result is after it; setting it again
+        moves it. Marks last for the call. Platform releases before the
+        whole-list rule set it as of the start of its own action object:
+        set it before ``say`` there.
 
         Args:
             name: 1 to 64 letters, digits or underscores.
@@ -1052,6 +1061,12 @@ class FunctionResult:
         - confidence: Float (0.0 to 1.0)
         - barge-confidence: Float (0.0 to 1.0)
         - temperature: Float (0.0 to 2.0, clamped to 1.5)
+
+        Each key named replaces its current value; every other setting keeps
+        its value, the prompt's own included. A key the model doesn't take is
+        ignored. A key can't be removed: to undo one, set it to the value you
+        want, such as the model's default. Platform releases before the merge
+        reset every key not named to the model's default.
 
         Args:
             settings: Dictionary of settings to update

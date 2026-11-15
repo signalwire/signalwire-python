@@ -87,7 +87,8 @@ class TestTheConfirmFlow:
         sim.caller("A large tea, please.")
         review = sim.call("review_order", {"item": "a large tea"})
         assert review.ran and sim.step == "confirm"
-        assert sim.call_log[-2]["content"] == "That's a large tea. Is that right?"
+        said = [e["content"] for e in sim.call_log if e["role"] == "assistant" and e["content"]]
+        assert said[-1] == "That's a large tea. Is that right?"
         assert sim.semantic_state["proposal"] == "That's a large tea. Is that right?"
         assert sim.waiting_for_user
         sim.caller("Yes.")
@@ -269,3 +270,346 @@ class TestToolMentionCheck:
         assert sim.call("pick_time").ran
         # Off by default
         CallSimulator(agent).call("find_store")
+
+
+class TestModelView:
+    """What the model gets, after each step's history mode: applied when the
+    step's instructions are injected, before the follow-up request right after
+    the result that moved the call there, to everything before it
+    (STEP_HISTORY.md; mod_openai check_steps runs before every request)."""
+
+    def _agent(self, mode: str | None) -> AgentBase:
+        agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
+        agent.set_global_data({"store": "Main Street"})
+        agent.define_tool("lookup", "Look up", {}, lambda a, r: FunctionResult(
+            tool_result="Order 7 is a tea.", tool_prompt="Tell the caller.").swml_change_step(
+                "next"))
+        ctx = agent.define_contexts().add_context("default")
+        ctx.add_step("first").set_text("Look it up.").set_functions(["lookup"])
+        second = ctx.add_step("next").set_text("Help at ${global_data.store}.")
+        if mode:
+            second.set_history(mode)
+        return agent
+
+    def _run(self, mode: str | None) -> list[tuple[str, str]]:
+        sim = CallSimulator(self._agent(mode))
+        sim.caller("Where's my order?")
+        sim.call("lookup")
+        sim.caller("Thanks.")
+        return [(e["role"], e["content"] or "<tool call>") for e in sim.model_view()]
+
+    def test_default_clears_old_instructions(self) -> None:
+        assert self._run(None) == [
+            ("user", "Where's my order?"),
+            ("assistant", "<tool call>"),
+            ("tool", "Order 7 is a tea."),
+            ("system", "Tell the caller."),
+            ("system", "Help at Main Street."),
+            ("user", "Thanks."),
+        ]
+
+    def test_keep_keeps_everything(self) -> None:
+        assert self._run("keep")[0] == ("system", "Look it up.")
+
+    def test_hide_takes_everything_before_the_entering_exchange(self) -> None:
+        # The call that moved the call here, its result and note, are the
+        # step's start, and stay
+        assert self._run("hide") == [
+            ("assistant", "<tool call>"),
+            ("tool", "Order 7 is a tea."),
+            ("system", "Tell the caller."),
+            ("system", "Help at Main Street."),
+            ("user", "Thanks."),
+        ]
+
+    def test_a_post_process_change_keeps_its_call_and_the_reply(self) -> None:
+        # The actions run after the model's reply to the result; the change
+        # keeps the call and everything stored from it on (mod_openai
+        # delayed_call_id, ai_conversation_tag_call_cause)
+        agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
+        agent.define_tool("lookup", "Look up", {}, lambda a, r: FunctionResult(
+            "Order 7.", post_process=True).swml_change_step("next"))
+        ctx = agent.define_contexts().add_context("default")
+        ctx.add_step("first").set_text("Look it up.").set_functions(["lookup"])
+        ctx.add_step("next").set_text("Next.").set_history("hide")
+        sim = CallSimulator(agent)
+        sim.caller("Where's my order?")
+        sim.call("lookup")
+        assert sim.step == "first"
+        sim.agent_says("Order 7 is on its way.")
+        assert sim.step == "next"
+        sim.caller("Thanks.")
+        assert [e["content"] for e in sim.model_view()] == [
+            "", "Order 7.", "Order 7 is on its way.", "Thanks.", "Next."]
+
+    def test_post_process_actions_wait_for_the_reply(self) -> None:
+        agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
+        agent.define_tool("finish", "Finish", {}, lambda a, r: FunctionResult(
+            "Done.", post_process=True).hangup())
+        agent.define_tool("bye", "Bye", {}, lambda a, r: FunctionResult(
+            "Bye.", post_process=True).say("Goodbye."))
+        sim = CallSimulator(agent)
+        sim.call("finish")
+        assert not sim.ended
+        # A newer post_process result replaces actions still waiting
+        sim.call("bye")
+        sim.agent_says("Thanks for calling.")
+        assert not sim.ended
+        assert sim.call_log[-1]["content"] == "Goodbye."
+
+    def test_a_say_before_the_change_in_the_same_result_stays(self) -> None:
+        # A result's action list is one scope: a change anywhere in it keeps
+        # what the list added, before the change too
+        agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
+        agent.define_tool("confirm", "Confirm", {}, lambda a, r: FunctionResult(
+            "Read back.").say("That's a large tea.").swml_change_step("next"))
+        ctx = agent.define_contexts().add_context("default")
+        ctx.add_step("first").set_text("Take the order.").set_functions(["confirm"])
+        ctx.add_step("next").set_text("Confirm.").set_history("hide")
+        sim = CallSimulator(agent)
+        sim.caller("A large tea.")
+        sim.call("confirm")
+        # The say goes after the call's result, held past system entries until
+        # the next caller or agent turn (mod_openai conversation.c held_says)
+        assert [e["content"] for e in sim.model_view()] == [
+            "", "Read back.", "Confirm.", "That's a large tea."]
+        sim.caller("Yes.")
+        assert [e["content"] for e in sim.model_view()][-2:] == ["That's a large tea.", "Yes."]
+
+    def test_a_post_process_change_keeps_calls_chained_after_its_own(self) -> None:
+        # The range runs from the waiting list's call to the change; a newer
+        # post_process list brings its own call
+        agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
+        agent.define_tool("lookup", "Look up", {}, lambda a, r: FunctionResult(
+            "Order 7.", post_process=True).swml_change_step("next"))
+        agent.define_tool("price", "Price", {}, lambda a, r: FunctionResult("Four dollars."))
+        agent.define_tool("check", "Check", {}, lambda a, r: FunctionResult(
+            "Checked.", post_process=True).swml_change_step("next"))
+        ctx = agent.define_contexts().add_context("default")
+        ctx.add_step("first").set_text("Look it up.").set_functions(["lookup", "price", "check"])
+        ctx.add_step("next").set_text("Next.").set_history("hide")
+        sim = CallSimulator(agent)
+        sim.call("lookup")
+        sim.call("price")
+        sim.agent_says("Order 7 is four dollars.")
+        assert [e["content"] for e in sim.model_view()] == [
+            "", "Order 7.", "", "Four dollars.", "Order 7 is four dollars.", "Next."]
+        sim = CallSimulator(agent)
+        sim.call("lookup")
+        sim.call("check")
+        sim.agent_says("All set.")
+        assert [e["content"] for e in sim.model_view()] == ["", "Checked.", "All set.", "Next."]
+
+    def test_the_step_text_is_expanded_again_when_a_value_changes(self) -> None:
+        agent = self._agent(None)
+        agent.define_tool("move", "Move", {}, lambda a, r: FunctionResult(
+            "Moved.").update_global_data({"store": "Elm Street"}))
+        ctx = agent._contexts_builder._contexts["default"]  # type: ignore[union-attr]
+        ctx._steps["next"].set_functions(["move"])
+        sim = CallSimulator(agent)
+        sim.call("lookup")
+        sim.call("move")
+        view = [e["content"] for e in sim.model_view()]
+        # In place, nothing appended; the call log keeps the text as it went in
+        assert view.count("Help at Elm Street.") == 1
+        assert "Help at Main Street." not in view
+        assert [e["content"] for e in sim.call_log].count("Help at Main Street.") == 1
+
+    def test_an_end_step_brings_back_what_isolate_hid(self) -> None:
+        # Steps end there, and what an isolate step hid is the model's again
+        # (mod_openai check_steps, ai_conversation_restore_isolated)
+        agent = self._agent("isolate")
+        ctx = agent._contexts_builder._contexts["default"]  # type: ignore[union-attr]
+        ctx.add_step("done").set_text("Done.").set_end(True)
+        agent.define_tool("finish", "Finish", {}, lambda a, r: FunctionResult(
+            "ok").swml_change_step("done"))
+        ctx._steps["next"].set_functions(["finish"])
+        sim = CallSimulator(agent)
+        sim.caller("Where's my order?")
+        sim.call("lookup")
+        assert sim.model_view()[0]["content"] == ""
+        sim.call("finish")
+        assert sim.model_view()[0]["content"] == "Where's my order?"
+
+    def test_an_end_step_keeps_the_text_it_went_in_with(self) -> None:
+        agent = self._agent(None)
+        agent.define_tool("move", "Move", {}, lambda a, r: FunctionResult(
+            "Moved.").update_global_data({"store": "Elm Street"}))
+        ctx = agent._contexts_builder._contexts["default"]  # type: ignore[union-attr]
+        ctx._steps["next"].set_functions(["move"]).set_end(True)
+        sim = CallSimulator(agent)
+        sim.call("lookup")
+        sim.call("move")
+        assert "Help at Main Street." in [e["content"] for e in sim.model_view()]
+
+    def test_isolate_restores_when_the_step_is_left(self) -> None:
+        agent = self._agent("isolate")
+        ctx = agent._contexts_builder._contexts["default"]  # type: ignore[union-attr]
+        ctx.add_step("after").set_text("After.")
+        agent.define_tool("move_on", "Move", {}, lambda a, r: FunctionResult("ok").swml_change_step(
+            "after"))
+        ctx._steps["next"].set_functions(["move_on"])
+        sim = CallSimulator(agent)
+        sim.caller("Where's my order?")
+        sim.call("lookup")
+        assert [e["content"] for e in sim.model_view()] == [
+            "", "Order 7 is a tea.", "Tell the caller.", "Help at Main Street."]
+        sim.call("move_on")
+        sim.caller("Bye.")
+        contents = [e["content"] for e in sim.model_view()]
+        assert contents[0] == "Where's my order?"
+        assert contents[-2:] == ["After.", "Bye."]
+
+
+class TestSpokenMode:
+    """history "spoken": at the step's entry, earlier tool calls, tool
+    results, turn-scoped system notes and old instructions leave for the rest
+    of the call; every spoken turn stays (mod_openai STEP_HISTORY.md)."""
+
+    def test_the_work_goes_and_the_talk_stays(self) -> None:
+        agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
+        agent.define_tool("lookup", "Look up", {}, lambda a, r: FunctionResult(
+            tool_result="Order 7 is a tea.", tool_prompt="Tell the caller."))
+        agent.define_tool("finish", "Finish", {}, lambda a, r: FunctionResult(
+            "Lookup finished.").swml_change_step("next"))
+        ctx = agent.define_contexts().add_context("default")
+        ctx.add_step("first").set_text("Look it up.").set_functions(["lookup", "finish"])
+        ctx.add_step("next").set_text("Next request.").set_history("spoken")
+        sim = CallSimulator(agent)
+        sim.caller("Where's my order? And my balance.")
+        sim.call("lookup")
+        sim.agent_says("It's a tea.")
+        sim.call("finish")
+        assert [(e["role"], e["content"] or "<tool call>") for e in sim.model_view()] == [
+            ("user", "Where's my order? And my balance."),
+            ("assistant", "It's a tea."),
+            # The exchange that entered the step stays: it's the step's start
+            ("assistant", "<tool call>"),
+            ("tool", "Lookup finished."),
+            ("system", "Next request."),
+        ]
+
+    def test_a_say_stays_when_its_call_goes(self) -> None:
+        agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
+        agent.define_tool("lookup", "Look up", {}, lambda a, r: FunctionResult(
+            "Order 7.").say("Your order is on its way."))
+        agent.define_tool("finish", "Finish", {}, lambda a, r: FunctionResult(
+            "Done.").swml_change_step("next"))
+        ctx = agent.define_contexts().add_context("default")
+        ctx.add_step("first").set_text("Look it up.").set_functions(["lookup", "finish"])
+        ctx.add_step("next").set_text("Next.").set_history("spoken")
+        sim = CallSimulator(agent)
+        sim.caller("Where is it?")
+        sim.call("lookup")
+        sim.call("finish")
+        # With no turn after it, the say is held to the end
+        assert [e["content"] for e in sim.model_view()] == [
+            "Where is it?", "", "Done.", "Next.", "Your order is on its way."]
+
+    def test_a_later_isolate_doesnt_bring_back_what_spoken_took(self) -> None:
+        agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
+        agent.define_tool("lookup", "Look up", {}, lambda a, r: FunctionResult(
+            "Order 7.").swml_change_step("talk"))
+        agent.define_tool("confirm", "Confirm", {}, lambda a, r: FunctionResult(
+            "Read back.").swml_change_step("confirm"))
+        agent.define_tool("done", "Done", {}, lambda a, r: FunctionResult(
+            "Done.").swml_change_step("after"))
+        ctx = agent.define_contexts().add_context("default")
+        ctx.add_step("first").set_text("Look up.").set_functions(["lookup"])
+        ctx.add_step("talk").set_text("Talk.").set_history("spoken").set_functions(["confirm"])
+        ctx.add_step("confirm").set_text("Confirm.").set_history("isolate").set_functions(["done"])
+        ctx.add_step("after").set_text("After.")
+        sim = CallSimulator(agent)
+        sim.caller("Where's my order?")
+        sim.call("lookup")
+        sim.caller("Cancel it.")
+        sim.call("confirm")
+        # isolate keeps the exchange that entered it: the confirm call
+        assert [e["content"] for e in sim.model_view()] == ["", "Read back.", "Confirm."]
+        sim.call("done")
+        contents = [e["content"] for e in sim.model_view()]
+        # isolate brings back what it hid, which includes the lookup that
+        # entered the spoken step: spoken kept that as the step's start
+        assert contents[:3] == ["Where's my order?", "", "Order 7."]
+        assert "Cancel it." in contents
+
+
+class TestGateConversation:
+    def _sim(self, mode: str | None = None) -> CallSimulator:
+        agent = _shop()
+        if mode:
+            agent._contexts_builder._contexts["default"]._steps["confirm"].set_history(mode)  # type: ignore[union-attr]
+        return CallSimulator(agent)
+
+    def test_the_window_is_the_spoken_turns_the_model_sees(self) -> None:
+        sim = self._sim()
+        sim.caller("A tea, and my balance later.")
+        sim.call("review_order", {"item": "a tea"})
+        sim.caller("Yes.")
+        assert sim.gate_conversation() == [
+            "user: A tea, and my balance later.",
+            "assistant: That's a tea. Is that right?",
+            "user: Yes.",
+        ]
+        assert sim.gate_conversation({"history": 1}) == ["user: Yes."]
+
+    def test_hide_takes_the_callers_earlier_words_from_gates_too(self) -> None:
+        sim = self._sim("hide")
+        sim.caller("A tea, and my balance later.")
+        sim.call("review_order", {"item": "a tea"})
+        sim.caller("Yes.")
+        # The read-back said by the call that entered the step stays
+        assert sim.gate_conversation() == [
+            "assistant: That's a tea. Is that right?", "user: Yes."]
+
+    def test_spoken_keeps_them(self) -> None:
+        sim = self._sim("spoken")
+        sim.caller("A tea, and my balance later.")
+        sim.call("review_order", {"item": "a tea"})
+        sim.caller("Yes.")
+        assert sim.gate_conversation()[0] == "user: A tea, and my balance later."
+
+    def test_the_proposal_starts_at_its_read_back(self) -> None:
+        sim = self._sim()
+        sim.caller("A tea, and my balance later.")
+        sim.call("review_order", {"item": "a tea"})
+        sim.caller("Yes.")
+        assert sim.gate_conversation({"dialogue": "proposal"}) == [
+            "assistant: That's a tea. Is that right?",
+            "user: Yes.",
+        ]
+
+    def test_since_a_mark(self) -> None:
+        agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
+        sim = CallSimulator(agent)
+        sim.caller("Earlier words.")
+        sim._apply({"action": [{"semantic_gate_mark": "rb", "say": "Is that right?"}]})
+        sim.caller("Yes.")
+        assert sim.gate_conversation({"since": "rb"}) == [
+            "assistant: Is that right?", "user: Yes."]
+        assert sim.gate_conversation({"since": "unset"})[0] == "user: Earlier words."
+
+    def test_a_say_before_the_state_in_the_same_result_is_in_the_proposal(self) -> None:
+        # The proposal dates from the start of the result's action list, so
+        # the order of its action objects doesn't matter
+        agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
+        agent.define_tool("review", "Review", {}, lambda a, r: FunctionResult(
+            "Read back.").say("That's a tea. Is that right?").set_semantic_state(
+                {"proposal": "a tea"}))
+        sim = CallSimulator(agent)
+        sim.caller("A tea, and my balance later.")
+        sim.call("review")
+        sim.caller("Yes.")
+        assert sim.gate_conversation({"dialogue": "proposal"}) == [
+            "assistant: That's a tea. Is that right?", "user: Yes."]
+
+    def test_a_say_before_the_mark_in_the_same_result_is_after_it(self) -> None:
+        agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
+        agent.define_tool("review", "Review", {}, lambda a, r: FunctionResult(
+            "Read back.").say("Is that right?").set_semantic_gate_mark("rb"))
+        sim = CallSimulator(agent)
+        sim.caller("Earlier words.")
+        sim.call("review")
+        sim.caller("Yes.")
+        assert sim.gate_conversation({"since": "rb"}) == [
+            "assistant: Is that right?", "user: Yes."]

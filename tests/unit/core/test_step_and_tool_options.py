@@ -340,3 +340,25 @@ class TestDesignWarningsAreVisible:
         with pytest.warns(UserWarning, match="SignalWire tool_named_but_not_offered: step "
                           "'greet' in context 'default' names the tool 'place_order'"):
             agent._render_swml()
+
+
+class TestDesignWarningsAcrossRequests:
+    def test_per_request_copies_share_what_was_reported(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A per-request copy deep-copies the contexts builder; the record of
+        reported warnings lives on the agent, which copies share, so a
+        warning isn't logged again on every request."""
+        logger = Mock()
+        monkeypatch.setattr("signalwire.core.contexts._logger", logger)
+        agent = _agent()
+        agent.define_tool("find_store", "Find", {}, lambda a, r: "ok")
+        agent.define_tool("place_order", "Order", {}, lambda a, r: "ok")
+        ctx = agent.define_contexts().add_context("default")
+        ctx.add_step("greet").set_text("Then call place_order.").set_functions(["find_store"])
+        ctx.add_step("order").set_text("Order.").set_functions(["place_order"])
+        for _ in range(3):
+            agent._create_ephemeral_copy()._render_swml()
+        agent._render_swml()
+        assert [c.args[0] for c in logger.warning.call_args_list] == [
+            "tool_named_but_not_offered"]

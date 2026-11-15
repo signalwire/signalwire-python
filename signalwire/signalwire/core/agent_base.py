@@ -443,6 +443,9 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         # Initialize contexts system
         self._contexts_builder: ContextBuilder | None = None
         self._contexts_defined = False
+        # The design warnings the contexts builder has reported, kept here so
+        # per-request copies, which deep-copy the builder, share it
+        self._design_warnings_seen: set[tuple[str, ...]] = set()
 
         # Initialize SWAIG query params for dynamic config
         self._swaig_query_params: dict[str, Any] = {}

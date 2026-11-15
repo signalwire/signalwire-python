@@ -265,7 +265,12 @@ Use explicit allowed model transitions when the model can choose among safe dest
 - `keep`: retain prior instructions and dialogue.
 - `default`: remove prior step instructions while retaining dialogue; default when unset.
 - `hide`: remove prior instructions and dialogue from the model's view. Use deliberate step-history projections to bring back selected information.
+- `spoken`: remove prior instructions and every earlier tool call, tool result and turn-scoped system note (tool prompts, `ai-msg` injections, a gather's preamble) for the rest of the call, while keeping every spoken turn, the caller's and the agent's. A platform without `spoken` treats it as `default`.
 - `isolate`: like `hide`, but only while the agent is in this step. When the step is left, the earlier dialogue returns and the step's own turns stay; the earlier instructions stay cleared, and what an earlier `hide` step hid stays hidden. Entering the step again isolates it again. Use it for a step that must see nothing else, such as a confirmation read-back. A platform without `isolate` treats it as `default`.
+
+`hide`, `isolate` and `spoken` keep the exchange that entered the step, as its start: the call whose action changed the step, with its result, notes and `say`, so a confirm step entered from a tool keeps the read-back the caller just heard. A `post_process` action's change, which runs after the model's reply, keeps the call and everything stored from it on, the reply included. A change by `next_step` keeps nothing, and platform releases before this keep nothing under `hide` and `isolate`.
+
+Between the stages of a task, choose by what must survive. Use `spoken` at a stage boundary where the caller's earlier requests must stay but the finished stage's lookups shouldn't: a model that sees old tool results tends to call tools the current step doesn't offer. Use `isolate` on a confirm step. Use `hide` only where earlier talk must never come back, because it takes the caller's earlier requests too, from the model and from the semantic gates. Put any result the next stage needs in `global_data`, and show it in the step's text.
 
 Hidden turns remain in the call log. Do not describe `hide` as deletion. `set_isolated()`, `set_system_prompt()`, `set_user_prompt()`, `set_consolidate()`, and `set_full_reset()` provide additional context-entry controls; verify the chosen combination on the runtime rather than equating them all with a memory wipe. [S03]
 

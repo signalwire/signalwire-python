@@ -3,8 +3,9 @@ The confirm pattern: a function reads a change back and records it, and the
 confirm tool's gates judge the caller's answer on the proposal's dialogue.
 
 The platform starts a proposal when semantic_state changes, as of the start
-of the action object that sets it, and a say in that object runs first, so
-the read-back is the proposal's first turn (SEMANTIC_GATES.md §2). Setting
+of the result's action list (before the whole-list rule, of the action
+object that sets it, where a say in that object runs first), so the
+read-back is the proposal's first turn (SEMANTIC_GATES.md §2). Setting
 the same state again marks nothing, so asking again needs a new revision.
 """
 

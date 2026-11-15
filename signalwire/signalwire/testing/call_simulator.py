@@ -18,8 +18,9 @@ simulated call: global data and ``semantic_state``, the step and context,
 which functions are on, ``say``, and the end of the call.
 
 It's an approximation of the platform, for testing your code's decisions.
-It doesn't run a model, DataMap tools (give a stub), gather questions, or
-the gates' decision model (give a callback).
+It doesn't run a model, DataMap tools (give a stub), gather questions,
+consolidation, the sliding window, or the gates' decision model (give a
+callback).
 """
 
 from __future__ import annotations
@@ -180,6 +181,31 @@ class CallSimulator:
         self.marks: dict[str, int] = {}
         self._toggled: dict[str, bool] = {}
         self._tool_calls = 0
+        # What the model sees: each call_log entry's kind, and which are out
+        # of its view (see model_view)
+        self._kinds: dict[int, str] = {}
+        self._hidden: set[int] = set()
+        self._isolated: set[int] = set()
+        self._cleared: set[int] = set()
+        # The entries that are a result's say
+        self._says: set[int] = set()
+        self._inject_pending = False
+        # Where the call whose actions are running started, and where the
+        # exchange that entered the current step starts: spoken, hide and
+        # isolate keep it. None when nothing is kept: a change by next_step
+        self._call_start: int | None = None
+        self._entered_at: int | None = 0
+        # A post_process result's actions, waiting for the model's reply,
+        # and where their call started
+        self._deferred: tuple[list[Any], int | None] | None = None
+        # The current step's instruction entry and its text before expansion,
+        # and each instruction's text as the model gets it now, when the
+        # platform expanded it again
+        self._instruction: tuple[int, str] | None = None
+        self._shown: dict[int, str] = {}
+        # Where the proposal (semantic_state's last change) starts in call_log
+        self._proposal_at: int | None = None
+        self._action_start = 0
         #: The current context and step, None without contexts
         self.context: str | None = None
         self.step: str | None = None
@@ -189,18 +215,28 @@ class CallSimulator:
                 "default" if "default" in self._contexts else next(iter(self._contexts))
             )
             self._enter_context(first)
+        self._inject()
 
     # -- the conversation ------------------------------------------------
 
     def caller(self, text: str) -> CallSimulator:
         """The caller says ``text``."""
-        self._log({"role": "user", "content": text})
+        # Stored before the next request, which is when a pending step is
+        # injected
+        self._log({"role": "user", "content": text}, "spoken")
         self.waiting_for_user = False
         return self
 
     def agent_says(self, text: str) -> CallSimulator:
-        """The agent says ``text``, as the model's reply."""
-        self._log({"role": "assistant", "content": text})
+        """The agent says ``text``, as the model's reply. The actions of a
+        ``post_process`` result waiting for it run after it."""
+        self._inject()
+        self._log({"role": "assistant", "content": text}, "spoken")
+        if self._deferred is not None:
+            actions, self._call_start = self._deferred
+            self._deferred = None
+            self._run(actions)
+            self._call_start = None
         return self
 
     @property
@@ -234,7 +270,10 @@ class CallSimulator:
         and the model gets the platform's reply naming the tools it has. A
         gated tool runs only when every gate passes. Otherwise the tool's
         handler runs with a request like the platform's, and its result's
-        actions change the call.
+        actions change the call. A result with ``post_process`` runs its
+        actions after the model's reply to it, as the platform does: give the
+        reply with ``agent_says``. A newer such result replaces actions still
+        waiting.
 
         Returns:
             What the call came to.
@@ -246,6 +285,8 @@ class CallSimulator:
         if self.ended:
             raise RuntimeError("the call has ended")
         args = dict(args or {})
+        self._inject()
+        self._call_start = len(self.call_log)
         self._log(
             {
                 "role": "assistant",
@@ -253,7 +294,8 @@ class CallSimulator:
                 "tool_calls": [
                     {"function": {"name": name, "arguments": json.dumps(args)}}
                 ],
-            }
+            },
+            "tool_call",
         )
         if name not in self.offered():
             outcome = SimulatedCall(
@@ -267,8 +309,15 @@ class CallSimulator:
             outcome = self._navigate(name, args)
         else:
             outcome = self._dispatch(name, args)
-        self._log({"role": "tool", "content": outcome.response})
+        self._log({"role": "tool", "content": outcome.response}, "tool_result")
+        if outcome.tool_prompt:
+            # The platform adds a result's tool_prompt as a system note
+            self._log({"role": "system", "content": outcome.tool_prompt}, "note")
         self.calls.append(outcome)
+        self._call_start = None
+        # A call whose result changed the step gets its follow-up request
+        # right away, and the new step is injected before it
+        self._inject()
         if self._check_tool_mentions and outcome.blocked_by != "step":
             self._check_mentions(outcome)
         return outcome
@@ -378,6 +427,7 @@ class CallSimulator:
                     blocked_by="step",
                 )
             self._enter_step(target)
+            self._entered_at = None  # next_step keeps nothing of its own
             return SimulatedCall(
                 name, args, {"response": f"Moved to step {target}."}, ran=True
             )
@@ -413,7 +463,17 @@ class CallSimulator:
 
     def _apply(self, result: dict[str, Any]) -> None:
         actions = result.get("action", [])
-        for action in actions if isinstance(actions, list) else [actions]:
+        actions = actions if isinstance(actions, list) else [actions]
+        if result.get("post_process") and actions:
+            self._deferred = (actions, self._call_start)
+            return
+        self._run(actions)
+
+    def _run(self, actions: list[Any]) -> None:
+        # A proposal or mark is set as of the start of the result's action
+        # list, so a say anywhere in the list is after it
+        self._action_start = len(self.call_log)
+        for action in actions:
             if not isinstance(action, dict):
                 continue
             for key, value in action.items():
@@ -421,8 +481,16 @@ class CallSimulator:
 
     def _apply_one(self, key: str, value: Any) -> None:
         if key == "say":
-            self._log({"role": "assistant", "content": str(value)})
+            self._says.add(len(self.call_log))
+            self._log({"role": "assistant", "content": str(value)}, "spoken")
         elif key == "set_global_data" and isinstance(value, dict):
+            if "semantic_state" in value and value[
+                "semantic_state"
+            ] != self.global_data.get("semantic_state"):
+                # Setting the same state again marks nothing; {} leaves none
+                self._proposal_at = (
+                    self._action_start if value["semantic_state"] else None
+                )
             self.global_data.update(copy.deepcopy(value))
         elif key == "unset_global_data":
             for name in [value] if isinstance(value, str) else list(value or []):
@@ -442,7 +510,7 @@ class CallSimulator:
         elif key == "semantic_gate_mark":
             # The platform keeps a call's 16 newest names; setting one moves it
             self.marks.pop(str(value), None)
-            self.marks[str(value)] = len(self.call_log)
+            self.marks[str(value)] = self._action_start
             while len(self.marks) > _MAX_MARKS:
                 del self.marks[next(iter(self.marks))]
         elif key == "wait_for_user":
@@ -468,6 +536,16 @@ class CallSimulator:
         if step is None:
             raise ValueError(f"context {self.context!r} has no step {name!r}")
         self.step = name
+        # The platform injects the step's instructions, and applies its
+        # history mode, before the next request to the model: for a tool
+        # that changed the step, the follow-up right after its result. The
+        # call is the new step's start, with everything stored from it on:
+        # for a post_process change, the reply and the caller's words too
+        self._inject_pending = True
+        if self._call_start is not None:
+            self._entered_at = self._call_start
+        else:
+            self._entered_at = len(self.call_log)
         functions = step.get("functions")
         if functions == "none" or functions == []:
             self._step_functions = set()
@@ -540,8 +618,185 @@ class CallSimulator:
             return f"{text} The tools available now are: {tools}.\n"
         return f"{text} No tools are available now.\n"
 
-    def _log(self, entry: dict[str, Any]) -> None:
+    def _log(self, entry: dict[str, Any], kind: str = "spoken") -> None:
+        self._kinds[len(self.call_log)] = kind
         self.call_log.append({**entry, "timestamp": int(time.time() * 1_000_000)})
+
+    # -- what the model sees -----------------------------------------------
+
+    def history_mode(self) -> str:
+        """The current step's history mode: its own, its context's, or
+        "default"."""
+        step = self._step() or {}
+        context = self._contexts.get(self.context or "", {})
+        return str(step.get("history") or context.get("history") or "default")
+
+    def model_view(self) -> list[dict[str, Any]]:
+        """
+        The conversation entries the model gets now, oldest first, after the
+        history modes of the steps entered so far.
+
+        At each step's injection, the platform first restores what an
+        isolate step hid, then applies the new step's mode to everything
+        before it:
+
+        - ``keep``: nothing leaves.
+        - ``default``: earlier step instructions leave.
+        - ``hide``: earlier instructions, and every earlier spoken turn, tool
+          call, tool result and system note, leave for the rest of the call.
+        - ``isolate``: as ``hide``, until the call leaves the step.
+        - ``spoken``: earlier instructions, and every earlier tool call, tool
+          result and system note, leave for the rest of the call; every
+          spoken turn stays.
+
+        ``hide``, ``isolate`` and ``spoken`` keep the exchange that entered
+        the step, as its start: the call whose action changed it, its result,
+        notes and say, and caller words stored before the step was injected.
+        For a ``post_process`` action's change, which runs after the model's
+        reply, that's the call and everything stored from it on, the reply
+        included. A change by ``next_step`` keeps nothing. After that they're
+        ordinary entries, which each later step's mode treats like the rest.
+
+        It's the view for the model's next request: a step entered by a
+        ``say`` or another action outside a tool call is injected before it,
+        as the platform injects a step before the next request. A result's
+        ``say`` is the agent's turn after the call's result and notes: the
+        platform holds it until the next caller or agent turn, past system
+        entries such as a step's instructions, or to the end. The current
+        step's instructions are its text expanded with the global data now,
+        as the platform expands it again when a value it reads changes;
+        ``call_log`` keeps the text as it went in. An end step, or one with a
+        reset, keeps the text it went in with, and brings back what an
+        ``isolate`` step hid, as steps end there. The base prompt isn't
+        included.
+        """
+        self._inject()
+        view: list[dict[str, Any]] = []
+        held: list[dict[str, Any]] = []
+        for index, entry in enumerate(self.call_log):
+            if index in self._hidden | self._isolated | self._cleared:
+                continue
+            shown = {k: v for k, v in entry.items() if k != "timestamp"}
+            if index in self._shown:
+                shown["content"] = self._shown[index]
+            if index in self._says:
+                held.append(shown)
+                continue
+            if shown.get("role") in ("user", "assistant") and not shown.get(
+                "tool_calls"
+            ):
+                view.extend(held)
+                held.clear()
+            view.append(shown)
+        return view + held
+
+    def gate_conversation(self, gate: Mapping[str, Any] | None = None) -> list[str]:
+        """
+        The dialogue a semantic gate judges now, as ``"role: text"`` lines,
+        oldest first: the spoken turns the model sees (``model_view``),
+        chosen as the platform chooses them.
+
+        With the gate's ``since`` mark set, the turns from the agent's first
+        turn at or after the mark. Otherwise, with ``dialogue`` "proposal"
+        (the gate's, or the agent's ``semantic_gate_dialogue``) and a
+        proposal marked, the turns from the agent's first turn after
+        ``semantic_state`` last changed. Otherwise the window. Then at most
+        ``history`` of the newest (the gate's, the agent's
+        ``semantic_gate_history``, or 20).
+
+        Give it to a gate callback: ``gates=lambda gate, sim, args:
+        judge(gate["question"], sim.gate_conversation(gate))``.
+        """
+        gate = gate or {}
+        self._inject()
+        visible = set(range(len(self.call_log))) - self._hidden - self._isolated
+        spoken = [
+            i
+            for i in sorted(visible)
+            if self._kinds.get(i) == "spoken" and self.call_log[i].get("content")
+        ]
+        start: int | None = None
+        since = gate.get("since")
+        dialogue = gate.get("dialogue") or self.params.get("semantic_gate_dialogue")
+        if isinstance(since, str) and since in self.marks:
+            start = self.marks[since]
+        elif str(dialogue).lower() == "proposal" and self._proposal_at is not None:
+            start = self._proposal_at
+        if start is not None:
+            first_agent = next(
+                (
+                    i
+                    for i in spoken
+                    if i >= start and self.call_log[i].get("role") == "assistant"
+                ),
+                None,
+            )
+            spoken = [i for i in spoken if first_agent is not None and i >= first_agent]
+        history = gate.get("history") or self.params.get("semantic_gate_history") or 20
+        newest = spoken[-int(history) :] if int(history) > 0 else []
+        return [
+            f"{self.call_log[i]['role']}: {self.call_log[i]['content']}" for i in newest
+        ]
+
+    def _inject(self) -> None:
+        """Before a request to the model: inject the current step's
+        instructions, applying its history mode to what came before, once a
+        step change is pending; otherwise expand the current step's text
+        again."""
+        if not self._inject_pending:
+            self._refresh()
+            return
+        self._inject_pending = False
+        self._isolated.clear()
+        mode = self.history_mode()
+        before = range(len(self.call_log))
+        if mode != "keep":
+            self._cleared.update(
+                i for i in before if self._kinds.get(i) == "instruction"
+            )
+        if mode in ("hide", "isolate", "spoken"):
+            # The exchange that entered the step stays: it's the step's start
+            kept_from = (
+                len(self.call_log) if self._entered_at is None else self._entered_at
+            )
+            swept = {
+                i
+                for i in range(kept_from)
+                if self._kinds.get(i) != "instruction"
+                and i not in self._hidden
+                and (mode != "spoken" or self._kinds.get(i) != "spoken")
+            }
+            (self._isolated if mode == "isolate" else self._hidden).update(swept)
+        step = self._step() or {}
+        context = self._contexts.get(self.context or "", {})
+        text = "\n\n".join(
+            part
+            for part in (str(context.get("prompt") or ""), str(step.get("text") or ""))
+            if part
+        )
+        data = {"global_data": self.global_data}
+        # An end step, or one with a reset, ends steps mode once it's in: its
+        # text isn't expanded again, and what an isolate step hid is back
+        terminal = bool(step.get("end")) or isinstance(step.get("reset"), dict)
+        self._instruction = None if terminal else (len(self.call_log), text)
+        if terminal:
+            self._isolated.clear()
+        self._log(
+            {"role": "system", "content": _expand(text, data, missing="")},
+            "instruction",
+        )
+
+    def _refresh(self) -> None:
+        # The platform rewrites the step's instruction entry in place when its
+        # expansion changes; the call log keeps the text as it went in
+        if self._instruction is None:
+            return
+        index, text = self._instruction
+        expanded = _expand(text, {"global_data": self.global_data}, missing="")
+        if expanded == self.call_log[index]["content"]:
+            self._shown.pop(index, None)
+        else:
+            self._shown[index] = expanded
 
 
 class RequestRecorder:
@@ -626,22 +881,23 @@ def _as_dict(result: Any) -> dict[str, Any]:
     return {"response": str(result)}
 
 
-def _expand(value: Any, data: dict[str, Any]) -> Any:
-    """``${...}`` variables in a gate's output, from the call's data, as the
-    platform expands them once; a variable it can't find is left as it is."""
+def _expand(value: Any, data: dict[str, Any], missing: str | None = None) -> Any:
+    """``${...}`` variables from the call's data, as the platform expands
+    them once. A variable it can't find becomes ``missing``, or is left as it
+    is when that's None."""
     if isinstance(value, str):
 
         def lookup(match: re.Match[str]) -> str:
             found: Any = data
             for part in match.group(1).split("."):
                 if not isinstance(found, dict) or part not in found:
-                    return match.group(0)
+                    return match.group(0) if missing is None else missing
                 found = found[part]
             return found if isinstance(found, str) else json.dumps(found)
 
         return _VARIABLE.sub(lookup, value)
     if isinstance(value, dict):
-        return {k: _expand(v, data) for k, v in value.items()}
+        return {k: _expand(v, data, missing) for k, v in value.items()}
     if isinstance(value, list):
-        return [_expand(v, data) for v in value]
+        return [_expand(v, data, missing) for v in value]
     return value

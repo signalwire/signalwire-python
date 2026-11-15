@@ -1,5 +1,65 @@
 # Changelog
 
+## [3.10.0] - 2026-11-15
+
+### Added
+- History mode `"spoken"` for a step or context: earlier step instructions,
+  and every earlier tool call, tool result and turn-scoped system note, leave
+  the model's context for the rest of the call, while every spoken turn stays.
+  Use it at a stage boundary where the caller's earlier requests must stay but
+  the finished stage's tool results shouldn't. The platform side is mod_openai
+  7afb159; a release without it treats the value as `"default"`.
+- History modes `"hide"` and `"isolate"`, like `"spoken"`, keep the exchange
+  that entered the step: the call whose action changed it, its result, notes
+  and say. A step entered from a tool kept nothing of it before, not even the
+  read-back the caller just heard. This is the platform's change (mod_openai
+  7afb159); the SDK's docs and `CallSimulator` follow it.
+- `CallSimulator.model_view()` gives the entries the model gets now, after
+  each step's history mode, and `CallSimulator.gate_conversation(gate)` the
+  dialogue a semantic gate judges: the same spoken turns, by its window,
+  proposal or mark. The simulator now logs each step's injected instructions
+  and each result's tool prompt, sets a proposal or mark as of the start of
+  the result's action list, and gives the model a result's `say` after the call's
+  result and notes, held to the next caller or agent turn, as the platform
+  does.
+- The Contexts and Steps Guide has a section on history between steps: what
+  each mode removes, and which to use at a stage boundary. It also covers the
+  platform's other history changes in the same mod_openai commit: a
+  consolidation's summary stays under `hide` and `spoken`; consolidation and
+  the sliding window keep the current step's instructions; and the step's
+  text is expanded again, in place, when a value it reads changes.
+
+### Changed
+- `CallSimulator` runs a `post_process` result's actions after the model's
+  reply to it, at the next `agent_says()`, as the platform does; a newer such
+  result replaces actions still waiting. They ran at once before, so a test
+  that checks a `post_process` hangup or step change right after the call now
+  needs the reply first. The change keeps the call and everything stored from
+  it on, the reply included, under `hide`, `isolate` and `spoken` (mod_openai
+  7afb159; it kept nothing before).
+- `CallSimulator.model_view()` shows the current step's text expanded with
+  the global data now, as the platform expands it again before a request;
+  `call_log` keeps the text as it went in.
+- A function result's proposal (`set_semantic_state`) or mark
+  (`set_semantic_gate_mark`) dates from the start of the result's whole
+  action list, so a `say` anywhere in the result is in the proposal's or the
+  mark's dialogue, and a change anywhere in the list keeps what the list
+  added, before the change too (mod_openai 7afb159). Before it, each dated
+  from its own action object, and `result.say(read_back)` followed by
+  `set_semantic_state(...)` left the read-back out of the proposal's
+  dialogue. The docs say so, and `CallSimulator` follows the new rule.
+  `Proposal` writes both in one action object, which works on either.
+- `update_settings()` documents that the platform merges the keys named into
+  the current settings (mod_openai 7afb159; before it, every key not named
+  went back to the model's default). The API reference's example no longer
+  uses `end_of_speech_timeout`, which isn't a model setting.
+
+### Fixed
+- The render-time design warnings were logged again on every request when the
+  agent had a per-request configuration callback: each request's copy
+  deep-copied the contexts builder and with it the record of what had been
+  reported. The record is now on the agent, which the copies share.
+
 ## [3.9.1] - 2026-11-14
 
 ### Fixed
