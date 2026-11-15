@@ -96,7 +96,7 @@ class AgentServer:
         self.app = FastAPI(
             title="SignalWire AI Agents",
             description="Hosted SignalWire AI Agents",
-            version="3.9.1",
+            version="3.10.0",
             redirect_slashes=False,
             docs_url=None,
             redoc_url=None,
