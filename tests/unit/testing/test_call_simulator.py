@@ -357,6 +357,30 @@ class TestModelView:
         assert not sim.ended
         assert sim.call_log[-1]["content"] == "Goodbye."
 
+    def test_a_post_process_change_keeps_calls_chained_after_its_own(self) -> None:
+        # The range runs from the waiting list's call to the change; a newer
+        # post_process list brings its own call
+        agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
+        agent.define_tool("lookup", "Look up", {}, lambda a, r: FunctionResult(
+            "Order 7.", post_process=True).swml_change_step("next"))
+        agent.define_tool("price", "Price", {}, lambda a, r: FunctionResult("Four dollars."))
+        agent.define_tool("check", "Check", {}, lambda a, r: FunctionResult(
+            "Checked.", post_process=True).swml_change_step("next"))
+        ctx = agent.define_contexts().add_context("default")
+        ctx.add_step("first").set_text("Look it up.").set_functions(["lookup", "price", "check"])
+        ctx.add_step("next").set_text("Next.").set_history("hide")
+        sim = CallSimulator(agent)
+        sim.call("lookup")
+        sim.call("price")
+        sim.agent_says("Order 7 is four dollars.")
+        assert [e["content"] for e in sim.model_view()] == [
+            "", "Order 7.", "", "Four dollars.", "Order 7 is four dollars.", "Next."]
+        sim = CallSimulator(agent)
+        sim.call("lookup")
+        sim.call("check")
+        sim.agent_says("All set.")
+        assert [e["content"] for e in sim.model_view()] == ["", "Checked.", "All set.", "Next."]
+
     def test_the_step_text_is_expanded_again_when_a_value_changes(self) -> None:
         agent = self._agent(None)
         agent.define_tool("move", "Move", {}, lambda a, r: FunctionResult(
