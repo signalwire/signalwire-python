@@ -18,8 +18,10 @@
   each step's history mode, and `CallSimulator.gate_conversation(gate)` the
   dialogue a semantic gate judges: the same spoken turns, by its window,
   proposal or mark. The simulator now logs each step's injected instructions
-  and each result's tool prompt, and sets a proposal or mark as of the start of
-  its action object, as the platform does.
+  and each result's tool prompt, sets a proposal or mark as of the start of
+  its action object, and gives the model a result's `say` after the call's
+  result and notes, held to the next caller or agent turn, as the platform
+  does.
 - The Contexts and Steps Guide has a section on history between steps: what
   each mode removes, and which to use at a stage boundary. It also covers the
   platform's other history changes in the same mod_openai commit: a

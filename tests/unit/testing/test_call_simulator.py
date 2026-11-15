@@ -357,6 +357,25 @@ class TestModelView:
         assert not sim.ended
         assert sim.call_log[-1]["content"] == "Goodbye."
 
+    def test_a_say_before_the_change_in_the_same_result_stays(self) -> None:
+        # A result's action list is one scope: a change anywhere in it keeps
+        # what the list added, before the change too
+        agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
+        agent.define_tool("confirm", "Confirm", {}, lambda a, r: FunctionResult(
+            "Read back.").say("That's a large tea.").swml_change_step("next"))
+        ctx = agent.define_contexts().add_context("default")
+        ctx.add_step("first").set_text("Take the order.").set_functions(["confirm"])
+        ctx.add_step("next").set_text("Confirm.").set_history("hide")
+        sim = CallSimulator(agent)
+        sim.caller("A large tea.")
+        sim.call("confirm")
+        # The say goes after the call's result, held past system entries until
+        # the next caller or agent turn (mod_openai conversation.c held_says)
+        assert [e["content"] for e in sim.model_view()] == [
+            "", "Read back.", "Confirm.", "That's a large tea."]
+        sim.caller("Yes.")
+        assert [e["content"] for e in sim.model_view()][-2:] == ["That's a large tea.", "Yes."]
+
     def test_a_post_process_change_keeps_calls_chained_after_its_own(self) -> None:
         # The range runs from the waiting list's call to the change; a newer
         # post_process list brings its own call
@@ -467,8 +486,9 @@ class TestSpokenMode:
         sim.caller("Where is it?")
         sim.call("lookup")
         sim.call("finish")
+        # With no turn after it, the say is held to the end
         assert [e["content"] for e in sim.model_view()] == [
-            "Where is it?", "Your order is on its way.", "", "Done.", "Next."]
+            "Where is it?", "", "Done.", "Next.", "Your order is on its way."]
 
     def test_a_later_isolate_doesnt_bring_back_what_spoken_took(self) -> None:
         agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)

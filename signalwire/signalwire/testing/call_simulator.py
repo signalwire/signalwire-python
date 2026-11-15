@@ -187,6 +187,8 @@ class CallSimulator:
         self._hidden: set[int] = set()
         self._isolated: set[int] = set()
         self._cleared: set[int] = set()
+        # The entries that are a result's say
+        self._says: set[int] = set()
         self._inject_pending = False
         # Where the call whose actions are running started, and where the
         # exchange that entered the current step starts: spoken, hide and
@@ -479,6 +481,7 @@ class CallSimulator:
 
     def _apply_one(self, key: str, value: Any) -> None:
         if key == "say":
+            self._says.add(len(self.call_log))
             self._log({"role": "assistant", "content": str(value)}, "spoken")
         elif key == "set_global_data" and isinstance(value, dict):
             if "semantic_state" in value and value[
@@ -656,23 +659,34 @@ class CallSimulator:
 
         It's the view for the model's next request: a step entered by a
         ``say`` or another action outside a tool call is injected before it,
-        as the platform injects a step before the next request. The current
+        as the platform injects a step before the next request. A result's
+        ``say`` is the agent's turn after the call's result and notes: the
+        platform holds it until the next caller or agent turn, past system
+        entries such as a step's instructions, or to the end. The current
         step's instructions are its text expanded with the global data now,
         as the platform expands it again when a value it reads changes;
         ``call_log`` keeps the text as it went in. An end step keeps the text
         it went in with. The base prompt isn't included.
         """
         self._inject()
-        return [
-            {
-                **{k: v for k, v in entry.items() if k != "timestamp"},
-                **({"content": self._shown[index]} if index in self._shown else {}),
-            }
-            for index, entry in enumerate(self.call_log)
-            if index not in self._hidden
-            and index not in self._isolated
-            and index not in self._cleared
-        ]
+        view: list[dict[str, Any]] = []
+        held: list[dict[str, Any]] = []
+        for index, entry in enumerate(self.call_log):
+            if index in self._hidden | self._isolated | self._cleared:
+                continue
+            shown = {k: v for k, v in entry.items() if k != "timestamp"}
+            if index in self._shown:
+                shown["content"] = self._shown[index]
+            if index in self._says:
+                held.append(shown)
+                continue
+            if shown.get("role") in ("user", "assistant") and not shown.get(
+                "tool_calls"
+            ):
+                view.extend(held)
+                held.clear()
+            view.append(shown)
+        return view + held
 
     def gate_conversation(self, gate: Mapping[str, Any] | None = None) -> list[str]:
         """
