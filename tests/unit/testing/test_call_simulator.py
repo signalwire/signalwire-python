@@ -613,3 +613,77 @@ class TestGateConversation:
         sim.caller("Yes.")
         assert sim.gate_conversation({"since": "rb"}) == [
             "assistant: Is that right?", "user: Yes."]
+
+
+class TestThePlatformAt7afb159:
+    """Found by the TypeScript port's differential test, checked against
+    mod_openai 7afb159 (step_management.c check_steps, semantic_gates.c
+    semantic_gates_note_state)."""
+
+    def _agent(self, last: Any) -> AgentBase:
+        agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
+        agent.define_tool("finish", "Finish", {}, lambda a, r: FunctionResult(
+            "Done").swml_change_step("last"))
+        ctx = agent.define_contexts().add_context("default")
+        ctx.add_step("first").set_text("Help the caller.").set_functions(["finish"])
+        last(ctx.add_step("last"))
+        return agent
+
+    def test_an_end_step_takes_no_history_pass(self) -> None:
+        agent = self._agent(lambda s: s.set_text("This is the end text").set_end(
+            True).set_history("hide"))
+        sim = CallSimulator(agent)
+        sim.caller("Please also check my balance")
+        sim.call("finish")
+        assert [e["content"] for e in sim.model_view()] == [
+            "Help the caller.", "Please also check my balance", "", "Done",
+            "This is the end text"]
+        assert sim.gate_conversation() == ["user: Please also check my balance"]
+
+    def test_the_simulation_stops_at_a_reset(self) -> None:
+        agent = self._agent(lambda s: s.set_text("Never sent.").set_reset_system_prompt(
+            "You are a new agent."))
+        sim = CallSimulator(agent)
+        sim.call("finish")
+        assert sim.step == "last"
+        assert "Never sent." not in [e["content"] for e in sim.call_log]
+        with pytest.raises(NotImplementedError, match="step 'last' has a reset"):
+            sim.model_view()
+        with pytest.raises(NotImplementedError):
+            sim.gate_conversation()
+
+    def _proposals(self, *results: FunctionResult) -> CallSimulator:
+        agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
+        pending = list(results)
+        agent.define_tool("act", "Act", {}, lambda a, r: pending.pop(0))
+        return CallSimulator(agent)
+
+    def test_unsetting_the_state_leaves_no_proposal(self) -> None:
+        sim = self._proposals(
+            FunctionResult("ok").say("A tea?").set_semantic_state({"item": "tea"}),
+            FunctionResult("ok").remove_global_data("semantic_state"))
+        sim.caller("Earlier words.")
+        sim.call("act")
+        sim.call("act")
+        sim.caller("Yes.")
+        # The window, not a proposal
+        assert sim.gate_conversation({"dialogue": "proposal"})[0] == "user: Earlier words."
+
+    def test_a_state_is_compared_as_printed_json(self) -> None:
+        sim = self._proposals(
+            FunctionResult("ok").say("First read-back").set_semantic_state(
+                {"item": "tea", "price": 4}),
+            FunctionResult("ok").say("Fresh readback").set_semantic_state(
+                {"price": 4, "item": "tea"}),
+            FunctionResult("ok").say("Same again").set_semantic_state(
+                {"price": 4.0, "item": "tea"}))
+        sim.call("act")
+        sim.call("act")
+        # Another key order is a new proposal
+        assert sim.gate_conversation({"dialogue": "proposal"})[0] == "assistant: Fresh readback"
+        sim.call("act")
+        # A whole float prints as the integer: no change
+        assert sim.gate_conversation({"dialogue": "proposal"})[0] == "assistant: Fresh readback"
+        sim._apply({"action": [{"set_global_data": {"semantic_state": {
+            "price": True, "item": "tea"}}, "say": "True now"}]})
+        assert sim.gate_conversation({"dialogue": "proposal"})[0] == "assistant: True now"

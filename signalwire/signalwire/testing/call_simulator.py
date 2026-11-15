@@ -205,6 +205,9 @@ class CallSimulator:
         self._shown: dict[int, str] = {}
         # Where the proposal (semantic_state's last change) starts in call_log
         self._proposal_at: int | None = None
+        # The step with a reset the call entered, which the simulation
+        # doesn't follow past
+        self._reset_step: str | None = None
         self._action_start = 0
         #: The current context and step, None without contexts
         self.context: str | None = None
@@ -484,16 +487,13 @@ class CallSimulator:
             self._says.add(len(self.call_log))
             self._log({"role": "assistant", "content": str(value)}, "spoken")
         elif key == "set_global_data" and isinstance(value, dict):
-            if "semantic_state" in value and value[
-                "semantic_state"
-            ] != self.global_data.get("semantic_state"):
-                # Setting the same state again marks nothing; {} leaves none
-                self._proposal_at = (
-                    self._action_start if value["semantic_state"] else None
-                )
+            if "semantic_state" in value:
+                self._note_state(value["semantic_state"])
             self.global_data.update(copy.deepcopy(value))
         elif key == "unset_global_data":
             for name in [value] if isinstance(value, str) else list(value or []):
+                if name == "semantic_state":
+                    self._proposal_at = None  # an unset leaves no proposal
                 self.global_data.pop(name, None)
         elif key == "change_step":
             self._enter_step(str(value))
@@ -517,6 +517,16 @@ class CallSimulator:
             self.waiting_for_user = bool(value)
         elif key in ("hangup", "stop"):
             self.ended = True
+
+    def _note_state(self, state: Any) -> None:
+        # The platform compares the states as printed JSON, so a change of key
+        # order or of true to 1 is a new proposal; {} leaves none
+        if isinstance(state, dict) and not state:
+            self._proposal_at = None
+        elif "semantic_state" not in self.global_data or _printed(state) != _printed(
+            self.global_data["semantic_state"]
+        ):
+            self._proposal_at = self._action_start
 
     def _enter_context(self, name: str) -> None:
         if name not in self._contexts:
@@ -656,6 +666,8 @@ class CallSimulator:
         reply, that's the call and everything stored from it on, the reply
         included. A change by ``next_step`` keeps nothing. After that they're
         ordinary entries, which each later step's mode treats like the rest.
+        An end step takes no pass: steps end there, so what an ``isolate``
+        step hid is back, and earlier instructions stay.
 
         It's the view for the model's next request: a step entered by a
         ``say`` or another action outside a tool call is injected before it,
@@ -665,12 +677,17 @@ class CallSimulator:
         entries such as a step's instructions, or to the end. The current
         step's instructions are its text expanded with the global data now,
         as the platform expands it again when a value it reads changes;
-        ``call_log`` keeps the text as it went in. An end step, or one with a
-        reset, keeps the text it went in with, and brings back what an
-        ``isolate`` step hid, as steps end there. The base prompt isn't
-        included.
+        ``call_log`` keeps the text as it went in. An end step keeps the text
+        it went in with. The base prompt isn't included.
+
+        Raises:
+            NotImplementedError: Once the call has entered a step with a
+                reset, which starts a new context or consolidates the
+                conversation into a summary, in place of the step's text: the
+                simulation doesn't follow it.
         """
         self._inject()
+        self._check_reset()
         view: list[dict[str, Any]] = []
         held: list[dict[str, Any]] = []
         for index, entry in enumerate(self.call_log):
@@ -706,9 +723,14 @@ class CallSimulator:
 
         Give it to a gate callback: ``gates=lambda gate, sim, args:
         judge(gate["question"], sim.gate_conversation(gate))``.
+
+        Raises:
+            NotImplementedError: Once the call has entered a step with a
+                reset, as for ``model_view``.
         """
         gate = gate or {}
         self._inject()
+        self._check_reset()
         visible = set(range(len(self.call_log))) - self._hidden - self._isolated
         spoken = [
             i
@@ -748,6 +770,31 @@ class CallSimulator:
             return
         self._inject_pending = False
         self._isolated.clear()
+        step = self._step() or {}
+        context = self._contexts.get(self.context or "", {})
+        data = {"global_data": self.global_data}
+        if step.get("end") or isinstance(step.get("reset"), dict):
+            # An end step, or one with a reset, takes no history pass, and
+            # steps end there, so what an isolate step hid stays back. A
+            # reset runs in place of the step's text; an end step's text goes
+            # in ahead of its context's prompt, and isn't expanded again
+            self._instruction = None
+            if isinstance(step.get("reset"), dict):
+                self._reset_step = self.step
+                return
+            text = "\n\n".join(
+                part
+                for part in (
+                    str(step.get("text") or ""),
+                    str(context.get("prompt") or ""),
+                )
+                if part
+            )
+            self._log(
+                {"role": "system", "content": _expand(text, data, missing="")},
+                "instruction",
+            )
+            return
         mode = self.history_mode()
         before = range(len(self.call_log))
         if mode != "keep":
@@ -767,24 +814,24 @@ class CallSimulator:
                 and (mode != "spoken" or self._kinds.get(i) != "spoken")
             }
             (self._isolated if mode == "isolate" else self._hidden).update(swept)
-        step = self._step() or {}
-        context = self._contexts.get(self.context or "", {})
         text = "\n\n".join(
             part
             for part in (str(context.get("prompt") or ""), str(step.get("text") or ""))
             if part
         )
-        data = {"global_data": self.global_data}
-        # An end step, or one with a reset, ends steps mode once it's in: its
-        # text isn't expanded again, and what an isolate step hid is back
-        terminal = bool(step.get("end")) or isinstance(step.get("reset"), dict)
-        self._instruction = None if terminal else (len(self.call_log), text)
-        if terminal:
-            self._isolated.clear()
+        self._instruction = (len(self.call_log), text)
         self._log(
             {"role": "system", "content": _expand(text, data, missing="")},
             "instruction",
         )
+
+    def _check_reset(self) -> None:
+        if self._reset_step is not None:
+            raise NotImplementedError(
+                f"step {self._reset_step!r} has a reset, which starts a new context "
+                "or consolidates the conversation in place of the step's text: "
+                "CallSimulator doesn't follow the conversation past it"
+            )
 
     def _refresh(self) -> None:
         # The platform rewrites the step's instruction entry in place when its
@@ -879,6 +926,22 @@ def _as_dict(result: Any) -> dict[str, Any]:
     if isinstance(result, dict):
         return result
     return {"response": str(result)}
+
+
+def _printed(value: Any) -> str:
+    """``value`` as the platform prints JSON to compare states: compact, in
+    key order, with a whole float printed as an integer."""
+
+    def whole(item: Any) -> Any:
+        if isinstance(item, float) and item.is_integer():
+            return int(item)
+        if isinstance(item, dict):
+            return {k: whole(v) for k, v in item.items()}
+        if isinstance(item, list):
+            return [whole(v) for v in item]
+        return item
+
+    return json.dumps(whole(value), separators=(",", ":"))
 
 
 def _expand(value: Any, data: dict[str, Any], missing: str | None = None) -> Any:
