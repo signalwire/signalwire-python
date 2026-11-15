@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- The docs for `refresh_step()`, `Step.set_text()` and `RequestList` still
+  said a step's text is expanded only once, on entry, which 3.10.0's own
+  history section contradicts. Current platform releases (mod_openai 7afb159)
+  expand it again before a request when a value it reads changes;
+  `refresh_step()` is for earlier releases and realtime models, which keep
+  the values from entry. Reported by the TypeScript port.
+
 ## [3.10.0] - 2026-11-15
 
 ### Added

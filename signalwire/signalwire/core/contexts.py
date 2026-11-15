@@ -258,10 +258,12 @@ class Step:
         Set the step's prompt text directly
 
         The platform expands the text's variables, such as
-        ``${global_data.order_total}``, once, when the step is entered. A
-        later ``update_global_data`` doesn't change text the model already
-        has: return ``FunctionResult.refresh_step(name)`` after it to enter
-        the step again with the new values.
+        ``${global_data.order_total}``, when the step is entered, and
+        current releases expand it again before a request whenever a value
+        it reads has changed. Earlier releases, and a realtime model, keep
+        the values from entry: there, return
+        ``FunctionResult.refresh_step(name)`` after a later
+        ``update_global_data`` to enter the step again with the new values.
 
         Args:
             text: The prompt text for this step

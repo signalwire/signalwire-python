@@ -378,7 +378,7 @@ step.add_section("Role", "You are a helpful assistant") \
 
 **Note**: You cannot mix `set_text()` with `add_section()` in the same step.
 
-The platform expands a step's variables, such as `${global_data.order_total}`, once, when the step is entered. A later `update_global_data()` doesn't change text the model already has. To show the new value, return `FunctionResult.refresh_step()` with the current step's name after the update. Entering the step starts it over, and its `history` mode applies again.
+The platform expands a step's variables, such as `${global_data.order_total}`, when the step is entered. Current releases expand the text again before a request whenever a value it reads has changed, and rewrite the step's instructions in place, so a later `update_global_data()` reaches the model on its own (see [Conversation History Between Steps](#conversation-history-between-steps)). Earlier releases, and a realtime model, keep the values from entry. There, to show the new value, return `FunctionResult.refresh_step()` with the current step's name after the update. Entering the step starts it over, and its `history` mode applies again.
 
 ```python
 result = (FunctionResult("Added the drink.")

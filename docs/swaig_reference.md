@@ -528,7 +528,7 @@ result.stop()
 ```
 
 #### `refresh_step(step_name)`
-Enter the current step again, so its text shows new global data. A step's text is expanded once, when the step is entered, so its `${global_data.*}` values are the ones from then. After `update_global_data()` changes one, add `refresh_step()` with the current step's name, after the update, and the model gets the step's text again with the new values. It's the same action as `swml_change_step(step_name)`: entering a step starts it over, and its `history` mode applies again.
+Enter the current step again: it starts over, its text expanded with the global data now. The platform expands a step's `${global_data.*}` values when the step is entered, and current releases expand the text again before a request whenever a value it reads has changed, so new global data reaches the model without this. Earlier releases, and a realtime model, keep the values from entry: there, add `refresh_step()` with the current step's name after `update_global_data()` to show the new ones. It's the same action as `swml_change_step(step_name)`: entering a step starts it over, and its `history` mode applies again.
 
 ```python
 result = (FunctionResult("Added the drink.")

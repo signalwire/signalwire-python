@@ -498,15 +498,18 @@ class FunctionResult:
 
     def refresh_step(self, step_name: str) -> "FunctionResult":
         """
-        Enter the current step again, so its text shows new global data.
+        Enter the current step again: it starts over, its text expanded
+        with the global data now.
 
-        A step's text is expanded once, when the step is entered, so its
-        ``${global_data.*}`` values are the ones from then. After
-        ``update_global_data`` changes one, return this with the current
-        step's name, after the update in the same result, and the model
-        gets the step's text again with the new values. Entering a step
-        starts it over: its ``history`` mode applies again, so under "hide"
-        the step's dialogue so far leaves the model's context too.
+        The platform expands a step's ``${global_data.*}`` values when the
+        step is entered. Current releases expand the text again before a
+        request whenever a value it reads has changed, so new global data
+        reaches the model without this. Earlier releases, and a realtime
+        model, keep the values from entry: there, return this with the
+        current step's name, after ``update_global_data`` in the same
+        result, to show the new ones. Entering a step starts it over: its
+        ``history`` mode applies again, so under "hide" the step's dialogue
+        so far leaves the model's context too.
 
         The same action as ``swml_change_step(step_name)``.
 

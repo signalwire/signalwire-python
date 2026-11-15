@@ -161,7 +161,7 @@ ctx = agent.define_contexts().add_context("default")
 ctx.add_step("take_order").set_text("Take the order.\n\n${global_data.later_text}")
 ```
 
-`later.next(raw_data)` gives the oldest request with its opener, and `later.done(raw_data)` removes it once it's taken up. The kinds and their openers are yours. A step's text is expanded when the step is entered, so return `refresh_step()` with a note to show the new list at once.
+`later.next(raw_data)` gives the oldest request with its opener, and `later.done(raw_data)` removes it once it's taken up. The kinds and their openers are yours. Current platform releases expand the step's text again when the list changes, so it shows at the next request. Earlier releases, and a realtime model, keep the list from the step's entry: there, return `refresh_step()` with a note to show it at once.
 
 ## What a Caller Spelled
 
