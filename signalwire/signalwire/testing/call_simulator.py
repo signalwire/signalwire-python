@@ -665,8 +665,10 @@ class CallSimulator:
         entries such as a step's instructions, or to the end. The current
         step's instructions are its text expanded with the global data now,
         as the platform expands it again when a value it reads changes;
-        ``call_log`` keeps the text as it went in. An end step keeps the text
-        it went in with. The base prompt isn't included.
+        ``call_log`` keeps the text as it went in. An end step, or one with a
+        reset, keeps the text it went in with, and brings back what an
+        ``isolate`` step hid, as steps end there. The base prompt isn't
+        included.
         """
         self._inject()
         view: list[dict[str, Any]] = []
@@ -773,7 +775,12 @@ class CallSimulator:
             if part
         )
         data = {"global_data": self.global_data}
-        self._instruction = None if step.get("end") else (len(self.call_log), text)
+        # An end step, or one with a reset, ends steps mode once it's in: its
+        # text isn't expanded again, and what an isolate step hid is back
+        terminal = bool(step.get("end")) or isinstance(step.get("reset"), dict)
+        self._instruction = None if terminal else (len(self.call_log), text)
+        if terminal:
+            self._isolated.clear()
         self._log(
             {"role": "system", "content": _expand(text, data, missing="")},
             "instruction",

@@ -415,6 +415,22 @@ class TestModelView:
         assert "Help at Main Street." not in view
         assert [e["content"] for e in sim.call_log].count("Help at Main Street.") == 1
 
+    def test_an_end_step_brings_back_what_isolate_hid(self) -> None:
+        # Steps end there, and what an isolate step hid is the model's again
+        # (mod_openai check_steps, ai_conversation_restore_isolated)
+        agent = self._agent("isolate")
+        ctx = agent._contexts_builder._contexts["default"]  # type: ignore[union-attr]
+        ctx.add_step("done").set_text("Done.").set_end(True)
+        agent.define_tool("finish", "Finish", {}, lambda a, r: FunctionResult(
+            "ok").swml_change_step("done"))
+        ctx._steps["next"].set_functions(["finish"])
+        sim = CallSimulator(agent)
+        sim.caller("Where's my order?")
+        sim.call("lookup")
+        assert sim.model_view()[0]["content"] == ""
+        sim.call("finish")
+        assert sim.model_view()[0]["content"] == "Where's my order?"
+
     def test_an_end_step_keeps_the_text_it_went_in_with(self) -> None:
         agent = self._agent(None)
         agent.define_tool("move", "Move", {}, lambda a, r: FunctionResult(
