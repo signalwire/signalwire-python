@@ -1486,11 +1486,11 @@ class ContextBuilder:
         self._agent = agent
         self._contexts: dict[str, Context] = {}
         self._context_order: list[str] = []
-        # Tools already reported as offered by no step, so a render on every
-        # request doesn't repeat the warning
-        self._unoffered_warned: set[str] = set()
-        # Tool names in text where the step doesn't offer them, reported once
-        self._mention_warned: set[tuple[str, ...]] = set()
+        # Design warnings already reported, so a render on every request
+        # doesn't repeat them. The agent's set is used when there is one: a
+        # per-request copy deep-copies this builder, but shares the agent's
+        # attributes
+        self._warned_here: set[tuple[str, ...]] = set()
 
     def reset(self) -> "ContextBuilder":
         """
@@ -1754,13 +1754,13 @@ class ContextBuilder:
             return
         for name in registered:
             if (
-                name in self._unoffered_warned
+                ("unoffered", name) in self._warned()
                 or name in RESERVED_FUNCTION_NAMES
                 or name in RESERVED_NATIVE_TOOL_NAMES
                 or self.steps_offering(name)
             ):
                 continue
-            self._unoffered_warned.add(name)
+            self._warned().add(("unoffered", name))
             _design_warning(
                 "tool_offered_by_no_step",
                 f"no step offers the tool {name!r}: every step lists its "
@@ -1769,6 +1769,12 @@ class ContextBuilder:
                 "steps that need it.",
                 function=name,
             )
+
+    def _warned(self) -> set[tuple[str, ...]]:
+        """The design warnings already reported: the agent's, shared with its
+        per-request copies, or this builder's own without an agent."""
+        shared = getattr(self._agent, "_design_warnings_seen", None)
+        return shared if isinstance(shared, set) else self._warned_here
 
     def _warn_inert_resets(self) -> None:
         """Log, once each, reset settings that don't do what they read as: a
@@ -1790,8 +1796,8 @@ class ContextBuilder:
                 context._system_prompt or context._system_prompt_sections
             )
             key: tuple[str, ...] = ("context", context_name)
-            if unused and not has_system_prompt and key not in self._mention_warned:
-                self._mention_warned.add(key)
+            if unused and not has_system_prompt and key not in self._warned():
+                self._warned().add(key)
                 _design_warning(
                     "context_reset_without_system_prompt",
                     f"context {context_name!r} sets {', '.join(unused)} without a "
@@ -1802,14 +1808,14 @@ class ContextBuilder:
                 )
             for step_name, step in context._steps.items():
                 key = ("step", context_name, step_name)
-                if key in self._mention_warned or not (
+                if key in self._warned() or not (
                     step._reset_system_prompt is not None
                     or step._reset_user_prompt is not None
                     or step._reset_consolidate
                     or step._reset_full_reset
                 ):
                     continue
-                self._mention_warned.add(key)
+                self._warned().add(key)
                 _design_warning(
                     "step_reset_is_terminal",
                     f"step {step_name!r} in context {context_name!r} has a reset, "
@@ -1851,9 +1857,9 @@ class ContextBuilder:
                 for where, text, also in _step_texts(step, prompt, registered, offered):
                     for tool in sorted(named_tools(text, tools) - offered - also):
                         key = (context_name, step_name, where, tool)
-                        if key in self._mention_warned:
+                        if key in self._warned():
                             continue
-                        self._mention_warned.add(key)
+                        self._warned().add(key)
                         _design_warning(
                             "tool_named_but_not_offered",
                             f"step {step_name!r} in context {context_name!r} "

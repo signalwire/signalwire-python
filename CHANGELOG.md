@@ -23,6 +23,12 @@
 - The Contexts and Steps Guide has a section on history between steps: what
   each mode removes, and which to use at a stage boundary.
 
+### Fixed
+- The render-time design warnings were logged again on every request when the
+  agent had a per-request configuration callback: each request's copy
+  deep-copied the contexts builder and with it the record of what had been
+  reported. The record is now on the agent, which the copies share.
+
 ## [3.9.1] - 2026-11-14
 
 ### Fixed
