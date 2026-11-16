@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../assets/img/signalwire-favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
     
     
       
@@ -31,10 +31,10 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -9007,6 +9007,19 @@ whatever the discarded callback configured -- a voice, a language
 set, a hint list -- is simply absent, with nothing to indicate it
 was dropped. Use <code>add_per_call_config</code> when composing, and reserve
 this method for the single-callback case it was written for.</p>
+<p>It discards callbacks registered with <code>add_per_call_config</code> too,
+and the loss depends on the order of the two calls:</p>
+<div class="highlight"><pre><span></span><code>agent.add_per_call_config(a)            # both run
+agent.set_dynamic_config_callback(b)    # -&gt; only b runs
+
+agent.set_dynamic_config_callback(a)    # both run
+agent.add_per_call_config(b)            # -&gt; a then b
+</code></pre></div>
+<p>So a base class that registers with <code>add_per_call_config</code>, the
+composable form, is silently wiped by a subclass that calls this
+setter afterwards -- the case <code>add_per_call_config</code> exists to make
+safe. If a class cannot know what its bases registered, it should
+use <code>add_per_call_config</code>.</p>
 </details>
 
     </div>
@@ -9322,10 +9335,10 @@ agent.add_per_call_config(configure_page_context)</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.sections", "navigation.indexes", "navigation.top", "content.code.copy", "search.suggest", "search.highlight"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.sections", "navigation.indexes", "navigation.top", "content.code.copy", "search.suggest", "search.highlight"], "search": "../../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
       
         <script src="../../../assets/js/navbar.js"></script>
       
