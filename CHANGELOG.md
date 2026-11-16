@@ -1,6 +1,13 @@
 # Changelog
 
-## [3.11.1] - 2026-11-16
+## [3.12.0] - 2026-11-16
+
+### Added
+- `Call.ring()` sends 180 Ringing on an inbound RELAY call without answering
+  it, so an upstream carrier's post-dial-delay timer is satisfied while the
+  application decides what to do. No media, no answer, no billing. Ringing
+  takes control of the call, as answering does, so it can't be passed to
+  another consumer afterwards (#93 by jakubkarolczyk).
 
 ### Fixed
 - REST retries honour a `Retry-After` header in its HTTP-date form, such as
