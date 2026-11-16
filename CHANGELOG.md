@@ -1,5 +1,63 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- SWML verbs that take a string, number or array body work everywhere a verb
+  is added. Before, `add_verb` and `add_verb_to_section` dropped such a body
+  with only a log line, unless it was an integer `sleep` (#141). Affected
+  verbs: `cond`'s conditions, `label`'s name, `unset`'s names, `sleep`'s
+  duration or SWML variable, and `return`'s value.
+- The verb methods on `SWMLService` and `SWMLBuilder` take the body
+  positionally, as their generated declarations say: `label("start")`,
+  `connect({"to": ...})`. They also take it as `config=`/`value=`, and still
+  take an object's options as keywords (#142).
+- `return_()` adds the `return` verb, since `return` is a Python keyword
+  (#143).
+- `SWMLBuilder.answer()` takes `username` and `password` (#144), and
+  `SWMLBuilder.play()` takes `status_url` (#145).
+- `RelayClient` reads `SIGNALWIRE_RELAY_HOST`, before `SIGNALWIRE_SPACE`,
+  which it still reads for compatibility (#101).
+- `AIChatClient`, and with it `ChatGateway`, accepts the space as its name or
+  its hostname. Before, the hostname that `SIGNALWIRE_SPACE` holds for REST
+  made it request `example.signalwire.com.signalwire.com` (#101).
+- `sw-agent-init` and `sw-agent-dokku` write `SIGNALWIRE_SPACE` as the space's
+  hostname, so `RestClient()` works in a scaffolded project. They also write
+  `SIGNALWIRE_RELAY_HOST=relay.signalwire.com`, so RELAY doesn't take the
+  space hostname (#101).
+
+### Changed
+- A verb body that doesn't fit its schema raises `SchemaValidationError`
+  wherever it's added. The integer `sleep` shortcut used to skip validation;
+  now a `sleep` duration must be a positive number of milliseconds or `-1`,
+  and not a boolean (#149). A body that isn't a JSON value raises
+  `TypeError`. `add_verb` and `add_verb_to_section` return True or raise,
+  and never return False.
+- `add_pre_answer_verb()`, `add_answer_verb()`, `add_post_answer_verb()` and
+  `add_post_ai_verb()` check the verb when it's added, so a bad config fails
+  there instead of when the SWML is rendered (#148). They take the same bodies
+  `add_verb` does.
+- An explicit `schema_path` that's missing or isn't valid JSON raises
+  `ValueError` when the service is created, naming the path and the cause.
+  Before, the service started with no SWML methods and every verb failed
+  later (#146).
+
+### Fixed
+- Without jsonschema-rs or jsonschema, the fallback validator found a verb's
+  required fields only when they were declared inline. It now follows `$ref`s
+  and union branches, so an empty `send_sms` is refused (#150).
+- SQLite search indexes score every chunk. Vector search read only the first
+  10,000 rows, with no ordering, so chunks past them were never found by
+  meaning. Each batch of 4,096 embeddings is now one matrix product: on
+  10,000 chunks a query went from 781 ms to 7 ms (#168, PR #115 by mjerris).
+- `RelayClient.dial()` and `Call.connect()` document `max_duration` in
+  seconds, as the platform applies it, not minutes (#98).
+- The Fabric subscriber example mints its token with the subscriber's email.
+  A reference that matches no subscriber creates a new one, so minting with
+  the subscriber's id left a stray subscriber on every run (#188).
+- `add_post_answer_verb()`'s docstring example passed `sleep` an object the
+  schema refuses; it now passes a duration.
+
 ## [3.10.3] - 2026-11-16
 
 ### Fixed
