@@ -89,6 +89,15 @@ Answer an inbound call.
 await call.answer()
 ```
 
+### `ring(**kwargs) -> dict`
+
+Send **180 Ringing** on an inbound call without answering it, so an upstream carrier's post-dial-delay timer is satisfied. Signalling only: no media, no answer, no billing. Ringing a call takes control of it, so it can no longer be passed to another consumer.
+
+<!-- snippet: no-compile await-fragment -->
+```python
+await call.ring()
+```
+
 ### `hangup(reason="hangup") -> dict`
 
 End the call.

@@ -140,6 +140,13 @@ class TestCallLifecycle:
         )
 
     @pytest.mark.asyncio
+    async def test_ring(self, call: Call, mock_client: MagicMock) -> None:
+        await call.ring()
+        mock_client.execute.assert_called_once_with(
+            "calling.ring", {"node_id": "node-1", "call_id": "call-1"}
+        )
+
+    @pytest.mark.asyncio
     async def test_hangup(self, call: Call, mock_client: MagicMock) -> None:
         await call.hangup(reason="busy")
         mock_client.execute.assert_called_once_with(
