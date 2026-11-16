@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [3.11.0] - 2026-11-16
 
 ### Added
 - SWML verbs that take a string, number or array body work everywhere a verb
