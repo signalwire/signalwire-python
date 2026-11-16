@@ -1,5 +1,26 @@
 # Changelog
 
+## [3.11.1] - 2026-11-16
+
+### Fixed
+- REST retries honour a `Retry-After` header in its HTTP-date form, such as
+  `Wed, 21 Oct 2015 07:28:30 GMT`. Only the seconds form was read, so a date
+  fell back to exponential backoff and could retry before the time the server
+  asked for. A date in the past retries at once, and a delay that isn't a
+  finite non-negative number falls back to backoff (#125 by Kayvan-Zahiri).
+- `set_dynamic_config_callback()`'s docstring says it also discards callbacks
+  registered with `add_per_call_config()` before it, so a subclass calling it
+  silently drops what a base class registered (#177 by Len-PGH).
+
+### Changed
+- Dependencies updated: fastapi, lxml, pydantic, pytz, uvicorn, ruff 0.17,
+  setuptools 84, and for the API reference mkdocs-material, mkdocstrings,
+  mkdocstrings-python and pymdown-extensions 13. CI uses actions/setup-python
+  v7, and its single-version jobs run Python 3.15 (#192-#195).
+- The package declares its license as the SPDX expression `MIT` with its
+  license file, in place of the license table and classifier that setuptools
+  deprecates.
+
 ## [3.11.0] - 2026-11-16
 
 ### Added
