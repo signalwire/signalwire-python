@@ -1,6 +1,6 @@
 # The MCP gateway ships in the SignalWire SDK as the mcp-gateway command.
 # This image installs the SDK and runs that command.
-FROM python:3.12-slim
+FROM python:3.15-slim
 
 WORKDIR /app
 
