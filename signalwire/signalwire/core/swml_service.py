@@ -60,8 +60,8 @@ from signalwire.utils.schema_utils import (  # noqa: E402
     SchemaValidationError,
 )
 from signalwire.core._verb_methods import (  # noqa: E402
-    make_verb_method,
-    verb_for_attribute,
+    _make_verb_method,
+    _verb_for_attribute,
 )
 from signalwire.core.swml_handler import (  # noqa: E402
     VerbHandlerRegistry,
@@ -288,7 +288,7 @@ class SWMLService(ToolMixin):
         """The method for ``verb_name``, made once and cached."""
         method = self._verb_methods_cache.get(verb_name)
         if method is None:
-            method = make_verb_method(
+            method = _make_verb_method(
                 verb_name,
                 self.schema_utils.get_verb_properties(verb_name).get("description"),
                 self.schema_utils.get_verb_parameters(verb_name),
@@ -367,7 +367,7 @@ class SWMLService(ToolMixin):
             _log.debug("getattr_no_schema", attribute=name)
             raise AttributeError(msg)
 
-        verb_name = verb_for_attribute(name)
+        verb_name = _verb_for_attribute(name)
         if verb_name in _schema_utils.get_all_verb_names():
             _log.debug("getattr_valid_verb", verb=verb_name)
             if "_verb_methods_cache" not in self.__dict__:

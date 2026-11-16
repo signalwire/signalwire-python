@@ -22,7 +22,7 @@ except ImportError:
     from typing_extensions import Self  # For Python 3.9-3.10
 
 from signalwire.core.swml_service import SWMLService
-from signalwire.core._verb_methods import make_verb_method, verb_for_attribute
+from signalwire.core._verb_methods import _make_verb_method, _verb_for_attribute
 
 if TYPE_CHECKING:
     # The SWML verb methods are installed dynamically at runtime (_create_verb_methods,
@@ -306,7 +306,7 @@ class SWMLBuilder(_VerbsBase):
         method = self._verb_methods_cache.get(verb_name)
         if method is None:
             schema_utils = self.service.schema_utils
-            method = make_verb_method(
+            method = _make_verb_method(
                 verb_name,
                 schema_utils.get_verb_properties(verb_name).get("description"),
                 schema_utils.get_verb_parameters(verb_name),
@@ -343,7 +343,7 @@ class SWMLBuilder(_VerbsBase):
             msg = f"'{self.__class__.__name__}' object has no attribute '{name}' (no schema available)"
             raise AttributeError(msg)
 
-        verb_name = verb_for_attribute(name)
+        verb_name = _verb_for_attribute(name)
         if verb_name in self.service.schema_utils.get_all_verb_names():
             if "_verb_methods_cache" not in self.__dict__:
                 self._verb_methods_cache = {}

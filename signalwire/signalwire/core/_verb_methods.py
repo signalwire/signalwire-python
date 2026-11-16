@@ -24,23 +24,23 @@ from typing import Any
 _BODY_KEYWORDS = ("config", "value")
 
 #: ``add(instance, verb, body)`` adds the verb and returns add_verb's result
-VerbAdder = Callable[[Any, str, Any], bool]
+_VerbAdder = Callable[[Any, str, Any], bool]
 
 
-def attribute_names(verb: str) -> list[str]:
+def _attribute_names(verb: str) -> list[str]:
     """The attribute names a verb's method goes under: the verb's own, and
     with a trailing underscore for a Python keyword such as ``return``."""
     return [verb, f"{verb}_"] if keyword.iskeyword(verb) else [verb]
 
 
-def verb_for_attribute(name: str) -> str:
+def _verb_for_attribute(name: str) -> str:
     """The verb an attribute name stands for: ``return_`` is ``return``."""
     if name.endswith("_") and keyword.iskeyword(name[:-1]):
         return name[:-1]
     return name
 
 
-def verb_body(
+def _verb_body(
     verb: str, body: Any, options: dict[str, Any], properties: Mapping[str, Any]
 ) -> Any:
     """
@@ -77,11 +77,11 @@ def verb_body(
     return body
 
 
-def make_verb_method(
+def _make_verb_method(
     verb: str,
     description: str | None,
     properties: Mapping[str, Any],
-    add: VerbAdder,
+    add: _VerbAdder,
     *,
     returns_self: bool,
 ) -> Callable[..., Any]:
@@ -120,7 +120,7 @@ def make_verb_method(
         return sleep
 
     def verb_method(instance: Any, body: Any = None, /, **kwargs: Any) -> Any:
-        added = add(instance, verb, verb_body(verb, body, kwargs, properties))
+        added = add(instance, verb, _verb_body(verb, body, kwargs, properties))
         return instance if returns_self else added
 
     doc = f"Add the {verb} verb to the document."
@@ -129,5 +129,5 @@ def make_verb_method(
     if returns_self:
         doc += "\n\nReturns: Self for method chaining"
     verb_method.__doc__ = doc
-    verb_method.__name__ = verb_method.__qualname__ = attribute_names(verb)[-1]
+    verb_method.__name__ = verb_method.__qualname__ = _attribute_names(verb)[-1]
     return verb_method
