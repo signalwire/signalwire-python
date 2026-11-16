@@ -7558,6 +7558,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.utils.schema_utils.SchemaUtils.load_error" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        load_error
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.utils.schema_utils.SchemaUtils.schema_path" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -8054,6 +8065,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.utils.schema_utils.SchemaUtils.load_error" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        load_error
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.utils.schema_utils.SchemaUtils.schema_path" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -8458,6 +8480,26 @@ See LICENSE file in the project root for full license information.</p>
 
 
 
+<h4 id="signalwire.utils.schema_utils.SchemaUtils.load_error" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">load_error</span> <span class="o">=</span> <span class="kc">None</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#signalwire.utils.schema_utils.SchemaUtils.load_error" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
 <h4 id="signalwire.utils.schema_utils.SchemaUtils.schema_path" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">schema_path</span> <span class="o">=</span> <span class="n">schema_path</span></code>
 
@@ -8801,7 +8843,7 @@ See LICENSE file in the project root for full license information.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Validate a verb configuration against the schema.</p>
+        <p>Validate a verb's body against the schema.</p>
 <p>Performs full JSON Schema validation including type checking and nested
 object validation using jsonschema-rs.</p>
 
@@ -8838,11 +8880,12 @@ object validation using jsonschema-rs.</p>
                 <code>verb_config</code>
             </td>
             <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+                  <code><span title="typing.Any">Any</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The configuration for the verb</p>
+                <p>The verb's body: an object, or the string, number or
+array some verbs take</p>
               </div>
             </td>
             <td>

@@ -8246,7 +8246,7 @@ instance for the actual document creation.</p>
 
 
 <h4 id="signalwire.core.swml_builder.SWMLBuilder.answer" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">answer</span><span class="p">(</span><span class="n">max_duration</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">codecs</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">answer</span><span class="p">(</span><span class="n">max_duration</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">codecs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 <a href="#signalwire.core.swml_builder.SWMLBuilder.answer" class="headerlink" title="Permanent link">&para;</a></h4>
 
@@ -8293,6 +8293,38 @@ instance for the actual document creation.</p>
             <td>
               <div class="doc-md-description">
                 <p>Comma-separated list of codecs</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>username</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Username for SIP authentication</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>password</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Password for SIP authentication</p>
               </div>
             </td>
             <td>
@@ -8558,7 +8590,7 @@ instance for the actual document creation.</p>
 
 
 <h4 id="signalwire.core.swml_builder.SWMLBuilder.play" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">play</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">urls</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">volume</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">say_voice</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">say_language</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">say_gender</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">auto_answer</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">play</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">urls</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">volume</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">say_voice</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">say_language</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">say_gender</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">auto_answer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">status_url</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 <a href="#signalwire.core.swml_builder.SWMLBuilder.play" class="headerlink" title="Permanent link">&para;</a></h4>
 
@@ -8685,6 +8717,22 @@ instance for the actual document creation.</p>
             <td>
               <div class="doc-md-description">
                 <p>Whether to auto-answer the call</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>status_url</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>URL that receives the play's status events</p>
               </div>
             </td>
             <td>
@@ -9067,7 +9115,8 @@ instance for the actual document creation.</p>
         <p>Dynamically generate and return SWML verb methods when accessed</p>
 <p>This method is called when an attribute lookup fails through the normal
 mechanisms. It checks if the attribute name corresponds to a SWML verb
-defined in the schema, and if so, dynamically creates a method for that verb.</p>
+defined in the schema, and if so, returns the method for that verb.
+<code>return_</code> is the method for <code>return</code>, a Python keyword.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -9116,7 +9165,7 @@ defined in the schema, and if so, dynamically creates a method for that verb.</p
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The dynamically created verb method if name is a valid SWML verb,</p>
+                <p>The verb method if name is a valid SWML verb, otherwise raises</p>
               </div>
             </td>
           </tr>
@@ -9126,7 +9175,7 @@ defined in the schema, and if so, dynamically creates a method for that verb.</p
             </td>
             <td>
               <div class="doc-md-description">
-                <p>otherwise raises AttributeError</p>
+                <p>AttributeError</p>
               </div>
             </td>
           </tr>

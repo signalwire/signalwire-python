@@ -10206,11 +10206,12 @@ stop_record_call, stop_denoise, stop_tap</p>
                 <code>config</code>
             </td>
             <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+                  <code><span title="typing.Any">Any</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Verb configuration dictionary</p>
+                <p>The verb's body: an object, or the string, number or
+array some verbs take, such as sleep's duration</p>
               </div>
             </td>
             <td>
@@ -10260,6 +10261,16 @@ stop_record_call, stop_denoise, stop_tap</p>
             <td>
               <div class="doc-md-description">
                 <p>If verb is not safe for pre-answer use</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="SchemaValidationError (signalwire.utils.schema_utils.SchemaValidationError)" href="../utils/schema_utils.html#signalwire.utils.schema_utils.SchemaValidationError">SchemaValidationError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the config doesn't fit the verb's schema</p>
               </div>
             </td>
           </tr>
@@ -10350,6 +10361,29 @@ answer behavior, such as setting max_duration.</p>
     </table>
 
 
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="SchemaValidationError (signalwire.utils.schema_utils.SchemaValidationError)" href="../utils/schema_utils.html#signalwire.utils.schema_utils.SchemaValidationError">SchemaValidationError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the config doesn't fit the answer verb</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
 <details class="example" open>
   <summary>Example</summary>
   <h5 id="signalwire.core.agent_base.AgentBase.add_answer_verb--set-maximum-call-duration-to-1-hour">Set maximum call duration to 1 hour<a class="headerlink" href="#signalwire.core.agent_base.AgentBase.add_answer_verb--set-maximum-call-duration-to-1-hour" title="Permanent link">&para;</a></h5>
@@ -10408,11 +10442,12 @@ welcome messages, legal disclaimers, and hold music.</p>
                 <code>config</code>
             </td>
             <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+                  <code><span title="typing.Any">Any</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Verb configuration dictionary</p>
+                <p>The verb's body: an object, or the string, number or
+array some verbs take, such as sleep's duration</p>
               </div>
             </td>
             <td>
@@ -10446,6 +10481,29 @@ welcome messages, legal disclaimers, and hold music.</p>
     </table>
 
 
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="SchemaValidationError (signalwire.utils.schema_utils.SchemaValidationError)" href="../utils/schema_utils.html#signalwire.utils.schema_utils.SchemaValidationError">SchemaValidationError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the config doesn't fit the verb's schema</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
 <details class="example" open>
   <summary>Example</summary>
   <h5 id="signalwire.core.agent_base.AgentBase.add_post_answer_verb--play-welcome-message">Play welcome message<a class="headerlink" href="#signalwire.core.agent_base.AgentBase.add_post_answer_verb--play-welcome-message" title="Permanent link">&para;</a></h5>
@@ -10453,7 +10511,7 @@ welcome messages, legal disclaimers, and hold music.</p>
     "url": "say:Welcome to Acme Corporation."
 })</p>
 <h5 id="signalwire.core.agent_base.AgentBase.add_post_answer_verb--brief-pause">Brief pause<a class="headerlink" href="#signalwire.core.agent_base.AgentBase.add_post_answer_verb--brief-pause" title="Permanent link">&para;</a></h5>
-<p>agent.add_post_answer_verb("sleep", {"time": 500})</p>
+<p>agent.add_post_answer_verb("sleep", 500)</p>
 </details>
 
     </div>
@@ -10508,11 +10566,12 @@ include clean disconnects, transfers, and logging.</p>
                 <code>config</code>
             </td>
             <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+                  <code><span title="typing.Any">Any</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Verb configuration dictionary</p>
+                <p>The verb's body: an object, or the string, number or
+array some verbs take, such as sleep's duration</p>
               </div>
             </td>
             <td>
@@ -10539,6 +10598,29 @@ include clean disconnects, transfers, and logging.</p>
             <td>
               <div class="doc-md-description">
                 <p>Self for method chaining</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="SchemaValidationError (signalwire.utils.schema_utils.SchemaValidationError)" href="../utils/schema_utils.html#signalwire.utils.schema_utils.SchemaValidationError">SchemaValidationError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the config doesn't fit the verb's schema</p>
               </div>
             </td>
           </tr>

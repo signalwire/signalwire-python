@@ -9255,11 +9255,14 @@ defined in the schema, and if so, dynamically creates a method for that verb.</p
                 <code>config</code>
             </td>
             <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | <span title="int">int</span></code>
+                  <code><span title="typing.Any">Any</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Configuration for the verb or direct value for certain verbs (e.g., sleep)</p>
+                <p>The verb's body: an object for most verbs, or the string,
+number or array some take, such as <code>label</code>'s name,
+<code>unset</code>'s variable names, <code>cond</code>'s conditions or
+<code>sleep</code>'s duration</p>
               </div>
             </td>
             <td>
@@ -9285,7 +9288,41 @@ defined in the schema, and if so, dynamically creates a method for that verb.</p
             </td>
             <td>
               <div class="doc-md-description">
-                <p>True if the verb was added successfully, False otherwise</p>
+                <p>True. A body that isn't valid raises rather than being dropped.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="SchemaValidationError (signalwire.utils.schema_utils.SchemaValidationError)" href="../utils/schema_utils.html#signalwire.utils.schema_utils.SchemaValidationError">SchemaValidationError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>When schema validation is on and the body
+doesn't fit the verb.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="TypeError">TypeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>For a body that isn't a JSON value.</p>
               </div>
             </td>
           </tr>
@@ -9403,7 +9440,7 @@ defined in the schema, and if so, dynamically creates a method for that verb.</p
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Name of the section to add to</p>
+                <p>Name of the section to add to, created if it's new</p>
               </div>
             </td>
             <td>
@@ -9431,11 +9468,11 @@ defined in the schema, and if so, dynamically creates a method for that verb.</p
                 <code>config</code>
             </td>
             <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | <span title="int">int</span></code>
+                  <code><span title="typing.Any">Any</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Configuration for the verb or direct value for certain verbs (e.g., sleep)</p>
+                <p>The verb's body, as for <code>add_verb</code></p>
               </div>
             </td>
             <td>
@@ -9461,7 +9498,41 @@ defined in the schema, and if so, dynamically creates a method for that verb.</p
             </td>
             <td>
               <div class="doc-md-description">
-                <p>True if the verb was added successfully, False otherwise</p>
+                <p>True. A body that isn't valid raises rather than being dropped.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="SchemaValidationError (signalwire.utils.schema_utils.SchemaValidationError)" href="../utils/schema_utils.html#signalwire.utils.schema_utils.SchemaValidationError">SchemaValidationError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>When schema validation is on and the body
+doesn't fit the verb.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="TypeError">TypeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>For a body that isn't a JSON value.</p>
               </div>
             </td>
           </tr>
