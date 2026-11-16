@@ -242,6 +242,16 @@ sched_gate SIGNATURES desc="regenerate python_signatures.json (reference oracle)
 sched_gate DRIFT deps=SIGNATURES desc="oracle snapshot vs this tree (ADVISORY — python is the reference)" \
     --fn drift_gate
 
+# SURFACE regenerates the Layer B oracle (python_surface.json) from this tree, as
+# SIGNATURES does Layer A, and DOC-AUDIT resolves against it. Without it DOC-AUDIT
+# read porting-sdk's committed copy, so a newly documented method failed here, and
+# at publish, until porting-sdk regenerated and pushed: the reference waiting on
+# a copy derived from itself (RULES.md §1a).
+sched_gate SURFACE desc="regenerate python_surface.json (reference oracle, Layer B)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/enumerate_python.py" \
+        --python-sdk "$PORT_ROOT" \
+        --output "$PORTING_SDK_DIR/python_surface.json"
+
 sched_gate SEMVER-DIFF deps=SIGNATURES desc="version bump matches surface change vs python_signatures.baseline.json (the reference is not exempt)" \
     -- python3 "$PORTING_SDK_DIR/scripts/semver_diff.py" --port python --repo "$PORT_ROOT"
 
@@ -351,7 +361,7 @@ sched_gate SURFACE-NATIVE desc="regenerate port_surface_native.json (native-only
 # exactly this ("the enumerator carrying the port's idiom, not a doc-audit omission").
 # An ignore-ledger entry would have been the wrong fix: real shipped members excused by
 # name is a permanent blind spot that also hides a future typo in those names.
-sched_gate DOC-AUDIT deps=SURFACE-NATIVE desc="audit_docs vs python_surface.json (the reference oracle)" \
+sched_gate DOC-AUDIT deps=SURFACE-NATIVE,SURFACE desc="audit_docs vs python_surface.json (the reference oracle)" \
     -- python3 "$PORTING_SDK_DIR/scripts/audit_docs.py" \
         --root "$PORT_ROOT" \
         --surface "$PORTING_SDK_DIR/python_surface.json" \
