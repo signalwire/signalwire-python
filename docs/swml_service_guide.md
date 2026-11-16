@@ -499,8 +499,9 @@ The service answers at its route with or without a trailing slash, checks its ow
 
 ### Schema Path Customization
 
-You can specify a custom path to the schema file:
+You can specify a custom path to the schema file. A path that can't be loaded raises `ValueError`:
 
+<!-- snippet: no-run placeholder path; a real schema file is needed -->
 ```python
 service = SWMLService(
     name="my-service",

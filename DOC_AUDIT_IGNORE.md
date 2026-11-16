@@ -37,6 +37,7 @@ random: random.random — stdlib
 choice: random.choice — stdlib
 time: time.time / prometheus_client.Histogram().time() — stdlib / prometheus helper
 sleep: time.sleep — stdlib (one call); the remaining hit is `self.sleep(1000)` in auto_vivified_example.py demonstrating the SWML `sleep` verb auto-vivified on SWMLService (real, but dynamic so absent from the public surface).
+label: the SWML `label` verb's method, installed on SWMLService and SWMLBuilder from the schema at runtime (docs/swml_service_guide.md, Verb Bodies); real, but dynamic so absent from the public surface.
 
 ## Python stdlib: logging
 
