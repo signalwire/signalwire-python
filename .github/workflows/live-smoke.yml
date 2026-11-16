@@ -41,7 +41,7 @@ jobs:
         if: steps.creds.outputs.have == 'true'
         uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.15"
 
       - name: Install SDK
         if: steps.creds.outputs.have == 'true'
