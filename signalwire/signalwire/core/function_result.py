@@ -1289,7 +1289,7 @@ class FunctionResult:
         swml_doc = {
             "version": "1.0.0",
             "sections": {
-                "main": [{"set": {"ai_response": ai_response}}, {"pay": pay_params}]
+                "main": [{"pay": pay_params}, {"set": {"ai_response": ai_response}}]
             },
         }
 

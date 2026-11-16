@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.10.3] - 2026-11-16
+
+### Fixed
+- `RelayClient` couldn't connect without `SIGNALWIRE_RELAY_CA_FILE`: it passed
+  `ssl=None` to `websockets.connect()`, which websockets 15 refuses for a
+  `wss://` URI, so every connection failed and retried forever. It now leaves
+  the argument out unless a CA file is set, and the system trust store is
+  used (#122, PR #123 by niravcodes).
+- `FunctionResult.pay()` set `ai_response` before the `pay` verb ran. SWML's
+  `set` expands `${pay_result}` when it runs, so the model got an empty or
+  stale payment status. The inline SWML now runs `pay` first, then `set`
+  (#176, PR #186 by Prasad-178). Ports that mirror the Python emission need
+  the same order.
+
 ## [3.10.2] - 2026-11-16
 
 ### Fixed
