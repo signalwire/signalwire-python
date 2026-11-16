@@ -789,11 +789,13 @@ class TestPay:
         assert len(result.action) == 1
         swml = result.action[0]["SWML"]
         main_section = swml["sections"]["main"]
-        # First item is set ai_response
-        assert "set" in main_section[0]
-        assert "ai_response" in main_section[0]["set"]
-        # Second item is pay
-        pay_params = main_section[1]["pay"]
+        # Set ai_response only after pay has populated ${pay_result}.
+        assert [list(verb) for verb in main_section] == [["pay"], ["set"]]
+        assert main_section[1]["set"]["ai_response"] == (
+            "The payment status is ${pay_result}, do not mention anything else "
+            "about collecting payment if successful."
+        )
+        pay_params = main_section[0]["pay"]
         assert pay_params["payment_connector_url"] == "https://pay.example.com/connector"
         assert pay_params["input"] == "dtmf"
         assert pay_params["payment_method"] == "credit-card"
@@ -828,10 +830,10 @@ class TestPay:
             voice="man",
             description="Monthly subscription",
             valid_card_types="visa amex",
-            ai_response="Payment processed."
+            ai_response="Payment result: ${pay_result}"
         )
 
-        pay_params = result.action[0]["SWML"]["sections"]["main"][1]["pay"]
+        pay_params = result.action[0]["SWML"]["sections"]["main"][0]["pay"]
         assert pay_params["input"] == "voice"
         assert pay_params["status_url"] == "https://status.example.com"
         assert pay_params["timeout"] == "10"
@@ -847,8 +849,8 @@ class TestPay:
         assert pay_params["description"] == "Monthly subscription"
         assert pay_params["valid_card_types"] == "visa amex"
 
-        ai_response = result.action[0]["SWML"]["sections"]["main"][0]["set"]["ai_response"]
-        assert ai_response == "Payment processed."
+        ai_response = result.action[0]["SWML"]["sections"]["main"][1]["set"]["ai_response"]
+        assert ai_response == "Payment result: ${pay_result}"
 
     def test_pay_with_prompts_and_parameters(self) -> None:
         """Test pay with custom prompts and parameters"""
@@ -860,7 +862,7 @@ class TestPay:
             parameters=parameters
         )
 
-        pay_params = result.action[0]["SWML"]["sections"]["main"][1]["pay"]
+        pay_params = result.action[0]["SWML"]["sections"]["main"][0]["pay"]
         assert pay_params["prompts"] == prompts
         assert pay_params["parameters"] == parameters
 
@@ -870,7 +872,7 @@ class TestPay:
             payment_connector_url="https://pay.example.com",
             postal_code=False
         )
-        pay_params = result.action[0]["SWML"]["sections"]["main"][1]["pay"]
+        pay_params = result.action[0]["SWML"]["sections"]["main"][0]["pay"]
         assert pay_params["postal_code"] == "false"
 
     def test_pay_chaining(self) -> None:
