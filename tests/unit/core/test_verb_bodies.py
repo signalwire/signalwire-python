@@ -37,12 +37,10 @@ def test_scalar_and_array_bodies_are_kept(verb: str, body: Any, validation: bool
 
 def test_a_body_the_schema_refuses_raises_in_any_section() -> None:
     service = SWMLService(name="example")
-    for add in (
-        lambda: service.add_verb("label", ["not", "a", "name"]),
-        lambda: service.add_verb_to_section("other", "label", 42),
-    ):
-        with pytest.raises(SchemaValidationError):
-            add()
+    with pytest.raises(SchemaValidationError):
+        service.add_verb("label", ["not", "a", "name"])
+    with pytest.raises(SchemaValidationError):
+        service.add_verb_to_section("other", "label", 42)
     assert service.get_document()["sections"]["main"] == []
     assert "other" not in service.get_document()["sections"]
 
@@ -107,7 +105,9 @@ def test_keyword_options_still_work_and_merge_with_an_object_body() -> None:
 
 def test_a_builder_method_chains() -> None:
     builder = SWMLBuilder(SWMLService(name="example"))
-    assert builder.label("start").unset("x") is builder
+    # The generated declaration types unset's body as a mapping until porting-sdk's
+    # generator gives scalar bodies their types (#151-#154)
+    assert builder.label("start").unset("x") is builder  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize("make", [lambda s: s, SWMLBuilder])
