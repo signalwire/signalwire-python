@@ -773,23 +773,20 @@ class CallSimulator:
         step = self._step() or {}
         context = self._contexts.get(self.context or "", {})
         data = {"global_data": self.global_data}
+        text = "\n\n".join(
+            part
+            for part in (str(context.get("prompt") or ""), str(step.get("text") or ""))
+            if part
+        )
         if step.get("end") or isinstance(step.get("reset"), dict):
             # An end step, or one with a reset, takes no history pass, and
             # steps end there, so what an isolate step hid stays back. A
-            # reset runs in place of the step's text; an end step's text goes
-            # in ahead of its context's prompt, and isn't expanded again
+            # reset runs in place of the step's text; an end step's text isn't
+            # expanded again
             self._instruction = None
             if isinstance(step.get("reset"), dict):
                 self._reset_step = self.step
                 return
-            text = "\n\n".join(
-                part
-                for part in (
-                    str(step.get("text") or ""),
-                    str(context.get("prompt") or ""),
-                )
-                if part
-            )
             self._log(
                 {"role": "system", "content": _expand(text, data, missing="")},
                 "instruction",
@@ -814,11 +811,6 @@ class CallSimulator:
                 and (mode != "spoken" or self._kinds.get(i) != "spoken")
             }
             (self._isolated if mode == "isolate" else self._hidden).update(swept)
-        text = "\n\n".join(
-            part
-            for part in (str(context.get("prompt") or ""), str(step.get("text") or ""))
-            if part
-        )
         self._instruction = (len(self.call_log), text)
         self._log(
             {"role": "system", "content": _expand(text, data, missing="")},

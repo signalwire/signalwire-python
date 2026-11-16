@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.10.2] - 2026-11-16
+
+### Fixed
+- `CallSimulator` puts an end step's text after its context's prompt, as for
+  every other step. The platform joined them the other way, with a stray
+  slash, until mod_openai dc20c53.
+
 ## [3.10.1] - 2026-11-15
 
 ### Fixed

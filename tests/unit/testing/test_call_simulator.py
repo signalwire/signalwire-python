@@ -640,6 +640,14 @@ class TestThePlatformAt7afb159:
             "This is the end text"]
         assert sim.gate_conversation() == ["user: Please also check my balance"]
 
+    def test_an_end_steps_text_follows_its_contexts_prompt(self) -> None:
+        # As every step's does (mod_openai dc20c53)
+        agent = self._agent(lambda s: s.set_text("The end.").set_end(True))
+        agent._contexts_builder._contexts["default"].set_prompt("Be brief.")  # type: ignore[union-attr]
+        sim = CallSimulator(agent)
+        sim.call("finish")
+        assert sim.model_view()[-1]["content"] == "Be brief.\n\nThe end."
+
     def test_the_simulation_stops_at_a_reset(self) -> None:
         agent = self._agent(lambda s: s.set_text("Never sent.").set_reset_system_prompt(
             "You are a new agent."))
