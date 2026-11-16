@@ -539,6 +539,10 @@ class Call:
         """Answer an inbound call."""
         return await self._execute("answer", kwargs or None)
 
+    async def ring(self, **kwargs: Any) -> dict[str, Any]:
+        """Send 180 Ringing on an inbound call without answering it."""
+        return await self._execute("ring", kwargs or None)
+
     async def hangup(self, reason: str = "hangup") -> dict[str, Any]:
         """End/hang up the call."""
         return await self._execute("end", {"reason": reason})

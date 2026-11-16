@@ -44,9 +44,9 @@ jobs:
           token: ${{ secrets.PORTING_SDK_TOKEN }}
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
-          python-version: '3.14'
+          python-version: '3.15'
 
       - name: Compile every example (catches syntax-level phantom APIs)
         # py_compile only verifies syntax, but any example that calls a phantom
@@ -63,6 +63,15 @@ jobs:
           python3 signalwire-python/scripts/emit_surface_native.py \
             --out signalwire-python/port_surface_native.json
 
+      # Enumerate the surface from this tree, as run-ci.sh's SURFACE gate does, so a
+      # newly documented method resolves against the SDK that defines it rather than
+      # porting-sdk's last committed copy.
+      - name: Enumerate the Python surface from this tree
+        run: |
+          python3 porting-sdk/scripts/enumerate_python.py \
+            --python-sdk signalwire-python \
+            --output signalwire-python/python_surface_fresh.json
+
       - name: Run audit_docs.py against the Python surface
         # --native-names is load-bearing: signalwire.livewire.* is excluded from the
         # surface oracle by design, but livewire/ docs are in this perimeter, so its
@@ -70,7 +79,7 @@ jobs:
         run: |
           python3 porting-sdk/scripts/audit_docs.py \
             --root signalwire-python \
-            --surface porting-sdk/python_surface.json \
+            --surface signalwire-python/python_surface_fresh.json \
             --ignore signalwire-python/DOC_AUDIT_IGNORE.md \
             --native-names signalwire-python/port_surface_native.json
 
