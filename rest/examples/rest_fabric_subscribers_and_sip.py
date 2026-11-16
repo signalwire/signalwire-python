@@ -17,14 +17,14 @@ client = RestClient()
 def main():
     # 1. Create a subscriber
     print("Creating subscriber...")
+    email = "alice@example.com"
     subscriber = client.fabric.subscribers.create(
-        email="alice@example.com",
+        email=email,
         first_name="Alice",
         last_name="Johnson",
         display_name="Alice Johnson",
     )
     sub_id = subscriber["id"]
-    inner_sub_id = subscriber.get("subscriber", {}).get("id", sub_id)
     print(f"  Created subscriber: {sub_id}")
 
     # 2. Add a SIP endpoint to the subscriber
@@ -75,12 +75,11 @@ def main():
     except SignalWireRestError as e:
         print(f"  Fabric addresses failed: {e.status_code}")
 
-    # 8. Generate a subscriber token
+    # 8. Generate a subscriber token. The reference is the subscriber's
+    # email: a reference that matches no subscriber creates a new one
     print("\nGenerating subscriber token...")
     try:
-        token = client.fabric.tokens.create_subscriber_token(
-            reference=inner_sub_id,
-        )
+        token = client.fabric.tokens.create_subscriber_token(reference=email)
         print(f"  Token: {str(token.get('token', ''))[:40]}...")
     except SignalWireRestError as e:
         print(f"  Token generation failed (expected in demo): {e.status_code}")
