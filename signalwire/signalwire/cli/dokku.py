@@ -143,6 +143,10 @@ ENV_EXAMPLE_TEMPLATE = """# SignalWire Agent Configuration
 
 # SignalWire Credentials (required for WebRTC calling)
 SIGNALWIRE_SPACE_NAME=your-space
+# The space's hostname, for the REST and AI Chat clients
+SIGNALWIRE_SPACE=your-space.signalwire.com
+# The RELAY endpoint: set it so RELAY doesn't take the space hostname above
+SIGNALWIRE_RELAY_HOST=relay.signalwire.com
 SIGNALWIRE_PROJECT_ID=your-project-id
 SIGNALWIRE_API_TOKEN=your-api-token
 
@@ -1310,6 +1314,14 @@ APP_JSON_TEMPLATE = """{{
     "SIGNALWIRE_SPACE_NAME": {{
       "description": "SignalWire space name (e.g., 'myspace' or 'myspace.signalwire.com')",
       "required": true
+    }},
+    "SIGNALWIRE_SPACE": {{
+      "description": "SignalWire space hostname (e.g., 'myspace.signalwire.com'), for the REST and AI Chat clients",
+      "required": false
+    }},
+    "SIGNALWIRE_RELAY_HOST": {{
+      "description": "RELAY endpoint; set so RELAY doesn't take SIGNALWIRE_SPACE",
+      "value": "relay.signalwire.com"
     }},
     "SIGNALWIRE_PROJECT_ID": {{
       "description": "SignalWire project ID",

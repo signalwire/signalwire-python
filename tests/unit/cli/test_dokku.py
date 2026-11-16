@@ -1288,6 +1288,9 @@ class TestTemplates:
     def test_env_example_template_has_placeholders(self) -> None:
         assert '{app_name}' in ENV_EXAMPLE_TEMPLATE
         assert 'SIGNALWIRE_SPACE_NAME' in ENV_EXAMPLE_TEMPLATE
+        # The space hostname for REST, and RELAY pinned so it doesn't take it
+        assert 'SIGNALWIRE_SPACE=your-space.signalwire.com' in ENV_EXAMPLE_TEMPLATE
+        assert 'SIGNALWIRE_RELAY_HOST=relay.signalwire.com' in ENV_EXAMPLE_TEMPLATE
 
     def test_app_template_has_class_placeholder(self) -> None:
         assert '{agent_class}' in APP_TEMPLATE

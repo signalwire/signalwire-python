@@ -31,6 +31,8 @@ from signalwire.cli.init_project import (
     prompt_multiselect,
     mask_token,
     get_env_credentials,
+    space_hostname,
+    TEMPLATE_ENV_EXAMPLE,
     generate_password,
     get_agent_template,
     get_app_template,
@@ -226,6 +228,23 @@ class TestGetEnvCredentials:
         assert creds['space'] == ''
         assert creds['project'] == ''
         assert creds['token'] == ''
+
+    @patch.dict(os.environ, {'SIGNALWIRE_SPACE': 'myspace.signalwire.com'}, clear=True)
+    def test_falls_back_to_the_space_hostname(self) -> None:
+        assert get_env_credentials()['space'] == 'myspace.signalwire.com'
+
+
+class TestSpaceHostname:
+    """The scaffold writes SIGNALWIRE_SPACE as a hostname (#101)."""
+
+    def test_from_a_name_or_a_hostname(self) -> None:
+        assert space_hostname('myspace') == 'myspace.signalwire.com'
+        assert space_hostname('myspace.signalwire.com') == 'myspace.signalwire.com'
+        assert space_hostname('') == 'your-space.signalwire.com'
+
+    def test_the_env_example_pins_relay(self) -> None:
+        assert 'SIGNALWIRE_SPACE=your-space.signalwire.com' in TEMPLATE_ENV_EXAMPLE
+        assert 'SIGNALWIRE_RELAY_HOST=relay.signalwire.com' in TEMPLATE_ENV_EXAMPLE
 
 
 # =============================================================================

@@ -264,7 +264,8 @@ The SDK reads these environment variables:
 |----------|---------|-------------|
 | `SIGNALWIRE_PROJECT_ID` | RELAY, REST | Project identifier |
 | `SIGNALWIRE_API_TOKEN` | RELAY, REST | API token |
-| `SIGNALWIRE_SPACE` | RELAY, REST | Space hostname (e.g. `example.signalwire.com`) |
+| `SIGNALWIRE_SPACE` | REST, AI Chat | Space hostname (e.g. `example.signalwire.com`). AI Chat also accepts the bare space name. |
+| `SIGNALWIRE_RELAY_HOST` | RELAY | RELAY endpoint (default: `relay.signalwire.com`). Without it, RELAY reads `SIGNALWIRE_SPACE`, for compatibility, so set it wherever `SIGNALWIRE_SPACE` is set. |
 | `SWML_BASIC_AUTH_USER` | Agents | Basic auth username (default: auto-generated) |
 | `SWML_BASIC_AUTH_PASSWORD` | Agents | Basic auth password (default: auto-generated) |
 | `SWML_PROXY_URL_BASE` | Agents | Base URL when behind a reverse proxy |

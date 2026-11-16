@@ -259,6 +259,12 @@ def test_url_from_space() -> None:
     assert client.url == "https://myspace.signalwire.com/api/ai/chat"
 
 
+def test_url_from_the_spaces_hostname() -> None:
+    # The hostname form SIGNALWIRE_SPACE takes for REST works here too (#101)
+    client = AIChatClient(PROJECT, TOKEN, space="myspace.signalwire.com")
+    assert client.url == "https://myspace.signalwire.com/api/ai/chat"
+
+
 def test_url_arg_wins_over_space_and_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("RAILS_DEV_MODE", "http://dev:1/")
     client = AIChatClient(PROJECT, TOKEN, space="myspace", url="http://arg:2/")

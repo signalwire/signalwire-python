@@ -173,7 +173,15 @@ class RelayClient:
         self.project = project or os.environ.get("SIGNALWIRE_PROJECT_ID", "")
         self.token = token or os.environ.get("SIGNALWIRE_API_TOKEN", "")
         self.jwt_token = jwt_token or os.environ.get("SIGNALWIRE_JWT_TOKEN", "")
-        self.host = host or os.environ.get("SIGNALWIRE_SPACE", DEFAULT_RELAY_HOST)
+        # SIGNALWIRE_SPACE is read after SIGNALWIRE_RELAY_HOST for
+        # compatibility: it names the space's hostname, which isn't the RELAY
+        # endpoint, so set SIGNALWIRE_RELAY_HOST where both are set
+        self.host = (
+            host
+            or os.environ.get("SIGNALWIRE_RELAY_HOST")
+            or os.environ.get("SIGNALWIRE_SPACE")
+            or DEFAULT_RELAY_HOST
+        )
         self.contexts = contexts or []
 
         if self.jwt_token:
@@ -516,7 +524,7 @@ class RelayClient:
             devices: Array of device lists (serial/parallel dial).
             tag: Client-provided tag for event correlation. Auto-generated
                  if not supplied.
-            max_duration: Optional max call duration in minutes.
+            max_duration: Optional max call duration in seconds.
             dial_timeout: How long (seconds) to wait for the dial to
                           complete before raising TimeoutError.  Defaults
                           to 120s.

@@ -10,7 +10,7 @@ RelayClient(
     project: str = None,          # SIGNALWIRE_PROJECT_ID
     token: str = None,            # SIGNALWIRE_API_TOKEN
     jwt_token: str = None,        # SIGNALWIRE_JWT_TOKEN
-    host: str = None,             # SIGNALWIRE_SPACE (default: relay.signalwire.com)
+    host: str = None,             # SIGNALWIRE_RELAY_HOST, then SIGNALWIRE_SPACE (default: relay.signalwire.com)
     contexts: list[str] = None,   # Topics to subscribe to
     max_active_calls: int = None, # RELAY_MAX_ACTIVE_CALLS (default: 1000)
 )
@@ -63,7 +63,7 @@ Place an outbound call. Returns a `Call` once the remote party answers.
 
 - `devices`: nested list of device objects (serial/parallel dial)
 - `tag`: optional correlation tag (auto-generated if omitted)
-- `max_duration`: max call duration in minutes
+- `max_duration`: max call duration in seconds
 - `dial_timeout`: seconds to wait before raising `TimeoutError` (default: 120)
 
 Call it with a nested list of device objects:

@@ -904,7 +904,10 @@ class Call:
         status_url: str | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
-        """Bridge the call to one or more destinations."""
+        """Bridge the call to one or more destinations.
+
+        ``max_duration`` is the bridged call's maximum length in seconds.
+        """
         params: dict[str, Any] = {"devices": devices}
         if ringback is not None:
             params["ringback"] = ringback
