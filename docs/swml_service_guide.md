@@ -170,11 +170,18 @@ These methods build and read the document:
 - `get_document()`: Get the current document as a dictionary
 - `render_document()`: Get the current document as a JSON string
 
-### Common Verb Shortcuts
+### Verb Bodies
 
-This shortcut works for any verb:
+A verb's body is an object for most verbs. A few take a string, number or array, and `add_verb` and `add_verb_to_section` keep it as given:
 
-- `add_verb(verb_name, config)`: Add any SWML verb with configuration
+```python
+self.add_verb("label", "start")
+self.add_verb("unset", ["temp_a", "temp_b"])
+self.add_verb("sleep", 2000)          # milliseconds; -1 sleeps until the call ends
+self.add_verb("return", "done")
+```
+
+Each verb also has a method of its own, taking the body positionally or its options as keywords: `self.label("start")`, `self.connect({"to": "+15551234567"})` or `self.connect(to="+15551234567")`. `return` is a Python keyword, so its method is `return_()`. On a `SWMLBuilder` the same methods return the builder, for chaining.
 
 ## Verb Handling
 
@@ -196,6 +203,10 @@ self.add_verb("play", {
     "invalid_param": "value"
 })
 ```
+
+A body that doesn't fit the verb raises `SchemaValidationError`, and nothing is added. A `sleep` duration must be a positive number of milliseconds or `-1`. With validation off (`schema_validation=False`), any JSON body is added as given.
+
+An explicit `schema_path` that can't be loaded, because it's missing or isn't valid JSON, raises `ValueError` when the service is created, naming the path and the cause.
 
 ### Custom Verb Handlers
 
