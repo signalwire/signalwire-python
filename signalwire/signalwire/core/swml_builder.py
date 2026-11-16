@@ -22,6 +22,7 @@ except ImportError:
     from typing_extensions import Self  # For Python 3.9-3.10
 
 from signalwire.core.swml_service import SWMLService
+from signalwire.core._verb_methods import make_verb_method, verb_for_attribute
 
 if TYPE_CHECKING:
     # The SWML verb methods are installed dynamically at runtime (_create_verb_methods,
@@ -63,7 +64,11 @@ class SWMLBuilder(_VerbsBase):
         self._create_verb_methods()
 
     def answer(
-        self, max_duration: int | None = None, codecs: str | None = None
+        self,
+        max_duration: int | None = None,
+        codecs: str | None = None,
+        username: str | None = None,
+        password: str | None = None,
     ) -> Self:
         """
         Add an 'answer' verb to the main section
@@ -71,6 +76,8 @@ class SWMLBuilder(_VerbsBase):
         Args:
             max_duration: Maximum duration in seconds
             codecs: Comma-separated list of codecs
+            username: Username for SIP authentication
+            password: Password for SIP authentication
 
         Returns:
             Self for method chaining
@@ -80,6 +87,10 @@ class SWMLBuilder(_VerbsBase):
             config["max_duration"] = max_duration
         if codecs is not None:
             config["codecs"] = codecs
+        if username is not None:
+            config["username"] = username
+        if password is not None:
+            config["password"] = password
         self.service.add_verb("answer", config)
         return self
 
@@ -156,6 +167,7 @@ class SWMLBuilder(_VerbsBase):
         say_language: str | None = None,
         say_gender: str | None = None,
         auto_answer: bool | None = None,
+        status_url: str | None = None,
     ) -> Self:
         """
         Add a 'play' verb to the main section
@@ -168,6 +180,7 @@ class SWMLBuilder(_VerbsBase):
             say_language: Language for text-to-speech
             say_gender: Gender for text-to-speech
             auto_answer: Whether to auto-answer the call
+            status_url: URL that receives the play's status events
 
         Returns:
             Self for method chaining
@@ -194,6 +207,8 @@ class SWMLBuilder(_VerbsBase):
             config["say_gender"] = say_gender
         if auto_answer is not None:
             config["auto_answer"] = auto_answer
+        if status_url is not None:
+            config["status_url"] = status_url
 
         # Add the verb
         self.service.add_verb("play", config)
@@ -275,94 +290,31 @@ class SWMLBuilder(_VerbsBase):
 
     def _create_verb_methods(self) -> None:
         """
-        Create auto-vivified methods for all verbs at initialization time
-
-        This creates methods for all SWML verbs defined in the schema,
-        allowing for fluent chaining like builder.denoise().goto().play()
+        Make the method for each of the schema's verbs, ready for
+        ``__getattr__`` to return, allowing for fluent chaining like
+        builder.denoise().goto().play(). A method the class defines, such as
+        ``answer`` or ``play``, wins: verbs are found through ``__getattr__``,
+        which runs only when nothing else is.
         """
-        # Get all verb names from the schema
-        if not hasattr(self.service, "schema_utils") or not self.service.schema_utils:
+        if not getattr(self.service, "schema_utils", None):
             return
+        for verb_name in self.service.schema_utils.get_all_verb_names():
+            self._verb_method(verb_name)
 
-        verb_names = self.service.schema_utils.get_all_verb_names()
-
-        # Create a method for each verb
-        for verb_name in verb_names:
-            # Skip verbs that already have specific methods
-            if hasattr(self, verb_name):
-                continue
-
-            # Handle sleep verb specially since it takes an integer directly
-            if verb_name == "sleep":
-
-                def sleep_method(
-                    self_instance: "SWMLBuilder",
-                    duration: int | None = None,
-                    **kwargs: Any,
-                ) -> "SWMLBuilder":
-                    """
-                    Add the sleep verb to the document.
-
-                    Args:
-                        duration: The amount of time to sleep in milliseconds
-                    """
-                    # Sleep verb takes a direct integer parameter in SWML
-                    if duration is not None:
-                        self_instance.service.add_verb("sleep", duration)
-                    elif kwargs:
-                        # Try to get the value from kwargs
-                        self_instance.service.add_verb(
-                            "sleep", next(iter(kwargs.values()))
-                        )
-                    else:
-                        raise TypeError("sleep() missing required argument: 'duration'")
-                    return self_instance
-
-                # Set it as an attribute of self
-                setattr(self, verb_name, types.MethodType(sleep_method, self))
-
-                # Also cache it for later
-                self._verb_methods_cache[verb_name] = sleep_method
-                continue
-
-            # Generate the method implementation for normal verbs
-            def make_verb_method(
-                name: str,
-            ) -> Callable[..., "SWMLBuilder"]:
-                def verb_method(
-                    self_instance: "SWMLBuilder", **kwargs: Any
-                ) -> "SWMLBuilder":
-                    """
-                    Dynamically generated method for SWML verb - returns self for chaining
-                    """
-                    config: dict[str, Any] = {
-                        key: value for key, value in kwargs.items() if value is not None
-                    }
-                    self_instance.service.add_verb(name, config)
-                    return self_instance
-
-                # Add docstring to the method
-                if hasattr(self.service.schema_utils, "get_verb_properties"):
-                    verb_properties = self.service.schema_utils.get_verb_properties(
-                        name
-                    )
-                    if "description" in verb_properties:
-                        verb_method.__doc__ = f"Add the {name} verb to the document.\n\n{verb_properties['description']}\n\nReturns: Self for method chaining"
-                    else:
-                        verb_method.__doc__ = f"Add the {name} verb to the document.\n\nReturns: Self for method chaining"
-                else:
-                    verb_method.__doc__ = f"Add the {name} verb to the document.\n\nReturns: Self for method chaining"
-
-                return verb_method
-
-            # Create the method with closure over the verb name
-            method = make_verb_method(verb_name)
-
-            # Set it as an attribute of self
-            setattr(self, verb_name, types.MethodType(method, self))
-
-            # Also cache it for later
+    def _verb_method(self, verb_name: str) -> Callable[..., Any]:
+        """The method for ``verb_name``, made once and cached."""
+        method = self._verb_methods_cache.get(verb_name)
+        if method is None:
+            schema_utils = self.service.schema_utils
+            method = make_verb_method(
+                verb_name,
+                schema_utils.get_verb_properties(verb_name).get("description"),
+                schema_utils.get_verb_parameters(verb_name),
+                _add_to_builder,
+                returns_self=True,
+            )
             self._verb_methods_cache[verb_name] = method
+        return method
 
     def __getattr__(self, name: str) -> Any:
         """
@@ -370,94 +322,38 @@ class SWMLBuilder(_VerbsBase):
 
         This method is called when an attribute lookup fails through the normal
         mechanisms. It checks if the attribute name corresponds to a SWML verb
-        defined in the schema, and if so, dynamically creates a method for that verb.
+        defined in the schema, and if so, returns the method for that verb.
+        ``return_`` is the method for ``return``, a Python keyword.
 
         Args:
             name: The name of the attribute being accessed
 
         Returns:
-            The dynamically created verb method if name is a valid SWML verb,
-            otherwise raises AttributeError
+            The verb method if name is a valid SWML verb, otherwise raises
+            AttributeError
 
         Raises:
             AttributeError: If name is not a valid SWML verb
         """
-        # First check if this is a valid SWML verb
-        if not hasattr(self.service, "schema_utils") or not self.service.schema_utils:
+        if name.startswith("__") or name in ("service", "_verb_methods_cache"):
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{name}'"
+            )
+        if not getattr(self.service, "schema_utils", None):
             msg = f"'{self.__class__.__name__}' object has no attribute '{name}' (no schema available)"
             raise AttributeError(msg)
 
-        verb_names = self.service.schema_utils.get_all_verb_names()
-
-        if name in verb_names:
-            # Check if we already have this method in the cache
-            if not hasattr(self, "_verb_methods_cache"):
+        verb_name = verb_for_attribute(name)
+        if verb_name in self.service.schema_utils.get_all_verb_names():
+            if "_verb_methods_cache" not in self.__dict__:
                 self._verb_methods_cache = {}
-
-            if name in self._verb_methods_cache:
-                return types.MethodType(self._verb_methods_cache[name], self)
-
-            # Handle sleep verb specially since it takes an integer directly
-            if name == "sleep":
-
-                def sleep_method(
-                    self_instance: "SWMLBuilder",
-                    duration: int | None = None,
-                    **kwargs: Any,
-                ) -> "SWMLBuilder":
-                    """
-                    Add the sleep verb to the document.
-
-                    Args:
-                        duration: The amount of time to sleep in milliseconds
-                    """
-                    # Sleep verb takes a direct integer parameter in SWML
-                    if duration is not None:
-                        self_instance.service.add_verb("sleep", duration)
-                    elif kwargs:
-                        # Try to get the value from kwargs
-                        self_instance.service.add_verb(
-                            "sleep", next(iter(kwargs.values()))
-                        )
-                    else:
-                        raise TypeError("sleep() missing required argument: 'duration'")
-                    return self_instance
-
-                # Cache the method for future use
-                self._verb_methods_cache[name] = sleep_method
-
-                # Return the bound method
-                return types.MethodType(sleep_method, self)
-
-            # Generate the method implementation for normal verbs
-            def verb_method(
-                self_instance: "SWMLBuilder", **kwargs: Any
-            ) -> "SWMLBuilder":
-                """
-                Dynamically generated method for SWML verb - returns self for chaining
-                """
-                config: dict[str, Any] = {
-                    key: value for key, value in kwargs.items() if value is not None
-                }
-                self_instance.service.add_verb(name, config)
-                return self_instance
-
-            # Add docstring to the method
-            if hasattr(self.service.schema_utils, "get_verb_properties"):
-                verb_properties = self.service.schema_utils.get_verb_properties(name)
-                if "description" in verb_properties:
-                    verb_method.__doc__ = f"Add the {name} verb to the document.\n\n{verb_properties['description']}\n\nReturns: Self for method chaining"
-                else:
-                    verb_method.__doc__ = f"Add the {name} verb to the document.\n\nReturns: Self for method chaining"
-            else:
-                verb_method.__doc__ = f"Add the {name} verb to the document.\n\nReturns: Self for method chaining"
-
-            # Cache the method for future use
-            self._verb_methods_cache[name] = verb_method
-
-            # Return the bound method
-            return types.MethodType(verb_method, self)
+            return types.MethodType(self._verb_method(verb_name), self)
 
         # Not a valid verb
         msg = f"'{self.__class__.__name__}' object has no attribute '{name}'"
         raise AttributeError(msg)
+
+
+def _add_to_builder(builder: SWMLBuilder, verb: str, body: Any) -> bool:
+    """A builder's verb method adds to its service's document."""
+    return builder.service.add_verb(verb, body)

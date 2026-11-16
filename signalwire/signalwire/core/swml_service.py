@@ -59,6 +59,10 @@ from signalwire.utils.schema_utils import (  # noqa: E402
     SchemaUtils,
     SchemaValidationError,
 )
+from signalwire.core._verb_methods import (  # noqa: E402
+    make_verb_method,
+    verb_for_attribute,
+)
 from signalwire.core.swml_handler import (  # noqa: E402
     VerbHandlerRegistry,
     SWMLVerbHandler,
@@ -101,6 +105,11 @@ _NULL_LOG = _NullLog()
 # recursion whose traceback names the dependency rather than the access that
 # triggered it.
 _GETATTR_INTERNALS = frozenset({"log", "schema_utils", "_verb_methods_cache"})
+
+
+def _add_to_service(service: "SWMLService", verb: str, body: Any) -> bool:
+    """A service's verb method adds to its own document."""
+    return service.add_verb(verb, body)
 
 
 def _as_response(result: "Response | dict[str, Any]") -> "Response":
@@ -209,6 +218,7 @@ class SWMLService(ToolMixin):
             self._basic_auth_source = self.security.basic_auth_source or "provided"
 
         # Find the schema file if not provided
+        schema_path_given = schema_path is not None
         if schema_path is None:
             schema_path = self._find_schema_path()
             if schema_path:
@@ -220,6 +230,11 @@ class SWMLService(ToolMixin):
         self.schema_utils = SchemaUtils(
             schema_path, schema_validation=self._schema_validation
         )
+        if schema_path_given and self.schema_utils.load_error:
+            raise ValueError(
+                f"schema_path {schema_path!r} couldn't be loaded: "
+                f"{self.schema_utils.load_error}"
+            )
         if self.schema_utils.full_validation_available:
             self.log.debug("schema_validation_enabled", engine="jsonschema-rs")
 
@@ -259,92 +274,29 @@ class SWMLService(ToolMixin):
 
     def _create_verb_methods(self) -> None:
         """
-        Create auto-vivified methods for all verbs at initialization time
+        Make the method for each of the schema's verbs, ready for
+        ``__getattr__`` to return. A method the class defines wins: verbs are
+        found through ``__getattr__``, which runs only when nothing else is.
         """
-        self.log.debug("creating_verb_methods")
-
-        # Get all verb names from the schema
         if not self.schema_utils:
             self.log.warning("no_schema_utils_available")
             return
+        for verb_name in self.schema_utils.get_all_verb_names():
+            self._verb_method(verb_name)
 
-        verb_names = self.schema_utils.get_all_verb_names()
-        self.log.debug("found_verbs_in_schema", count=len(verb_names))
-
-        # Create a method for each verb
-        for verb_name in verb_names:
-            # Skip verbs that already have specific methods
-            if hasattr(self, verb_name):
-                self.log.debug("skipping_verb_has_method", verb=verb_name)
-                continue
-
-            # Handle sleep verb specially since it takes an integer directly
-            if verb_name == "sleep":
-
-                def sleep_method(
-                    self_instance: "SWMLService",
-                    duration: int | None = None,
-                    **kwargs: Any,
-                ) -> bool:
-                    """
-                    Add the sleep verb to the document.
-
-                    Args:
-                        duration: The amount of time to sleep in milliseconds
-                    """
-                    self.log.debug("executing_sleep_verb", duration=duration)
-                    # Sleep verb takes a direct integer parameter in SWML
-                    if duration is not None:
-                        return self_instance.add_verb("sleep", duration)
-                    if kwargs:
-                        # Try to get the value from kwargs
-                        return self_instance.add_verb(
-                            "sleep", next(iter(kwargs.values()))
-                        )
-                    raise TypeError("sleep() missing required argument: 'duration'")
-
-                # Set it as an attribute of self
-                setattr(self, verb_name, types.MethodType(sleep_method, self))
-
-                # Also cache it for later
-                self._verb_methods_cache[verb_name] = sleep_method
-
-                self.log.debug("created_special_method", verb=verb_name)
-                continue
-
-            # Generate the method implementation for normal verbs
-            def make_verb_method(name: str) -> Callable[..., bool]:
-                def verb_method(self_instance: "SWMLService", **kwargs: Any) -> bool:
-                    """
-                    Dynamically generated method for SWML verb
-                    """
-                    self.log.debug(
-                        "executing_verb_method", verb=name, kwargs_count=len(kwargs)
-                    )
-                    config = {
-                        key: value for key, value in kwargs.items() if value is not None
-                    }
-                    return self_instance.add_verb(name, config)
-
-                # Add docstring to the method
-                verb_properties = self.schema_utils.get_verb_properties(name)
-                if "description" in verb_properties:
-                    verb_method.__doc__ = f"Add the {name} verb to the document.\n\n{verb_properties['description']}"
-                else:
-                    verb_method.__doc__ = f"Add the {name} verb to the document."
-
-                return verb_method
-
-            # Create the method with closure over the verb name
-            method = make_verb_method(verb_name)
-
-            # Set it as an attribute of self
-            setattr(self, verb_name, types.MethodType(method, self))
-
-            # Also cache it for later
+    def _verb_method(self, verb_name: str) -> Callable[..., Any]:
+        """The method for ``verb_name``, made once and cached."""
+        method = self._verb_methods_cache.get(verb_name)
+        if method is None:
+            method = make_verb_method(
+                verb_name,
+                self.schema_utils.get_verb_properties(verb_name).get("description"),
+                self.schema_utils.get_verb_parameters(verb_name),
+                _add_to_service,
+                returns_self=False,
+            )
             self._verb_methods_cache[verb_name] = method
-
-            self.log.debug("created_verb_method", verb=verb_name)
+        return method
 
     def __getattr__(self, name: str) -> Any:
         """
@@ -415,77 +367,12 @@ class SWMLService(ToolMixin):
             _log.debug("getattr_no_schema", attribute=name)
             raise AttributeError(msg)
 
-        verb_names = _schema_utils.get_all_verb_names()
-
-        if name in verb_names:
-            _log.debug("getattr_valid_verb", verb=name)
-
-            # Check if we already have this method in the cache
-            if not hasattr(self, "_verb_methods_cache"):
+        verb_name = verb_for_attribute(name)
+        if verb_name in _schema_utils.get_all_verb_names():
+            _log.debug("getattr_valid_verb", verb=verb_name)
+            if "_verb_methods_cache" not in self.__dict__:
                 self._verb_methods_cache = {}
-
-            if name in self._verb_methods_cache:
-                _log.debug("getattr_cached_method", verb=name)
-                return types.MethodType(self._verb_methods_cache[name], self)
-
-            # Handle sleep verb specially since it takes an integer directly
-            if name == "sleep":
-
-                def sleep_method(
-                    self_instance: "SWMLService",
-                    duration: int | None = None,
-                    **kwargs: Any,
-                ) -> bool:
-                    """
-                    Add the sleep verb to the document.
-
-                    Args:
-                        duration: The amount of time to sleep in milliseconds
-                    """
-                    self.log.debug("executing_sleep_method", duration=duration)
-                    # Sleep verb takes a direct integer parameter in SWML
-                    if duration is not None:
-                        return self_instance.add_verb("sleep", duration)
-                    if kwargs:
-                        # Try to get the value from kwargs
-                        return self_instance.add_verb(
-                            "sleep", next(iter(kwargs.values()))
-                        )
-                    raise TypeError("sleep() missing required argument: 'duration'")
-
-                # Cache the method for future use
-                _log.debug("caching_sleep_method", verb=name)
-                self._verb_methods_cache[name] = sleep_method
-
-                # Return the bound method
-                return types.MethodType(sleep_method, self)
-
-            # Generate the method implementation for normal verbs
-            def verb_method(self_instance: "SWMLService", **kwargs: Any) -> bool:
-                """
-                Dynamically generated method for SWML verb
-                """
-                self.log.debug(
-                    "executing_dynamic_verb", verb=name, kwargs_count=len(kwargs)
-                )
-                config = {
-                    key: value for key, value in kwargs.items() if value is not None
-                }
-                return self_instance.add_verb(name, config)
-
-            # Add docstring to the method
-            verb_properties = self.schema_utils.get_verb_properties(name)
-            if "description" in verb_properties:
-                verb_method.__doc__ = f"Add the {name} verb to the document.\n\n{verb_properties['description']}"
-            else:
-                verb_method.__doc__ = f"Add the {name} verb to the document."
-
-            # Cache the method for future use
-            _log.debug("caching_verb_method", verb=name)
-            self._verb_methods_cache[name] = verb_method
-
-            # Return the bound method
-            return types.MethodType(verb_method, self)
+            return types.MethodType(self._verb_method(verb_name), self)
 
         # Not a valid verb
         msg = f"'{self.__class__.__name__}' object has no attribute '{name}'"
@@ -584,36 +471,40 @@ class SWMLService(ToolMixin):
         """
         self._current_document = self._create_empty_document()
 
-    def add_verb(self, verb_name: str, config: dict[str, Any] | int) -> bool:
+    def add_verb(self, verb_name: str, config: Any) -> bool:
         """
         Add a verb to the main section of the current document
 
         Args:
             verb_name: The name of the verb to add
-            config: Configuration for the verb or direct value for certain verbs (e.g., sleep)
+            config: The verb's body: an object for most verbs, or the string,
+                number or array some take, such as ``label``'s name,
+                ``unset``'s variable names, ``cond``'s conditions or
+                ``sleep``'s duration
 
         Returns:
-            True if the verb was added successfully, False otherwise
+            True. A body that isn't valid raises rather than being dropped.
+
+        Raises:
+            SchemaValidationError: When schema validation is on and the body
+                doesn't fit the verb.
+            TypeError: For a body that isn't a JSON value.
         """
-        # Special case for verbs that take direct values (like sleep)
-        if verb_name == "sleep" and isinstance(config, int):
-            # Sleep verb takes a direct integer value
-            verb_obj: dict[str, Any] = {verb_name: config}
-            self._current_document["sections"]["main"].append(verb_obj)
-            return True
+        self._current_document["sections"]["main"].append(
+            self._verb_entry(verb_name, config)
+        )
+        return True
 
-        # Ensure config is a dictionary for other verbs
-        if not isinstance(config, dict):
-            self.log.warning(
-                "invalid_config_type",
-                verb=verb_name,
-                expected="dict",
-                got=type(config).__name__,
+    def _verb_entry(self, verb_name: str, config: Any) -> dict[str, Any]:
+        """The document entry for a verb, checked against the schema."""
+        if config is None or not isinstance(
+            config, (dict, list, str, int, float, bool)
+        ):
+            raise TypeError(
+                f"the {verb_name} verb's body must be a JSON object, array, string, "
+                f"number or boolean, got {type(config).__name__}"
             )
-            return False
-
-        # Check if we have a specialized handler for this verb
-        if self.verb_registry.has_handler(verb_name):
+        if isinstance(config, dict) and self.verb_registry.has_handler(verb_name):
             handler = self.verb_registry.get_handler(verb_name)
             assert handler is not None  # noqa: S101  # type-narrowing invariant (not input validation): guaranteed by has_handler() above
             is_valid, errors = handler.validate_config(config)
@@ -639,11 +530,7 @@ class SWMLService(ToolMixin):
 
         if not is_valid:
             raise SchemaValidationError(verb_name, errors)
-
-        # Add the verb to the main section
-        verb_obj = {verb_name: config}
-        self._current_document["sections"]["main"].append(verb_obj)
-        return True
+        return {verb_name: config}
 
     def add_section(self, section_name: str) -> bool:
         """
@@ -662,64 +549,28 @@ class SWMLService(ToolMixin):
         return True
 
     def add_verb_to_section(
-        self, section_name: str, verb_name: str, config: dict[str, Any] | int
+        self, section_name: str, verb_name: str, config: Any
     ) -> bool:
         """
         Add a verb to a specific section
 
         Args:
-            section_name: Name of the section to add to
+            section_name: Name of the section to add to, created if it's new
             verb_name: The name of the verb to add
-            config: Configuration for the verb or direct value for certain verbs (e.g., sleep)
+            config: The verb's body, as for ``add_verb``
 
         Returns:
-            True if the verb was added successfully, False otherwise
+            True. A body that isn't valid raises rather than being dropped.
+
+        Raises:
+            SchemaValidationError: When schema validation is on and the body
+                doesn't fit the verb.
+            TypeError: For a body that isn't a JSON value.
         """
-        # Make sure the section exists
+        entry = self._verb_entry(verb_name, config)
         if section_name not in self._current_document["sections"]:
             self.add_section(section_name)
-
-        # Special case for verbs that take direct values (like sleep)
-        if verb_name == "sleep" and isinstance(config, int):
-            # Sleep verb takes a direct integer value
-            verb_obj: dict[str, Any] = {verb_name: config}
-            self._current_document["sections"][section_name].append(verb_obj)
-            return True
-
-        # Ensure config is a dictionary for other verbs
-        if not isinstance(config, dict):
-            self.log.warning(
-                "invalid_config_type",
-                verb=verb_name,
-                section=section_name,
-                expected="dict",
-                got=type(config).__name__,
-            )
-            return False
-
-        # Check if we have a specialized handler for this verb
-        if self.verb_registry.has_handler(verb_name):
-            handler = self.verb_registry.get_handler(verb_name)
-            assert handler is not None  # noqa: S101  # type-narrowing invariant (not input validation): guaranteed by has_handler() above
-            is_valid, errors = handler.validate_config(config)
-            # See add_verb: also run the shallow unknown-top-level-key check so a
-            # handler verb rejects misspelled/unknown top-level keys (NOT the full
-            # deep schema, which would false-reject the ai verb's legitimate
-            # empty-pom / SWAIG emissions). No-op when validation is disabled.
-            if is_valid:
-                is_valid, errors = self.schema_utils._validate_verb_top_level_keys(
-                    verb_name, config
-                )
-        else:
-            # Use schema-based validation for standard verbs
-            is_valid, errors = self.schema_utils.validate_verb(verb_name, config)
-
-        if not is_valid:
-            raise SchemaValidationError(verb_name, errors)
-
-        # Add the verb to the section
-        verb_obj = {verb_name: config}
-        self._current_document["sections"][section_name].append(verb_obj)
+        self._current_document["sections"][section_name].append(entry)
         return True
 
     def get_document(self) -> dict[str, Any]:

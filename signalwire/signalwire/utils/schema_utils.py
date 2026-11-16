@@ -60,6 +60,22 @@ class SchemaValidationError(Exception):
 logger = get_logger("signalwire.utils.schema_utils")
 
 
+def _sleep_duration_errors(body: Any) -> list[str]:
+    """A ``sleep`` duration the platform runs: a positive number of
+    milliseconds, or -1 to sleep until the call ends. Not a boolean, which
+    JSON doesn't count as a number. A SWML variable is checked by the
+    schema."""
+    duration = body.get("duration") if isinstance(body, dict) else body
+    if isinstance(duration, bool):
+        return ["sleep's duration must be a number of milliseconds, not a boolean"]
+    if isinstance(duration, int) and duration != -1 and duration <= 0:
+        return [
+            f"sleep's duration must be a positive number of milliseconds, or -1 "
+            f"to sleep until the call ends, got {duration}"
+        ]
+    return []
+
+
 class SchemaUtils:
     """
     Utility class for loading and working with SWML schemas
@@ -90,6 +106,8 @@ class SchemaUtils:
             )
         self._validation_enabled = schema_validation and not env_skip
 
+        #: Why the schema couldn't be loaded, or None when it was
+        self.load_error: str | None = None
         self.schema_path = schema_path
         if not self.schema_path:
             self.schema_path = self._get_default_schema_path()
@@ -223,6 +241,7 @@ class SchemaUtils:
         """
         if not self.schema_path:
             self.log.warning("no_schema_path_provided")
+            self.load_error = "no schema path"
             return {}
 
         try:
@@ -251,9 +270,11 @@ class SchemaUtils:
                     )
                 return schema
             self.log.error("schema_file_not_found", path=self.schema_path)
+            self.load_error = "no such file"
             return {}
-        except (FileNotFoundError, json.JSONDecodeError) as e:
+        except (OSError, json.JSONDecodeError) as e:
             self.log.error("schema_loading_error", error=str(e), path=self.schema_path)
+            self.load_error = str(e)
             return {}
 
     def _extract_verb_definitions(self) -> dict[str, dict[str, Any]]:
@@ -343,18 +364,17 @@ class SchemaUtils:
                 return cast(list[str], verb_props.get("required", []))
         return []
 
-    def validate_verb(
-        self, verb_name: str, verb_config: dict[str, Any]
-    ) -> tuple[bool, list[str]]:
+    def validate_verb(self, verb_name: str, verb_config: Any) -> tuple[bool, list[str]]:
         """
-        Validate a verb configuration against the schema.
+        Validate a verb's body against the schema.
 
         Performs full JSON Schema validation including type checking and nested
         object validation using jsonschema-rs.
 
         Args:
             verb_name: The name of the verb (e.g., "ai", "answer", etc.)
-            verb_config: The configuration for the verb
+            verb_config: The verb's body: an object, or the string, number or
+                array some verbs take
 
         Returns:
             (is_valid, error_messages) tuple
@@ -370,6 +390,11 @@ class SchemaUtils:
             errors.append(f"Unknown verb: {verb_name}")
             return False, errors
 
+        if verb_name == "sleep":
+            errors = _sleep_duration_errors(verb_config)
+            if errors:
+                return False, errors
+
         # Use full validation if validator is available
         # getattr handles cases where __init__ wasn't called (e.g., tests with mocked schemas)
         if getattr(self, "_full_validator", None):
@@ -379,7 +404,7 @@ class SchemaUtils:
         return self._validate_verb_lightweight(verb_name, verb_config)
 
     def _validate_verb_full(
-        self, verb_name: str, verb_config: dict[str, Any]
+        self, verb_name: str, verb_config: Any
     ) -> tuple[bool, list[str]]:
         """
         Perform full JSON Schema validation with jsonschema-rs or jsonschema.
@@ -420,34 +445,63 @@ class SchemaUtils:
             return False, [f"Schema validation error for '{verb_name}': {error_msg}"]
 
     def _validate_verb_lightweight(
-        self, verb_name: str, verb_config: dict[str, Any]
+        self, verb_name: str, verb_config: Any
     ) -> tuple[bool, list[str]]:
         """
-        Perform lightweight validation (verb existence + required fields only).
+        Perform lightweight validation: the verb's required fields only.
 
         This is the fallback when neither jsonschema-rs nor jsonschema is
-        installed.
+        installed. Required fields are found through ``$ref`` and in the
+        branches of a union: a body passes when some branch it could match
+        has all of its required fields.
 
         Args:
             verb_name: The name of the verb
-            verb_config: The configuration for the verb
+            verb_config: The verb's body
 
         Returns:
             (is_valid, error_messages) tuple
         """
-        errors = []
-
-        # Get the required properties for this verb
-        required_props = self.get_verb_required_properties(verb_name)
-
-        # Check if all required properties are present
+        body_schema = self.get_verb_properties(verb_name)
+        missing = self._missing_required(body_schema, verb_config, depth=0)
         errors = [
             f"Missing required property '{prop}' for verb '{verb_name}'"
-            for prop in required_props
-            if prop not in verb_config
+            for prop in missing or []
         ]
-
         return len(errors) == 0, errors
+
+    def _resolve_ref(self, node: Any) -> Any:
+        """``node``, following ``$ref``s into the schema's ``$defs``."""
+        seen: set[str] = set()
+        while isinstance(node, dict) and "$ref" in node and node["$ref"] not in seen:
+            seen.add(node["$ref"])
+            node = self.schema.get("$defs", {}).get(node["$ref"].split("/")[-1], {})
+        return node
+
+    def _missing_required(self, node: Any, value: Any, depth: int) -> list[str] | None:
+        """The required fields ``value`` lacks for ``node``: [] when it has
+        them all, or None when ``node`` describes no object ``value`` could
+        be. For a union, the branch with the fewest missing."""
+        node = self._resolve_ref(node)
+        if not isinstance(node, dict) or depth > 8:
+            return [] if not isinstance(value, dict) else None
+        branches = node.get("anyOf") or node.get("oneOf")
+        if branches:
+            results = [
+                missing
+                for missing in (
+                    self._missing_required(branch, value, depth + 1)
+                    for branch in branches
+                )
+                if missing is not None
+            ]
+            return min(results, key=len) if results else None
+        if node.get("type") == "object" or "properties" in node or "required" in node:
+            if not isinstance(value, dict):
+                return None
+            return [prop for prop in node.get("required", []) if prop not in value]
+        # A scalar or array form, or a schema without a type
+        return None if isinstance(value, dict) and "type" in node else []
 
     def _verb_top_level_property_names(self, verb_name: str) -> set[str] | None:
         """Resolve the set of KNOWN top-level property names for a verb's config

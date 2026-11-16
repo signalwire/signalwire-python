@@ -13,10 +13,12 @@ Unit tests for SWMLService class
 
 import pytest
 import json
+from pathlib import Path
 from typing import Any
 from unittest.mock import Mock, patch, MagicMock
 
 from signalwire.core.swml_service import SWMLService
+from signalwire.utils.schema_utils import SchemaUtils, SchemaValidationError
 
 
 class TestSWMLServiceInitialization:
@@ -47,13 +49,21 @@ class TestSWMLServiceInitialization:
     
     def test_initialization_with_schema_path(self) -> None:
         """Test initialization with schema path"""
-        service = SWMLService(
-            name="test_service",
-            schema_path="/path/to/schema.json"
-        )
-        
+        bundled = SWMLService(name="bundled")._find_schema_path()
+        service = SWMLService(name="test_service", schema_path=bundled)
+
         assert service.name == "test_service"
-        assert hasattr(service, 'schema_utils')
+        assert service.schema_utils.get_all_verb_names()
+
+    def test_a_schema_path_that_cant_be_loaded_raises(self, tmp_path: Path) -> None:
+        """An explicit schema_path that's missing or malformed is a
+        construction error naming the path and the cause (#146)."""
+        with pytest.raises(ValueError, match="missing-example-schema.json.*no such file"):
+            SWMLService(name="example", schema_path="missing-example-schema.json")
+        bad = tmp_path / "bad.json"
+        bad.write_text("{not json")
+        with pytest.raises(ValueError, match="bad.json"):
+            SWMLService(name="example", schema_path=str(bad))
     
     def test_initialization_with_basic_auth(self) -> None:
         """Test initialization with basic auth"""
@@ -216,11 +226,10 @@ class TestSWMLServiceErrorHandling:
     """Test error handling and edge cases"""
     
     def test_add_verb_with_none_config(self, mock_swml_service: SWMLService) -> None:
-        """Test adding verb with None configuration"""
-        result = mock_swml_service.add_verb("hangup", None)  # type: ignore[arg-type]  # intentional invalid input
-
-        # Should return boolean (likely False due to invalid config)
-        assert isinstance(result, bool)
+        """A body that isn't a JSON value raises rather than disappearing."""
+        with pytest.raises(TypeError, match="hangup verb's body"):
+            mock_swml_service.add_verb("hangup", None)
+        assert mock_swml_service.get_document()["sections"]["main"] == []
     
     def test_add_verb_with_empty_config(self, mock_swml_service: SWMLService) -> None:
         """Test adding verb with empty configuration"""
@@ -975,12 +984,13 @@ class TestSectionManagement:
         assert "auto_created" in doc["sections"]
         assert {"sleep": 500} in doc["sections"]["auto_created"]
 
-    def test_add_verb_to_section_invalid_config_type(self, mock_swml_service: SWMLService) -> None:
-        """add_verb_to_section with non-dict non-sleep config should return False."""
+    def test_add_verb_to_section_keeps_a_non_object_body(self, mock_swml_service: SWMLService) -> None:
+        """A string, number or array body is kept, not dropped (#141); with
+        validation off, it isn't checked."""
         mock_swml_service.reset_document()
         mock_swml_service.add_section("bad_section")
-        result = mock_swml_service.add_verb_to_section("bad_section", "play", "not_a_dict")  # type: ignore[arg-type]  # intentional invalid input
-        assert result is False
+        assert mock_swml_service.add_verb_to_section("bad_section", "play", "not_a_dict")
+        assert {"play": "not_a_dict"} in mock_swml_service.get_document()["sections"]["bad_section"]
 
     def test_multiple_sections_in_document(self, mock_swml_service: SWMLService) -> None:
         """Multiple sections should all appear in the document."""
@@ -1042,11 +1052,12 @@ class TestSectionManagement:
         assert "extra" in parsed["sections"]
         assert {"sleep": 42} in parsed["sections"]["extra"]
 
-    def test_add_verb_non_dict_config_returns_false(self, mock_swml_service: SWMLService) -> None:
-        """add_verb with a non-dict, non-sleep-int config returns False."""
-        mock_swml_service.reset_document()
-        result = mock_swml_service.add_verb("play", 42)
-        assert result is False
+    def test_add_verb_body_the_schema_refuses_raises(self) -> None:
+        """A body that doesn't fit the verb raises instead of being dropped."""
+        service = SWMLService(name="validated")
+        with pytest.raises(SchemaValidationError):
+            service.add_verb("play", 42)
+        assert service.get_document()["sections"]["main"] == []
 
     def test_add_verb_sleep_int_config(self, mock_swml_service: SWMLService) -> None:
         """add_verb with verb_name='sleep' and int config should succeed."""
@@ -2393,12 +2404,14 @@ class TestSchemaNotFoundWarning:
     """Test schema_not_found path (line 131)."""
 
     def test_schema_not_found_still_initializes(self) -> None:
-        """Service should still initialize when schema is not found."""
-        svc = SWMLService(
-            name="no_schema_warn", route="/", host="127.0.0.1", port=3001,
-            schema_path="/nonexistent/path/schema.json",
-            schema_validation=False,
-        )
+        """Service should still initialize when no schema is found and none
+        was given."""
+        with patch.object(SWMLService, "_find_schema_path", return_value=None), \
+                patch.object(SchemaUtils, "_get_default_schema_path", return_value=None):
+            svc = SWMLService(
+                name="no_schema_warn", route="/", host="127.0.0.1", port=3001,
+                schema_validation=False,
+            )
         assert svc.name == "no_schema_warn"
 
 
