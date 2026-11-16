@@ -128,10 +128,18 @@ def mask_token(token: str) -> str:
     return f"{token[:4]}...{token[-3:]}"
 
 
+def space_hostname(space: str) -> str:
+    """The space's hostname, from its name or its hostname."""
+    if not space:
+        return "your-space.signalwire.com"
+    return space if "." in space else f"{space}.signalwire.com"
+
+
 def get_env_credentials() -> dict[str, str]:
     """Get SignalWire credentials from environment variables."""
     return {
-        "space": os.environ.get("SIGNALWIRE_SPACE_NAME", ""),
+        "space": os.environ.get("SIGNALWIRE_SPACE_NAME")
+        or os.environ.get("SIGNALWIRE_SPACE", ""),
         "project": os.environ.get("SIGNALWIRE_PROJECT_ID", ""),
         "token": os.environ.get("SIGNALWIRE_API_TOKEN", ""),
     }
@@ -191,6 +199,10 @@ Thumbs.db
 
 TEMPLATE_ENV_EXAMPLE = """# SignalWire Credentials
 SIGNALWIRE_SPACE_NAME=your-space
+# The space's hostname, for the REST and AI Chat clients
+SIGNALWIRE_SPACE=your-space.signalwire.com
+# The RELAY endpoint: set it so RELAY doesn't take the space hostname above
+SIGNALWIRE_RELAY_HOST=relay.signalwire.com
 SIGNALWIRE_PROJECT_ID=your-project-id
 SIGNALWIRE_API_TOKEN=your-api-token
 
@@ -1718,6 +1730,8 @@ Edit `.env` to configure:
 | Variable | Description |
 |----------|-------------|
 | `SIGNALWIRE_SPACE_NAME` | Your SignalWire space name |
+| `SIGNALWIRE_SPACE` | Your space's hostname (`your-space.signalwire.com`), for the REST and AI Chat clients |
+| `SIGNALWIRE_RELAY_HOST` | The RELAY endpoint (`relay.signalwire.com`) |
 | `SIGNALWIRE_PROJECT_ID` | Your SignalWire project ID |
 | `SIGNALWIRE_API_TOKEN` | Your SignalWire API token |
 | `HOST` | Server host (default: 0.0.0.0) |
@@ -2320,6 +2334,10 @@ Set your phone number's SWML URL to the endpoint URL shown after deployment.
         # .env
         env_content = f"""# SignalWire Credentials
 SIGNALWIRE_SPACE_NAME={self.credentials.get("space", "")}
+# The space's hostname, for the REST and AI Chat clients
+SIGNALWIRE_SPACE={space_hostname(self.credentials.get("space", ""))}
+# The RELAY endpoint: set it so RELAY doesn't take the space hostname above
+SIGNALWIRE_RELAY_HOST=relay.signalwire.com
 SIGNALWIRE_PROJECT_ID={self.credentials.get("project", "")}
 SIGNALWIRE_API_TOKEN={self.credentials.get("token", "")}
 

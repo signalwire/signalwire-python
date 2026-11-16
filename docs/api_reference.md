@@ -72,7 +72,7 @@ AgentBase(
 - `default_webhook_url` (Optional[str]): Default webhook URL for functions
 - `agent_id` (Optional[str]): Unique identifier for the agent
 - `native_functions` (Optional[List[str]]): List of native function names to enable
-- `schema_path` (Optional[str]): Path to custom SWML schema file
+- `schema_path` (Optional[str]): Path to custom SWML schema file. One that can't be loaded raises `ValueError`.
 - `suppress_logs` (bool): Silences a few legacy debug and error log lines, not the SDK's logging generally (default: False). See [Suppressing Logs](swml_service_guide.md#suppressing-logs) for how to control log output.
 - `enable_post_prompt_override` (bool): Allow post-prompt URL override (default: False)
 - `check_for_input_override` (bool): Allow check-for-input URL override (default: False)

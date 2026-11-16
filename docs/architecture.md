@@ -1212,6 +1212,8 @@ Other knobs:
 - `SWML_SKIP_SCHEMA_VALIDATION`: skip SWML schema validation (`1`), for debugging only
 - `SIGNALWIRE_LOG_FORMAT`: log renderer, `console` (default) or `json`
 - `SIGNALWIRE_SPACE_NAME`: default space name used by `sw-agent-init` scaffolding
+- `SIGNALWIRE_RELAY_HOST`: the RELAY endpoint, `relay.signalwire.com` by default.
+  `RelayClient` reads it before `SIGNALWIRE_SPACE`, which it still reads for compatibility
 
 The schema.json location is overridden via the `schema_path=` constructor argument
 of `AgentBase` / `SWMLService` (not an environment variable).

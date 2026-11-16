@@ -463,14 +463,14 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         # Initialize verb insertion points for call flow customization.
         # The verb lists hold (verb_name, config) tuples; _answer_config is a dict.
         self._pre_answer_verbs: list[
-            tuple[str, dict[str, Any]]
+            tuple[str, Any]
         ] = []  # Verbs to run before answer (e.g., ringback, screening)
         self._answer_config: dict[str, Any] = {}  # Configuration for the answer verb
         self._post_answer_verbs: list[
-            tuple[str, dict[str, Any]]
+            tuple[str, Any]
         ] = []  # Verbs to run after answer, before AI (e.g., announcements)
         self._post_ai_verbs: list[
-            tuple[str, dict[str, Any]]
+            tuple[str, Any]
         ] = []  # Verbs to run after AI ends (e.g., cleanup, transfers)
 
     # Verb categories for pre-answer validation
@@ -1006,9 +1006,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
 
     # ==================== Call Flow Verb Insertion Methods ====================
 
-    def add_pre_answer_verb(
-        self, verb_name: str, config: dict[str, Any]
-    ) -> "AgentBase":
+    def add_pre_answer_verb(self, verb_name: str, config: Any) -> "AgentBase":
         """
         Add a verb to run before the call is answered.
 
@@ -1024,13 +1022,15 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
 
         Args:
             verb_name: The SWML verb name (e.g., "play", "sleep", "request")
-            config: Verb configuration dictionary
+            config: The verb's body: an object, or the string, number or
+                array some verbs take, such as sleep's duration
 
         Returns:
             Self for method chaining
 
         Raises:
             ValueError: If verb is not safe for pre-answer use
+            SchemaValidationError: If the config doesn't fit the verb's schema
 
         Example:
             # Play ringback tone before answering
@@ -1041,7 +1041,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         """
         # Validate verb is safe for pre-answer use
         if verb_name in self._AUTO_ANSWER_VERBS:
-            if config.get("auto_answer") is not False:
+            if not isinstance(config, dict) or config.get("auto_answer") is not False:
                 self.log.warning(
                     "pre_answer_verb_will_answer",
                     verb=verb_name,
@@ -1053,6 +1053,8 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
                 f"Safe verbs: {', '.join(sorted(self._PRE_ANSWER_SAFE_VERBS))}"
             )
 
+        # Checked now, so a bad config fails here rather than at render
+        self._verb_entry(verb_name, config)
         self._pre_answer_verbs.append((verb_name, config))
         return self
 
@@ -1069,16 +1071,18 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         Returns:
             Self for method chaining
 
+        Raises:
+            SchemaValidationError: If the config doesn't fit the answer verb
+
         Example:
             # Set maximum call duration to 1 hour
             agent.add_answer_verb({"max_duration": 3600})
         """
+        self._verb_entry("answer", config or {})
         self._answer_config = config or {}
         return self
 
-    def add_post_answer_verb(
-        self, verb_name: str, config: dict[str, Any]
-    ) -> "AgentBase":
+    def add_post_answer_verb(self, verb_name: str, config: Any) -> "AgentBase":
         """
         Add a verb to run after the call is answered but before the AI starts.
 
@@ -1087,10 +1091,14 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
 
         Args:
             verb_name: The SWML verb name (e.g., "play", "sleep")
-            config: Verb configuration dictionary
+            config: The verb's body: an object, or the string, number or
+                array some verbs take, such as sleep's duration
 
         Returns:
             Self for method chaining
+
+        Raises:
+            SchemaValidationError: If the config doesn't fit the verb's schema
 
         Example:
             # Play welcome message
@@ -1098,12 +1106,13 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
                 "url": "say:Welcome to Acme Corporation."
             })
             # Brief pause
-            agent.add_post_answer_verb("sleep", {"time": 500})
+            agent.add_post_answer_verb("sleep", 500)
         """
+        self._verb_entry(verb_name, config)
         self._post_answer_verbs.append((verb_name, config))
         return self
 
-    def add_post_ai_verb(self, verb_name: str, config: dict[str, Any]) -> "AgentBase":
+    def add_post_ai_verb(self, verb_name: str, config: Any) -> "AgentBase":
         """
         Add a verb to run after the AI conversation ends.
 
@@ -1112,10 +1121,14 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
 
         Args:
             verb_name: The SWML verb name (e.g., "hangup", "transfer", "request")
-            config: Verb configuration dictionary
+            config: The verb's body: an object, or the string, number or
+                array some verbs take, such as sleep's duration
 
         Returns:
             Self for method chaining
+
+        Raises:
+            SchemaValidationError: If the config doesn't fit the verb's schema
 
         Example:
             # Log call completion and hang up
@@ -1125,6 +1138,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
             })
             agent.add_post_ai_verb("hangup", {})
         """
+        self._verb_entry(verb_name, config)
         self._post_ai_verbs.append((verb_name, config))
         return self
 

@@ -279,6 +279,22 @@ class TestRelayCaFile:
         c = RelayClient(project="p", token="t", host="custom.relay.com")
         assert c.host == "custom.relay.com"
 
+    def test_host_from_relay_host_before_space(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # SIGNALWIRE_RELAY_HOST, then SIGNALWIRE_SPACE for compatibility (#101)
+        monkeypatch.setenv("SIGNALWIRE_SPACE", "example.signalwire.com")
+        monkeypatch.setenv("SIGNALWIRE_RELAY_HOST", "relay.signalwire.com")
+        assert RelayClient(project="p", token="t").host == "relay.signalwire.com"
+        monkeypatch.delenv("SIGNALWIRE_RELAY_HOST")
+        assert RelayClient(project="p", token="t").host == "example.signalwire.com"
+        monkeypatch.delenv("SIGNALWIRE_SPACE")
+        assert RelayClient(project="p", token="t").host == "relay.signalwire.com"
+        monkeypatch.setenv("SIGNALWIRE_RELAY_HOST", "other.relay.com")
+        assert RelayClient(project="p", token="t", host="arg.relay.com").host == (
+            "arg.relay.com"
+        )
+
     def test_contexts(self) -> None:
         c = RelayClient(project="p", token="t", contexts=["a", "b"])
         assert c.contexts == ["a", "b"]

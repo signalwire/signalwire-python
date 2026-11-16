@@ -231,8 +231,9 @@ class AIChatClient:
         Args:
             project: Project id. Falls back to `SIGNALWIRE_PROJECT_ID`.
             token: API token. Falls back to `SIGNALWIRE_API_TOKEN`.
-            space: Space name used to build the default URL. Falls back to
-                `SIGNALWIRE_SPACE`.
+            space: The space, as its name (`example`) or its hostname
+                (`example.signalwire.com`), used to build the default URL.
+                Falls back to `SIGNALWIRE_SPACE`.
             url: Full service URL, overriding the one derived from `space`.
             session: An existing aiohttp session to reuse. Omit and the client
                 creates (and owns, and closes) its own.
@@ -277,7 +278,8 @@ class AIChatClient:
             # URL-looking value overrides the target here.
             return dev_url
         if space:
-            return f"https://{space}.signalwire.com{DEFAULT_PATH}"
+            host = space if "." in space else f"{space}.signalwire.com"
+            return f"https://{host}{DEFAULT_PATH}"
         raise ValueError(
             "No service URL: provide url=, set RAILS_DEV_MODE to a full URL, "
             "or provide space= / SIGNALWIRE_SPACE."
