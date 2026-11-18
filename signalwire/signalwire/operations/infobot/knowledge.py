@@ -11,7 +11,8 @@ A knowledge-search layer an agent installs to answer callers from a corpus.
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 from signalwire import AgentBase, FunctionResult
 
@@ -58,7 +59,12 @@ class InfoBotKnowledge:
         agent.define_tool(
             self._tool,
             f"{self._description} Changes nothing.",
-            {"query": {"type": "string", "description": "What to look up, in the caller's words."}},
+            {
+                "query": {
+                    "type": "string",
+                    "description": "What to look up, in the caller's words.",
+                }
+            },
             self._handle_search,
             required=["query"],
         )
@@ -71,12 +77,14 @@ class InfoBotKnowledge:
 
     def _ensure_main(self, agent: AgentBase) -> None:
         step = agent.define_contexts().add_context("default").add_step("main")
-        step.add_section("Knowledge", f"Answer the caller's question from {self._tool}, not memory.")
+        step.add_section(
+            "Knowledge", f"Answer the caller's question from {self._tool}, not memory."
+        )
         step.set_functions([self._tool])
 
     def _compose_conscience(self, agent: AgentBase) -> None:
         # Match Operations: append this layer's record line to whatever conscience
         # is already set, a blank line between, never replacing it.
-        line = "${global_data.%s.now}" % self._namespace
+        line = f"${{global_data.{self._namespace}.now}}"
         existing = getattr(agent, "_params", {}).get("conscience", "")
         agent.set_param("conscience", f"{existing}\n\n{line}" if existing else line)

@@ -16,7 +16,12 @@ runs the rest the same way for every operation: the read-back, one yes, the
 writes, the call's record, and a request made while another change waits.
 """
 
-from signalwire.operations.agent import DEFAULT_RULES, Call, Operations, ServiceAgent
+from signalwire.operations.agent import (
+    DEFAULT_RULES,
+    CallContext,
+    Operations,
+    ServiceAgent,
+)
 from signalwire.operations.model import (
     NOT_SAID,
     Change,
@@ -32,7 +37,7 @@ from signalwire.operations.model import (
 __all__ = [
     "DEFAULT_RULES",
     "NOT_SAID",
-    "Call",
+    "CallContext",
     "Change",
     "Field",
     "Need",

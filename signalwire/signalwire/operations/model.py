@@ -14,6 +14,7 @@ change its ``prepare`` builds, the writes that carry it out, and the two ways
 from __future__ import annotations
 
 import re
+import types
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, ClassVar, Literal, Union, get_args, get_origin, get_type_hints
@@ -62,7 +63,9 @@ class Refuse(Exception):
             raise Refuse("Only pending orders can be cancelled.", "Offer a return once it's delivered.")
     """
 
-    def __init__(self, why: str, then: str | None = None, *, keep: bool = False) -> None:
+    def __init__(
+        self, why: str, then: str | None = None, *, keep: bool = False
+    ) -> None:
         """
         Args:
             why: What is true now: nothing was changed, and why.
@@ -105,7 +108,7 @@ class Write:
         Write("cancel_pending_order", order_id="#W1234567", reason="no longer needed")
     """
 
-    __slots__ = ("name", "args")
+    __slots__ = ("args", "name")
 
     def __init__(self, name: str, /, **args: Any) -> None:
         """
@@ -126,7 +129,10 @@ class Write:
         return cls(str(data.get("name") or ""), **dict(data.get("args") or {}))
 
     def __eq__(self, other: object) -> bool:
-        return isinstance(other, Write) and (self.name, self.args) == (other.name, other.args)
+        return isinstance(other, Write) and (self.name, self.args) == (
+            other.name,
+            other.args,
+        )
 
     def __repr__(self) -> str:
         return f"Write({self.name!r}, **{self.args!r})"
@@ -286,9 +292,13 @@ class Operation:
         """The operation's fields, in declaration order."""
         found: dict[str, Field] = {}
         for klass in reversed(type(self).__mro__):
-            for name, value in vars(klass).items():
-                if isinstance(value, Field):
-                    found[name] = value
+            found.update(
+                {
+                    name: value
+                    for name, value in vars(klass).items()
+                    if isinstance(value, Field)
+                }
+            )
         return found
 
     def prepare(self, call: Any, values: Values) -> Any:
@@ -342,7 +352,9 @@ class Operation:
         for name in self.fields():
             old, now = held.get(name), new.get(name)
             if isinstance(old, list) and isinstance(now, list):
-                out[name] = [o for o in old if not any(self.same_item(name, o, n) for n in now)] + list(now)
+                out[name] = [
+                    o for o in old if not any(self.same_item(name, o, n) for n in now)
+                ] + list(now)
         return out
 
     def same_item(self, field: str, a: Any, b: Any) -> bool:
@@ -357,7 +369,11 @@ class Operation:
 
 
 def _missing(value: Any) -> bool:
-    return value is None or value == "" or (isinstance(value, str) and value.strip().lower() == NOT_SAID)
+    return (
+        value is None
+        or value == ""
+        or (isinstance(value, str) and value.strip().lower() == NOT_SAID)
+    )
 
 
 def _statement(read_back: str) -> str:
@@ -387,16 +403,35 @@ def _schema_of(kind: Any) -> dict[str, Any]:
     if origin in (list, Sequence, tuple) or kind in (list, tuple):
         return {"type": "array", "items": _schema_of(args[0]) if args else {}}
     if origin in (dict, Mapping) or kind is dict:
-        return {"type": "object", "additionalProperties": _schema_of(args[1]) if len(args) == 2 else {}}
-    if origin is Union:
+        return {
+            "type": "object",
+            "additionalProperties": _schema_of(args[1]) if len(args) == 2 else {},
+        }
+    if origin is Union or origin is types.UnionType:
         kinds = [a for a in args if a is not type(None)]
         if len(kinds) == 1:
             return _schema_of(kinds[0])
     if _is_typeddict is not None and _is_typeddict(kind):
         hints = get_type_hints(kind)
         required = sorted(getattr(kind, "__required_keys__", set(hints)))
-        return {"type": "object", "properties": {k: _schema_of(v) for k, v in hints.items()}, "required": required}
-    raise TypeError(f"a Field's kind must be a simple type, Literal, list, dict, TypedDict or JSON schema, got {kind!r}")
+        return {
+            "type": "object",
+            "properties": {k: _schema_of(v) for k, v in hints.items()},
+            "required": required,
+        }
+    raise TypeError(
+        f"a Field's kind must be a simple type, Literal, list, dict, TypedDict or JSON schema, got {kind!r}"
+    )
 
 
-__all__ = ["NOT_SAID", "Change", "Field", "Need", "Operation", "Refuse", "Values", "Write", "WriteFailed"]
+__all__ = [
+    "NOT_SAID",
+    "Change",
+    "Field",
+    "Need",
+    "Operation",
+    "Refuse",
+    "Values",
+    "Write",
+    "WriteFailed",
+]

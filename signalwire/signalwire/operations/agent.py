@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import copy
 import inspect
+import threading
 import logging
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from typing import Any
@@ -76,7 +77,7 @@ AS_WELL = {
 _GOING_ON = "Tell them, and ask how they'd like to go on."
 
 
-class Call:
+class CallContext:
     """
     One request of a call, as an operation, lookup or identify function sees it.
 
@@ -90,19 +91,23 @@ class Call:
 
     def __init__(self, service: Operations, raw_data: Mapping[str, Any] | None) -> None:
         self.service = service
-        self.raw_data: dict[str, Any] = dict(raw_data) if isinstance(raw_data, Mapping) else {}
+        self.raw_data: dict[str, Any] = (
+            dict(raw_data) if isinstance(raw_data, Mapping) else {}
+        )
         self.data = _record_of(raw_data)
         self.account: Any = None
         self.write_key = ""
         """While a write runs: a key unique to it in this call, for idempotent backends."""
         kept = self.data.get("state")
-        self.state: dict[str, Any] = copy.deepcopy(dict(kept)) if isinstance(kept, Mapping) else {}
+        self.state: dict[str, Any] = (
+            copy.deepcopy(dict(kept)) if isinstance(kept, Mapping) else {}
+        )
         self._state_was = copy.deepcopy(self.state)
         self._events: list[dict[str, Any]] = []
         self._acts: list[Any] = []
         self._next_step: str | None = None
 
-    def act(self, result: FunctionResult) -> Call:
+    def act(self, result: FunctionResult) -> CallContext:
         """
         Add a platform action (or several) to this tool's result, after
         everything else it does: hang up, start recording, play hold music,
@@ -112,7 +117,7 @@ class Call:
         self._acts.extend(result.action)
         return self
 
-    def show(self, event: Mapping[str, Any]) -> Call:
+    def show(self, event: Mapping[str, Any]) -> CallContext:
         """
         Send an event to the caller's screen (a SWML user event) with this
         tool's result, such as the order so far or the cards dealt.
@@ -120,7 +125,7 @@ class Call:
         self._events.append(dict(event))
         return self
 
-    def go(self, step: str) -> Call:
+    def go(self, step: str) -> CallContext:
         """
         Move to a step (a phase declared with ``Operations.phase``, or
         ``main``) when this tool's result goes back. Honoured from lookups,
@@ -152,8 +157,17 @@ class _Lookup:
         fillers: Any,
         secure: bool = True,
     ) -> None:
-        self.fn, self.tool, self.description, self.fields = fn, tool, description, fields
-        self.before_identity, self.fillers, self.secure = before_identity, fillers, secure
+        self.fn, self.tool, self.description, self.fields = (
+            fn,
+            tool,
+            description,
+            fields,
+        )
+        self.before_identity, self.fillers, self.secure = (
+            before_identity,
+            fillers,
+            secure,
+        )
 
 
 class _Identity:
@@ -175,15 +189,27 @@ class _Identity:
         self.any_of = [list(s) for s in any_of]
         self.find, self.load, self.describe = find, load, describe
         keys = list(dict.fromkeys(k for s in self.any_of for k in s))
-        self.fields = {k: fields.get(k) or Field(str, f"Their {k.replace('_', ' ')}, as they said it.") for k in keys}
+        self.fields = {
+            k: fields.get(k)
+            or Field(str, f"Their {k.replace('_', ' ')}, as they said it.")
+            for k in keys
+        }
         self.fields.update({k: f for k, f in fields.items() if k not in self.fields})
         self.tool, self.fillers, self.check_keys = tool, fillers, check_keys
-        self.ask = ask or ", or ".join("their " + _spoken_list([k.replace("_", " ") for k in s]) for s in self.any_of)
+        self.ask = ask or ", or ".join(
+            "their " + _spoken_list([k.replace("_", " ") for k in s])
+            for s in self.any_of
+        )
 
 
 class _Transfer:
     def __init__(
-        self, fn: Callable[..., Any], tool: str, destinations: Mapping[str, str] | None, gated: bool, notice: str | None
+        self,
+        fn: Callable[..., Any],
+        tool: str,
+        destinations: Mapping[str, str] | None,
+        gated: bool,
+        notice: str | None,
     ) -> None:
         self.fn, self.tool, self.gated, self.notice = fn, tool, gated, notice
         self.destinations = dict(destinations or {})
@@ -279,7 +305,11 @@ class Operations:
     # ------------------------------------------------------------------ registration
 
     def operation(
-        self, cls: type[Operation] | None = None, *, tool: str | None = None, kind: str | None = None,
+        self,
+        cls: type[Operation] | None = None,
+        *,
+        tool: str | None = None,
+        kind: str | None = None,
         guidance: str | None = None,
     ) -> Any:
         """
@@ -308,7 +338,9 @@ class Operations:
             if k in self._operations:
                 raise ValueError(f"an operation of kind {k!r} is already registered")
             if not klass.describe():
-                raise ValueError(f"{klass.__name__} needs a docstring: it is what the model reads about it")
+                raise ValueError(
+                    f"{klass.__name__} needs a docstring: it is what the model reads about it"
+                )
             self._operations[k] = op
             return klass
 
@@ -345,10 +377,25 @@ class Operations:
 
         def register(fn: Callable[..., Any]) -> Callable[..., Any]:
             params = list(inspect.signature(fn).parameters)[1:]
-            found = dict(fields) if fields is not None else {
-                p: Field(str, p.replace("_", " ").capitalize() + ".") for p in params
-            }
-            self._lookups.append(_Lookup(fn, tool or fn.__name__, description, found, before_identity, fillers, secure))
+            found = (
+                dict(fields)
+                if fields is not None
+                else {
+                    p: Field(str, p.replace("_", " ").capitalize() + ".")
+                    for p in params
+                }
+            )
+            self._lookups.append(
+                _Lookup(
+                    fn,
+                    tool or fn.__name__,
+                    description,
+                    found,
+                    before_identity,
+                    fillers,
+                    secure,
+                )
+            )
             return fn
 
         return register
@@ -403,7 +450,17 @@ class Operations:
         if not any_of or not all(any_of):
             raise ValueError("identify needs at least one non-empty key set")
         self._identity = _Identity(
-            any_of, find, load, describe, dict(fields or {}), tool, ask, fillers, check_keys, required, prefill
+            any_of,
+            find,
+            load,
+            describe,
+            dict(fields or {}),
+            tool,
+            ask,
+            fillers,
+            check_keys,
+            required,
+            prefill,
         )
         return self
 
@@ -446,22 +503,38 @@ class Operations:
         self._transfer = _Transfer(transfer, tool, destinations, gated, notice)
         return self
 
-    def offer(self, *tools: str, before_identity: bool = False, where: Sequence[str] | None = None) -> Operations:
+    def offer(
+        self,
+        *tools: str,
+        before_identity: bool = False,
+        steps: Sequence[str] | None = None,
+    ) -> Operations:
         """
         Offer tools the service didn't make (skills, DataMap tools, MCP
-        tools, another layer's tools, ``define_tool``) in its steps.
+        tools, another layer's tools, ``define_tool``) in its steps. Offers
+        add up.
 
         Args:
             *tools: The tools' names, as registered on the agent.
-            before_identity: True to offer them before the caller is
-                identified too.
-            where: The steps that offer them, by name; by default every
-                generated step but confirm's own list is extended too.
+            before_identity: True to offer them in the identify step too,
+                before the caller is found, as ``lookup`` takes it.
+            steps: The steps that offer them, by name, in place of the
+                default: every generated step but ``identify`` and
+                ``confirm``, where a change waits for the caller's yes.
         """
-        self._offers.append((list(tools), before_identity, list(where) if where is not None else None))
+        self._offers.append(
+            (list(tools), before_identity, list(steps) if steps is not None else None)
+        )
         return self
 
-    def phase(self, name: str, text: str, tools: Sequence[str] | None = None, *, initial: bool = False) -> Operations:
+    def phase(
+        self,
+        name: str,
+        text: str,
+        tools: Sequence[str] | None = None,
+        *,
+        initial: bool = False,
+    ) -> Operations:
         """
         Declare a step of the call's own, such as a game's betting and
         playing, with the tools it offers. Tools move to it with
@@ -475,12 +548,16 @@ class Operations:
             initial: True to start the call in it (after identify, if any,
                 its tool moves here with ``call.go``).
         """
-        if name in (IDENTIFY_STEP, MAIN_STEP, CONFIRM_STEP, TRANSFERRED) or any(p[0] == name for p in self._phases):
+        if name in (IDENTIFY_STEP, MAIN_STEP, CONFIRM_STEP, TRANSFERRED) or any(
+            p[0] == name for p in self._phases
+        ):
             raise ValueError(f"a step named {name!r} already exists")
-        self._phases.append((name, text, list(tools) if tools is not None else None, initial))
+        self._phases.append(
+            (name, text, list(tools) if tools is not None else None, initial)
+        )
         return self
 
-    def apply_write(self, call: Call, write: Write) -> Any:
+    def apply_write(self, call: CallContext, write: Write) -> Any:
         """Carry out one write with the agent's writer (``writes_with``)."""
         if self._writer is None:
             raise WriteFailed(f"no writer is set for {write.name}")
@@ -497,22 +574,32 @@ class Operations:
         replaced, and the conscience gets this service's line appended.
         """
         agent.prompt_add_section("Role", body=self._role)
-        rules = self._rules if self._rules is not None else [
-            r for r in DEFAULT_RULES if self._operations or r is not DEFAULT_RULES[2]
-        ]
+        rules = (
+            self._rules
+            if self._rules is not None
+            else [
+                r
+                for r in DEFAULT_RULES
+                if self._operations or r is not DEFAULT_RULES[2]
+            ]
+        )
         if rules:
             agent.prompt_add_section("Rules", bullets=list(rules))
         if self._operations or self._identity is not None:
             agent.update_global_data(_opening_data())
-            line = "${global_data.%s.now}" % RECORD
+            line = f"${{global_data.{RECORD}.now}}"
             had = str((getattr(agent, "_params", {}) or {}).get("conscience") or "")
             if line not in had:
-                agent.set_param("conscience", f"{had}\n\n{line}" if had.strip() else line)
+                agent.set_param(
+                    "conscience", f"{had}\n\n{line}" if had.strip() else line
+                )
         self._define_tools(agent)
         self._define_steps(agent)
         return agent
 
-    def prefilled(self, request_data: Mapping[str, Any] | None, request: Any = None) -> dict[str, Any] | None:
+    def prefilled(
+        self, request_data: Mapping[str, Any] | None, request: Any = None
+    ) -> dict[str, Any] | None:
         """
         The ``global_data`` a call starts with when ``identify``'s ``prefill``
         already knows the caller (caller ID, a chat widget, the page): the
@@ -526,12 +613,16 @@ class Operations:
             keys = _resolve(idn.prefill(request_data or {}, request))
             if not keys:
                 return None
-            call = Call(self, {"global_data": {RECORD: _opening()}})
+            call = CallContext(self, {"global_data": {RECORD: _opening()}})
             found = _resolve(idn.find(call, dict(keys)))
             if found is None or str(found).strip() == "":
                 return None
             call.data["account_id"] = str(found)
-            call.account = _resolve(idn.load(call, call.data["account_id"])) if idn.load else call.data["account_id"]
+            call.account = (
+                _resolve(idn.load(call, call.data["account_id"]))
+                if idn.load
+                else call.data["account_id"]
+            )
             text = str(_resolve(idn.describe(call))) if idn.describe else ""
         except Exception:  # unknown: the call starts unidentified, and identify asks
             logger.exception("operations: prefill could not identify the caller")
@@ -553,16 +644,28 @@ class Operations:
         if early:
             tools += [idn.tool] if idn is not None else []
             tools += [lk.tool for lk in self._lookups if lk.before_identity]
-            tools += [op.tool for op in self._operations.values() if op.before_identity and _offered(op, step)]
+            tools += [
+                op.tool
+                for op in self._operations.values()
+                if op.before_identity and _offered(op, step)
+            ]
         else:
             if idn is not None and not self._gated():
                 tools.append(idn.tool)
             tools += [lk.tool for lk in self._lookups]
-            tools += [op.tool for op in self._operations.values() if _offered(op, step) or op.kind == step]
-        for names, before_identity, where in self._offers:
-            if where is not None:
-                tools += [n for n in names if step in where]
-            elif not early or before_identity:
+            tools += [
+                op.tool
+                for op in self._operations.values()
+                if _offered(op, step) or op.kind == step
+            ]
+        for names, before_identity, steps in self._offers:
+            if steps is not None:
+                offered = step in steps
+            else:
+                offered = step != CONFIRM_STEP and (
+                    step != IDENTIFY_STEP or before_identity
+                )
+            if offered:
                 tools += list(names)
         if self._transfer:
             tools.append(self._transfer.tool)
@@ -572,11 +675,14 @@ class Operations:
         builder = agent.define_contexts()
         ctx = builder.get_context("default") or builder.add_context("default")
         transfer = self._transfer.mention() if self._transfer else ""
-        record = "${global_data.%s.account}" % RECORD
+        record = f"${{global_data.{RECORD}.account}}"
         where = f"Their account: {record}\n\n" if self._identity else ""
         idn = self._identity
         lookups = " or ".join(lk.tool for lk in self._lookups)
-        ops = "; ".join(f"{op.tool} ({type(op).describe().rstrip('.')})" for op in self._operations.values())
+        ops = "; ".join(
+            f"{op.tool} ({type(op).describe().rstrip('.')})"
+            for op in self._operations.values()
+        )
         unfound = (
             f" If their account isn't found yet and they want something that needs it, ask for {idn.ask} and call "
             f"{idn.tool}."
@@ -596,24 +702,32 @@ class Operations:
             + transfer
         )
         if self._gated():
-            assert idn is not None
+            assert idn is not None  # noqa: S101  # type narrowing: _gated() means an identity is set
             early_lookups = [lk.tool for lk in self._lookups if lk.before_identity]
-            early = f" For {' or '.join(early_lookups)}, they needn't be identified." if early_lookups else ""
+            early = (
+                f" For {' or '.join(early_lookups)}, they needn't be identified."
+                if early_lookups
+                else ""
+            )
             _contribute(
-                ctx, IDENTIFY_STEP,
+                ctx,
+                IDENTIFY_STEP,
                 self._step_text.get(IDENTIFY_STEP)
                 or f"Ask for {idn.ask}, and call {idn.tool} with what they say. Nothing about an account can be shared "
                 f"or changed until it's found.{early}{transfer}",
                 self._tools_for(IDENTIFY_STEP),
             )
         _contribute(
-            ctx, MAIN_STEP,
-            self._step_text.get(MAIN_STEP) or f"{where}Help with what they ask, all of it. {help_with}",
+            ctx,
+            MAIN_STEP,
+            self._step_text.get(MAIN_STEP)
+            or f"{where}Help with what they ask, all of it. {help_with}",
             self._tools_for(MAIN_STEP),
         )
         if any(op.confirm for op in self._operations.values()):
             _contribute(
-                ctx, CONFIRM_STEP,
+                ctx,
+                CONFIRM_STEP,
                 self._step_text.get(CONFIRM_STEP)
                 or f"{where}A change was just read to them and waits for their answer. When they say yes, call "
                 f"{CONFIRM_TOOL}. If they want it different, call its tool again with what they want. If they don't "
@@ -624,24 +738,38 @@ class Operations:
         for op in self._operations.values():
             if op.guidance:
                 _contribute(
-                    ctx, op.kind, f"{where}{op.guidance} When you have what it needs, call {op.tool}. {help_with}",
+                    ctx,
+                    op.kind,
+                    f"{where}{op.guidance} When you have what it needs, call {op.tool}. {help_with}",
                     self._tools_for(op.kind),
                 ).set_history("spoken")
-        known = {*self._tools_for(MAIN_STEP), *self._tools_for(IDENTIFY_STEP), CONFIRM_TOOL, DECLINE_TOOL,
-                 *(n for names, _, _ in self._offers for n in names),
-                 *(op.tool for op in self._operations.values())}
+        known = {
+            *self._tools_for(MAIN_STEP),
+            *self._tools_for(IDENTIFY_STEP),
+            CONFIRM_TOOL,
+            DECLINE_TOOL,
+            *(n for names, _, _ in self._offers for n in names),
+            *(op.tool for op in self._operations.values()),
+        }
         first = None
         for pname, ptext, ptools, initial in self._phases:
             tools = ptools if ptools is not None else self._tools_for(pname)
             unknown = [t for t in tools if t not in known]
             if unknown:
-                raise ValueError(f"phase {pname!r} offers tools that don't exist: {', '.join(unknown)}")
+                raise ValueError(
+                    f"phase {pname!r} offers tools that don't exist: {', '.join(unknown)}"
+                )
             _contribute(ctx, pname, f"{where}{ptext}", tools)
             first = first or (pname if initial else None)
         ctx.set_initial_step(IDENTIFY_STEP if self._gated() else first or MAIN_STEP)
         if self._transfer:
             gone = builder.get_context(TRANSFERRED) or builder.add_context(TRANSFERRED)
-            _contribute(gone, TRANSFERRED, "The caller is being transferred. Say nothing more.", [])
+            _contribute(
+                gone,
+                TRANSFERRED,
+                "The caller is being transferred. Say nothing more.",
+                [],
+            )
             gone.set_initial_step(TRANSFERRED)
         if self._customize is not None:
             self._customize(builder)
@@ -678,7 +806,9 @@ class Operations:
         for op in self._operations.values():
             fields = op.fields()
             params = {k: _with_not_said(f) for k, f in fields.items()}
-            if op.confirm and (op.combine is not None or _overrides(op, "conflicts_with")):
+            if op.confirm and (
+                op.combine is not None or _overrides(op, "conflicts_with")
+            ):
                 params["as_well"] = dict(AS_WELL)
             agent.define_tool(
                 op.tool,
@@ -693,14 +823,22 @@ class Operations:
             )
         kinds = [k for k, op in self._operations.items() if op.confirm]
         if kinds:
-            which = {"change": {"type": "string", "enum": kinds, "description": "What the change read back is."}}
+            which = {
+                "change": {
+                    "type": "string",
+                    "enum": kinds,
+                    "description": "What the change read back is.",
+                }
+            }
             agent.define_tool(
                 CONFIRM_TOOL,
                 "Make the change just read back, once the caller has said yes to it.",
                 which,
                 self._wrapped(CONFIRM_TOOL, self._confirm),
                 required=["change"],
-                gates=self._confirm_gates if self._confirm_gates is not None else self.confirm_gates(),
+                gates=self._confirm_gates
+                if self._confirm_gates is not None
+                else self.confirm_gates(),
                 gate_fillers=self._gate_fillers,
                 fillers=self._tool_fillers.get(CONFIRM_TOOL),
             )
@@ -714,7 +852,12 @@ class Operations:
             )
         tr = self._transfer
         if tr is not None:
-            params = {"summary": {"type": "string", "description": "What they need, in a sentence."}}
+            params = {
+                "summary": {
+                    "type": "string",
+                    "description": "What they need, in a sentence.",
+                }
+            }
             if tr.destinations:
                 params["to"] = {
                     "type": "string",
@@ -766,9 +909,13 @@ class Operations:
 
     # ------------------------------------------------------------------ handlers
 
-    def _operation_handler(self, op: Operation) -> Callable[..., Awaitable[FunctionResult]]:
-        async def handler(args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
-            call = Call(self, raw_data)
+    def _operation_handler(
+        self, op: Operation
+    ) -> Callable[..., Awaitable[FunctionResult]]:
+        async def handler(
+            args: dict[str, Any], raw_data: dict[str, Any]
+        ) -> FunctionResult:
+            call = CallContext(self, raw_data)
             try:
                 if op.before_identity:
                     await self._load_account(call)
@@ -776,8 +923,12 @@ class Operations:
                     await self._require_account(call)
                 change = await self._prepare(call, op, args)
                 if not op.confirm:
-                    return self._finish(call, await self._apply_now(call, op, args, change))
-                return self._finish(call, await self._stage(call, op, args, change), go=False)
+                    return self._finish(
+                        call, await self._apply_now(call, op, args, change)
+                    )
+                return self._finish(
+                    call, await self._stage(call, op, args, change), go=False
+                )
             except Need as e:
                 return self._finish(call, self._need_result(call, op, e), go=False)
             except Refuse as e:
@@ -787,54 +938,91 @@ class Operations:
         return handler
 
     def _lookup_handler(self, lk: _Lookup) -> Callable[..., Awaitable[FunctionResult]]:
-        async def handler(args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
-            call = Call(self, raw_data)
+        async def handler(
+            args: dict[str, Any], raw_data: dict[str, Any]
+        ) -> FunctionResult:
+            call = CallContext(self, raw_data)
             try:
                 if not lk.before_identity:
                     await self._require_account(call)
-                kwargs = {k: (None if _missing(args.get(k)) else args.get(k)) for k in lk.fields}
+                kwargs = {
+                    k: (None if _missing(args.get(k)) else args.get(k))
+                    for k in lk.fields
+                }
                 answer = await _maybe(lk.fn(call, **kwargs))
             except Refuse as e:
                 return self._finish(call, _refused(e, ""), go=False)
             except Need as e:
                 return self._finish(
-                    call, FunctionResult(tool_result=f"Nothing was looked up yet: {e.ask}", tool_prompt=f"Ask them: {e.ask}"),
+                    call,
+                    FunctionResult(
+                        tool_result=f"Nothing was looked up yet: {e.ask}",
+                        tool_prompt=f"Ask them: {e.ask}",
+                    ),
                     go=False,
                 )
-            return self._finish(call, answer if isinstance(answer, FunctionResult) else FunctionResult(tool_result=str(answer)))
+            return self._finish(
+                call,
+                answer
+                if isinstance(answer, FunctionResult)
+                else FunctionResult(tool_result=str(answer)),
+            )
 
         handler.__name__ = f"{lk.tool}_handler"
         return handler
 
-    async def _load_account(self, call: Call) -> None:
+    async def _load_account(self, call: CallContext) -> None:
         idn = self._identity
         if idn is not None and call.account_id:
-            call.account = await _maybe(idn.load(call, call.account_id)) if idn.load else call.account_id
+            call.account = (
+                await _maybe(idn.load(call, call.account_id))
+                if idn.load
+                else call.account_id
+            )
 
-    async def _require_account(self, call: Call) -> None:
+    async def _require_account(self, call: CallContext) -> None:
         idn = self._identity
         if idn is None:
             return
         if not call.account_id:
-            raise Refuse("Their account isn't found yet.", f"Ask for {idn.ask}, and call {idn.tool}.")
-        call.account = await _maybe(idn.load(call, call.account_id)) if idn.load else call.account_id
+            raise Refuse(
+                "Their account isn't found yet.",
+                f"Ask for {idn.ask}, and call {idn.tool}.",
+            )
+        call.account = (
+            await _maybe(idn.load(call, call.account_id))
+            if idn.load
+            else call.account_id
+        )
 
-    async def _prepare(self, call: Call, op: Operation, args: Mapping[str, Any]) -> Change:
+    async def _prepare(
+        self, call: CallContext, op: Operation, args: Mapping[str, Any]
+    ) -> Change:
         fields = op.fields()
-        missing = [k for k, f in fields.items() if f.required and f.ask and _missing(args.get(k))]
+        missing = [
+            k
+            for k, f in fields.items()
+            if f.required and f.ask and _missing(args.get(k))
+        ]
         if missing and op.ask_in_order:
             missing = missing[:1]
         if missing:
             raise Need(" ".join(str(fields[k].ask) for k in missing), missing)
         change = await _maybe(op.prepare(call, Values(fields, args)))
         if not isinstance(change, Change):
-            raise TypeError(f"{type(op).__name__}.prepare must return a Change, got {type(change).__name__}")
+            raise TypeError(
+                f"{type(op).__name__}.prepare must return a Change, got {type(change).__name__}"
+            )
         if op.confirm and not change.read_back.strip():
-            raise ValueError(f"{type(op).__name__}.prepare returned a Change with no read_back")
+            raise ValueError(
+                f"{type(op).__name__}.prepare returned a Change with no read_back"
+            )
         return change
 
     @staticmethod
-    def _finish(call: Call, result: FunctionResult, *, go: bool = True) -> FunctionResult:
+    def _finish(
+        call: CallContext, result: FunctionResult, *, go: bool = True
+    ) -> FunctionResult:
         """
         Put what the tool's own code asked for into its result. The record
         goes in one action object ahead of the rest, whole (the platform
@@ -845,16 +1033,26 @@ class Operations:
         record = None
         kept: list[Any] = []
         for action in result.action:
-            if isinstance(action, dict) and isinstance(action.get("set_global_data"), dict) and RECORD in action["set_global_data"]:
+            if (
+                isinstance(action, dict)
+                and isinstance(action.get("set_global_data"), dict)
+                and RECORD in action["set_global_data"]
+            ):
                 record = action["set_global_data"][RECORD]
-                rest = {k: v for k, v in action["set_global_data"].items() if k != RECORD}
+                rest = {
+                    k: v for k, v in action["set_global_data"].items() if k != RECORD
+                }
                 others = {k: v for k, v in action.items() if k != "set_global_data"}
                 if rest or others:
-                    kept.append({**others, **({"set_global_data": rest} if rest else {})})
+                    kept.append(
+                        {**others, **({"set_global_data": rest} if rest else {})}
+                    )
                 continue
             kept.append(action)
         if call.state != call._state_was:
-            record = _whole(record if record is not None else call.data, state=call.state)
+            record = _whole(
+                record if record is not None else call.data, state=call.state
+            )
         front = FunctionResult()
         if record is not None:
             front.update_global_data({RECORD: record})
@@ -866,7 +1064,7 @@ class Operations:
         result.action = [*front.action, *kept, *call._acts]
         return result
 
-    def _need_result(self, call: Call, op: Operation, e: Need) -> FunctionResult:
+    def _need_result(self, call: CallContext, op: Operation, e: Need) -> FunctionResult:
         result = FunctionResult(
             tool_result=f"Nothing is changed yet: {op.tool} needs more from the caller.",
             tool_prompt=f"Ask them: {e.ask} Then call {op.tool} again with everything they asked for.",
@@ -875,7 +1073,9 @@ class Operations:
             result.swml_change_step(op.kind)
         return result
 
-    async def _stage(self, call: Call, op: Operation, args: dict[str, Any], change: Change) -> FunctionResult:
+    async def _stage(
+        self, call: CallContext, op: Operation, args: dict[str, Any], change: Change
+    ) -> FunctionResult:
         """
         Hold a change for the caller's yes, weighed against the one waiting.
 
@@ -918,7 +1118,9 @@ class Operations:
                         "of it; ask them if you can't tell.",
                     )
                 held = waiting.get("args") or {}
-                if as_well is True and all(_same_value(held.get(k), args.get(k)) for k in op.combine):
+                if as_well is True and all(
+                    _same_value(held.get(k), args.get(k)) for k in op.combine
+                ):
                     args = op.merge(held, args)
                     change = await self._prepare(call, op, args)
                     note = f"What they just asked for is added to the {op.kind} change read back before, as one change. "
@@ -969,25 +1171,50 @@ class Operations:
                     tool_prompt=f'Tell them you\'ll do that right after, and get their answer to the change waiting: "{waiting["read_back"]}"',
                 ).update_global_data(_update(data, queued=queued))
             else:
-                queued.append({k: waiting.get(k) for k in ("kind", "read_back", "touches", "args")})
+                queued.append(
+                    {
+                        k: waiting.get(k)
+                        for k in ("kind", "read_back", "touches", "args")
+                    }
+                )
                 note = f'The change read back before isn\'t made yet, and is kept for after this one: "{waiting["read_back"]}" '
         queued, also = await self._reconcile_queue(call, op, change, queued)
         note += also
-        history = _settle(data, "replaced")["history"] if replaced else list(data.get("history") or [])
+        history = (
+            _settle(data, "replaced")["history"]
+            if replaced
+            else list(data.get("history") or [])
+        )
         revision = int(data.get("proposals") or 0) + 1
         entry = _waiting_entry(op.kind, args, change, revision)
         result = (
             FunctionResult()
-            .update_global_data(_update(data, history=history, queued=queued, waiting=entry, proposals=revision))
+            .update_global_data(
+                _update(
+                    data,
+                    history=history,
+                    queued=queued,
+                    waiting=entry,
+                    proposals=revision,
+                )
+            )
             .swml_change_step(CONFIRM_STEP)
         )
-        result = _state_first(self.proposal.propose(change.read_back, raw_data=call.raw_data, result=result))
+        result = self.proposal.propose(
+            change.read_back, raw_data=call.raw_data, result=result
+        )
         if note and isinstance(result.response, dict):
-            result.response["tool_result"] = note + str(result.response.get("tool_result") or "")
+            result.response["tool_result"] = note + str(
+                result.response.get("tool_result") or ""
+            )
         return result
 
     async def _reconcile_queue(
-        self, call: Call, op: Operation, change: Change, queued: list[dict[str, Any]]
+        self,
+        call: CallContext,
+        op: Operation,
+        change: Change,
+        queued: list[dict[str, Any]],
     ) -> tuple[list[dict[str, Any]], str]:
         """
         The changes set aside, weighed against the one now read back as the
@@ -1008,8 +1235,13 @@ class Operations:
             if same and qtouches == set(change.touches):
                 continue  # this is that one, taken up now
             theirs = _change_of(q)
-            conflict = None if same else (
-                op.conflicts_with(qop.kind, change, theirs) or qop.conflicts_with(op.kind, theirs, change)
+            conflict = (
+                None
+                if same
+                else (
+                    op.conflicts_with(qop.kind, change, theirs)
+                    or qop.conflicts_with(op.kind, theirs, change)
+                )
             )
             if not (same or conflict):
                 kept.append(q)
@@ -1023,12 +1255,18 @@ class Operations:
                     rebuilt = None
             if rebuilt is not None and rest is not None:
                 kept.append(_queued_entry(qop.kind, rest, rebuilt))
-                notes.append(f'The change set aside for later is now only this: "{rebuilt.read_back}" ')
+                notes.append(
+                    f'The change set aside for later is now only this: "{rebuilt.read_back}" '
+                )
             else:
-                notes.append(f'The change set aside for later no longer goes ahead, since this one takes its place: "{q.get("read_back")}" ')
+                notes.append(
+                    f'The change set aside for later no longer goes ahead, since this one takes its place: "{q.get("read_back")}" '
+                )
         return kept, "".join(notes)
 
-    async def _run_writes(self, call: Call, op: Operation, writes: Sequence[Write], revision: int) -> tuple[int, str]:
+    async def _run_writes(
+        self, call: CallContext, op: Operation, writes: Sequence[Write], revision: int
+    ) -> tuple[int, str]:
         made, reply = 0, ""
         for i, write in enumerate(writes):
             call.write_key = f"{call.call_id}:{revision}:{i}"
@@ -1044,18 +1282,24 @@ class Operations:
             made += 1
         return made, reply
 
-    async def _account_text(self, call: Call) -> dict[str, Any]:
+    async def _account_text(self, call: CallContext) -> dict[str, Any]:
         idn = self._identity
         if idn is None or idn.describe is None or not call.account_id:
             return {}
         try:
-            call.account = await _maybe(idn.load(call, call.account_id)) if idn.load else call.account_id
+            call.account = (
+                await _maybe(idn.load(call, call.account_id))
+                if idn.load
+                else call.account_id
+            )
             return {"account": str(await _maybe(idn.describe(call)))}
         except Exception:  # what was written still counts
             logger.exception("operations: describing the account again failed")
             return {}
 
-    async def _apply_now(self, call: Call, op: Operation, args: dict[str, Any], change: Change) -> FunctionResult:
+    async def _apply_now(
+        self, call: CallContext, op: Operation, args: dict[str, Any], change: Change
+    ) -> FunctionResult:
         data = call.data
         history = list(data.get("history") or [])
         revision = int(data.get("proposals") or 0) + 1
@@ -1064,30 +1308,57 @@ class Operations:
         done = _made_text(lines, list(change.writes), made)
         outcome = "made" if made == len(change.writes) else f"not made: {reply}"
         history.append(
-            {"kind": op.kind, "touches": list(change.touches), "read_back": change.read_back, "outcome": outcome,
-             "done": done, "money": round(sum(moved[:made]), 2),
-             **({"writes_made": [w.to_dict() for w in change.writes[:made]]} if outcome != "made" else {})}
+            {
+                "kind": op.kind,
+                "touches": list(change.touches),
+                "read_back": change.read_back,
+                "outcome": outcome,
+                "done": done,
+                "money": round(sum(moved[:made]), 2),
+                **(
+                    {"writes_made": [w.to_dict() for w in change.writes[:made]]}
+                    if outcome != "made"
+                    else {}
+                ),
+            }
         )
-        update = _update(data, **(await self._account_text(call)), history=history, proposals=revision)
+        update = _update(
+            data,
+            **(await self._account_text(call)),
+            history=history,
+            proposals=revision,
+        )
         if outcome != "made":
             part = f" What went through first: {done}" if made else ""
-            return FunctionResult(tool_result=f"It didn't go through: {reply}.{part}", tool_prompt=_GOING_ON).update_global_data(update)
-        return FunctionResult(tool_result=f"Done. {done}", tool_prompt="Tell them.").update_global_data(update)
+            return FunctionResult(
+                tool_result=f"It didn't go through: {reply}.{part}",
+                tool_prompt=_GOING_ON,
+            ).update_global_data(update)
+        return FunctionResult(
+            tool_result=f"Done. {done}", tool_prompt="Tell them."
+        ).update_global_data(update)
 
-    def _waiting_named(self, call: Call, args: Mapping[str, Any]) -> dict[str, Any]:
+    def _waiting_named(
+        self, call: CallContext, args: Mapping[str, Any]
+    ) -> dict[str, Any]:
         waiting = call.data.get("waiting") or {}
         if not waiting.get("read_back"):
-            raise Refuse("No change is waiting for an answer, so nothing was changed.", "Ask what they'd like to do.")
+            raise Refuse(
+                "No change is waiting for an answer, so nothing was changed.",
+                "Ask what they'd like to do.",
+            )
         if args.get("change") != waiting.get("kind"):
             raise Refuse(
-                f'Nothing was changed: the change waiting for their answer is the {waiting.get("kind")} change, this '
+                f"Nothing was changed: the change waiting for their answer is the {waiting.get('kind')} change, this "
                 f'one: "{waiting["read_back"]}"',
                 f'If their answer was to that one, call this again with change "{waiting.get("kind")}".',
             )
         return waiting
 
-    async def _confirm(self, args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
-        call = Call(self, raw_data)
+    async def _confirm(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> FunctionResult:
+        call = CallContext(self, raw_data)
         try:
             waiting = self._waiting_named(call, args)
             await self._require_account(call)
@@ -1095,7 +1366,7 @@ class Operations:
             return _refused(e, "")
         state = current(raw_data)
         if not state or state.get("proposal") != waiting["read_back"]:
-            result = _state_first(self.proposal.propose(waiting["read_back"], raw_data=raw_data))
+            result = self.proposal.propose(waiting["read_back"], raw_data=raw_data)
             if isinstance(result.response, dict):
                 result.response["tool_result"] = (
                     "Nothing was changed: their yes was to an earlier read-back, so this one is read to them again. "
@@ -1104,7 +1375,9 @@ class Operations:
             return result
         op = self._operations[waiting["kind"]]
         writes = [Write.from_dict(w) for w in waiting.get("writes") or []]
-        made, reply = await self._run_writes(call, op, writes, int(waiting.get("revision") or 0))
+        made, reply = await self._run_writes(
+            call, op, writes, int(waiting.get("revision") or 0)
+        )
         account = await self._account_text(call)
         data = call.data
         made_now = _made_text(list(waiting.get("done") or []), writes, made)
@@ -1136,8 +1409,10 @@ class Operations:
             .swml_change_step(MAIN_STEP),
         )
 
-    async def _decline(self, args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
-        call = Call(self, raw_data)
+    async def _decline(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> FunctionResult:
+        call = CallContext(self, raw_data)
         try:
             waiting = self._waiting_named(call, args)
         except Refuse as e:
@@ -1154,55 +1429,81 @@ class Operations:
             .swml_change_step(MAIN_STEP)
         )
 
-    async def _identify(self, args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
-        call = Call(self, raw_data)
+    async def _identify(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> FunctionResult:
+        call = CallContext(self, raw_data)
         idn = self._identity
-        assert idn is not None  # the tool exists only with an identity
+        assert idn is not None  # noqa: S101  # type narrowing: the tool exists only with an identity
         asked = str(args.get("asked_for") or call.data.get("asked") or "")
         keys = {k: args[k] for k in idn.fields if not _missing(args.get(k))}
         remember = _update(call.data, asked=asked)
         if idn.check_keys and not any(all(k in keys for k in s) for s in idn.any_of):
-            return self._finish(call, FunctionResult(
-                tool_result=f"Nothing was looked up: it takes {idn.ask}.",
-                tool_prompt=f"Ask them for {idn.ask}, then call {idn.tool} with what they say.",
-            ).update_global_data(remember))
+            return self._finish(
+                call,
+                FunctionResult(
+                    tool_result=f"Nothing was looked up: it takes {idn.ask}.",
+                    tool_prompt=f"Ask them for {idn.ask}, then call {idn.tool} with what they say.",
+                ).update_global_data(remember),
+            )
         try:
             found = await _maybe(idn.find(call, keys))
             if found is None or str(found).strip() == "":
-                raise Refuse("No account was found with that.", f"Ask them for {idn.ask} again, and check it with them.")
+                raise Refuse(
+                    "No account was found with that.",
+                    f"Ask them for {idn.ask} again, and check it with them.",
+                )
             account_id = str(found)
         except Refuse as e:  # call.go is honoured: a lockout moves the call on
             return self._finish(call, _refused(e, "").update_global_data(remember))
         except Need as e:
             return self._finish(
                 call,
-                FunctionResult(tool_result=f"Not found yet: {e.ask}", tool_prompt=f"Ask them: {e.ask}").update_global_data(remember),
+                FunctionResult(
+                    tool_result=f"Not found yet: {e.ask}",
+                    tool_prompt=f"Ask them: {e.ask}",
+                ).update_global_data(remember),
             )
         call.data["account_id"] = account_id
         text = (await self._account_text(call)).get("account", "")
         fresh = call.data.get("account_id") != _record_of(raw_data).get("account_id")
         update = {"account_id": account_id, "account": text, "asked": asked}
-        if fresh and _record_of(raw_data).get("account_id"):  # a different account: nothing waits on the old one
+        if fresh and _record_of(raw_data).get(
+            "account_id"
+        ):  # a different account: nothing waits on the old one
             update.update(waiting={}, queued=[])
         found_it = FunctionResult(
             tool_result=f"Found their account. {text}".strip(),
-            tool_prompt=(f"Help with what they asked for: {asked}" if asked else "Ask how you can help."),
+            tool_prompt=(
+                f"Help with what they asked for: {asked}"
+                if asked
+                else "Ask how you can help."
+            ),
         ).update_global_data(_update(call.data, **update))
-        return self._finish(call, found_it.swml_change_step(MAIN_STEP) if self._gated() else found_it)
+        return self._finish(
+            call, found_it.swml_change_step(MAIN_STEP) if self._gated() else found_it
+        )
 
-    async def _transfer_handler(self, args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
-        call = Call(self, raw_data)
+    async def _transfer_handler(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> FunctionResult:
+        call = CallContext(self, raw_data)
         tr = self._transfer
-        assert tr is not None  # the tool exists only with a transfer
+        assert tr is not None  # noqa: S101  # type narrowing: the tool exists only with a transfer
         summary = str(args.get("summary") or "asked for a person")
         to = str(args.get("to") or "") if tr.destinations else ""
         if tr.destinations and to not in tr.destinations:
-            return self._finish(call, FunctionResult(
-                tool_result=f"Not transferred: {to or 'nowhere'} isn't one of the places it goes.",
-                tool_prompt=f"Ask where they want to go: {_spoken_list(list(tr.destinations))}.",
-            ))
+            return self._finish(
+                call,
+                FunctionResult(
+                    tool_result=f"Not transferred: {to or 'nowhere'} isn't one of the places it goes.",
+                    tool_prompt=f"Ask where they want to go: {_spoken_list(list(tr.destinations))}.",
+                ),
+            )
         try:
-            handed = await _maybe(tr.fn(call, summary, to) if tr.destinations else tr.fn(call, summary))
+            handed = await _maybe(
+                tr.fn(call, summary, to) if tr.destinations else tr.fn(call, summary)
+            )
         except Refuse as e:  # call.go is honoured: a closed desk can move the call to take a message
             return self._finish(call, _refused(e, ""))
         result = FunctionResult(
@@ -1227,10 +1528,15 @@ class Operations:
         if agent is None:
             agent = self.install(AgentBase(name="preview", suppress_logs=True))
         contexts = agent.define_contexts().to_dict()
-        lines = [f"Conscience: {(getattr(agent, '_params', {}) or {}).get('conscience', '')}", ""]
+        lines = [
+            f"Conscience: {(getattr(agent, '_params', {}) or {}).get('conscience', '')}",
+            "",
+        ]
         for cname, ctx in contexts.items():
             for step in ctx.get("steps") or []:
-                lines.append(f"== {cname}/{step.get('name')}  tools: {', '.join(step.get('functions') or []) or 'none'}")
+                lines.append(
+                    f"== {cname}/{step.get('name')}  tools: {', '.join(step.get('functions') or []) or 'none'}"
+                )
                 lines.append(str(step.get("text") or ""))
                 lines.append("")
         return "\n".join(lines)
@@ -1275,6 +1581,7 @@ class ServiceAgent(AgentBase):
         super().__init__(name=name, **kwargs)
         self.ops = Operations(role=role, rules=rules, transfer_notice=transfer_notice)
         self._installed = False
+        self._install_lock = threading.Lock()
         self.operation = self.ops.operation
         self.lookup = self.ops.lookup
         self.phase = self.ops.phase
@@ -1291,13 +1598,18 @@ class ServiceAgent(AgentBase):
         self.ops.writes_with(writer)
         return self
 
-    def transfer_with(self, transfer: Callable[..., Any], **kwargs: Any) -> ServiceAgent:
+    def transfer_with(
+        self, transfer: Callable[..., Any], **kwargs: Any
+    ) -> ServiceAgent:
         """See ``Operations.transfer_with``."""
         self.ops.transfer_with(transfer, **kwargs)
         return self
 
     def on_swml_request(
-        self, request_data: dict[str, Any] | None = None, callback_path: str | None = None, request: Any = None
+        self,
+        request_data: dict[str, Any] | None = None,
+        callback_path: str | None = None,
+        request: Any = None,
     ) -> dict[str, Any] | None:
         """Start the call identified when ``identify``'s ``prefill`` already knows the caller."""
         mods = super().on_swml_request(request_data, callback_path, request)
@@ -1313,19 +1625,28 @@ class ServiceAgent(AgentBase):
     def compile(self) -> ServiceAgent:
         """Install the operations on this agent, once; runs before the first SWML or tool request."""
         if not self._installed:
-            self._installed = True
-            self.ops.install(self)
+            # The first requests can come at once, on worker threads: one
+            # installs, and the others wait for it rather than render a
+            # half-installed agent
+            with self._install_lock:
+                if not self._installed:
+                    self.ops.install(self)
+                    self._installed = True
         return self
 
     def preview(self) -> str:
         """See ``Operations.preview``."""
         return self.ops.preview(self.compile())
 
-    def _render_swml(self, call_id: str | None = None, modifications: dict[str, Any] | None = None) -> str:
+    def _render_swml(
+        self, call_id: str | None = None, modifications: dict[str, Any] | None = None
+    ) -> str:
         self.compile()
         return super()._render_swml(call_id, modifications)
 
-    def on_function_call(self, name: str, args: dict[str, Any], raw_data: dict[str, Any] | None = None) -> Any:
+    def on_function_call(
+        self, name: str, args: dict[str, Any], raw_data: dict[str, Any] | None = None
+    ) -> Any:
         self.compile()
         return super().on_function_call(name, args, raw_data)
 
@@ -1334,18 +1655,17 @@ def _contribute(ctx: Any, name: str, text: str, tools: list[str]) -> Any:
     """
     A step with its text and its tools, and no way to leave on its own:
     handlers move it. A step another layer made already keeps what it has:
-    the text is added (as a section, when it's written in sections) and the
-    tools join its own.
+    the text and tools are added to its own (``Step._extend``).
     """
     step = ctx.get_step(name)
     if step is None:
-        return ctx.add_step(name).set_text(text).set_functions(list(tools)).set_valid_steps([])
-    if step._sections:
-        step.add_section("What else you can do", text)
-    elif text:
-        step.set_text(f"{step._text}\n\n{text}" if step._text else text)
-    had = step._functions if isinstance(step._functions, list) else []
-    return step.set_functions(list(dict.fromkeys([*had, *tools])))
+        return (
+            ctx.add_step(name)
+            .set_text(text)
+            .set_functions(list(tools))
+            .set_valid_steps([])
+        )
+    return step._extend(text, tools, section="What else you can do")
 
 
 def _offered(op: Operation, step: str) -> bool:
@@ -1362,25 +1682,6 @@ def _refused(e: Refuse, prefix: str) -> FunctionResult:
     return result.enable_extensive_data(False) if e.keep else result
 
 
-def _state_first(result: FunctionResult) -> FunctionResult:
-    """
-    An action object that says something and also sets state (a read-back
-    with its ``semantic_state``) split in two, the state first: the platform
-    runs a say first within its object, and skips the rest of the object when
-    the caller talks over it.
-    """
-    out: list[Any] = []
-    for action in result.action:
-        if isinstance(action, dict) and "say" in action and len(action) > 1:
-            state = {k: v for k, v in action.items() if k in ("set_global_data", "semantic_gate_mark")}
-            rest = {k: v for k, v in action.items() if k not in state}
-            out.extend([state, rest] if state else [action])
-        else:
-            out.append(action)
-    result.action = out
-    return result
-
-
 def _made_text(done: Sequence[str], writes: Sequence[Write], made: int) -> str:
     """What went through, in the change's own words, or, where it has none for the writes made, the writes."""
     if not writes:
@@ -1388,13 +1689,23 @@ def _made_text(done: Sequence[str], writes: Sequence[Write], made: int) -> str:
     said = " ".join(d for d in done[:made] if d)
     if said or made == 0 or made == len(writes):
         return said
-    return "; ".join(f"{w.name} ({', '.join(f'{k} {v}' for k, v in w.args.items())})" for w in writes[:made]) + "."
+    return (
+        "; ".join(
+            f"{w.name} ({', '.join(f'{k} {v}' for k, v in w.args.items())})"
+            for w in writes[:made]
+        )
+        + "."
+    )
 
 
 def _with_not_said(f: Field) -> dict[str, Any]:
     """A field's schema; one that's asked for when missing takes "not said" as well, the model's honest answer."""
     schema = f.schema()
-    if f.ask and isinstance(schema.get("enum"), list) and NOT_SAID not in schema["enum"]:
+    if (
+        f.ask
+        and isinstance(schema.get("enum"), list)
+        and NOT_SAID not in schema["enum"]
+    ):
         schema["enum"] = [*schema["enum"], NOT_SAID]
     return schema
 
@@ -1418,17 +1729,21 @@ def _change_of(entry: Mapping[str, Any]) -> Change:
 
 
 def _same_value(a: Any, b: Any) -> bool:
-    norm = lambda v: str(v).strip().lower() if v is not None else ""  # noqa: E731
-    return norm(a) == norm(b)
+    return _normal(a) == _normal(b)
+
+
+def _normal(value: Any) -> str:
+    return str(value).strip().lower() if value is not None else ""
 
 
 def _same_request(a: Mapping[str, Any], b: Mapping[str, Any]) -> bool:
-    return a.get("kind") == b.get("kind") and set(a.get("touches") or []) == set(b.get("touches") or [])
+    return a.get("kind") == b.get("kind") and set(a.get("touches") or []) == set(
+        b.get("touches") or []
+    )
 
 
 def _snake(name: str) -> str:
-    out = "".join(f"_{c.lower()}" if c.isupper() else c for c in name).lstrip("_")
-    return out
+    return "".join(f"_{c.lower()}" if c.isupper() else c for c in name).lstrip("_")
 
 
 def _spoken_list(items: Sequence[str]) -> str:
@@ -1461,4 +1776,4 @@ def _transfer_gate() -> SemanticGate:
     )
 
 
-__all__ = ["DEFAULT_RULES", "Call", "Operations", "ServiceAgent"]
+__all__ = ["DEFAULT_RULES", "CallContext", "Operations", "ServiceAgent"]

@@ -62,7 +62,8 @@ def test_optional_identity_starts_in_main_and_gates_only_what_needs_it() -> None
     refused = sim.call("cancel_booking", said({}))
     assert "Their account isn't found yet." in refused.response
     first = sim.call("book_table", said({"party": None, "when": None}))
-    assert first.tool_prompt.startswith("Ask them: How many people is it for?") and "What day" not in first.tool_prompt
+    prompt = first.tool_prompt or ""
+    assert prompt.startswith("Ask them: How many people is it for?") and "What day" not in prompt
     booked = sim.call("book_table", said({"party": 2, "when": "Friday at 7"}))
     assert booked.ran and sim.step == "confirm"
     found = sim.call("find_account", said({"phone": "555", "asked_for": ""}))
@@ -75,7 +76,7 @@ def test_prefill_starts_the_call_identified() -> None:
     assert known and known["ops"]["account_id"] == "g1" and known["ops"]["account"] == "Guest g1"
     assert agent.ops.prefilled({"caller_id_num": "000"}) is None
     mods = agent.on_swml_request({"caller_id_num": "555"})
-    assert mods["global_data"]["ops"]["account_id"] == "g1"
+    assert mods is not None and mods["global_data"]["ops"]["account_id"] == "g1"
     sim = CallSimulator(agent, global_data=mods["global_data"])
     assert sim.step == "main"
     out = sim.call("cancel_booking", said({}))
@@ -87,11 +88,14 @@ def test_offer_puts_other_tools_in_the_generated_steps() -> None:
     agent.define_tool("weather", "Today's weather.", {}, lambda args, raw: FunctionResult("Sunny."))
     agent.define_tool("menu", "The menu.", {}, lambda args, raw: FunctionResult("Soup."))
     agent.offer("weather", before_identity=True)
-    agent.offer("menu", where=["main"])
+    agent.offer("menu", steps=["main"])
     sim = CallSimulator(agent)
     assert sim.step == "identify" and "weather" in sim.offered() and "menu" not in sim.offered()
     sim.call("find_account", said({"phone": "555", "asked_for": ""}))
     assert {"weather", "menu"} <= set(sim.offered())
+    # Not where a change waits for a yes, unless named there
+    steps = {s["name"]: s for s in agent.define_contexts().to_dict()["default"]["steps"]}
+    assert "weather" not in steps["confirm"]["functions"]
 
 
 def test_router_destinations_ungated_with_connect() -> None:

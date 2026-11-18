@@ -23,13 +23,33 @@ from signalwire.operations.model import Change
 RECORD = "ops"
 """The ``global_data`` key the record lives under, so other layers' state sits beside it."""
 
-RECORD_KEYS = ("account_id", "account", "asked", "waiting", "queued", "history", "proposals", "state", "now")
+RECORD_KEYS = (
+    "account_id",
+    "account",
+    "asked",
+    "waiting",
+    "queued",
+    "history",
+    "proposals",
+    "state",
+    "now",
+)
 """The keys of the record."""
 
 
 def _opening() -> dict[str, Any]:
     """The record as a call opens."""
-    return _whole({}, account_id="", account="", asked="", waiting={}, queued=[], history=[], proposals=0, state={})
+    return _whole(
+        {},
+        account_id="",
+        account="",
+        asked="",
+        waiting={},
+        queued=[],
+        history=[],
+        proposals=0,
+        state={},
+    )
 
 
 def _opening_data() -> dict[str, Any]:
@@ -66,13 +86,19 @@ def _now_line(data: Mapping[str, Any]) -> str:
     parts = [
         f"What they asked for: {data['asked']}" if data.get("asked") else "",
         f"Done in this call: {done}" if done else "",
-        f'Waiting for their answer: "{waiting["read_back"]}"' if waiting.get("read_back") else "",
-        ("Set aside, to do next: " + " ".join(f'"{q["read_back"]}"' for q in queued)) if queued else "",
+        f'Waiting for their answer: "{waiting["read_back"]}"'
+        if waiting.get("read_back")
+        else "",
+        ("Set aside, to do next: " + " ".join(f'"{q["read_back"]}"' for q in queued))
+        if queued
+        else "",
     ]
     return "\n".join(p for p in parts if p)
 
 
-def _waiting_entry(kind: str, args: Mapping[str, Any], change: Change, revision: int) -> dict[str, Any]:
+def _waiting_entry(
+    kind: str, args: Mapping[str, Any], change: Change, revision: int
+) -> dict[str, Any]:
     """A change as it waits for the caller's yes: everything needed to carry it out, frozen."""
     return {
         "kind": kind,
@@ -88,10 +114,17 @@ def _waiting_entry(kind: str, args: Mapping[str, Any], change: Change, revision:
 
 def _queued_entry(kind: str, args: Mapping[str, Any], change: Change) -> dict[str, Any]:
     """A change set aside for after the one waiting, kept with the arguments to build it again."""
-    return {"kind": kind, "read_back": change.read_back, "touches": list(change.touches), "args": dict(args)}
+    return {
+        "kind": kind,
+        "read_back": change.read_back,
+        "touches": list(change.touches),
+        "args": dict(args),
+    }
 
 
-def _settle(data: Mapping[str, Any], outcome: str, done: str = "", made: int = 0) -> dict[str, Any]:
+def _settle(
+    data: Mapping[str, Any], outcome: str, done: str = "", made: int = 0
+) -> dict[str, Any]:
     """
     The change waiting, settled into history: how (made, not made, declined,
     replaced), what was done, and the money moved by the writes that went
@@ -107,7 +140,7 @@ def _settle(data: Mapping[str, Any], outcome: str, done: str = "", made: int = 0
         "done": done,
         "money": round(sum(moved if outcome == "made" else moved[:made]), 2),
     }
-    return {"waiting": {}, "history": list(data.get("history") or []) + [entry]}
+    return {"waiting": {}, "history": [*(data.get("history") or []), entry]}
 
 
 def _money(amount: float) -> str:
@@ -116,19 +149,31 @@ def _money(amount: float) -> str:
 
 def _joined(parts: Sequence[str]) -> str:
     parts = [p for p in parts if p]
-    return parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " and " + parts[-1] if parts else ""
+    return (
+        parts[0]
+        if len(parts) == 1
+        else ", ".join(parts[:-1]) + " and " + parts[-1]
+        if parts
+        else ""
+    )
 
 
 def _in_all(history: Sequence[Mapping[str, Any]]) -> str:
     """What the changes made in the call come to, once more than one moved money."""
-    moved = [float(h.get("money") or 0) for h in history if h.get("money")]  # only writes that went through count
+    moved = [
+        float(h.get("money") or 0) for h in history if h.get("money")
+    ]  # only writes that went through count
     if len(moved) < 2:
         return ""
     back, charged = -sum(m for m in moved if m < 0), sum(m for m in moved if m > 0)
     parts = ([f"{_money(back)} back to them"] if back > 0.005 else []) + (
         [f"{_money(charged)} charged"] if charged > 0.005 else []
     )
-    return f" In all, the changes made in this call come to {_joined(parts)}." if parts else ""
+    return (
+        f" In all, the changes made in this call come to {_joined(parts)}."
+        if parts
+        else ""
+    )
 
 
 def _next_up(data: Mapping[str, Any], tool_of: Mapping[str, str]) -> str:
