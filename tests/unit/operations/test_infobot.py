@@ -6,8 +6,8 @@ This file is part of the SignalWire SDK.
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 
-InfoBotKnowledge: a read/inform layer that installs on its own and composes
-beside Operations on one agent.
+InfoBotKnowledge: a read/inform layer that installs on its own, composes beside
+Operations on one agent, and governs its search results.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ def _main_step(agent: AgentBase) -> dict[str, Any]:
 
 def test_knowledge_installs_standalone() -> None:
     agent = AgentBase(name="kb", route="/kb", suppress_logs=True)
-    InfoBotKnowledge(search=lambda q: f"results for {q}").install(agent)
+    InfoBotKnowledge(search=lambda q: []).install(agent)
 
     main = _main_step(agent)
     assert "search_knowledge" in main["functions"]
@@ -36,7 +36,7 @@ def test_knowledge_installs_standalone() -> None:
 
 def test_knowledge_composes_beside_operations() -> None:
     agent = AgentBase(name="both", route="/both", suppress_logs=True)
-    InfoBotKnowledge(search=lambda q: "...").install(agent)
+    InfoBotKnowledge(search=lambda q: []).install(agent)
 
     ops = Operations(role="You help customers.")
     ops.writes_with(lambda call, w: None)
@@ -51,26 +51,54 @@ def test_knowledge_composes_beside_operations() -> None:
     ops.install(agent)
 
     main = _main_step(agent)
-    # search_knowledge (ours) is kept and the operation tool is unioned in.
     assert "search_knowledge" in main["functions"]
     assert "cancel_order" in main["functions"]
     assert "cancel_order" in main["text"]
-    # each layer's record line survives, ours ahead of Operations'.
     assert agent._params["conscience"] == "${global_data.infobot.now}\n\n${global_data.ops.now}"
 
 
 def test_blank_query_asks_rather_than_searches() -> None:
     seen: list[str] = []
 
-    def search(q: str) -> str:
+    def search(q: str) -> list[dict[str, Any]]:
         seen.append(q)
-        return "x"
+        return [{"content": "x", "score": 1.0}]
 
     kb = InfoBotKnowledge(search=search)
-    # an empty query returns a prompt and never calls search
     result = kb._handle_search({"query": "  "}, {})
     assert "no query" in str(result.response).lower()
     assert seen == []
-    # a real query flows through to search
-    assert kb._handle_search({"query": "pricing"}, {}).response == "x"
-    assert seen == ["pricing"]
+
+
+def test_governance_excludes_demotes_ranks_and_labels() -> None:
+    def search(q: str) -> list[dict[str, Any]]:
+        return [
+            {"content": "low", "score": 0.4, "kind": "keep"},
+            {"content": "high", "score": 0.9, "kind": "keep"},
+            {"content": "commentary", "score": 0.95, "kind": "demote"},
+            {"content": "spam", "score": 0.99, "kind": "drop"},
+        ]
+
+    kb = InfoBotKnowledge(search=search)
+    kb.set_exclude(lambda r, q: r["kind"] == "drop")
+    kb.set_demote(lambda r: r["kind"] == "demote")
+    kb.set_result_context(lambda r: f"[{r['kind']}]")
+
+    blob = str(kb._handle_search({"query": "anything"}, {}).response)
+    assert "spam" not in blob  # excluded before the cut
+    assert blob.index("high") < blob.index("low")  # higher score first
+    assert blob.index("low") < blob.index("commentary")  # demoted ranks last
+    assert "[keep]" in blob  # context labels present
+    assert blob.startswith(kb._grounding)  # grounding leads
+
+
+def test_governance_limits_and_empty_case() -> None:
+    def search(q: str) -> list[dict[str, Any]]:
+        return [{"content": f"r{i}", "score": i / 10} for i in range(10)]
+
+    blob = str(InfoBotKnowledge(search=search, result_limit=3)._handle_search({"query": "q"}, {}).response)
+    assert "r9" in blob and "r8" in blob and "r7" in blob  # top 3 by score
+    assert "r6" not in blob  # cut by the limit
+
+    empty = InfoBotKnowledge(search=lambda q: [])
+    assert "do not cover it" in str(empty._handle_search({"query": "q"}, {}).response).lower()
