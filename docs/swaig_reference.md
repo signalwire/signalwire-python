@@ -665,7 +665,7 @@ result = FunctionResult("Read the order back to the caller.").no_barge_next_resp
 ```
 
 #### `back_to_back_functions(value=True)`
-Set whether the model may call another function right after a function result, without answering in words first. `"forever"`, the call's default, chains freely. `False` makes the model answer in words after a function result. `True`, while chaining is off, allows one more chain, and then it's off again; it never lowers `"forever"`. The setting lasts for the call. Realtime models don't read it.
+Set whether the model may call another function right after a function result, without answering in words first. `"forever"`, the call's default, chains freely. `False` makes the model answer in words after a function result. `True`, while chaining is off, allows one more chain, and then it's off again; it never lowers `"forever"`. The setting lasts for the call, including one a gate's `on_fail` sets: after a refused gate turns chaining off, a later result sets `"forever"` to turn it back on, or every later tool result needs words after it. `Proposal`'s results do this. Realtime models don't read it.
 
 ```python
 # A read-back the caller must answer before anything else runs

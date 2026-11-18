@@ -121,6 +121,8 @@ class Proposal:
                 )
             ),
         )
+        # Chaining back on, after a confirm gate that refused turned it off
+        result.back_to_back_functions("forever")
         # The state first, in an object of its own: a say the caller talks
         # over ends the result's actions there. The proposal dates from the
         # start of the result's action list (from the start of its own object
@@ -165,9 +167,13 @@ class Proposal:
         the proposal's dialogue. When one fails, the model is told why, with
         the proposal quoted from ``semantic_state`` (the platform expands
         ``${global_data...}`` in a gate's output; one that doesn't sends it
-        as written), and chaining is turned off for the call
+        as written), and chaining is turned off
         (``back_to_back_functions(False)``), so the model answers in words
-        before it calls a tool again.
+        before it calls a tool again. That setting lasts for the call, so
+        ``propose``, ``ask_again`` and ``complete`` turn chaining back on
+        (``"forever"``, the call's default). Without that, every later tool
+        result would need words after it. An agent that sets
+        ``back_to_back_functions`` itself should know they do.
         """
         tool = self.confirm_tool
         quoted = "${global_data.semantic_state.proposal}"
@@ -271,6 +277,8 @@ class Proposal:
             result: The confirm tool's result, to add to.
         """
         result = result if result is not None else FunctionResult(tool_result=summary)
+        # Chaining back on, ahead of anything the result says
+        result.action.insert(0, {"back_to_back_functions": "forever"})
         return result.set_semantic_state({"done": summary})
 
 
