@@ -8045,10 +8045,11 @@
 See LICENSE file in the project root for full license information.</p>
 <p>A change the caller says yes to before a tool carries it out.</p>
 <p>This is the platform's confirm pattern. A function proposes the change: it
-reads it back and records it in <code>semantic_state</code>, in one action object,
-so the proposal's dialogue starts with the read-back on any platform
-release, including those that date a proposal from its own action object
-rather than the result's action list. The confirm tool's
+records it in <code>semantic_state</code>, then reads it back, so the proposal's
+dialogue starts with the read-back. The state goes first, in an action object
+of its own: when the caller talks over a <code>say</code>, the platform skips the rest
+of the result's actions, and a state recorded after the read-back would be
+lost. The confirm tool's
 semantic gates, judged on that dialogue (<code>dialogue="proposal"</code>), check
 three things: that the caller's latest turn is an answer, that the answer
 is a yes, and that what they answered was a read-back of this change. The
@@ -8333,11 +8334,12 @@ which asks the caller again.</p>
     <div class="doc doc-contents ">
 
         <p>The result of the function that proposes the change.</p>
-<p>The agent says <code>read_back</code> word for word, and the proposal is
-recorded as <code>semantic_state</code> <code>{"proposal": read_back, "revision":
-n, **details}</code>, in the same action object, so the gates' proposal
-dialogue starts with the read-back. The model then waits for the
-caller's answer (<code>wait_for_user</code>).</p>
+<p>The proposal is recorded as <code>semantic_state</code> <code>{"proposal":
+read_back, "revision": n, **details}</code>, and the agent says
+<code>read_back</code> word for word, so the gates' proposal dialogue starts
+with the read-back. The model then waits for the caller's answer
+(<code>wait_for_user</code>). The state is set before the read-back, so it's
+recorded even when the caller talks over the read-back.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>

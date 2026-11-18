@@ -12145,9 +12145,12 @@ decision model.</p>
 <p>A change starts a proposal, the dialogue of a gate with
 <code>dialogue="proposal"</code>, as of the start of the result's action list,
 so a <code>say</code> anywhere in the same result, such as the read-back, is in
-it. Platform releases before the whole-list rule start it at its own
-action object: set the state before <code>say</code> there, or use
-<code>signalwire.patterns.Proposal</code>, which works on both.</p>
+it. Set the state before the <code>say</code> all the same: when the caller
+talks over a <code>say</code>, the platform skips the rest of the result's
+actions, so a state set after it could be lost. Platform releases
+before the whole-list rule also date a proposal from its own action
+object, which the same order covers. <code>signalwire.patterns.Proposal</code>
+does this.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
