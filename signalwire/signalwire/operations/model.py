@@ -169,6 +169,15 @@ class Change:
     done: Sequence[str] | str | None = None
     """What to tell the caller once each write went through, one per write, or
     one sentence for the whole change."""
+    after: str | None = None
+    """The kind of another change the caller asked for that has to go first,
+    such as ``"address"`` for an item change that would leave the order's
+    address unchangeable. This one isn't read back yet: it's set aside, the
+    model is told to call that kind's tool now, and it's offered once a
+    change of that kind is settled."""
+    after_why: str = ""
+    """Why the other change goes first, in a clause: "an order's items change
+    last, since after that nothing else in it can change"."""
 
     def done_lines(self) -> list[str]:
         """What to say for each write once it went through."""

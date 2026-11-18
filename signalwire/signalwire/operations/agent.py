@@ -15,6 +15,7 @@ lifecycle: prepared, read back, agreed to, written, recorded.
 from __future__ import annotations
 
 import copy
+import functools
 import inspect
 import threading
 import logging
@@ -75,6 +76,11 @@ AS_WELL = {
 }
 
 _GOING_ON = "Tell them, and ask how they'd like to go on."
+# After a change is settled with none set aside: what else they asked for, so it isn't left for them to ask again
+_ANYTHING_ELSE = (
+    " If they've asked for anything else in this call that isn't done yet, call its tool now; if not, ask if "
+    "there's anything else."
+)
 
 
 class CallContext:
@@ -877,6 +883,7 @@ class Operations:
             )
 
     def _wrapped(self, name: str, handler: Callable[..., Any]) -> Callable[..., Any]:
+        handler = _chained(handler)
         return self._wrap(name, handler) if self._wrap is not None else handler
 
     def confirm_gates(self) -> list[SemanticGate]:
@@ -1095,6 +1102,8 @@ class Operations:
         data = call.data
         waiting = data.get("waiting") or {}
         queued = list(data.get("queued") or [])
+        if change.after:
+            return await self._held(call, op, args, change, queued)
         as_well = args.get("as_well")
         note, replaced = "", False
         if waiting.get("read_back"):
@@ -1208,6 +1217,72 @@ class Operations:
                 result.response.get("tool_result") or ""
             )
         return result
+
+    async def _held(
+        self,
+        call: CallContext,
+        op: Operation,
+        args: dict[str, Any],
+        change: Change,
+        queued: list[dict[str, Any]],
+    ) -> FunctionResult:
+        """
+        A change that waits for another the caller asked for (``after``): set
+        aside, not read back, with the model told to call the other one's tool
+        now. It's offered once that one is settled, like any change set aside.
+        One of the same operation set aside already, for some of the same
+        things, is weighed against it as the change waiting would be: made "as
+        well", one change, merged; in place of it, this one, with the rest of
+        it kept; not said, the model is asked which.
+        """
+        as_well = args.get("as_well")
+        for q in [q for q in queued if q.get("kind") == op.kind]:
+            overlap = set(q.get("touches") or []) & set(change.touches)
+            if not overlap:
+                continue
+            held = dict(q.get("args") or {})
+            queued.remove(q)
+            within = set(change.touches) <= set(q.get("touches") or [])
+            if op.combine is not None and as_well is not False and not within:
+                if as_well is None:
+                    raise Refuse(
+                        f'Nothing is changed yet: a {op.kind} change is already set aside for after another: "{q.get("read_back")}"',
+                        f"Call {op.tool} again with as_well: true if they want this as well as it, false if in place "
+                        "of it; ask them if you can't tell.",
+                    )
+                if not all(_same_value(held.get(k), args.get(k)) for k in op.combine):
+                    raise Refuse(
+                        f"Nothing is changed yet: this and the {op.kind} change set aside differ in "
+                        f"{_spoken_list(list(op.combine))}.",
+                        "Ask which they want for both.",
+                    )
+                args = op.merge(held, args)
+                change = await self._prepare(call, op, args)
+                continue
+            rest = op.without(held, overlap)
+            if rest:
+                try:
+                    kept = await self._prepare(call, op, rest)
+                except (Need, Refuse):
+                    continue
+                queued.append(_queued_entry(op.kind, rest, kept))
+        entry = _queued_entry(op.kind, args, change)
+        queued = [q for q in queued if not _same_request(q, entry)] + [entry]
+        first = self._operations.get(str(change.after))
+        tool = first.tool if first else "its tool"
+        waiting = call.data.get("waiting") or {}
+        why = f", since {change.after_why}" if change.after_why else ""
+        fact = (
+            f"Not read to them yet: the {change.after} change they asked for goes first{why}. Kept for right "
+            f'after it: "{change.read_back}"'
+        )
+        if waiting.get("kind") == change.after:
+            then = f'Tell them you\'ll do that right after, and get their answer to the change waiting: "{waiting.get("read_back")}"'
+        else:
+            then = f"Call {tool} now for it (ask them for anything it needs that they haven't said); this one comes right after it."
+        return FunctionResult(tool_result=fact, tool_prompt=then).update_global_data(
+            _update(call.data, queued=queued)
+        )
 
     async def _reconcile_queue(
         self,
@@ -1400,7 +1475,7 @@ class Operations:
         result = FunctionResult(
             tool_result=f"Done. {made_now}{total}",
             tool_prompt=f"Tell them it's done{', and what it all comes to' if total else ''}."
-            + (_next_up(data, tool_of) or " Ask if there's anything else."),
+            + (_next_up(data, tool_of) or _ANYTHING_ELSE),
         )
         return self._finish(
             call,
@@ -1422,7 +1497,7 @@ class Operations:
             FunctionResult(
                 tool_result=f'Nothing was changed: they don\'t want this change: "{waiting["read_back"]}"',
                 tool_prompt="Tell them it's left as it was."
-                + (_next_up(call.data, tool_of) or " Help with what they want next."),
+                + (_next_up(call.data, tool_of) or _ANYTHING_ELSE),
             )
             .set_semantic_state({"declined": waiting["read_back"]})
             .update_global_data(_update(call.data, **_settle(call.data, "declined")))
@@ -1674,6 +1749,25 @@ def _offered(op: Operation, step: str) -> bool:
 
 async def _maybe(value: Any) -> Any:
     return await value if inspect.isawaitable(value) else value
+
+
+def _chained(handler: Callable[..., Any]) -> Callable[..., Awaitable[FunctionResult]]:
+    """
+    A generated handler whose result lets the model call the next tool right
+    after it. A gate that refuses turns that off, so the model answers in
+    words before it tries again (the confirm gate's and the transfer gate's
+    ``back_to_back_functions(False)``); but the setting lasts for the call, and
+    without this every later tool result would be followed by a request with
+    no tools. Set first, so a tool's own setting after it still wins.
+    """
+
+    @functools.wraps(handler)
+    async def run(args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
+        result: FunctionResult = await _maybe(handler(args, raw_data))
+        result.action = [{"back_to_back_functions": "forever"}, *result.action]
+        return result
+
+    return run
 
 
 def _refused(e: Refuse, prefix: str) -> FunctionResult:

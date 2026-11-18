@@ -195,3 +195,106 @@ def test_fillers_by_language_pass_through() -> None:
 
     fn = CallSimulator(agent).functions["hours"]
     assert fn["fillers"] == {"es-ES": ["Un momento."], "en-US": ["One moment."]}
+
+
+def address_and_items_agent() -> ServiceAgent:
+    agent = ServiceAgent("orders", role="r")
+    agent.writes_with(lambda call, w: None)
+
+    @agent.operation(tool="change_address")
+    class Address(Operation):
+        """Change the order's address."""
+
+        street = Field(str, "The new street address.")
+
+        def prepare(self, call: Any, f: Any) -> Change:
+            return Change(read_back=f"Ship it to {f.street}. Shall I?", touches=["order:1"], writes=[Write("address")])
+
+    @agent.operation(tool="change_items")
+    class Items(Operation):
+        """Change the order's items."""
+
+        color = Field(str, "The color they want.")
+        address_too = Field(bool, "Whether they also want the address changed.")
+
+        def prepare(self, call: Any, f: Any) -> Change:
+            settled = any(h.get("kind") == "address" for h in call.data.get("history") or [])
+            return Change(
+                read_back=f"Make it {f.color}. Shall I?",
+                touches=["order:1", "item:1"],
+                writes=[Write("items")],
+                after="address" if f.address_too and not settled else None,
+                after_why="the items change last",
+            )
+
+    return agent
+
+
+def test_a_change_after_another_is_kept_and_offered_once_that_one_is_settled() -> None:
+    sim = CallSimulator(address_and_items_agent())
+    held = sim.call("change_items", said({"color": "red", "address_too": True}))
+    assert held.response.startswith("Not read to them yet: the address change they asked for goes first, since the")
+    assert "Call change_address now" in (held.tool_prompt or "") and sim.step == "main"
+    assert [q["kind"] for q in sim.global_data["ops"]["queued"]] == ["items"] and not sim.global_data["ops"]["waiting"]
+    sim.call("change_address", said({"street": "1 Main St"}))
+    assert sim.step == "confirm" and [q["kind"] for q in sim.global_data["ops"]["queued"]] == ["items"]
+    sim.caller("Yes.")
+    done = sim.call("confirm_change", {"change": "address"})
+    assert "call change_items again for the change set aside: \"Make it red. Shall I?\"" in (done.tool_prompt or "")
+    again = sim.call("change_items", said({"color": "red", "address_too": True}))
+    assert sim.step == "confirm" and not sim.global_data["ops"]["queued"], again.response
+
+
+def test_every_generated_result_turns_chaining_back_on_and_after_a_change_the_rest_is_asked_for() -> None:
+    sim = CallSimulator(address_and_items_agent())
+    out = sim.call("change_address", said({"street": "1 Main St"}))
+    assert out.actions[0] == {"back_to_back_functions": "forever"}
+    sim.caller("Yes.")
+    done = sim.call("confirm_change", {"change": "address"})
+    assert done.actions[0] == {"back_to_back_functions": "forever"}
+    assert "anything else in this call that isn't done yet, call its tool now" in (done.tool_prompt or "")
+
+
+def test_a_second_change_held_for_the_same_things_is_merged_asked_or_takes_over() -> None:
+    agent = ServiceAgent("orders2", role="r")
+    agent.writes_with(lambda call, w: None)
+
+    @agent.operation(tool="change_address")
+    class Address(Operation):
+        """Change the order's address."""
+
+        street = Field(str, "The new street address.")
+
+        def prepare(self, call: Any, f: Any) -> Change:
+            return Change(read_back=f"Ship it to {f.street}. Shall I?", touches=["order:1"], writes=[Write("address")])
+
+    @agent.operation(tool="change_items")
+    class Items(Operation):
+        """Change the order's items."""
+
+        items = Field(list[str], "The items to change.")
+        address_too = Field(bool, "Whether they also want the address changed.")
+        combine = ()
+
+        def prepare(self, call: Any, f: Any) -> Change:
+            settled = any(h.get("kind") == "address" for h in call.data.get("history") or [])
+            return Change(
+                read_back=f"Change {', '.join(f.items)}. Shall I?",
+                touches=["order:1", *[f"item:{i}" for i in f.items]],
+                writes=[Write("items", items=list(f.items))],
+                after="address" if f.address_too and not settled else None,
+            )
+
+    sim = CallSimulator(agent)
+    sim.call("change_items", said({"items": ["a"], "address_too": True}))
+    asked = sim.call("change_items", said({"items": ["b"], "address_too": True}))
+    assert "already set aside for after another" in asked.response and "as_well" in (asked.tool_prompt or "")
+    assert [q["args"]["items"] for q in sim.global_data["ops"]["queued"]] == [["a"]], "nothing lost while asking"
+    sim.call("change_items", said({"items": ["b"], "address_too": True, "as_well": True}))
+    assert [q["args"]["items"] for q in sim.global_data["ops"]["queued"]] == [["a", "b"]]
+    sim.call("change_items", said({"items": ["c"], "address_too": True, "as_well": False}))
+    assert [q["args"]["items"] for q in sim.global_data["ops"]["queued"]] == [["c"]], "in place of it"
+    sim.call("change_address", said({"street": "1 Main St"}))
+    sim.caller("Yes.")
+    done = sim.call("confirm_change", {"change": "address"})
+    assert 'call change_items again for the change set aside: "Change c. Shall I?"' in (done.tool_prompt or "")

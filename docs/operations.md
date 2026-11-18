@@ -85,6 +85,8 @@ An operation is a class with `Field` attributes, a docstring (what it does, as t
 
 A `Change` carries `read_back` (the words the caller says yes to: put the change itself in the first clause), `touches` (stable keys for what it acts on, such as `order:#W1`), `writes` (the backend writes, kept as data), `money` (what each write moves) and `done` (what to tell the caller once each write went through).
 
+A change that has to wait for another one the caller asked for names that one's kind in `after` (and why, in `after_why`): an item change that would leave the order's address unchangeable, while they've also asked to change the address. It isn't read back yet. It's set aside, the model is told to call that kind's tool now, and it's offered once a change of that kind is settled.
+
 A field with `ask` is asked for when the model sends it empty, null or as "not said" (a field with a fixed choice of values gets that option), before `prepare` runs, so the model is never pushed to invent it. Every operation tool also has the caller vouch for its details (`data_supplied_by_user`), and nothing runs without that.
 
 Writes run through the agent's writer (`writes_with`) or the operation's own `apply(call, write)`. Raise `WriteFailed(reason)` when the backend refuses one: the writes before it stay made, and the model is told exactly what went through. `call.write_key` is unique to each write in the call, for backends that take an idempotency key.
@@ -99,7 +101,7 @@ Every change goes through the same steps:
 4. The model calls `confirm_change` or `decline_change`. `confirm_change` has one gate: did the caller agree to this read-back. A yes said while it was still being read counts.
 5. The writes run in order, each outcome kept.
 6. The change goes into the call's history, with the money it moved; after a second change that moves money, the model is told what the call comes to in all.
-7. A change set aside for after this one is offered next.
+7. A change set aside for after this one is offered next; with none, the model is told to go on with anything else the caller asked for.
 
 ## A Request While a Change Waits
 
@@ -169,7 +171,7 @@ A lookup reads and changes nothing. It returns text or a `FunctionResult`, or ra
 - Steps: `identify` (with `identify`), `main`, `confirm`, a step per operation with `guidance`, each declared phase, and `transferred` (with `transfer_with`). Handlers move between them; the model never navigates. Every step but the last offers every operation tool and every lookup, so a caller who asks for something else is never stranded.
 - The prompt's Role and Rules sections.
 - The call's record in `global_data`: `account_id`, `account`, `asked`, `waiting`, `queued`, `history`, `proposals` and `now`. The conscience is `${global_data.now}`: where the call stands, on every request.
-- `confirm_change` with its one gate, `decline_change`, and `transfer_to_human` gated on the caller asking for a person.
+- `confirm_change` with its one gate, `decline_change`, and `transfer_to_human` gated on the caller asking for a person. A gate that refuses has the model answer in words before it calls a tool again (`back_to_back_functions(False)`, which lasts for the call), and every generated tool's result turns chaining back on (`"forever"`), so one refusal doesn't keep the model from chaining tools for the rest of the call.
 
 `agent.preview()` prints each step's text and tools, as the model gets them. Overrides: `step_text`, `confirm_gates`, `tool_fillers`, `gate_fillers`, `wrap` (middleware around every generated handler) and `customize(contexts)` (the generated `ContextBuilder`, to change it).
 
