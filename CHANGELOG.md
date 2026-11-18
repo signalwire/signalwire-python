@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.12.1] - 2026-11-18
+
+### Fixed
+- `Proposal.propose()` and `ask_again()` record the proposal's
+  `semantic_state` before the read-back, in an action object of its own. They
+  put both in one object, `say` first. When the caller talked over the
+  read-back, the platform skipped the rest of the result's actions, the state
+  was never recorded, and the confirm gates judged the caller's yes against
+  the previous read-back. The read-back is still the proposal's first turn:
+  the platform dates a proposal from the start of the result's action list,
+  and older releases from the start of the state's own object. The docs for
+  `set_semantic_state()` give the same rule. Found by the benchmark runs.
+
 ## [3.12.0] - 2026-11-16
 
 ### Added
