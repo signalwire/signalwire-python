@@ -61,10 +61,15 @@ def test_knowledge_composes_beside_operations() -> None:
 
 def test_blank_query_asks_rather_than_searches() -> None:
     seen: list[str] = []
-    kb = InfoBotKnowledge(search=lambda q: seen.append(q) or "x")
+
+    def search(q: str) -> str:
+        seen.append(q)
+        return "x"
+
+    kb = InfoBotKnowledge(search=search)
     # an empty query returns a prompt and never calls search
     result = kb._handle_search({"query": "  "}, {})
-    assert "no query" in result.response.lower()
+    assert "no query" in str(result.response).lower()
     assert seen == []
     # a real query flows through to search
     assert kb._handle_search({"query": "pricing"}, {}).response == "x"
