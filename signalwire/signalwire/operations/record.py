@@ -14,29 +14,48 @@ the steps, and is worked out again on every update, so it is never behind.
 
 from __future__ import annotations
 
+import copy
 from collections.abc import Mapping, Sequence
 from typing import Any
 
 from signalwire.operations.model import Change
 
-RECORD_KEYS = ("account_id", "account", "asked", "waiting", "queued", "history", "proposals", "now")
-"""The ``global_data`` keys the record owns."""
+RECORD = "ops"
+"""The ``global_data`` key the record lives under, so other layers' state sits beside it."""
+
+RECORD_KEYS = ("account_id", "account", "asked", "waiting", "queued", "history", "proposals", "state", "now")
+"""The keys of the record."""
 
 
 def _opening() -> dict[str, Any]:
     """The record as a call opens."""
-    return _update({}, account_id="", account="", asked="", waiting={}, queued=[], history=[], proposals=0)
+    return _whole({}, account_id="", account="", asked="", waiting={}, queued=[], history=[], proposals=0, state={})
+
+
+def _opening_data() -> dict[str, Any]:
+    """The ``global_data`` a call opens with: the record under its key."""
+    return {RECORD: _opening()}
 
 
 def _record_of(raw_data: Mapping[str, Any] | None) -> dict[str, Any]:
-    """The call's ``global_data``, as the platform sent it with a request."""
+    """The call's record, as the platform sent it with a request."""
     data = raw_data.get("global_data") if isinstance(raw_data, Mapping) else None
-    return dict(data) if isinstance(data, Mapping) else {}
+    record = data.get(RECORD) if isinstance(data, Mapping) else None
+    return copy.deepcopy(dict(record)) if isinstance(record, Mapping) else {}
+
+
+def _whole(data: Mapping[str, Any], **changes: Any) -> dict[str, Any]:
+    """The whole record after these changes, with ``now`` worked out after them."""
+    record = {**data, **changes}
+    return {**record, "now": _now_line(record)}
 
 
 def _update(data: Mapping[str, Any], **changes: Any) -> dict[str, Any]:
-    """The ``global_data`` update for these changes, with ``now`` worked out after them."""
-    return {**changes, "now": _now_line({**data, **changes})}
+    """
+    The ``global_data`` update for these changes: the whole record, since the
+    platform replaces a top-level key whole.
+    """
+    return {RECORD: _whole(data, **changes)}
 
 
 def _now_line(data: Mapping[str, Any]) -> str:
@@ -121,4 +140,4 @@ def _next_up(data: Mapping[str, Any], tool_of: Mapping[str, str]) -> str:
     return f' Then, as they asked, call {tool_of.get(first["kind"], "its tool")} again for the change set aside: "{first["read_back"]}"'
 
 
-__all__ = ["RECORD_KEYS"]
+__all__ = ["RECORD", "RECORD_KEYS"]

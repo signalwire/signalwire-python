@@ -35,16 +35,20 @@ from signalwire.operations.model import (
     WriteFailed,
     _missing,
 )
+from signalwire.core.swaig_function import _resolve_awaitable as _resolve
 from signalwire.operations.record import (
+    RECORD,
     _in_all,
     _next_up,
     _now_line,
     _opening,
+    _opening_data,
     _queued_entry,
     _record_of,
     _settle,
     _update,
     _waiting_entry,
+    _whole,
 )
 from signalwire.patterns.proposal import Proposal, current
 
@@ -76,7 +80,8 @@ class Call:
     """
     One request of a call, as an operation, lookup or identify function sees it.
 
-    ``call.data`` is the call's ``global_data`` as it came with the request;
+    ``call.data`` is the call's record (``global_data.ops``) as it came with
+    the request;
     ``call.account_id`` is the account identified, and ``call.account`` what
     the agent's ``load`` function made of it. ``call.state`` is the
     developer's own state for the call (a game's hand, the results a caller
@@ -94,7 +99,18 @@ class Call:
         self.state: dict[str, Any] = copy.deepcopy(dict(kept)) if isinstance(kept, Mapping) else {}
         self._state_was = copy.deepcopy(self.state)
         self._events: list[dict[str, Any]] = []
+        self._acts: list[Any] = []
         self._next_step: str | None = None
+
+    def act(self, result: FunctionResult) -> Call:
+        """
+        Add a platform action (or several) to this tool's result, after
+        everything else it does: hang up, start recording, play hold music,
+        hand the call on. ``result`` is a ``FunctionResult`` whose actions are
+        taken; its text is not.
+        """
+        self._acts.extend(result.action)
+        return self
 
     def show(self, event: Mapping[str, Any]) -> Call:
         """
@@ -133,10 +149,11 @@ class _Lookup:
         description: str,
         fields: dict[str, Field],
         before_identity: bool,
-        fillers: Sequence[str],
+        fillers: Any,
+        secure: bool = True,
     ) -> None:
         self.fn, self.tool, self.description, self.fields = fn, tool, description, fields
-        self.before_identity, self.fillers = before_identity, list(fillers)
+        self.before_identity, self.fillers, self.secure = before_identity, fillers, secure
 
 
 class _Identity:
@@ -149,16 +166,37 @@ class _Identity:
         fields: Mapping[str, Field],
         tool: str,
         ask: str | None,
-        fillers: Sequence[str],
+        fillers: Any,
         check_keys: bool,
+        required: bool = True,
+        prefill: Callable[..., Any] | None = None,
     ) -> None:
+        self.required, self.prefill = required, prefill
         self.any_of = [list(s) for s in any_of]
         self.find, self.load, self.describe = find, load, describe
         keys = list(dict.fromkeys(k for s in self.any_of for k in s))
         self.fields = {k: fields.get(k) or Field(str, f"Their {k.replace('_', ' ')}, as they said it.") for k in keys}
         self.fields.update({k: f for k, f in fields.items() if k not in self.fields})
-        self.tool, self.fillers, self.check_keys = tool, list(fillers), check_keys
+        self.tool, self.fillers, self.check_keys = tool, fillers, check_keys
         self.ask = ask or ", or ".join("their " + _spoken_list([k.replace("_", " ") for k in s]) for s in self.any_of)
+
+
+class _Transfer:
+    def __init__(
+        self, fn: Callable[..., Any], tool: str, destinations: Mapping[str, str] | None, gated: bool, notice: str | None
+    ) -> None:
+        self.fn, self.tool, self.gated, self.notice = fn, tool, gated, notice
+        self.destinations = dict(destinations or {})
+
+    def mention(self) -> str:
+        if self.destinations:
+            return f" To reach {_spoken_list(list(self.destinations))}, call {self.tool} with where they want to go."
+        return f" If they ask for a person, call {self.tool}."
+
+    def description(self) -> str:
+        if self.destinations:
+            return "Transfer the caller where they ask to go."
+        return "Transfer the caller to a person, when they ask for one or say yes to being transferred."
 
 
 class Operations:
@@ -203,7 +241,9 @@ class Operations:
         """
         Args:
             role: Who the agent is and how it sounds, the prompt's Role section.
-            rules: The prompt's Rules section; defaults to ``DEFAULT_RULES``.
+            rules: The prompt's Rules section; defaults to ``DEFAULT_RULES``
+                (without the rule about changes when there are no
+                operations).
             transfer_notice: What the platform says as a transfer starts.
             step_text: Text to use in place of a generated step's, by step
                 name (``identify``, ``main``, ``confirm``).
@@ -225,13 +265,14 @@ class Operations:
         self._gate_fillers = dict(gate_fillers) if gate_fillers else None
         self._wrap = wrap
         self._customize = customize
-        self._rules = list(rules) if rules is not None else list(DEFAULT_RULES)
+        self._rules = list(rules) if rules is not None else None
         self._operations: dict[str, Operation] = {}
         self._lookups: list[_Lookup] = []
         self._identity: _Identity | None = None
         self._writer: Callable[..., Any] | None = None
-        self._transfer: Callable[..., Any] | None = None
+        self._transfer: _Transfer | None = None
         self._transfer_notice = transfer_notice
+        self._offers: list[tuple[list[str], bool, list[str] | None]] = []
         self._phases: list[tuple[str, str, list[str] | None, bool]] = []
         self.proposal = Proposal(CONFIRM_TOOL, decline_tool=DECLINE_TOOL)
 
@@ -280,7 +321,8 @@ class Operations:
         tool: str | None = None,
         fields: Mapping[str, Field] | None = None,
         before_identity: bool = False,
-        fillers: Sequence[str] = (),
+        fillers: Any = (),
+        secure: bool = True,
     ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
         """
         Register a lookup: a tool that reads and answers, and changes nothing.
@@ -296,7 +338,9 @@ class Operations:
                 after ``call``, each a string.
             before_identity: True to offer it before the caller is identified.
                 Account data never should be.
-            fillers: Short phrases said while it runs.
+            fillers: Short phrases said while it runs: a list, or lists by
+                language code.
+            secure: Whether its tool takes the per-call security token.
         """
 
         def register(fn: Callable[..., Any]) -> Callable[..., Any]:
@@ -304,7 +348,7 @@ class Operations:
             found = dict(fields) if fields is not None else {
                 p: Field(str, p.replace("_", " ").capitalize() + ".") for p in params
             }
-            self._lookups.append(_Lookup(fn, tool or fn.__name__, description, found, before_identity, fillers))
+            self._lookups.append(_Lookup(fn, tool or fn.__name__, description, found, before_identity, fillers, secure))
             return fn
 
         return register
@@ -319,8 +363,10 @@ class Operations:
         fields: Mapping[str, Field] | None = None,
         tool: str = "find_account",
         ask: str | None = None,
-        fillers: Sequence[str] = (),
+        fillers: Any = (),
         check_keys: bool = True,
+        required: bool = True,
+        prefill: Callable[..., Any] | None = None,
     ) -> Operations:
         """
         Identify the caller before account data is shared or changed.
@@ -344,10 +390,21 @@ class Operations:
             fillers: Short phrases said while it runs.
             check_keys: False to call ``find`` without a whole key set, when
                 it recovers from partial or misheard keys itself.
+            required: False for an agent that's useful to callers who aren't
+                identified: there's no identify step, and the identify tool is
+                offered with the rest. Operations still refuse until it's
+                found, unless they're ``before_identity``.
+            prefill: ``prefill(request_data, request)`` returns keys already
+                known when the call starts (caller ID, a chat widget, the
+                page), or None. With them, ``find`` runs before the call does,
+                silently, and the call starts identified (``prefilled``).
+                Implies ``required=False``.
         """
         if not any_of or not all(any_of):
             raise ValueError("identify needs at least one non-empty key set")
-        self._identity = _Identity(any_of, find, load, describe, dict(fields or {}), tool, ask, fillers, check_keys)
+        self._identity = _Identity(
+            any_of, find, load, describe, dict(fields or {}), tool, ask, fillers, check_keys, required, prefill
+        )
         return self
 
     def writes_with(self, writer: Callable[..., Any]) -> Operations:
@@ -359,13 +416,49 @@ class Operations:
         self._writer = writer
         return self
 
-    def transfer_with(self, transfer: Callable[..., Any]) -> Operations:
+    def transfer_with(
+        self,
+        transfer: Callable[..., Any],
+        *,
+        destinations: Mapping[str, str] | None = None,
+        gated: bool = True,
+        tool: str = TRANSFER_TOOL,
+        notice: str | None = None,
+    ) -> Operations:
         """
-        Offer a transfer to a person: ``transfer(call, summary)`` hands the
-        call over, or raises ``Refuse``. Adds the ``transfer_to_human`` tool
-        to every step, gated on the caller having asked for a person.
+        Offer a transfer: ``transfer(call, summary)`` (with ``destinations``,
+        ``transfer(call, summary, to)``) hands the call over, by returning
+        the platform action to do it (a ``FunctionResult`` with a connect or
+        a SWML transfer) or doing it itself, or raises ``Refuse``. Adds its
+        tool to every step.
+
+        Args:
+            transfer: The function.
+            destinations: Where callers can go, by name, each with a
+                description, such as ``{"sales": "buying something new"}``.
+            gated: Whether the tool runs only once the caller has asked for a
+                person or agreed to it. A router, whose callers say where to
+                go, sets it False.
+            tool: The tool's name.
+            notice: What the platform says as the transfer starts; defaults to
+                the service's ``transfer_notice``.
         """
-        self._transfer = transfer
+        self._transfer = _Transfer(transfer, tool, destinations, gated, notice)
+        return self
+
+    def offer(self, *tools: str, before_identity: bool = False, where: Sequence[str] | None = None) -> Operations:
+        """
+        Offer tools the service didn't make (skills, DataMap tools, MCP
+        tools, another layer's tools, ``define_tool``) in its steps.
+
+        Args:
+            *tools: The tools' names, as registered on the agent.
+            before_identity: True to offer them before the caller is
+                identified too.
+            where: The steps that offer them, by name; by default every
+                generated step but confirm's own list is extended too.
+        """
+        self._offers.append((list(tools), before_identity, list(where) if where is not None else None))
         return self
 
     def phase(self, name: str, text: str, tools: Sequence[str] | None = None, *, initial: bool = False) -> Operations:
@@ -399,31 +492,97 @@ class Operations:
         """
         Give ``agent`` this service's prompt sections, record, conscience,
         tools and steps. Call it once per agent (or per request, for an agent
-        configured per request).
+        configured per request). Other layers may install on the same agent,
+        before or after: steps that exist already are added to, never
+        replaced, and the conscience gets this service's line appended.
         """
         agent.prompt_add_section("Role", body=self._role)
-        if self._rules:
-            agent.prompt_add_section("Rules", bullets=list(self._rules))
-        agent.update_global_data(_opening())
-        agent.set_param("conscience", "${global_data.now}")
+        rules = self._rules if self._rules is not None else [
+            r for r in DEFAULT_RULES if self._operations or r is not DEFAULT_RULES[2]
+        ]
+        if rules:
+            agent.prompt_add_section("Rules", bullets=list(rules))
+        if self._operations or self._identity is not None:
+            agent.update_global_data(_opening_data())
+            line = "${global_data.%s.now}" % RECORD
+            had = str((getattr(agent, "_params", {}) or {}).get("conscience") or "")
+            if line not in had:
+                agent.set_param("conscience", f"{had}\n\n{line}" if had.strip() else line)
         self._define_tools(agent)
         self._define_steps(agent)
         return agent
 
-    def _tool_names(self) -> dict[str, list[str]]:
-        ops = [op.tool for op in self._operations.values()]
-        lookups = [lk.tool for lk in self._lookups]
-        early = [lk.tool for lk in self._lookups if lk.before_identity]
-        transfer = [TRANSFER_TOOL] if self._transfer else []
-        return {"ops": ops, "lookups": lookups, "early": early, "transfer": transfer}
+    def prefilled(self, request_data: Mapping[str, Any] | None, request: Any = None) -> dict[str, Any] | None:
+        """
+        The ``global_data`` a call starts with when ``identify``'s ``prefill``
+        already knows the caller (caller ID, a chat widget, the page): the
+        record, identified, or None. ``ServiceAgent`` applies it on each SWML
+        request; an agent configured per request applies it itself.
+        """
+        idn = self._identity
+        if idn is None or idn.prefill is None:
+            return None
+        try:
+            keys = _resolve(idn.prefill(request_data or {}, request))
+            if not keys:
+                return None
+            call = Call(self, {"global_data": {RECORD: _opening()}})
+            found = _resolve(idn.find(call, dict(keys)))
+            if found is None or str(found).strip() == "":
+                return None
+            call.data["account_id"] = str(found)
+            call.account = _resolve(idn.load(call, call.data["account_id"])) if idn.load else call.data["account_id"]
+            text = str(_resolve(idn.describe(call))) if idn.describe else ""
+        except Exception:  # unknown: the call starts unidentified, and identify asks
+            logger.exception("operations: prefill could not identify the caller")
+            return None
+        return _update(call.data, account_id=call.data["account_id"], account=text)
+
+    def _gated(self) -> bool:
+        """Whether the call starts in a step of its own that asks who the caller is."""
+        idn = self._identity
+        return idn is not None and idn.required and idn.prefill is None
+
+    def _tools_for(self, step: str) -> list[str]:
+        """The tools a generated step offers: every lookup and operation (those an operation scopes with
+        ``offered_in`` only where it says), the identify tool where identify doesn't have a step of its own,
+        tools offered with ``offer``, and the transfer."""
+        idn = self._identity
+        early = step == IDENTIFY_STEP
+        tools: list[str] = []
+        if early:
+            tools += [idn.tool] if idn is not None else []
+            tools += [lk.tool for lk in self._lookups if lk.before_identity]
+            tools += [op.tool for op in self._operations.values() if op.before_identity and _offered(op, step)]
+        else:
+            if idn is not None and not self._gated():
+                tools.append(idn.tool)
+            tools += [lk.tool for lk in self._lookups]
+            tools += [op.tool for op in self._operations.values() if _offered(op, step) or op.kind == step]
+        for names, before_identity, where in self._offers:
+            if where is not None:
+                tools += [n for n in names if step in where]
+            elif not early or before_identity:
+                tools += list(names)
+        if self._transfer:
+            tools.append(self._transfer.tool)
+        return list(dict.fromkeys(tools))
 
     def _define_steps(self, agent: AgentBase) -> None:
-        names = self._tool_names()
-        ctx = agent.define_contexts().add_context("default")
-        transfer = " If they ask for a person, call transfer_to_human." if self._transfer else ""
-        where = "Their account: ${global_data.account}\n\n" if self._identity else ""
-        lookups = " or ".join(names["lookups"])
+        builder = agent.define_contexts()
+        ctx = builder.get_context("default") or builder.add_context("default")
+        transfer = self._transfer.mention() if self._transfer else ""
+        record = "${global_data.%s.account}" % RECORD
+        where = f"Their account: {record}\n\n" if self._identity else ""
+        idn = self._identity
+        lookups = " or ".join(lk.tool for lk in self._lookups)
         ops = "; ".join(f"{op.tool} ({type(op).describe().rstrip('.')})" for op in self._operations.values())
+        unfound = (
+            f" If their account isn't found yet and they want something that needs it, ask for {idn.ask} and call "
+            f"{idn.tool}."
+            if idn is not None and not self._gated()
+            else ""
+        )
         help_with = (
             (f"To look something up, call {lookups}. " if lookups else "")
             + (
@@ -433,56 +592,59 @@ class Operations:
                 else ""
             )
             + "If they ask for something these tools can't do, tell them so and what can be done instead."
+            + unfound
             + transfer
         )
-        idn = self._identity
-        if idn is not None:
-            early = f" For {' or '.join(names['early'])}, they needn't be identified." if names["early"] else ""
-            _scoped(
-                ctx.add_step(IDENTIFY_STEP),
+        if self._gated():
+            assert idn is not None
+            early_lookups = [lk.tool for lk in self._lookups if lk.before_identity]
+            early = f" For {' or '.join(early_lookups)}, they needn't be identified." if early_lookups else ""
+            _contribute(
+                ctx, IDENTIFY_STEP,
                 self._step_text.get(IDENTIFY_STEP)
                 or f"Ask for {idn.ask}, and call {idn.tool} with what they say. Nothing about an account can be shared "
                 f"or changed until it's found.{early}{transfer}",
-                [idn.tool, *names["early"], *names["transfer"]],
+                self._tools_for(IDENTIFY_STEP),
             )
-        _scoped(
-            ctx.add_step(MAIN_STEP),
+        _contribute(
+            ctx, MAIN_STEP,
             self._step_text.get(MAIN_STEP) or f"{where}Help with what they ask, all of it. {help_with}",
-            [*names["lookups"], *names["ops"], *names["transfer"]],
+            self._tools_for(MAIN_STEP),
         )
         if any(op.confirm for op in self._operations.values()):
-            _scoped(
-                ctx.add_step(CONFIRM_STEP),
+            _contribute(
+                ctx, CONFIRM_STEP,
                 self._step_text.get(CONFIRM_STEP)
                 or f"{where}A change was just read to them and waits for their answer. When they say yes, call "
                 f"{CONFIRM_TOOL}. If they want it different, call its tool again with what they want. If they don't "
                 f"want it, call {DECLINE_TOOL}. If they ask for another change as well, call its tool: the tool says "
                 f"which comes first, and nothing asked for is lost.{transfer}",
-                [CONFIRM_TOOL, DECLINE_TOOL, *names["lookups"], *names["ops"], *names["transfer"]],
+                [CONFIRM_TOOL, DECLINE_TOOL, *self._tools_for(CONFIRM_STEP)],
             )
         for op in self._operations.values():
             if op.guidance:
-                _scoped(
-                    ctx.add_step(op.kind),
-                    f"{where}{op.guidance} When you have what it needs, call {op.tool}. {help_with}",
-                    [*names["lookups"], *names["ops"], *names["transfer"]],
+                _contribute(
+                    ctx, op.kind, f"{where}{op.guidance} When you have what it needs, call {op.tool}. {help_with}",
+                    self._tools_for(op.kind),
                 ).set_history("spoken")
-        known = {*names["lookups"], *names["ops"], *names["transfer"], CONFIRM_TOOL, DECLINE_TOOL}
+        known = {*self._tools_for(MAIN_STEP), *self._tools_for(IDENTIFY_STEP), CONFIRM_TOOL, DECLINE_TOOL,
+                 *(n for names, _, _ in self._offers for n in names),
+                 *(op.tool for op in self._operations.values())}
         first = None
         for pname, ptext, ptools, initial in self._phases:
-            tools = ptools if ptools is not None else [*names["lookups"], *names["ops"], *names["transfer"]]
+            tools = ptools if ptools is not None else self._tools_for(pname)
             unknown = [t for t in tools if t not in known]
             if unknown:
                 raise ValueError(f"phase {pname!r} offers tools that don't exist: {', '.join(unknown)}")
-            _scoped(ctx.add_step(pname), f"{where}{ptext}", tools)
+            _contribute(ctx, pname, f"{where}{ptext}", tools)
             first = first or (pname if initial else None)
-        ctx.set_initial_step(IDENTIFY_STEP if idn is not None else first or MAIN_STEP)
+        ctx.set_initial_step(IDENTIFY_STEP if self._gated() else first or MAIN_STEP)
         if self._transfer:
-            gone = agent.define_contexts().add_context(TRANSFERRED)
-            _scoped(gone.add_step(TRANSFERRED), "The caller is being transferred to a person. Say nothing more.", [])
+            gone = builder.get_context(TRANSFERRED) or builder.add_context(TRANSFERRED)
+            _contribute(gone, TRANSFERRED, "The caller is being transferred. Say nothing more.", [])
             gone.set_initial_step(TRANSFERRED)
         if self._customize is not None:
-            self._customize(agent.define_contexts())
+            self._customize(builder)
 
     def _define_tools(self, agent: AgentBase) -> None:
         idn = self._identity
@@ -511,6 +673,7 @@ class Operations:
                 required=[k for k, f in lk.fields.items() if f.required and not f.ask],
                 nullable_optional=True,
                 fillers=_fillers(lk.fillers),
+                secure=lk.secure,
             )
         for op in self._operations.values():
             fields = op.fields()
@@ -526,6 +689,7 @@ class Operations:
                 vouched=True,
                 nullable_optional=True,
                 fillers=_fillers(op.fillers),
+                secure=op.secure,
             )
         kinds = [k for k, op in self._operations.items() if op.confirm]
         if kinds:
@@ -548,15 +712,25 @@ class Operations:
                 required=["change"],
                 fillers=self._tool_fillers.get(DECLINE_TOOL),
             )
-        if self._transfer:
+        tr = self._transfer
+        if tr is not None:
+            params = {"summary": {"type": "string", "description": "What they need, in a sentence."}}
+            if tr.destinations:
+                params["to"] = {
+                    "type": "string",
+                    "enum": list(tr.destinations),
+                    "description": "Where they want to go: "
+                    + "; ".join(f"{k}: {v}" for k, v in tr.destinations.items()),
+                }
             agent.define_tool(
-                TRANSFER_TOOL,
-                "Transfer the caller to a person, when they ask for one or say yes to being transferred.",
-                {"summary": {"type": "string", "description": "What they need, in a sentence."}},
-                self._wrapped(TRANSFER_TOOL, self._transfer_handler),
-                gates=[_transfer_gate()],
-                gate_fillers=self._gate_fillers,
-                fillers=self._tool_fillers.get(TRANSFER_TOOL),
+                tr.tool,
+                tr.description(),
+                params,
+                self._wrapped(tr.tool, self._transfer_handler),
+                required=["to"] if tr.destinations else None,
+                gates=[_transfer_gate()] if tr.gated else None,
+                gate_fillers=self._gate_fillers if tr.gated else None,
+                fillers=self._tool_fillers.get(tr.tool),
             )
 
     def _wrapped(self, name: str, handler: Callable[..., Any]) -> Callable[..., Any]:
@@ -596,7 +770,10 @@ class Operations:
         async def handler(args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
             call = Call(self, raw_data)
             try:
-                await self._require_account(call)
+                if op.before_identity:
+                    await self._load_account(call)
+                else:
+                    await self._require_account(call)
                 change = await self._prepare(call, op, args)
                 if not op.confirm:
                     return self._finish(call, await self._apply_now(call, op, args, change))
@@ -629,6 +806,11 @@ class Operations:
         handler.__name__ = f"{lk.tool}_handler"
         return handler
 
+    async def _load_account(self, call: Call) -> None:
+        idn = self._identity
+        if idn is not None and call.account_id:
+            call.account = await _maybe(idn.load(call, call.account_id)) if idn.load else call.account_id
+
     async def _require_account(self, call: Call) -> None:
         idn = self._identity
         if idn is None:
@@ -640,6 +822,8 @@ class Operations:
     async def _prepare(self, call: Call, op: Operation, args: Mapping[str, Any]) -> Change:
         fields = op.fields()
         missing = [k for k, f in fields.items() if f.required and f.ask and _missing(args.get(k))]
+        if missing and op.ask_in_order:
+            missing = missing[:1]
         if missing:
             raise Need(" ".join(str(fields[k].ask) for k in missing), missing)
         change = await _maybe(op.prepare(call, Values(fields, args)))
@@ -652,19 +836,34 @@ class Operations:
     @staticmethod
     def _finish(call: Call, result: FunctionResult, *, go: bool = True) -> FunctionResult:
         """
-        Put what the tool's own code asked for into its result, ahead of the
-        result's other actions, so a say that the caller talks over can't keep
-        them from running: its state, the step it goes to, its screen events.
+        Put what the tool's own code asked for into its result. The record
+        goes in one action object ahead of the rest, whole (the platform
+        replaces a top-level key whole), with the tool's state in it, so a say
+        the caller talks over can't keep it from being recorded; then the step
+        it goes to and its screen events; its platform actions go last.
         """
-        front = FunctionResult()
+        record = None
+        kept: list[Any] = []
+        for action in result.action:
+            if isinstance(action, dict) and isinstance(action.get("set_global_data"), dict) and RECORD in action["set_global_data"]:
+                record = action["set_global_data"][RECORD]
+                rest = {k: v for k, v in action["set_global_data"].items() if k != RECORD}
+                others = {k: v for k, v in action.items() if k != "set_global_data"}
+                if rest or others:
+                    kept.append({**others, **({"set_global_data": rest} if rest else {})})
+                continue
+            kept.append(action)
         if call.state != call._state_was:
-            front.update_global_data({"state": call.state})
+            record = _whole(record if record is not None else call.data, state=call.state)
+        front = FunctionResult()
+        if record is not None:
+            front.update_global_data({RECORD: record})
         if go and call._next_step:
-            result.action = [a for a in result.action if not (isinstance(a, dict) and "change_step" in a)]
+            kept = [a for a in kept if not (isinstance(a, dict) and "change_step" in a)]
             front.swml_change_step(call._next_step)
         for event in call._events:
             front.swml_user_event(event)
-        result.action[:0] = front.action
+        result.action = [*front.action, *kept, *call._acts]
         return result
 
     def _need_result(self, call: Call, op: Operation, e: Need) -> FunctionResult:
@@ -963,22 +1162,21 @@ class Operations:
         keys = {k: args[k] for k in idn.fields if not _missing(args.get(k))}
         remember = _update(call.data, asked=asked)
         if idn.check_keys and not any(all(k in keys for k in s) for s in idn.any_of):
-            return FunctionResult(
+            return self._finish(call, FunctionResult(
                 tool_result=f"Nothing was looked up: it takes {idn.ask}.",
                 tool_prompt=f"Ask them for {idn.ask}, then call {idn.tool} with what they say.",
-            ).update_global_data(remember)
+            ).update_global_data(remember))
         try:
             found = await _maybe(idn.find(call, keys))
             if found is None or str(found).strip() == "":
                 raise Refuse("No account was found with that.", f"Ask them for {idn.ask} again, and check it with them.")
             account_id = str(found)
-        except Refuse as e:
-            return self._finish(call, _refused(e, "").update_global_data(remember), go=False)
+        except Refuse as e:  # call.go is honoured: a lockout moves the call on
+            return self._finish(call, _refused(e, "").update_global_data(remember))
         except Need as e:
             return self._finish(
                 call,
                 FunctionResult(tool_result=f"Not found yet: {e.ask}", tool_prompt=f"Ask them: {e.ask}").update_global_data(remember),
-                go=False,
             )
         call.data["account_id"] = account_id
         text = (await self._account_text(call)).get("account", "")
@@ -986,31 +1184,34 @@ class Operations:
         update = {"account_id": account_id, "account": text, "asked": asked}
         if fresh and _record_of(raw_data).get("account_id"):  # a different account: nothing waits on the old one
             update.update(waiting={}, queued=[])
-        return self._finish(
-            call,
-            FunctionResult(
-                tool_result=f"Found their account. {text}".strip(),
-                tool_prompt=(f"Help with what they asked for: {asked}" if asked else "Ask how you can help."),
-            )
-            .update_global_data(_update(call.data, **update))
-            .swml_change_step(MAIN_STEP),
-        )
+        found_it = FunctionResult(
+            tool_result=f"Found their account. {text}".strip(),
+            tool_prompt=(f"Help with what they asked for: {asked}" if asked else "Ask how you can help."),
+        ).update_global_data(_update(call.data, **update))
+        return self._finish(call, found_it.swml_change_step(MAIN_STEP) if self._gated() else found_it)
 
     async def _transfer_handler(self, args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
         call = Call(self, raw_data)
-        assert self._transfer is not None  # the tool exists only with a transfer
+        tr = self._transfer
+        assert tr is not None  # the tool exists only with a transfer
+        summary = str(args.get("summary") or "asked for a person")
+        to = str(args.get("to") or "") if tr.destinations else ""
+        if tr.destinations and to not in tr.destinations:
+            return self._finish(call, FunctionResult(
+                tool_result=f"Not transferred: {to or 'nowhere'} isn't one of the places it goes.",
+                tool_prompt=f"Ask where they want to go: {_spoken_list(list(tr.destinations))}.",
+            ))
         try:
-            await _maybe(self._transfer(call, str(args.get("summary") or "asked for a person")))
-        except Refuse as e:
-            return _refused(e, "")
-        return (
-            FunctionResult(
-                tool_result="The call is being transferred to a person.",
-                tool_prompt="Say nothing more; the transfer notice is playing.",
-            )
-            .say(self._transfer_notice)
-            .swml_change_context(TRANSFERRED)
-        )
+            handed = await _maybe(tr.fn(call, summary, to) if tr.destinations else tr.fn(call, summary))
+        except Refuse as e:  # call.go is honoured: a closed desk can move the call to take a message
+            return self._finish(call, _refused(e, ""))
+        result = FunctionResult(
+            tool_result=f"The call is being transferred to {to or 'a person'}.",
+            tool_prompt="Say nothing more; the transfer notice is playing.",
+        ).say(tr.notice or self._transfer_notice)
+        if isinstance(handed, FunctionResult):
+            result.add_actions(handed.action)
+        return self._finish(call, result.swml_change_context(TRANSFERRED), go=False)
 
     # ------------------------------------------------------------------ inspection
 
@@ -1026,7 +1227,7 @@ class Operations:
         if agent is None:
             agent = self.install(AgentBase(name="preview", suppress_logs=True))
         contexts = agent.define_contexts().to_dict()
-        lines = ["Conscience: ${global_data.now}", ""]
+        lines = [f"Conscience: {(getattr(agent, '_params', {}) or {}).get('conscience', '')}", ""]
         for cname, ctx in contexts.items():
             for step in ctx.get("steps") or []:
                 lines.append(f"== {cname}/{step.get('name')}  tools: {', '.join(step.get('functions') or []) or 'none'}")
@@ -1077,6 +1278,7 @@ class ServiceAgent(AgentBase):
         self.operation = self.ops.operation
         self.lookup = self.ops.lookup
         self.phase = self.ops.phase
+        self.offer = self.ops.offer
         self.confirm_gates = self.ops.confirm_gates
 
     def identify(self, **kwargs: Any) -> ServiceAgent:
@@ -1089,10 +1291,24 @@ class ServiceAgent(AgentBase):
         self.ops.writes_with(writer)
         return self
 
-    def transfer_with(self, transfer: Callable[..., Any]) -> ServiceAgent:
+    def transfer_with(self, transfer: Callable[..., Any], **kwargs: Any) -> ServiceAgent:
         """See ``Operations.transfer_with``."""
-        self.ops.transfer_with(transfer)
+        self.ops.transfer_with(transfer, **kwargs)
         return self
+
+    def on_swml_request(
+        self, request_data: dict[str, Any] | None = None, callback_path: str | None = None, request: Any = None
+    ) -> dict[str, Any] | None:
+        """Start the call identified when ``identify``'s ``prefill`` already knows the caller."""
+        mods = super().on_swml_request(request_data, callback_path, request)
+        if mods and mods.get("__use_ephemeral_agent"):
+            return mods
+        known = self.ops.prefilled(request_data, request)
+        if not known:
+            return mods
+        mods = dict(mods or {})
+        mods["global_data"] = {**(mods.get("global_data") or {}), **known}
+        return mods
 
     def compile(self) -> ServiceAgent:
         """Install the operations on this agent, once; runs before the first SWML or tool request."""
@@ -1114,9 +1330,26 @@ class ServiceAgent(AgentBase):
         return super().on_function_call(name, args, raw_data)
 
 
-def _scoped(step: Any, text: str, tools: list[str]) -> Any:
-    """A step with its text and its tools, and no way to leave on its own: handlers move it."""
-    return step.set_text(text).set_functions(tools).set_valid_steps([])
+def _contribute(ctx: Any, name: str, text: str, tools: list[str]) -> Any:
+    """
+    A step with its text and its tools, and no way to leave on its own:
+    handlers move it. A step another layer made already keeps what it has:
+    the text is added (as a section, when it's written in sections) and the
+    tools join its own.
+    """
+    step = ctx.get_step(name)
+    if step is None:
+        return ctx.add_step(name).set_text(text).set_functions(list(tools)).set_valid_steps([])
+    if step._sections:
+        step.add_section("What else you can do", text)
+    elif text:
+        step.set_text(f"{step._text}\n\n{text}" if step._text else text)
+    had = step._functions if isinstance(step._functions, list) else []
+    return step.set_functions(list(dict.fromkeys([*had, *tools])))
+
+
+def _offered(op: Operation, step: str) -> bool:
+    return op.offered_in is None or step in op.offered_in
 
 
 async def _maybe(value: Any) -> Any:
@@ -1205,8 +1438,11 @@ def _spoken_list(items: Sequence[str]) -> str:
     return ", ".join(items[:-1]) + " and " + items[-1]
 
 
-def _fillers(phrases: Sequence[str]) -> dict[str, list[str]] | None:
-    return {"en-US": list(phrases)} if phrases else None
+def _fillers(phrases: Any) -> dict[str, Any] | None:
+    """Fillers as ``define_tool`` takes them: a list is en-US; lists by language code pass through."""
+    if not phrases:
+        return None
+    return dict(phrases) if isinstance(phrases, Mapping) else {"en-US": list(phrases)}
 
 
 def _transfer_gate() -> SemanticGate:

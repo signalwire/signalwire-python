@@ -87,9 +87,9 @@ def test_phases_state_screen_and_no_read_back() -> None:
     bet = sim.call("place_bet", said({"amount": 10}))
     assert bet.ran and bet.response == "Done. Bet 10; dealt 10 and 7."
     assert sim.step == "playing"
-    assert sim.global_data["state"]["hand"] == [10, 7]
+    assert sim.global_data["ops"]["state"]["hand"] == [10, 7]
     assert len(events(bet)) == 1
-    assert sim.global_data["history"][-1]["outcome"] == "made"
+    assert sim.global_data["ops"]["history"][-1]["outcome"] == "made"
     first = [next(iter(a)) for a in bet.actions]
     assert first.index("set_global_data") < first.index("change_step"), "the tool's state goes ahead of its step"
     hit = sim.call("hit", said({}))
@@ -100,7 +100,7 @@ def test_refusal_keeps_phase() -> None:
     sim = CallSimulator(game())
     out = sim.call("place_bet", said({"amount": 500}))
     assert out.response == "Nothing is changed: That's more chips than they have."
-    assert sim.step == "betting" and "hand" not in sim.global_data.get("state", {})
+    assert sim.step == "betting" and "hand" not in sim.global_data["ops"].get("state", {})
 
 
 def test_unknown_phase_tool_is_an_error() -> None:

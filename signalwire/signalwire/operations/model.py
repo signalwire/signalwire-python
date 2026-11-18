@@ -271,6 +271,16 @@ class Operation:
     confirm: ClassVar[bool] = True
     """False for a change that goes through without a read-back and a yes,
     such as a move in a game. Its writes run when its tool is called."""
+    before_identity: ClassVar[bool] = False
+    """True for an operation a caller can use before they're identified, such
+    as booking for a new customer."""
+    ask_in_order: ClassVar[bool] = False
+    """True to ask for one missing field at a time, in declaration order."""
+    offered_in: ClassVar[Sequence[str] | None] = None
+    """The steps that offer its tool, by name; None for every step, so a
+    caller who asks for it anywhere is never stranded."""
+    secure: ClassVar[bool] = True
+    """Whether its tool takes the agent's per-call security token."""
 
     def fields(self) -> dict[str, Field]:
         """The operation's fields, in declaration order."""

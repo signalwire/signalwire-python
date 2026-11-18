@@ -194,7 +194,7 @@ def test_generated_steps_and_tools() -> None:
     s = CallSimulator(agent)
     assert s.step == "identify"
     assert set(s.offered()) == {"find_account", "transfer_to_human"}
-    assert s.global_data["now"] == ""
+    assert s.global_data["ops"]["now"] == ""
 
 
 def test_account_needed_first() -> None:
@@ -209,21 +209,21 @@ def test_account_needed_first() -> None:
 def test_cancel_read_back_yes_and_record(sim: CallSimulator) -> None:
     proposed = sim.call("cancel_order", said({"order_ids": ["#W1"], "reason": "no longer needed"}))
     assert proposed.ran and sim.step == "confirm"
-    assert sim.global_data["waiting"]["read_back"].startswith("Cancel #W1, refunding $30.00")
-    assert "Waiting for their answer" in sim.global_data["now"]
+    assert sim.global_data["ops"]["waiting"]["read_back"].startswith("Cancel #W1, refunding $30.00")
+    assert "Waiting for their answer" in sim.global_data["ops"]["now"]
     sim.caller("yes")
     done = sim.call("confirm_change", {"change": "cancel"})
     assert done.ran and done.response.startswith("Done. #W1 is cancelled.")
     assert WRITES == [("cancel", {"order_id": "#W1", "reason": "no longer needed"})]
     assert sim.step == "main"
-    assert sim.global_data["history"][-1]["outcome"] == "made"
-    assert sim.global_data["history"][-1]["money"] == -30.0
+    assert sim.global_data["ops"]["history"][-1]["outcome"] == "made"
+    assert sim.global_data["ops"]["history"][-1]["money"] == -30.0
 
 
 def test_missing_reason_is_asked_not_guessed(sim: CallSimulator) -> None:
     asked = sim.call("cancel_order", said({"order_ids": ["#W1"], "reason": "not said"}))
     assert "Why are they cancelling?" in (asked.tool_prompt or "")
-    assert sim.step == "main" and not sim.global_data["waiting"]
+    assert sim.step == "main" and not sim.global_data["ops"]["waiting"]
 
 
 def test_refused_by_rule(sim: CallSimulator) -> None:
@@ -242,37 +242,37 @@ def test_as_well_asked_then_merged(sim: CallSimulator) -> None:
     assert "as_well" in (asked.tool_prompt or "")
     merged = sim.call("cancel_order", said({"order_ids": ["#W2"], "reason": "no longer needed", "as_well": True}))
     assert "added to the cancel change" in merged.response
-    assert sim.global_data["waiting"]["read_back"].startswith("Cancel #W1 and #W2, refunding $35.00")
-    assert sim.global_data["history"][-1]["outcome"] == "replaced"
+    assert sim.global_data["ops"]["waiting"]["read_back"].startswith("Cancel #W1 and #W2, refunding $35.00")
+    assert sim.global_data["ops"]["history"][-1]["outcome"] == "replaced"
 
 
 def test_narrowing_replaces_without_asking(sim: CallSimulator) -> None:
     sim.call("cancel_order", said({"order_ids": ["#W1", "#W2"], "reason": "no longer needed"}))
     narrowed = sim.call("cancel_order", said({"order_ids": ["#W2"], "reason": "no longer needed"}))
     assert narrowed.ran and "takes the place" in narrowed.response
-    assert sim.global_data["waiting"]["read_back"].startswith("Cancel #W2,")
+    assert sim.global_data["ops"]["waiting"]["read_back"].startswith("Cancel #W2,")
 
 
 def test_conflict_takes_over_and_rest_is_kept(sim: CallSimulator) -> None:
     sim.call("return_items", said({"order_id": "#W3", "items": ["d", "e"], "refund_to": "card"}))
     swapped = sim.call("exchange_items", said({"order_id": "#W3", "items": ["d"], "as_well": False}))
     assert "takes the place of the return change" in swapped.response
-    assert sim.global_data["waiting"]["kind"] == "exchange"
-    assert sim.global_data["queued"][0]["read_back"].startswith("Return e from #W3")
+    assert sim.global_data["ops"]["waiting"]["kind"] == "exchange"
+    assert sim.global_data["ops"]["queued"][0]["read_back"].startswith("Return e from #W3")
 
 
 def test_conflict_as_well_is_refused(sim: CallSimulator) -> None:
     sim.call("return_items", said({"order_id": "#W3", "items": ["d"], "refund_to": "card"}))
     both = sim.call("exchange_items", said({"order_id": "#W3", "items": ["e"], "as_well": True}))
     assert "can't have both" in both.response
-    assert sim.global_data["waiting"]["kind"] == "return"
+    assert sim.global_data["ops"]["waiting"]["kind"] == "return"
 
 
 def test_unrelated_request_reads_now_and_sets_waiting_aside(sim: CallSimulator) -> None:
     sim.call("cancel_order", said({"order_ids": ["#W1"], "reason": "no longer needed"}))
     other = sim.call("return_items", said({"order_id": "#W3", "items": ["d"], "refund_to": "card"}))
     assert "kept for after this one" in other.response
-    assert sim.global_data["waiting"]["kind"] == "return"
+    assert sim.global_data["ops"]["waiting"]["kind"] == "return"
     sim.caller("yes")
     done = sim.call("confirm_change", {"change": "return"})
     assert 'call cancel_order again for the change set aside: "Cancel #W1' in (done.tool_prompt or "")
@@ -282,8 +282,8 @@ def test_goes_before_keeps_waiting_first(sim: CallSimulator) -> None:
     sim.call("change_address", said({"order_ids": ["#W1"], "address": "1 Main St"}))
     later = sim.call("cancel_order", said({"order_ids": ["#W1"], "reason": "no longer needed"}))
     assert "Kept for right after the change waiting" in later.response
-    assert sim.global_data["waiting"]["kind"] == "address"
-    assert sim.global_data["queued"][0]["kind"] == "cancel"
+    assert sim.global_data["ops"]["waiting"]["kind"] == "address"
+    assert sim.global_data["ops"]["queued"][0]["kind"] == "cancel"
 
 
 def test_confirm_names_the_waiting_change(sim: CallSimulator) -> None:
@@ -297,7 +297,7 @@ def test_decline(sim: CallSimulator) -> None:
     sim.call("cancel_order", said({"order_ids": ["#W1"], "reason": "no longer needed"}))
     no = sim.call("decline_change", {"change": "cancel"})
     assert no.ran and "left as it was" in (no.tool_prompt or "")
-    assert sim.global_data["history"][-1]["outcome"] == "declined" and not sim.global_data["waiting"]
+    assert sim.global_data["ops"]["history"][-1]["outcome"] == "declined" and not sim.global_data["ops"]["waiting"]
     assert sim.step == "main"
 
 
@@ -307,7 +307,7 @@ def test_partial_failure_counts_only_what_went_through(sim: CallSimulator) -> No
     sim.caller("yes")
     out = sim.call("confirm_change", {"change": "cancel"})
     assert out.response.startswith("The change didn't go through: cancel was refused.")
-    assert sim.global_data["history"][-1]["money"] == 0
+    assert sim.global_data["ops"]["history"][-1]["money"] == 0
 
 
 def test_totals_after_two_changes(sim: CallSimulator) -> None:
@@ -337,7 +337,7 @@ def test_as_well_within_the_waiting_change_keeps_all_of_it(sim: CallSimulator) -
     """"the d as well, keep the e" must not drop e."""
     sim.call("return_items", said({"order_id": "#W3", "items": ["d", "e"], "refund_to": "card"}))
     sim.call("return_items", said({"order_id": "#W3", "items": ["d"], "refund_to": "card", "as_well": True}))
-    waiting = sim.global_data["waiting"]["read_back"]
+    waiting = sim.global_data["ops"]["waiting"]["read_back"]
     assert "d" in waiting.split("Return ")[1].split(" from")[0] and "e" in waiting.split("Return ")[1].split(" from")[0]
 
 
@@ -363,10 +363,10 @@ def test_a_change_set_aside_gives_way_to_a_newer_one(sim: CallSimulator) -> None
     """an address set aside for A and B, then A to another address: the set-aside one keeps only B."""
     sim.call("change_address", said({"order_ids": ["#W1", "#W2"], "address": "1 Main St"}))
     sim.call("return_items", said({"order_id": "#W3", "items": ["d"], "refund_to": "card"}))
-    assert sim.global_data["queued"][0]["read_back"].startswith("Ship #W1 and #W2 to 1 Main St")
+    assert sim.global_data["ops"]["queued"][0]["read_back"].startswith("Ship #W1 and #W2 to 1 Main St")
     out = sim.call("change_address", said({"order_ids": ["#W1"], "address": "2 Oak St"}))
     assert "set aside for later is now only this" in out.response
-    queued = [q for q in sim.global_data["queued"] if q["kind"] == "address"]
+    queued = [q for q in sim.global_data["ops"]["queued"] if q["kind"] == "address"]
     assert [q["read_back"] for q in queued] == ["Ship #W2 to 1 Main St. Shall I?"]
 
 
@@ -392,7 +392,7 @@ def test_partial_failure_with_one_done_line_still_says_what_went_through() -> No
     s.caller("yes")
     out = s.call("confirm_change", {"change": "cancel"})
     assert "What went through first: cancel (order_id #W1)." in out.response
-    assert s.global_data["history"][-1]["writes_made"] == [{"name": "cancel", "args": {"order_id": "#W1"}}]
+    assert s.global_data["ops"]["history"][-1]["writes_made"] == [{"name": "cancel", "args": {"order_id": "#W1"}}]
 
 
 def test_a_yes_to_an_earlier_read_back_writes_nothing(sim: CallSimulator) -> None:
@@ -402,4 +402,4 @@ def test_a_yes_to_an_earlier_read_back_writes_nothing(sim: CallSimulator) -> Non
     sim.caller("yes")
     out = sim.call("confirm_change", {"change": "cancel"})
     assert "their yes was to an earlier read-back" in out.response and WRITES == []
-    assert sim.global_data["semantic_state"]["proposal"] == sim.global_data["waiting"]["read_back"]
+    assert sim.global_data["semantic_state"]["proposal"] == sim.global_data["ops"]["waiting"]["read_back"]
