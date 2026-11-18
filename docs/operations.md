@@ -75,7 +75,7 @@ That's the whole agent. Nothing above sets a step, a history mode, a gate or a g
 
 ## Operations
 
-An operation is a class with `Field` attributes, a docstring (what it does, as the model reads it) and `prepare(call, fields)`. `prepare` checks the request, may look things up, and answers one of three ways:
+An operation is a class with `Field` attributes, a docstring (what it does, as the model reads it) and `prepare(call, fields)`. `call` is a `CallContext`: the request's record, the caller's account, your own state for the call, and ways to act on it. `prepare` checks the request, may look things up, and answers one of three ways:
 
 | `prepare` | Meaning | What the SDK does |
 | --- | --- | --- |
@@ -218,6 +218,8 @@ ops = Operations(role="You answer the phone for an online store.")
 agent = AgentBase(name="store", route="/store")
 ops.install(agent)
 ```
+
+Other layers can install on the same agent, before or after: a step that exists already is added to, never replaced. Tools the service didn't make, such as a skill's or another layer's, go into its steps with `offer(*tools)`: every generated step but `identify` and `confirm` by default, `identify` as well with `before_identity=True`, or exactly the steps named with `steps=[...]`.
 
 ## Testing
 

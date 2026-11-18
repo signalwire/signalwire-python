@@ -515,6 +515,45 @@ constructor arguments, or subclass it to change its prompt and tools.
     live="prefabs",
 )
 
+_OPERATIONS = Topic(
+    name="operations",
+    title="Operations: an agent written as what it can do",
+    summary="Write the changes and lookups an agent offers; the SDK runs the read-back, yes, writes and record",
+    body="""\
+`signalwire.operations` builds an agent from the operations it can do for a
+caller (cancel an order, move a booking), its lookups, and how it identifies
+the caller. Each operation is a class with `Field`s, a docstring the model
+reads, and `prepare(call, fields)`, which returns a `Change` or raises `Need`
+or `Refuse`. The SDK generates the tools, steps, gates and the call's record
+in `global_data`, and runs every change the same way: read back, one yes,
+the writes, the record.
+
+- `ServiceAgent` is the prefab; `Operations(...).install(agent)` puts the
+  same on any `AgentBase`.
+- `identify(any_of=..., find=...)` finds the caller's account before
+  account data is shared or changed.
+- `offer(*tools)` adds tools the service didn't make, such as skills, to its
+  steps; `phase()` declares steps of your own.
+- `CallSimulator` tests one offline, record and steps included.
+
+The module is new and still settling; its names may change before it is
+ported to the other SDKs.
+""",
+    docs=(
+        (
+            "docs/operations.md",
+            "Operations, the change lifecycle, identity, lookups and testing",
+        ),
+    ),
+    api=(
+        "signalwire.operations.ServiceAgent",
+        "signalwire.operations.Operations",
+        "signalwire.operations.Operation",
+        "signalwire.operations.Change",
+    ),
+    related=("contexts", "pgi", "testing"),
+)
+
 _SWML = Topic(
     name="swml",
     title="SWML services: call flows without an AI agent",
@@ -1038,6 +1077,7 @@ TOPICS: tuple[Topic, ...] = (
     _CONTEXTS,
     _SKILLS,
     _PREFABS,
+    _OPERATIONS,
     _PGI,
     _SWML,
     _RELAY,
@@ -1070,6 +1110,7 @@ TOPIC_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "contexts",
             "skills",
             "prefabs",
+            "operations",
             "pgi",
         ),
     ),

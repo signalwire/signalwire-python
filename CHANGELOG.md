@@ -1,5 +1,21 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- `signalwire.operations`: an agent written as what it can do for a caller.
+  Each operation is a class with `Field`s, a docstring the model reads, and
+  `prepare(call, fields)`, which returns a `Change` or raises `Need` or
+  `Refuse`. The SDK generates the tools, steps, gates and the call's record
+  in `global_data`, and runs every change the same way: read back, one yes,
+  the writes, the record. A request made while another change waits is
+  combined with it, set aside, or refused by per-operation hooks.
+  `ServiceAgent` is the prefab; `Operations(...).install(agent)` puts it on
+  any `AgentBase`, beside other layers such as `InfoBotKnowledge`. See
+  docs/operations.md. The module is new and its names may still change: it
+  isn't part of the cross-SDK reference yet, and TypeScript will port it
+  first.
+
 ## [3.12.1] - 2026-11-18
 
 ### Fixed
