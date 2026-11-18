@@ -42,6 +42,13 @@ REPO = Path(__file__).resolve().parent.parent
 # is only legitimate when the module is excluded from the oracle AND really shipped.
 NATIVE_ONLY_PREFIXES = ("signalwire.livewire",)
 
+# Modules the user has excluded from the oracle that porting-sdk may not exclude
+# yet: signalwire.operations, excluded on 2026-11-18 until it's stable, with
+# TypeScript to port it first. One is in the sidecar where the porting-sdk in use
+# excludes it, and skipped where it doesn't, since the surface then resolves it.
+# Move it to NATIVE_ONLY_PREFIXES once every porting-sdk ref CI reads excludes it.
+PENDING_NATIVE_ONLY_PREFIXES = ("signalwire.operations",)
+
 
 def _resolve_porting_sdk() -> Path:
     for cand in (REPO.parent / "porting-sdk", REPO / "porting-sdk"):
@@ -60,7 +67,7 @@ def main(argv: list[str]) -> int:
 
     psdk = _resolve_porting_sdk()
     sys.path.insert(0, str(psdk / "scripts"))
-    import enumerate_python as ep  # noqa: E402  (path set above)
+    import enumerate_python as ep
 
     # ``enumerate_module`` short-circuits on ``_module_excluded`` and returns an empty
     # entry — which is the whole point of the oracle exclusion and exactly what we need
@@ -72,7 +79,7 @@ def main(argv: list[str]) -> int:
     _orig_excluded = ep._module_excluded
 
     def _excluded_except_native_only(module_name: str) -> bool:
-        if module_name.startswith(NATIVE_ONLY_PREFIXES):
+        if module_name.startswith(NATIVE_ONLY_PREFIXES + PENDING_NATIVE_ONLY_PREFIXES):
             return False
         return _orig_excluded(module_name)
 
@@ -87,6 +94,15 @@ def main(argv: list[str]) -> int:
                 "surface oracle. Drop it from NATIVE_ONLY_PREFIXES — the oracle now "
                 "covers it, and keeping it here would resolve doc refs twice."
             )
+    native = NATIVE_ONLY_PREFIXES + tuple(
+        prefix for prefix in PENDING_NATIVE_ONLY_PREFIXES if _orig_excluded(prefix)
+    )
+    for prefix in PENDING_NATIVE_ONLY_PREFIXES:
+        if prefix not in native:
+            print(
+                f"emit_surface_native.py: {prefix!r} isn't excluded by this porting-sdk "
+                "yet; the surface resolves it"
+            )
 
     pkg_root = REPO / "signalwire" / "signalwire"
     if not (pkg_root / "__init__.py").is_file():
@@ -97,7 +113,7 @@ def main(argv: list[str]) -> int:
         rel = path.relative_to(pkg_root).with_suffix("")
         parts = [p for p in rel.parts if p != "__init__"]
         name = ".".join(["signalwire", *parts])
-        if not name.startswith(NATIVE_ONLY_PREFIXES):
+        if not name.startswith(native):
             continue
         # enumerate_module applies the oracle's OWN public/exclude rules, so the
         # sidecar records exactly what the oracle would have recorded had the module
