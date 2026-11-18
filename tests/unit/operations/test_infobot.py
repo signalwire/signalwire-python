@@ -102,3 +102,31 @@ def test_governance_limits_and_empty_case() -> None:
 
     empty = InfoBotKnowledge(search=lambda q: [])
     assert "do not cover it" in str(empty._handle_search({"query": "q"}, {}).response).lower()
+
+
+def test_contact_tool_offered_only_when_enabled() -> None:
+    bare = AgentBase(name="a", route="/a", suppress_logs=True)
+    InfoBotKnowledge(search=lambda q: []).install(bare)
+    assert "collect_contact" not in _main_step(bare)["functions"]
+
+    withc = AgentBase(name="b", route="/b", suppress_logs=True)
+    InfoBotKnowledge(search=lambda q: [], contact=lambda f: None).install(withc)
+    assert "collect_contact" in _main_step(withc)["functions"]
+
+
+def test_contact_records_and_confirms() -> None:
+    captured: list[dict[str, Any]] = []
+    kb = InfoBotKnowledge(search=lambda q: [], contact=captured.append)
+    result = kb._handle_contact(
+        {"name": "Ann", "email": "ann@example.com", "topic": "pricing"}, {}
+    )
+    assert captured == [{"name": "Ann", "email": "ann@example.com", "topic": "pricing"}]
+    assert "follow up" in str(result.response).lower()
+
+
+def test_contact_requires_email() -> None:
+    captured: list[dict[str, Any]] = []
+    kb = InfoBotKnowledge(search=lambda q: [], contact=captured.append)
+    result = kb._handle_contact({"name": "Ann"}, {})
+    assert "email" in str(result.response).lower()
+    assert captured == []

@@ -34,10 +34,14 @@ class InfoBotKnowledge:
     - ``set_result_context(fn)`` — ``fn(result) -> str | None``: a label line
       shown above the passage (authority, kind, title, source url…).
 
+    With ``contact`` set, a second tool records a caller's details for a human
+    follow-up. Both tools re-enable back-to-back calls on their result, so a
+    refused gate elsewhere in a composed agent does not strand the model
+    one-tool-per-turn.
+
     Compose with ``Operations`` by installing this FIRST, then ``Operations``;
-    the generated ``main`` step keeps ``search_knowledge`` and gains the
-    operation tools, and each layer's record line stays in its own
-    ``global_data`` namespace.
+    the generated ``main`` step keeps these tools and gains the operation ones,
+    and each layer's record line stays in its own ``global_data`` namespace.
     """
 
     _GROUNDING = (
@@ -54,6 +58,8 @@ class InfoBotKnowledge:
         namespace: str = "infobot",
         result_limit: int = 5,
         grounding: str = _GROUNDING,
+        contact: Callable[[dict[str, Any]], None] | None = None,
+        contact_tool: str = "collect_contact",
     ) -> None:
         self._search = search
         self._tool = tool
@@ -61,6 +67,8 @@ class InfoBotKnowledge:
         self._namespace = namespace
         self._result_limit = result_limit
         self._grounding = grounding
+        self._contact = contact
+        self._contact_tool = contact_tool
         self._exclude: Callable[[Result, str], bool] | None = None
         self._demote: Callable[[Result], bool] | None = None
         self._context: Callable[[Result], str | None] | None = None
@@ -85,8 +93,10 @@ class InfoBotKnowledge:
     # -- install -----------------------------------------------------------
 
     def install(self, agent: AgentBase) -> AgentBase:
-        """Add the search tool, the ``main`` step and the conscience line."""
+        """Add the tools, the ``main`` step and the conscience line."""
         self._define_search(agent)
+        if self._contact is not None:
+            self._define_contact(agent)
         self._ensure_main(agent)
         self._compose_conscience(agent)
         return agent
@@ -104,7 +114,8 @@ class InfoBotKnowledge:
         query = ((args or {}).get("query") or "").strip()
         if not query:
             return FunctionResult("Ask them what to look up - there was no query.")
-        return FunctionResult(self._format(query, list(self._search(query) or [])))
+        blob = self._format(query, list(self._search(query) or []))
+        return FunctionResult(blob).back_to_back_functions("forever")
 
     def _format(self, query: str, results: list[Result]) -> str:
         kept = [r for r in results if not (self._exclude and self._exclude(r, query))]
@@ -120,10 +131,39 @@ class InfoBotKnowledge:
             blocks.append(f"{label}\n{passage}" if label else passage)
         return "\n\n".join(blocks)
 
+    def _define_contact(self, agent: AgentBase) -> None:
+        agent.define_tool(
+            self._contact_tool,
+            "Record the caller's contact details for a human follow-up. Call this "
+            "only after they have agreed they would like someone to follow up.",
+            {
+                "name": {"type": "string", "description": "The caller's name."},
+                "email": {"type": "string", "description": "An email address to reach them."},
+                "topic": {"type": "string", "description": "What they want followed up, in brief."},
+            },
+            self._handle_contact,
+            required=["email"],
+        )
+
+    def _handle_contact(self, args: dict[str, Any], raw: Any) -> FunctionResult:
+        fields: dict[str, Any] = {
+            k: str((args or {}).get(k) or "").strip() for k in ("name", "email", "topic")
+        }
+        if not fields["email"]:
+            return FunctionResult("Ask them for an email address to reach them at.")
+        if self._contact is not None:
+            self._contact(fields)
+        return FunctionResult(
+            "Thanks - I've passed that along and someone will follow up."
+        ).back_to_back_functions("forever")
+
     def _ensure_main(self, agent: AgentBase) -> None:
         step = agent.define_contexts().add_context("default").add_step("main")
         step.add_section("Knowledge", f"Answer the caller's question from {self._tool}, not memory.")
-        step.set_functions([self._tool])
+        tools = [self._tool]
+        if self._contact is not None:
+            tools.append(self._contact_tool)
+        step.set_functions(tools)
 
     def _compose_conscience(self, agent: AgentBase) -> None:
         # Match Operations: append this layer's record line to whatever conscience
