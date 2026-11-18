@@ -4,9 +4,11 @@ confirm tool's gates judge the caller's answer on the proposal's dialogue.
 
 The platform starts a proposal when semantic_state changes, as of the start
 of the result's action list (before the whole-list rule, of the action
-object that sets it, where a say in that object runs first), so the
-read-back is the proposal's first turn (SEMANTIC_GATES.md §2). Setting
-the same state again marks nothing, so asking again needs a new revision.
+object that sets it), so the read-back after it is the proposal's first turn
+(SEMANTIC_GATES.md §2). The state comes first: a say the caller talks over
+ends the result's actions there (mod_openai actions.c, "Transparent barge").
+Setting the same state again marks nothing, so asking again needs a new
+revision.
 """
 
 import json
@@ -26,15 +28,15 @@ def _raw(state: dict[str, Any] | None) -> dict[str, Any]:
 
 
 class TestPropose:
-    def test_the_read_back_and_the_state_are_one_action(self) -> None:
+    def test_the_state_is_set_before_the_read_back(self) -> None:
+        # So it's recorded even when the caller talks over the read-back
         result = Proposal("place_order").propose(READ_BACK, details={"item": "tea"}).to_dict()
-        assert result["action"][0] == {
-            "say": READ_BACK,
-            "set_global_data": {"semantic_state": {
-                "item": "tea", "proposal": READ_BACK, "revision": 1}},
-        }
-        assert result["action"][1] == {"wait_for_user": True}
-        assert len(result["action"]) == 2
+        assert result["action"] == [
+            {"set_global_data": {"semantic_state": {
+                "item": "tea", "proposal": READ_BACK, "revision": 1}}},
+            {"say": READ_BACK},
+            {"wait_for_user": True},
+        ]
 
     def test_the_model_is_told_what_to_wait_for(self) -> None:
         response = Proposal("place_order", decline_tool="change_order").propose(
@@ -51,10 +53,10 @@ class TestPropose:
 
     def test_asking_again_reads_the_same_change_as_a_new_revision(self) -> None:
         raw = _raw({"proposal": READ_BACK, "revision": 1, "item": "tea"})
-        first = Proposal("place_order").ask_again(raw).to_dict()["action"][0]
-        assert first["say"] == READ_BACK
-        assert first["set_global_data"]["semantic_state"] == {
+        actions = Proposal("place_order").ask_again(raw).to_dict()["action"]
+        assert actions[0]["set_global_data"]["semantic_state"] == {
             "item": "tea", "proposal": READ_BACK, "revision": 2}
+        assert actions[1] == {"say": READ_BACK}
 
     def test_asking_again_needs_a_proposal(self) -> None:
         with pytest.raises(ValueError, match="no proposal"):

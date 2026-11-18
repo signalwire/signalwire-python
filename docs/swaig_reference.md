@@ -607,7 +607,7 @@ result.remove_global_data(["step", "temp_value"])     # Multiple keys
 ```
 
 #### `set_semantic_state(state)`
-Set the state the call's semantic gates judge, besides the dialogue: `global_data.semantic_state`. It replaces the state as a whole; send `{}` to reset it. A change starts a proposal, the dialogue of a gate with `dialogue="proposal"`, as of the start of the result's action list, so a `say` anywhere in the same result, such as the read-back, is in it. Platform releases before this start it at its own action object: set the state before `say` there, or use `Proposal` (see [Conversation Patterns](conversation_patterns.md#confirming-a-change)), which works on both. See [Semantic gates](api_reference.md#semantic-gates).
+Set the state the call's semantic gates judge, besides the dialogue: `global_data.semantic_state`. It replaces the state as a whole; send `{}` to reset it. A change starts a proposal, the dialogue of a gate with `dialogue="proposal"`, as of the start of the result's action list, so a `say` anywhere in the same result, such as the read-back, is in it. Set the state before the `say` all the same: when the caller talks over a `say`, the platform skips the rest of the result's actions, so a state set after it could be lost. Platform releases before this also date a proposal from its own action object, which the same order covers. `Proposal` does this (see [Conversation Patterns](conversation_patterns.md#confirming-a-change)). See [Semantic gates](api_reference.md#semantic-gates).
 
 ```python
 result.set_semantic_state({"order": {"item": "large pepperoni", "confirmed": True}})

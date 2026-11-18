@@ -9,10 +9,11 @@ See LICENSE file in the project root for full license information.
 A change the caller says yes to before a tool carries it out.
 
 This is the platform's confirm pattern. A function proposes the change: it
-reads it back and records it in ``semantic_state``, in one action object,
-so the proposal's dialogue starts with the read-back on any platform
-release, including those that date a proposal from its own action object
-rather than the result's action list. The confirm tool's
+records it in ``semantic_state``, then reads it back, so the proposal's
+dialogue starts with the read-back. The state goes first, in an action object
+of its own: when the caller talks over a ``say``, the platform skips the rest
+of the result's actions, and a state recorded after the read-back would be
+lost. The confirm tool's
 semantic gates, judged on that dialogue (``dialogue="proposal"``), check
 three things: that the caller's latest turn is an answer, that the answer
 is a yes, and that what they answered was a read-back of this change. The
@@ -81,11 +82,12 @@ class Proposal:
         """
         The result of the function that proposes the change.
 
-        The agent says ``read_back`` word for word, and the proposal is
-        recorded as ``semantic_state`` ``{"proposal": read_back, "revision":
-        n, **details}``, in the same action object, so the gates' proposal
-        dialogue starts with the read-back. The model then waits for the
-        caller's answer (``wait_for_user``).
+        The proposal is recorded as ``semantic_state`` ``{"proposal":
+        read_back, "revision": n, **details}``, and the agent says
+        ``read_back`` word for word, so the gates' proposal dialogue starts
+        with the read-back. The model then waits for the caller's answer
+        (``wait_for_user``). The state is set before the read-back, so it's
+        recorded even when the caller talks over the read-back.
 
         Args:
             read_back: The words to read back, ending with the question,
@@ -119,10 +121,13 @@ class Proposal:
                 )
             ),
         )
-        # One object: its say runs before its set_global_data, so the
-        # read-back is the first turn of the proposal it records
+        # The state first, in an object of its own: a say the caller talks
+        # over ends the result's actions there. The proposal dates from the
+        # start of the result's action list (from the start of its own object
+        # on older platform releases), so the read-back after it is still
+        # the proposal's first turn
+        result.add_action("set_global_data", {"semantic_state": state})
         result.add_action("say", read_back)
-        result.action[-1]["set_global_data"] = {"semantic_state": state}
         result.wait_for_user(True)
         return result
 

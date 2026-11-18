@@ -19,7 +19,7 @@ Each pattern here keeps a decision in your code that the model would otherwise m
 
 A change the caller must agree to, such as placing an order or cancelling an account, needs a yes to that change, not a yes somewhere in the call. The platform's confirm pattern does this with semantic gates:
 
-1. A function proposes the change. It reads the change back and records it in `semantic_state`, in one action object, so the proposal's dialogue starts with the read-back.
+1. A function proposes the change. It records the change in `semantic_state` and then reads it back, so the proposal's dialogue starts with the read-back. The state goes first: when the caller talks over a `say`, the platform skips the rest of the result's actions, so a state set after the read-back could be lost.
 2. The tool that carries out the change has three gates, each judged on the proposal's dialogue: the caller's latest turn is an answer, the answer is a yes, and what they answered was a read-back of this change.
 
 `Proposal` builds both halves. The gates' questions are the platform's own, which were replayed against logged confirmation checks.

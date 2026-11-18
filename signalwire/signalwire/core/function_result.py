@@ -869,9 +869,12 @@ class FunctionResult:
         A change starts a proposal, the dialogue of a gate with
         ``dialogue="proposal"``, as of the start of the result's action list,
         so a ``say`` anywhere in the same result, such as the read-back, is in
-        it. Platform releases before the whole-list rule start it at its own
-        action object: set the state before ``say`` there, or use
-        ``signalwire.patterns.Proposal``, which works on both.
+        it. Set the state before the ``say`` all the same: when the caller
+        talks over a ``say``, the platform skips the rest of the result's
+        actions, so a state set after it could be lost. Platform releases
+        before the whole-list rule also date a proposal from its own action
+        object, which the same order covers. ``signalwire.patterns.Proposal``
+        does this.
 
         Args:
             state: The semantic state
