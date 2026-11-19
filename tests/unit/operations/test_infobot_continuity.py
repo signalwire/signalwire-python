@@ -145,3 +145,13 @@ def test_continuity_reports_the_whole_conversation(tmp_path: Path) -> None:
     assert sent[-1]["conversation_id"] == "r"
     assert len(sent[-1]["legs"]) == 2
     assert [leg["turns"][0]["content"] for leg in sent[-1]["legs"]] == ["q1", "q2"]
+
+
+def test_visitor_context_merges_global_data(tmp_path: Path) -> None:
+    c = Continuity(
+        store=LegStore(cache_dir=str(tmp_path)),
+        visitor_context=lambda body: {"visitor": "acme"},
+    )
+    agent = AgentBase(name="v", route="/v", suppress_logs=True)
+    c._seed_callback({}, {"conversation_id": "x"}, {}, agent)
+    assert agent._global_data.get("visitor") == "acme"

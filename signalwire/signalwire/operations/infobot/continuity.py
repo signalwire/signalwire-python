@@ -175,12 +175,15 @@ class Continuity:
         switch_note: Callable[[str, str], str] = default_switch_note,
         resolve_id: Callable[[dict[str, Any]], str] | None = None,
         report: Callable[[dict[str, Any]], None] | None = None,
+        visitor_context: Callable[[dict[str, Any]], dict[str, Any] | None]
+        | None = None,
     ) -> None:
         self._store = store or LegStore()
         self._include_tools = include_tools
         self._switch_note = switch_note
         self._resolve_id = resolve_id
         self._report = report
+        self._visitor_context = visitor_context
 
     @property
     def store(self) -> LegStore:
@@ -201,6 +204,10 @@ class Continuity:
         headers: dict[str, Any],
         agent: AgentBase,
     ) -> None:
+        if self._visitor_context is not None:
+            ctx = self._visitor_context(body)
+            if ctx:
+                agent.set_global_data(ctx)
         cid = self.resolve_conversation_id(body)
         if not cid:
             return

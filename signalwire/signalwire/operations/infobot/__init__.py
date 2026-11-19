@@ -23,6 +23,7 @@ from signalwire.operations.infobot.continuity import (
 )
 from signalwire.operations.infobot.knowledge import InfoBotKnowledge
 from signalwire.operations.infobot.legs import LegStore
+from signalwire.operations.infobot.livecall import say_into_call
 
 __all__ = [
     "Continuity",
@@ -31,4 +32,5 @@ __all__ = [
     "build_seed",
     "medium_of",
     "pair_tools",
+    "say_into_call",
 ]
