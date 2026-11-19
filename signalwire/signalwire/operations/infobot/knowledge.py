@@ -74,6 +74,8 @@ class InfoBotKnowledge:
         self._context: Callable[[Result], str | None] | None = None
         self._rules: list[tuple[str, str]] = []
         self._result_rules: list[tuple[Callable[[str, list[Result]], bool], str]] = []
+        self._query_types: dict[str, str] = {}
+        self._query_type_help: str = ""
 
     # -- governance hooks --------------------------------------------------
 
@@ -112,6 +114,18 @@ class InfoBotKnowledge:
         lines = [t for t, w in self._rules if w in (state, "always")]
         return lines or [self._grounding]
 
+    def add_query_type(self, kind: str, qualifier: str) -> InfoBotKnowledge:
+        """Register a query kind whose ``qualifier`` is appended to the search
+        query (not the grounding) when the model picks it. Exposes a
+        ``query_type`` argument on the search tool once any kind is registered."""
+        self._query_types[kind] = qualifier
+        return self
+
+    def set_query_type_help(self, text: str) -> InfoBotKnowledge:
+        """How the model should choose a ``query_type`` (the argument's description)."""
+        self._query_type_help = text
+        return self
+
     # -- install -----------------------------------------------------------
 
     def install(self, agent: AgentBase) -> AgentBase:
@@ -124,24 +138,35 @@ class InfoBotKnowledge:
         return agent
 
     def _define_search(self, agent: AgentBase) -> None:
+        params: dict[str, Any] = {
+            "query": {
+                "type": "string",
+                "description": "What to look up, in the caller's words.",
+            }
+        }
+        if self._query_types:
+            params["query_type"] = {
+                "type": "string",
+                "enum": sorted(self._query_types),
+                "description": self._query_type_help or "The kind of lookup.",
+            }
         agent.define_tool(
             self._tool,
             f"{self._description} Changes nothing.",
-            {
-                "query": {
-                    "type": "string",
-                    "description": "What to look up, in the caller's words.",
-                }
-            },
+            params,
             self._handle_search,
             required=["query"],
         )
 
     def _handle_search(self, args: dict[str, Any], raw: Any) -> FunctionResult:
-        query = ((args or {}).get("query") or "").strip()
+        args = args or {}
+        query = (args.get("query") or "").strip()
         if not query:
             return FunctionResult("Ask them what to look up - there was no query.")
-        blob = self._format(query, list(self._search(query) or []))
+        # The qualifier aids retrieval only; grounding stays the caller's own words.
+        qualifier = self._query_types.get((args.get("query_type") or "").strip())
+        effective = f"{query} {qualifier}" if qualifier else query
+        blob = self._format(query, list(self._search(effective) or []))
         return FunctionResult(blob).back_to_back_functions("forever")
 
     def _format(self, query: str, results: list[Result]) -> str:

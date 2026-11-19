@@ -170,3 +170,21 @@ def test_result_rule_fires_on_content() -> None:
     )
     assert "SAW CODE" in str(kb._handle_search({"query": "show code"}, {}).response)
     assert "SAW CODE" not in str(kb._handle_search({"query": "pricing"}, {}).response)
+
+
+def test_query_type_qualifies_the_search_not_the_grounding() -> None:
+    searched: list[str] = []
+
+    def search(q: str) -> list[dict[str, Any]]:
+        searched.append(q)
+        return [{"content": "x", "score": 1.0}]
+
+    kb = InfoBotKnowledge(search=search)
+    kb.add_query_type("code", "code example").set_query_type_help("pick code for code")
+
+    kb._handle_search({"query": "send a fax", "query_type": "code"}, {})
+    assert searched == ["send a fax code example"]  # qualifier aids retrieval
+    kb._handle_search({"query": "pricing"}, {})
+    assert searched[-1] == "pricing"  # no query_type -> bare query
+    kb._handle_search({"query": "pricing", "query_type": "nope"}, {})
+    assert searched[-1] == "pricing"  # unknown type ignored
