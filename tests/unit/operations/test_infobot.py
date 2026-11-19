@@ -54,7 +54,10 @@ def test_knowledge_composes_beside_operations() -> None:
     assert "search_knowledge" in main["functions"]
     assert "cancel_order" in main["functions"]
     assert "cancel_order" in main["text"]
-    assert agent._params["conscience"] == "${global_data.infobot.now}\n\n${global_data.ops.now}"
+    assert (
+        agent._params["conscience"]
+        == "${global_data.infobot.now}\n\n${global_data.ops.now}"
+    )
 
 
 def test_blank_query_asks_rather_than_searches() -> None:
@@ -96,12 +99,19 @@ def test_governance_limits_and_empty_case() -> None:
     def search(q: str) -> list[dict[str, Any]]:
         return [{"content": f"r{i}", "score": i / 10} for i in range(10)]
 
-    blob = str(InfoBotKnowledge(search=search, result_limit=3)._handle_search({"query": "q"}, {}).response)
+    blob = str(
+        InfoBotKnowledge(search=search, result_limit=3)
+        ._handle_search({"query": "q"}, {})
+        .response
+    )
     assert "r9" in blob and "r8" in blob and "r7" in blob  # top 3 by score
     assert "r6" not in blob  # cut by the limit
 
     empty = InfoBotKnowledge(search=lambda q: [])
-    assert "do not cover it" in str(empty._handle_search({"query": "q"}, {}).response).lower()
+    assert (
+        "do not cover it"
+        in str(empty._handle_search({"query": "q"}, {}).response).lower()
+    )
 
 
 def test_contact_tool_offered_only_when_enabled() -> None:

@@ -85,7 +85,9 @@ class InfoBotKnowledge:
         self._demote = fn
         return self
 
-    def set_result_context(self, fn: Callable[[Result], str | None]) -> InfoBotKnowledge:
+    def set_result_context(
+        self, fn: Callable[[Result], str | None]
+    ) -> InfoBotKnowledge:
         """A label line shown above a result's passage; ``None`` adds none."""
         self._context = fn
         return self
@@ -105,7 +107,12 @@ class InfoBotKnowledge:
         agent.define_tool(
             self._tool,
             f"{self._description} Changes nothing.",
-            {"query": {"type": "string", "description": "What to look up, in the caller's words."}},
+            {
+                "query": {
+                    "type": "string",
+                    "description": "What to look up, in the caller's words.",
+                }
+            },
             self._handle_search,
             required=["query"],
         )
@@ -120,7 +127,9 @@ class InfoBotKnowledge:
     def _format(self, query: str, results: list[Result]) -> str:
         kept = [r for r in results if not (self._exclude and self._exclude(r, query))]
         # Highest score first; a demoted result always sorts after a kept one.
-        kept.sort(key=lambda r: (1 if (self._demote and self._demote(r)) else 0, -_score(r)))
+        kept.sort(
+            key=lambda r: (1 if (self._demote and self._demote(r)) else 0, -_score(r))
+        )
         kept = kept[: self._result_limit]
         if not kept:
             return f"{self._grounding}\n\nThe results do not cover it."
@@ -138,8 +147,14 @@ class InfoBotKnowledge:
             "only after they have agreed they would like someone to follow up.",
             {
                 "name": {"type": "string", "description": "The caller's name."},
-                "email": {"type": "string", "description": "An email address to reach them."},
-                "topic": {"type": "string", "description": "What they want followed up, in brief."},
+                "email": {
+                    "type": "string",
+                    "description": "An email address to reach them.",
+                },
+                "topic": {
+                    "type": "string",
+                    "description": "What they want followed up, in brief.",
+                },
             },
             self._handle_contact,
             required=["email"],
@@ -147,7 +162,8 @@ class InfoBotKnowledge:
 
     def _handle_contact(self, args: dict[str, Any], raw: Any) -> FunctionResult:
         fields: dict[str, Any] = {
-            k: str((args or {}).get(k) or "").strip() for k in ("name", "email", "topic")
+            k: str((args or {}).get(k) or "").strip()
+            for k in ("name", "email", "topic")
         }
         if not fields["email"]:
             return FunctionResult("Ask them for an email address to reach them at.")
@@ -159,7 +175,9 @@ class InfoBotKnowledge:
 
     def _ensure_main(self, agent: AgentBase) -> None:
         step = agent.define_contexts().add_context("default").add_step("main")
-        step.add_section("Knowledge", f"Answer the caller's question from {self._tool}, not memory.")
+        step.add_section(
+            "Knowledge", f"Answer the caller's question from {self._tool}, not memory."
+        )
         tools = [self._tool]
         if self._contact is not None:
             tools.append(self._contact_tool)
