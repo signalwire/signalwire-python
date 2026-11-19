@@ -16,5 +16,6 @@ tools, with each layer's record line kept in its own ``global_data`` namespace.
 """
 
 from signalwire.operations.infobot.knowledge import InfoBotKnowledge
+from signalwire.operations.infobot.legs import LegStore
 
-__all__ = ["InfoBotKnowledge"]
+__all__ = ["InfoBotKnowledge", "LegStore"]
