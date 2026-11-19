@@ -134,3 +134,14 @@ def test_capture_ignores_request_with_no_id(tmp_path: Path) -> None:
 def test_continuity_install_wires_without_error() -> None:
     agent = AgentBase(name="ci", route="/ci", suppress_logs=True)
     assert Continuity().install(agent) is agent
+
+
+def test_continuity_reports_the_whole_conversation(tmp_path: Path) -> None:
+    sent: list[dict[str, Any]] = []
+    c = Continuity(store=LegStore(cache_dir=str(tmp_path)), report=sent.append)
+    c._capture_leg([{"role": "user", "content": "q1"}], {"conversation_id": "r"})
+    c._capture_leg([{"role": "user", "content": "q2"}], {"conversation_id": "r.2"})
+    # the latest report covers both legs under the one root
+    assert sent[-1]["conversation_id"] == "r"
+    assert len(sent[-1]["legs"]) == 2
+    assert [leg["turns"][0]["content"] for leg in sent[-1]["legs"]] == ["q1", "q2"]

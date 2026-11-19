@@ -174,11 +174,13 @@ class Continuity:
         include_tools: bool = True,
         switch_note: Callable[[str, str], str] = default_switch_note,
         resolve_id: Callable[[dict[str, Any]], str] | None = None,
+        report: Callable[[dict[str, Any]], None] | None = None,
     ) -> None:
         self._store = store or LegStore()
         self._include_tools = include_tools
         self._switch_note = switch_note
         self._resolve_id = resolve_id
+        self._report = report
 
     @property
     def store(self) -> LegStore:
@@ -224,4 +226,10 @@ class Continuity:
             if isinstance(t, dict)
             and t.get("role") in ("user", "assistant", "system", "tool")
         ]
-        self._store.record(LegStore.root_id(cid), {"cid": cid, "turns": turns})
+        root = LegStore.root_id(cid)
+        self._store.record(root, {"cid": cid, "turns": turns})
+        # Hand the whole conversation so far to the report sink. The record is
+        # complete at every leg end (the last one covers the full conversation),
+        # so a sink can simply keep the latest. Default: no report.
+        if self._report is not None:
+            self._report({"conversation_id": root, "legs": self._store.legs(root)})
