@@ -1134,6 +1134,15 @@ class Operations:
                     change = await self._prepare(call, op, args)
                     note = f"What they just asked for is added to the {op.kind} change read back before, as one change. "
                     replaced = True
+            if waiting.get("read_back") == change.read_back and replaced:
+                # as_well with nothing new: the model meant to add something
+                # and left it out, so say what to pass, not "the same"
+                raise Refuse(
+                    f"Nothing is added: this call has nothing the {op.kind} change waiting for their answer "
+                    f'doesn\'t have already: "{change.read_back}"',
+                    f"Call {op.tool} again with as_well: true and what else they asked for, as they said it. If "
+                    "they asked for nothing more, get their yes or no.",
+                )
             if waiting.get("read_back") == change.read_back:
                 raise Refuse(
                     f'That\'s the change already read back, the same in every detail: "{change.read_back}"',

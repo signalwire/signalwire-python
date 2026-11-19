@@ -255,6 +255,31 @@ def test_every_generated_result_turns_chaining_back_on_and_after_a_change_the_re
     assert "anything else in this call that isn't done yet, call its tool now" in (done.tool_prompt or "")
 
 
+def test_as_well_with_nothing_new_says_what_to_add() -> None:
+    agent = ServiceAgent("orders3", role="r")
+    agent.writes_with(lambda call, w: None)
+
+    @agent.operation(tool="change_items")
+    class Items(Operation):
+        """Change the order's items."""
+
+        items = Field(list[str], "The items to change.")
+        combine = ()
+
+        def prepare(self, call: Any, f: Any) -> Change:
+            return Change(read_back=f"Change {', '.join(f.items)}. Shall I?", touches=["order:1"],
+                          writes=[Write("items", items=list(f.items))])
+
+    sim = CallSimulator(agent)
+    sim.call("change_items", said({"items": ["a"]}))
+    same = sim.call("change_items", said({"items": ["a"], "as_well": True}))
+    assert same.response.startswith("Nothing is added") and "what else they asked for" in (same.tool_prompt or "")
+    again = sim.call("change_items", said({"items": ["a"]}))
+    assert "That's the change already read back" in again.response, "asked again as it is, without as_well"
+    more = sim.call("change_items", said({"items": ["b"], "as_well": True}))
+    assert "Change a, b. Shall I?" in more.response
+
+
 def test_a_second_change_held_for_the_same_things_is_merged_asked_or_takes_over() -> None:
     agent = ServiceAgent("orders2", role="r")
     agent.writes_with(lambda call, w: None)
