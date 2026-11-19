@@ -78,11 +78,13 @@ AS_WELL = {
 _GOING_ON = "Tell them, and ask how they'd like to go on."
 # What the model is told with a read-back, in place of the Proposal pattern's own ("If they say no or want a change,
 # call decline_change"): the confirm step's words, and more asked for added to it. Told only to wait for a yes, a
-# model told the caller nothing more could be asked for until they answered.
+# model told the caller nothing more could be asked for until they answered. A question answered in between left
+# the change waiting, unasked, until the call ended.
 _READ_BACK_PROMPT = (
     "Wait for the caller's answer. Call {confirm} only when they say yes to this read-back. If they want it "
     "different, call its tool again with what they want. If they ask for something more as well, call the tool for "
-    "it (this change's own tool again with as_well: true, when it takes that). If they don't want it, call {decline}."
+    "it (this change's own tool again with as_well: true, when it takes that). If they don't want it, call {decline}. "
+    "If they ask something else first, answer it, then ask again whether to go ahead."
 )
 # After a change is settled with none set aside: what else they asked for, so it isn't left for them to ask again
 _ANYTHING_ELSE = (

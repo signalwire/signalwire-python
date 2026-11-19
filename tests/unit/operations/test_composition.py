@@ -303,6 +303,7 @@ def test_a_read_back_says_what_to_do_with_more_asked_for() -> None:
     assert "Change a. Shall I?" in first.response
     assert "as_well: true" in prompt and "call its tool again with what they want" in prompt
     assert "want a change, call decline_change" not in prompt and "decline_change" in prompt
+    assert "answer it, then ask again whether to go ahead" in prompt, "a question in between leaves it unasked"
 
 
 def test_a_second_change_held_for_the_same_things_is_merged_asked_or_takes_over() -> None:
