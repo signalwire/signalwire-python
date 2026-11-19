@@ -26,7 +26,7 @@ def say_into_call(
     Defaults to the public SignalWire REST path
     (``RestClient().calling.ai_message``) with credentials from the usual
     environment variables; pass ``client`` to override — e.g. a client wired to
-    different credentials. No hostnames or project ids live here.
+    different credentials. Nothing deployment-specific is baked in here.
     """
     if client is None:
         from signalwire import RestClient
