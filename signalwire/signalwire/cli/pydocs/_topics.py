@@ -282,8 +282,8 @@ Or give the schema yourself, with a handler that takes `(args, raw_data)`:
 - `gates=[SemanticGate(...)]` adds semantic gates: yes/no questions a
   decision model answers about the call before the platform runs the tool.
   A platform release without semantic gates runs the tool ungated.
-- `vouched=True` runs the handler only when the model says every argument
-  came from the caller (a required `data_supplied_by_user`); otherwise the
+- `vouched=True` runs the handler only when the model says the caller gave
+  the details the call needs (a required `data_supplied_by_user`); otherwise the
   model is told to get the answer from the caller first.
 - Raise `ToolRefusal(tool_result, tool_prompt)` to decline with an outcome you
   know. Any other exception tells the model the outcome is unknown, so it

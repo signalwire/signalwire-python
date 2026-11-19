@@ -16,6 +16,13 @@
   isn't part of the cross-SDK reference yet, and TypeScript will port it
   first.
 
+### Changed
+- A vouched tool's `data_supplied_by_user` argument now asks the model
+  whether the user gave the details the call needs themselves. It asked
+  whether every other argument was what the user said, and a model answered
+  that honestly with false for a tool whose arguments include an id it had
+  looked up, such as an order's, so the tool was refused again and again.
+
 ## [3.12.2] - 2026-11-18
 
 ### Fixed
