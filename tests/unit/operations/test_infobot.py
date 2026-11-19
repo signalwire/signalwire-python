@@ -227,3 +227,55 @@ def test_missing_backend_fails_fast() -> None:
     agent = AgentBase(name="nb", route="/nb", suppress_logs=True)
     with pytest.raises(ValueError, match="search backend"):
         InfoBotKnowledge().install(agent)
+
+
+def test_authority_ranks_before_score() -> None:
+    def search(q: str) -> list[dict[str, Any]]:
+        return [
+            {"content": "low-auth-high-score", "score": 0.9, "auth": 1},
+            {"content": "high-auth-low-score", "score": 0.4, "auth": 5},
+        ]
+
+    kb = InfoBotKnowledge(search=search)
+    kb.set_authority(lambda r: r["auth"])
+    blob = str(kb._handle_search({"query": "q"}, {}).response)
+    assert blob.index("high-auth-low-score") < blob.index("low-auth-high-score")
+
+
+def test_query_transform_rewrites_the_search_not_the_grounding() -> None:
+    searched: list[str] = []
+
+    def search(q: str) -> list[dict[str, Any]]:
+        searched.append(q)
+        return [{"content": "x", "score": 1.0}]
+
+    kb = InfoBotKnowledge(search=search)
+    kb.set_query_transform(lambda q: q.replace("fax", "send_fax"))
+    kb._handle_search({"query": "how to fax"}, {})
+    assert searched == ["how to send_fax"]
+
+
+def test_fallback_used_only_when_empty() -> None:
+    kb = InfoBotKnowledge(search=lambda q: [])
+    kb.set_fallback(lambda q: f"web says: {q}")
+    blob = str(kb._handle_search({"query": "obscure"}, {}).response)
+    assert "web says: obscure" in blob
+    assert "do not cover it" not in blob.lower()
+
+    kb.set_fallback(lambda q: None)  # no fallback text -> the not-covered line
+    assert (
+        "do not cover it" in str(kb._handle_search({"query": "x"}, {}).response).lower()
+    )
+
+
+def test_expander_transforms_kept_results() -> None:
+    def search(q: str) -> list[dict[str, Any]]:
+        return [{"content": "short", "score": 1.0}]
+
+    kb = InfoBotKnowledge(search=search)
+    kb.set_expander(
+        lambda results: [
+            {**r, "content": r["content"] + " (expanded)"} for r in results
+        ]
+    )
+    assert "short (expanded)" in str(kb._handle_search({"query": "q"}, {}).response)

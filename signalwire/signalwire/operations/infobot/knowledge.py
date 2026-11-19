@@ -76,6 +76,10 @@ class InfoBotKnowledge:
         self._result_rules: list[tuple[Callable[[str, list[Result]], bool], str]] = []
         self._query_types: dict[str, str] = {}
         self._query_type_help: str = ""
+        self._authority: Callable[[Result], int | None] | None = None
+        self._query_transform: Callable[[str], str] | None = None
+        self._fallback: Callable[[str], str | None] | None = None
+        self._expander: Callable[[list[Result]], list[Result]] | None = None
 
     # -- governance hooks --------------------------------------------------
 
@@ -94,6 +98,31 @@ class InfoBotKnowledge:
     ) -> InfoBotKnowledge:
         """A label line shown above a result's passage; ``None`` adds none."""
         self._context = fn
+        return self
+
+    def set_authority(self, fn: Callable[[Result], int | None]) -> InfoBotKnowledge:
+        """A ranking tier for a result; higher ranks first among non-demoted ones."""
+        self._authority = fn
+        return self
+
+    def set_query_transform(self, fn: Callable[[str], str]) -> InfoBotKnowledge:
+        """Rewrite the SEARCH query (aliases, glossary, stopwords, …) before it
+        runs; the grounding still uses the caller's own words."""
+        self._query_transform = fn
+        return self
+
+    def set_fallback(self, fn: Callable[[str], str | None]) -> InfoBotKnowledge:
+        """Called with the query when nothing clears the cut; its text, if any, is
+        returned in place of the not-covered line (e.g. a web search)."""
+        self._fallback = fn
+        return self
+
+    def set_expander(
+        self, fn: Callable[[list[Result]], list[Result]]
+    ) -> InfoBotKnowledge:
+        """Transform the kept results before they're rendered, e.g. widen each to
+        its full section."""
+        self._expander = fn
         return self
 
     def add_rule(self, text: str, *, when: str = "results") -> InfoBotKnowledge:
@@ -207,19 +236,31 @@ class InfoBotKnowledge:
         if search is None:
             return FunctionResult("Search isn't configured.")
         # The qualifier aids retrieval only; grounding stays the caller's own words.
+        base = self._query_transform(query) if self._query_transform else query
         qualifier = self._query_types.get((args.get("query_type") or "").strip())
-        effective = f"{query} {qualifier}" if qualifier else query
+        effective = f"{base} {qualifier}" if qualifier else base
         blob = self._format(query, list(search(effective) or []))
         return FunctionResult(blob).back_to_back_functions("forever")
 
+    def _rank_key(self, r: Result) -> tuple[int, int, float]:
+        demoted = 1 if (self._demote and self._demote(r)) else 0
+        authority = (self._authority(r) or 0) if self._authority else 0
+        return (demoted, -authority, -_score(r))
+
     def _format(self, query: str, results: list[Result]) -> str:
         kept = [r for r in results if not (self._exclude and self._exclude(r, query))]
-        # Highest score first; a demoted result always sorts after a kept one.
-        kept.sort(
-            key=lambda r: (1 if (self._demote and self._demote(r)) else 0, -_score(r))
-        )
+        # Demoted last; then higher authority; then higher score.
+        kept.sort(key=self._rank_key)
         kept = kept[: self._result_limit]
+        if self._expander and kept:
+            kept = list(self._expander(kept))
         if not kept:
+            if self._fallback:
+                # The fallback supplies its own answer from another source, so
+                # the "answer only from these results" grounding does not apply.
+                text = self._fallback(query)
+                if text:
+                    return str(text)
             return "\n\n".join(
                 [*self._rules_for("empty"), "The results do not cover it."]
             )
