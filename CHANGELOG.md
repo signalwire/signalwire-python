@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.12.2] - 2026-11-18
+
+### Fixed
+- After one refused yes, an agent built on `Proposal` couldn't chain tool
+  calls for the rest of the call. The confirm gates' refusal sets
+  `back_to_back_functions(False)`, so the model answers in words, and the
+  platform keeps that setting for the call. Every later tool result then had
+  to be followed by words, a lookup included. `Proposal.propose()`,
+  `ask_again()` and `complete()` now turn chaining back on (`"forever"`, the
+  call's default). An agent that sets `back_to_back_functions` itself should
+  know they do. The `back_to_back_functions()` docs say an `on_fail` setting
+  lasts for the call. Found by the benchmark runs.
+
 ## [3.12.1] - 2026-11-18
 
 ### Fixed

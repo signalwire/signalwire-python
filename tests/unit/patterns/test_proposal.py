@@ -32,6 +32,7 @@ class TestPropose:
         # So it's recorded even when the caller talks over the read-back
         result = Proposal("place_order").propose(READ_BACK, details={"item": "tea"}).to_dict()
         assert result["action"] == [
+            {"back_to_back_functions": "forever"},
             {"set_global_data": {"semantic_state": {
                 "item": "tea", "proposal": READ_BACK, "revision": 1}}},
             {"say": READ_BACK},
@@ -48,15 +49,15 @@ class TestPropose:
     def test_a_new_proposal_gets_the_next_revision(self) -> None:
         raw = _raw({"proposal": "older", "revision": 3})
         state = Proposal("place_order").propose(READ_BACK, raw_data=raw).to_dict()[
-            "action"][0]["set_global_data"]["semantic_state"]
+            "action"][1]["set_global_data"]["semantic_state"]
         assert state["revision"] == 4
 
     def test_asking_again_reads_the_same_change_as_a_new_revision(self) -> None:
         raw = _raw({"proposal": READ_BACK, "revision": 1, "item": "tea"})
         actions = Proposal("place_order").ask_again(raw).to_dict()["action"]
-        assert actions[0]["set_global_data"]["semantic_state"] == {
+        assert actions[1]["set_global_data"]["semantic_state"] == {
             "item": "tea", "proposal": READ_BACK, "revision": 2}
-        assert actions[1] == {"say": READ_BACK}
+        assert actions[2] == {"say": READ_BACK}
 
     def test_asking_again_needs_a_proposal(self) -> None:
         with pytest.raises(ValueError, match="no proposal"):
@@ -64,8 +65,20 @@ class TestPropose:
 
     def test_complete_records_what_was_done(self) -> None:
         result = Proposal("place_order").complete("Order 4471 is placed.").to_dict()
-        assert result["action"] == [{"set_global_data": {"semantic_state": {
-            "done": "Order 4471 is placed."}}}]
+        assert result["action"] == [
+            {"back_to_back_functions": "forever"},
+            {"set_global_data": {"semantic_state": {"done": "Order 4471 is placed."}}},
+        ]
+
+    def test_a_refused_yes_turns_chaining_off_and_the_next_result_back_on(self) -> None:
+        # A gate's back_to_back_functions(False) lasts for the call
+        # (mod_openai ai_back2back_value): the proposal's own results restore
+        # the call's default, or every later tool result would need words
+        proposal = Proposal("place_order")
+        on_fail = proposal.confirm_gates()[1].to_dict()["on_fail"]
+        assert {"back_to_back_functions": False} in on_fail["action"]
+        for result in (proposal.propose(READ_BACK), proposal.complete("Placed.")):
+            assert result.to_dict()["action"][0] == {"back_to_back_functions": "forever"}
 
 
 class TestConfirmGates:

@@ -1011,8 +1011,10 @@ class FunctionResult:
         out with ``tool_choice: "none"``. True, while chaining is off, allows
         one more chain: the next request after a function result may call
         one, and then it's off again. True never lowers "forever". The
-        setting lasts for the call. Text pipeline only: a realtime model
-        doesn't read it.
+        setting lasts for the call, one set by a gate's ``on_fail`` too:
+        after a refused gate turns it off, a later result sets "forever" to
+        turn it back on, or every later tool result needs words after it.
+        Text pipeline only: a realtime model doesn't read it.
 
         Args:
             value: True, False or "forever".
