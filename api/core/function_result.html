@@ -12767,8 +12767,10 @@ answer in words after a function result: the request after one goes
 out with <code>tool_choice: "none"</code>. True, while chaining is off, allows
 one more chain: the next request after a function result may call
 one, and then it's off again. True never lowers "forever". The
-setting lasts for the call. Text pipeline only: a realtime model
-doesn't read it.</p>
+setting lasts for the call, one set by a gate's <code>on_fail</code> too:
+after a refused gate turns it off, a later result sets "forever" to
+turn it back on, or every later tool result needs words after it.
+Text pipeline only: a realtime model doesn't read it.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>

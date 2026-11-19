@@ -8559,9 +8559,13 @@ and it was a yes to a read-back of this change. Each is judged on
 the proposal's dialogue. When one fails, the model is told why, with
 the proposal quoted from <code>semantic_state</code> (the platform expands
 <code>${global_data...}</code> in a gate's output; one that doesn't sends it
-as written), and chaining is turned off for the call
+as written), and chaining is turned off
 (<code>back_to_back_functions(False)</code>), so the model answers in words
-before it calls a tool again.</p>
+before it calls a tool again. That setting lasts for the call, so
+<code>propose</code>, <code>ask_again</code> and <code>complete</code> turn chaining back on
+(<code>"forever"</code>, the call's default). Without that, every later tool
+result would need words after it. An agent that sets
+<code>back_to_back_functions</code> itself should know they do.</p>
 
 
     </div>
