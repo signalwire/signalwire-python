@@ -51,7 +51,7 @@ class InfoBotKnowledge:
 
     def __init__(
         self,
-        search: Callable[[str], list[Result]],
+        search: Callable[[str], list[Result]] | None = None,
         *,
         tool: str = "search_knowledge",
         description: str = "Search the documentation and answer only from the results.",
@@ -126,10 +126,50 @@ class InfoBotKnowledge:
         self._query_type_help = text
         return self
 
+    def use_search_service(
+        self,
+        url: str,
+        *,
+        user: str = "",
+        password: str = "",
+        index_name: str = "default",
+        count: int = 10,
+        timeout: float = 10.0,
+    ) -> InfoBotKnowledge:
+        """Use a SignalWire search service at ``url`` as the backend instead of a
+        hand-written ``search`` callable: an HTTP ``POST <url>/search`` of
+        ``{query, index_name, count}`` (optional basic auth) returning ``results``."""
+        endpoint = url.rstrip("/")
+        if not endpoint.endswith("/search"):
+            endpoint += "/search"
+        auth = (user, password) if (user or password) else None
+
+        def backend(query: str) -> list[Result]:
+            import requests
+
+            resp = requests.post(
+                endpoint,
+                json={"query": query, "index_name": index_name, "count": count},
+                auth=auth,
+                timeout=timeout,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            results = data.get("results") if isinstance(data, dict) else data
+            return list(results or [])
+
+        self._search = backend
+        return self
+
     # -- install -----------------------------------------------------------
 
     def install(self, agent: AgentBase) -> AgentBase:
         """Add the tools, the ``main`` step and the conscience line."""
+        if self._search is None:
+            raise ValueError(
+                "InfoBotKnowledge needs a search backend: pass search=fn or call "
+                "use_search_service(...) before install()."
+            )
         self._define_search(agent)
         if self._contact is not None:
             self._define_contact(agent)
@@ -163,10 +203,13 @@ class InfoBotKnowledge:
         query = (args.get("query") or "").strip()
         if not query:
             return FunctionResult("Ask them what to look up - there was no query.")
+        search = self._search
+        if search is None:
+            return FunctionResult("Search isn't configured.")
         # The qualifier aids retrieval only; grounding stays the caller's own words.
         qualifier = self._query_types.get((args.get("query_type") or "").strip())
         effective = f"{query} {qualifier}" if qualifier else query
-        blob = self._format(query, list(self._search(effective) or []))
+        blob = self._format(query, list(search(effective) or []))
         return FunctionResult(blob).back_to_back_functions("forever")
 
     def _format(self, query: str, results: list[Result]) -> str:

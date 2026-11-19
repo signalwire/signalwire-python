@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
+
 from signalwire import AgentBase
 from signalwire.operations import Change, Operation, Operations
 from signalwire.operations.infobot import InfoBotKnowledge
@@ -188,3 +190,40 @@ def test_query_type_qualifies_the_search_not_the_grounding() -> None:
     assert searched[-1] == "pricing"  # no query_type -> bare query
     kb._handle_search({"query": "pricing", "query_type": "nope"}, {})
     assert searched[-1] == "pricing"  # unknown type ignored
+
+
+def test_use_search_service_posts_and_parses(monkeypatch: pytest.MonkeyPatch) -> None:
+    import requests
+
+    captured: dict[str, Any] = {}
+
+    class FakeResp:
+        def raise_for_status(self) -> None:
+            pass
+
+        def json(self) -> dict[str, Any]:
+            return {"results": [{"content": "hit", "score": 0.9}]}
+
+    def fake_post(endpoint: str, **kw: Any) -> FakeResp:
+        captured.update(endpoint=endpoint, json=kw.get("json"), auth=kw.get("auth"))
+        return FakeResp()
+
+    monkeypatch.setattr(requests, "post", fake_post)
+    kb = InfoBotKnowledge().use_search_service(
+        "http://svc:8001",
+        user="u",
+        password="p",  # noqa: S106 - test placeholder, not a real credential
+        index_name="idx",
+        count=7,
+    )
+    blob = str(kb._handle_search({"query": "fax"}, {}).response)
+    assert "hit" in blob
+    assert captured["endpoint"] == "http://svc:8001/search"
+    assert captured["json"] == {"query": "fax", "index_name": "idx", "count": 7}
+    assert captured["auth"] == ("u", "p")
+
+
+def test_missing_backend_fails_fast() -> None:
+    agent = AgentBase(name="nb", route="/nb", suppress_logs=True)
+    with pytest.raises(ValueError, match="search backend"):
+        InfoBotKnowledge().install(agent)
