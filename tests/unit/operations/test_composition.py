@@ -280,6 +280,31 @@ def test_as_well_with_nothing_new_says_what_to_add() -> None:
     assert "Change a, b. Shall I?" in more.response
 
 
+def test_a_read_back_says_what_to_do_with_more_asked_for() -> None:
+    """Told only to wait for a yes, a model told the caller nothing more could be added until they answered; and the
+    pattern's "want a change, call decline_change" went against the confirm step's "call its tool again"."""
+    agent = ServiceAgent("orders4", role="r")
+    agent.writes_with(lambda call, w: None)
+
+    @agent.operation(tool="change_items")
+    class Items(Operation):
+        """Change the order's items."""
+
+        items = Field(list[str], "The items to change.")
+        combine = ()
+
+        def prepare(self, call: Any, f: Any) -> Change:
+            return Change(read_back=f"Change {', '.join(f.items)}. Shall I?", touches=["order:1"],
+                          writes=[Write("items", items=list(f.items))])
+
+    sim = CallSimulator(agent)
+    first = sim.call("change_items", said({"items": ["a"]}))
+    prompt = first.tool_prompt or ""
+    assert "Change a. Shall I?" in first.response
+    assert "as_well: true" in prompt and "call its tool again with what they want" in prompt
+    assert "want a change, call decline_change" not in prompt and "decline_change" in prompt
+
+
 def test_a_second_change_held_for_the_same_things_is_merged_asked_or_takes_over() -> None:
     agent = ServiceAgent("orders2", role="r")
     agent.writes_with(lambda call, w: None)

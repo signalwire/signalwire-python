@@ -76,6 +76,14 @@ AS_WELL = {
 }
 
 _GOING_ON = "Tell them, and ask how they'd like to go on."
+# What the model is told with a read-back, in place of the Proposal pattern's own ("If they say no or want a change,
+# call decline_change"): the confirm step's words, and more asked for added to it. Told only to wait for a yes, a
+# model told the caller nothing more could be asked for until they answered.
+_READ_BACK_PROMPT = (
+    "Wait for the caller's answer. Call {confirm} only when they say yes to this read-back. If they want it "
+    "different, call its tool again with what they want. If they ask for something more as well, call the tool for "
+    "it (this change's own tool again with as_well: true, when it takes that). If they don't want it, call {decline}."
+)
 # After a change is settled with none set aside: what else they asked for, so it isn't left for them to ask again
 _ANYTHING_ELSE = (
     " If they've asked for anything else in this call that isn't done yet, call its tool now; if not, ask if "
@@ -1218,12 +1226,24 @@ class Operations:
             )
             .swml_change_step(CONFIRM_STEP)
         )
-        result = self.proposal.propose(
-            change.read_back, raw_data=call.raw_data, result=result
-        )
+        result = self._proposed(change.read_back, call.raw_data, result)
         if note and isinstance(result.response, dict):
             result.response["tool_result"] = note + str(
                 result.response.get("tool_result") or ""
+            )
+        return result
+
+    def _proposed(
+        self,
+        read_back: str,
+        raw_data: dict[str, Any],
+        result: FunctionResult | None = None,
+    ) -> FunctionResult:
+        """The read-back, proposed, with what the model is to do next."""
+        result = self.proposal.propose(read_back, raw_data=raw_data, result=result)
+        if isinstance(result.response, dict):
+            result.response["tool_prompt"] = _READ_BACK_PROMPT.format(
+                confirm=CONFIRM_TOOL, decline=DECLINE_TOOL
             )
         return result
 
@@ -1450,7 +1470,7 @@ class Operations:
             return _refused(e, "")
         state = current(raw_data)
         if not state or state.get("proposal") != waiting["read_back"]:
-            result = self.proposal.propose(waiting["read_back"], raw_data=raw_data)
+            result = self._proposed(waiting["read_back"], raw_data)
             if isinstance(result.response, dict):
                 result.response["tool_result"] = (
                     "Nothing was changed: their yes was to an earlier read-back, so this one is read to them again. "
