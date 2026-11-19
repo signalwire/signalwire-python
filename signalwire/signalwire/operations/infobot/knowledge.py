@@ -72,6 +72,8 @@ class InfoBotKnowledge:
         self._exclude: Callable[[Result, str], bool] | None = None
         self._demote: Callable[[Result], bool] | None = None
         self._context: Callable[[Result], str | None] | None = None
+        self._rules: list[tuple[str, str]] = []
+        self._result_rules: list[tuple[Callable[[str, list[Result]], bool], str]] = []
 
     # -- governance hooks --------------------------------------------------
 
@@ -91,6 +93,24 @@ class InfoBotKnowledge:
         """A label line shown above a result's passage; ``None`` adds none."""
         self._context = fn
         return self
+
+    def add_rule(self, text: str, *, when: str = "results") -> InfoBotKnowledge:
+        """A grounding line added to the block. ``when`` is "results" (only when
+        there are results), "empty" (only when there are none), or "always".
+        With no rules added, the ``grounding`` line is used as the default."""
+        self._rules.append((text, when))
+        return self
+
+    def add_result_rule(
+        self, predicate: Callable[[str, list[Result]], bool], text: str
+    ) -> InfoBotKnowledge:
+        """A line added after the passages when ``predicate(query, results)`` is true."""
+        self._result_rules.append((predicate, text))
+        return self
+
+    def _rules_for(self, state: str) -> list[str]:
+        lines = [t for t, w in self._rules if w in (state, "always")]
+        return lines or [self._grounding]
 
     # -- install -----------------------------------------------------------
 
@@ -132,12 +152,17 @@ class InfoBotKnowledge:
         )
         kept = kept[: self._result_limit]
         if not kept:
-            return f"{self._grounding}\n\nThe results do not cover it."
-        blocks = [self._grounding]
+            return "\n\n".join(
+                [*self._rules_for("empty"), "The results do not cover it."]
+            )
+        blocks = self._rules_for("results")
         for r in kept:
             label = self._context(r) if self._context else None
             passage = str(r.get("content") or r.get("text") or "").strip()
             blocks.append(f"{label}\n{passage}" if label else passage)
+        for predicate, text in self._result_rules:
+            if predicate(query, kept):
+                blocks.append(text)
         return "\n\n".join(blocks)
 
     def _define_contact(self, agent: AgentBase) -> None:

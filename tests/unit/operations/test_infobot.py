@@ -140,3 +140,33 @@ def test_contact_requires_email() -> None:
     result = kb._handle_contact({"name": "Ann"}, {})
     assert "email" in str(result.response).lower()
     assert captured == []
+
+
+def test_rules_fire_by_condition() -> None:
+    def search(q: str) -> list[dict[str, Any]]:
+        return [{"content": "hit", "score": 1.0}] if q == "has" else []
+
+    kb = InfoBotKnowledge(search=search)
+    kb.add_rule("ALWAYS", when="always")
+    kb.add_rule("RESULTS", when="results")
+    kb.add_rule("EMPTY", when="empty")
+
+    with_results = str(kb._handle_search({"query": "has"}, {}).response)
+    assert "ALWAYS" in with_results and "RESULTS" in with_results
+    assert "EMPTY" not in with_results
+
+    none = str(kb._handle_search({"query": "none"}, {}).response)
+    assert "ALWAYS" in none and "EMPTY" in none
+    assert "RESULTS" not in none
+
+
+def test_result_rule_fires_on_content() -> None:
+    def search(q: str) -> list[dict[str, Any]]:
+        return [{"content": q, "score": 1.0}]
+
+    kb = InfoBotKnowledge(search=search)
+    kb.add_result_rule(
+        lambda query, rs: any("code" in str(r["content"]) for r in rs), "SAW CODE"
+    )
+    assert "SAW CODE" in str(kb._handle_search({"query": "show code"}, {}).response)
+    assert "SAW CODE" not in str(kb._handle_search({"query": "pricing"}, {}).response)
