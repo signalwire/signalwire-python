@@ -263,10 +263,13 @@ class TestGetTools:
         webhook = tool["data_map"]["webhooks"][0]
         assert isinstance(webhook["output"], dict)
 
-    def test_data_map_has_error_keys(self) -> None:
+    def test_webhook_has_error_keys(self) -> None:
+        # The platform reads error_keys on a webhook only, and adds http_code
+        # to the response when the status isn't 2xx
         skill = _make_skill()
         tool = skill.get_tools()[0]
-        assert tool["data_map"]["error_keys"] == ["error"]
+        assert tool["data_map"]["webhooks"][0]["error_keys"] == ["error", "http_code"]
+        assert "error_keys" not in tool["data_map"]
 
     def test_data_map_has_fallback_output(self) -> None:
         skill = _make_skill()

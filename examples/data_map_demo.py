@@ -68,7 +68,7 @@ class DataMapDemoAgent(AgentBase):
                     "required": True,
                 }
             },
-            error_keys=["error", "message"],
+            error_keys=["error", "message", "http_code"],
         )
 
         # 2. Expression-based file control - no API calls
@@ -127,7 +127,7 @@ class DataMapDemoAgent(AgentBase):
                 }
             )
             .output(FunctionResult("Found:\n${found}"))
-            .error_keys(["error"])
+            .error_keys(["error", "http_code"])
         )
 
         # 4. Random joke API - handles array responses differently
@@ -145,7 +145,7 @@ class DataMapDemoAgent(AgentBase):
                 "GET", "https://api.jokes.com/random?category=${enc:args.category}"
             )
             .output(FunctionResult("Here's a ${input.args.category} joke: ${joke}"))
-            .error_keys(["error"])
+            .error_keys(["error", "http_code"])
         )
 
         # 5. Complex API with a fallback reply
@@ -176,7 +176,7 @@ class DataMapDemoAgent(AgentBase):
                 }
             )
             .output(FunctionResult("Search results:\n${found}"))
-            .error_keys(["error", "failed", "unavailable"])
+            .error_keys(["error", "failed", "unavailable", "http_code"])
             .fallback_output(
                 FunctionResult("Search is unavailable right now; try again later.")
             )
@@ -279,7 +279,7 @@ def print_data_map_examples():
             }
         )
         .output(FunctionResult("Found:\n${found}"))
-        .error_keys(["error"])
+        .error_keys(["error", "http_code"])
     )
 
     print("\n3. Complex Tool (Search with Foreach):")
