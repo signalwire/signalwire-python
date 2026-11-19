@@ -11,9 +11,17 @@ Cross-medium continuity: medium detection, tool pairing, and the convo seed.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
-from signalwire.operations.infobot import build_seed, medium_of, pair_tools
+from signalwire import AgentBase
+from signalwire.operations.infobot import (
+    Continuity,
+    LegStore,
+    build_seed,
+    medium_of,
+    pair_tools,
+)
 
 
 def test_medium_of() -> None:
@@ -92,3 +100,37 @@ def test_build_seed_can_drop_tool_turns() -> None:
     convo = build_seed(legs, "voice", include_tools=False)
     assert all(m["role"] != "tool" and "tool_calls" not in m for m in convo)
     assert any(m.get("content") == "answer" for m in convo)
+
+
+def test_continuity_captures_then_seeds_across_a_switch(tmp_path: Path) -> None:
+    c = Continuity(store=LegStore(cache_dir=str(tmp_path)))
+    # a voice leg ends; its transcript is captured under the root
+    c._capture_leg(
+        [
+            {"role": "user", "content": "q1"},
+            {"role": "assistant", "content": "a1"},
+        ],
+        {"conversation_id": "root"},
+    )
+    # a resuming leg (new id off the root) renders; it is seeded with the prior
+    agent = AgentBase(name="c", route="/c", suppress_logs=True)
+    c._seed_callback(
+        {}, {"conversation_id": "root.2", "conversation_type": "voice"}, {}, agent
+    )
+    convo = agent._params.get("convo")
+    assert convo is not None
+    contents = [m.get("content") for m in convo]
+    assert "q1" in contents and "a1" in contents
+    assert convo[-2]["content"] == "I want to switch to voice."
+    assert convo[-1]["role"] == "system"
+
+
+def test_capture_ignores_request_with_no_id(tmp_path: Path) -> None:
+    c = Continuity(store=LegStore(cache_dir=str(tmp_path)))
+    c._capture_leg([{"role": "user", "content": "x"}], {})
+    assert c.store.legs("") == []
+
+
+def test_continuity_install_wires_without_error() -> None:
+    agent = AgentBase(name="ci", route="/ci", suppress_logs=True)
+    assert Continuity().install(agent) is agent
