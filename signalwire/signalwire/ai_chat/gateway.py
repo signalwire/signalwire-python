@@ -435,6 +435,11 @@ class ChatGateway:
         return out
 
     def _charge_mint(self) -> None:
+        """Count one new conversation against the sliding window.
+
+        Raises:
+            GatewayRejection: With status 429 when the window is already full.
+        """
         now = time.monotonic()
         cutoff = now - self.window_seconds
         self._mints = [t for t in self._mints if t > cutoff]
@@ -443,6 +448,14 @@ class ChatGateway:
         self._mints.append(now)
 
     def _charge_turn(self, conversation_id: str) -> None:
+        """Count one turn against a conversation's turn limit.
+
+        Args:
+            conversation_id: The conversation the turn belongs to.
+
+        Raises:
+            GatewayRejection: With status 429 when the limit is reached.
+        """
         now = time.monotonic()
         # Sweep here rather than on a timer: a handle cannot outlive its TTL,
         # so anything older can never be charged against again.
@@ -614,6 +627,14 @@ class ChatGateway:
         router = APIRouter()
 
         def _cors(origin: str | None) -> dict[str, str]:
+            """CORS response headers for a request origin.
+
+            Args:
+                origin: The request's Origin header, or None.
+
+            Returns:
+                The CORS headers when the origin is allowed, otherwise an empty dict.
+            """
             if origin is None:
                 return {}
             try:
@@ -745,8 +766,24 @@ async def _read_json_body(
 
 
 def _b64(raw: bytes) -> str:
+    """Encode bytes as URL-safe base64 without padding.
+
+    Args:
+        raw: The bytes to encode.
+
+    Returns:
+        The encoded text.
+    """
     return base64.urlsafe_b64encode(raw).decode().rstrip("=")
 
 
 def _unb64(text: str) -> bytes:
+    """Decode URL-safe base64 text that may lack padding.
+
+    Args:
+        text: The encoded text.
+
+    Returns:
+        The decoded bytes.
+    """
     return base64.urlsafe_b64decode(text + "=" * (-len(text) % 4))

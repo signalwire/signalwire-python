@@ -24,6 +24,13 @@ class GoogleSearchScraper:
     def __init__(
         self, api_key: str, search_engine_id: str, max_content_length: int = 32768
     ):
+        """Set up the scraper.
+
+        Args:
+            api_key: The Google API key.
+            search_engine_id: The Custom Search engine ID.
+            max_content_length: Maximum length of content kept per page.
+        """
         self.api_key = api_key
         self.search_engine_id = search_engine_id
         self.max_content_length = max_content_length

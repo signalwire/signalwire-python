@@ -25,6 +25,13 @@ class GoogleSearchScraper:
     def __init__(
         self, api_key: str, search_engine_id: str, max_content_length: int = 32768
     ):
+        """Store the API credentials and set up the HTTP sessions.
+
+        Args:
+            api_key: The Google API key.
+            search_engine_id: The Programmable Search Engine ID.
+            max_content_length: The most text to keep from one page.
+        """
         self.api_key = api_key
         self.search_engine_id = search_engine_id
         self.max_content_length = max_content_length
@@ -42,7 +49,16 @@ class GoogleSearchScraper:
         self._api_session.headers.update(user_agent)
 
     def search_google(self, query: str, num_results: int = 5) -> list[dict[str, Any]]:
-        """Search Google using Custom Search JSON API"""
+        """Search Google using Custom Search JSON API
+
+        Args:
+            query: The search text.
+            num_results: How many results to return, at most 10.
+
+        Returns:
+            A list of dicts with `title`, `url` and `snippet`. The list is empty
+            if the request fails or finds nothing.
+        """
         url = "https://www.googleapis.com/customsearch/v1"
 
         params: dict[str, Any] = {
@@ -73,15 +89,26 @@ class GoogleSearchScraper:
             return []
 
     def is_reddit_url(self, url: str) -> bool:
-        """Check if URL is from Reddit"""
+        """Check if URL is from Reddit
+
+        Args:
+            url: The URL to check.
+
+        Returns:
+            True if the domain is Reddit, False otherwise.
+        """
         domain = urlparse(url).netloc.lower()
         return "reddit.com" in domain or "redd.it" in domain
 
     def extract_reddit_content(
         self, url: str, content_limit: int | None = None, timeout: float = 10
     ) -> tuple[str, dict[str, Any]]:
-        """
-        Extract Reddit content using JSON API for better quality
+        """Extract Reddit content using JSON API for better quality
+
+        Args:
+            url: The Reddit URL to read.
+            content_limit: The most text to keep, or None.
+            timeout: Seconds to wait for the request.
 
         Returns:
             Tuple of (text_content, quality_metrics)
@@ -221,8 +248,12 @@ class GoogleSearchScraper:
     def extract_text_from_url(
         self, url: str, content_limit: int | None = None, timeout: float = 10
     ) -> tuple[str, dict[str, Any]]:
-        """
-        Main extraction method that routes to appropriate extractor
+        """Main extraction method that routes to appropriate extractor
+
+        Args:
+            url: The URL to read.
+            content_limit: The most text to keep, or None.
+            timeout: Seconds to wait for the request.
 
         Returns:
             Tuple of (text_content, quality_metrics)
@@ -234,8 +265,15 @@ class GoogleSearchScraper:
     def extract_html_content(
         self, url: str, content_limit: int | None = None, timeout: float = 10
     ) -> tuple[str, dict[str, Any]]:
-        """
-        Original HTML extraction method (renamed from extract_text_from_url)
+        """Original HTML extraction method (renamed from extract_text_from_url)
+
+        Args:
+            url: The URL to read.
+            content_limit: The most text to keep, or None.
+            timeout: Seconds to wait for the request.
+
+        Returns:
+            Tuple of (text_content, quality_metrics).
         """
         try:
             from signalwire.utils.url_validator import validate_url
@@ -765,8 +803,15 @@ class GoogleSearchScraper:
     def search_and_scrape(
         self, query: str, num_results: int = 3, delay: float = 0.5
     ) -> str:
-        """
-        Backward compatible method that uses the improved search
+        """Backward compatible method that uses the improved search
+
+        Args:
+            query: The search text.
+            num_results: How many pages to return.
+            delay: Seconds to wait between page fetches.
+
+        Returns:
+            The scraped text of the best results.
         """
         return self.search_and_scrape_best(
             query=query,
@@ -790,13 +835,22 @@ class WebSearchSkill(SkillBase):
     SUPPORTS_MULTIPLE_INSTANCES = True
 
     def get_instance_key(self) -> str:
-        """Get the key used to track this skill instance"""
+        """Get the key used to track this skill instance
+
+        Returns:
+            The skill name, search engine ID and tool name joined together.
+        """
         search_engine_id = self.params.get("search_engine_id", "default")
         tool_name = self.params.get("tool_name", "web_search")
         return f"{self.SKILL_NAME}_{search_engine_id}_{tool_name}"
 
     def setup(self) -> bool:
-        """Setup the web search skill"""
+        """Setup the web search skill
+
+        Returns:
+            True if the API key, engine ID and packages are available, False
+            otherwise.
+        """
         # Validate required parameters
         required_params = ["api_key", "search_engine_id"]
         missing_params = [
@@ -937,11 +991,20 @@ class WebSearchSkill(SkillBase):
             )
 
     def get_hints(self) -> list[str]:
-        """Return speech recognition hints"""
+        """Return speech recognition hints
+
+        Returns:
+            An empty list.
+        """
         return []
 
     def get_global_data(self) -> dict[str, Any]:
-        """Return global data for agent context"""
+        """Return global data for agent context
+
+        Returns:
+            A dict with `web_search_enabled`, `search_provider` and
+            `quality_filtering`.
+        """
         return {
             "web_search_enabled": True,
             "search_provider": "Google Custom Search",
@@ -949,7 +1012,11 @@ class WebSearchSkill(SkillBase):
         }
 
     def get_prompt_sections(self) -> list[dict[str, Any]]:
-        """Return prompt sections to add to agent"""
+        """Return prompt sections to add to agent
+
+        Returns:
+            A list with one prompt section describing the search tool.
+        """
         return [
             {
                 "title": "Web Search Capability (Quality Enhanced)",
@@ -965,7 +1032,11 @@ class WebSearchSkill(SkillBase):
 
     @classmethod
     def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
-        """Get the parameter schema for the web search skill"""
+        """Get the parameter schema for the web search skill
+
+        Returns:
+            The base skill parameter schema plus the search parameters.
+        """
         schema = super().get_parameter_schema()
 
         # Add web search specific parameters

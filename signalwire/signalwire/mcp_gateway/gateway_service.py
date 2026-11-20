@@ -109,6 +109,11 @@ class MCPGateway:
     """Main gateway service class"""
 
     def __init__(self, config_path: str = "config.json") -> None:
+        """Load the configuration and set up the Flask app.
+
+        Args:
+            config_path: Path to the JSON config file.
+        """
         # Use unified config loader
         self.config_loader = ConfigLoader([config_path])
 
@@ -151,6 +156,7 @@ class MCPGateway:
         # Configure security headers
         @self.app.after_request
         def set_security_headers(response: Response) -> Response:
+            """Add security headers to every response."""
             response.headers["X-Content-Type-Options"] = "nosniff"
             response.headers["X-Frame-Options"] = "DENY"
             response.headers["X-XSS-Protection"] = "1; mode=block"
@@ -345,6 +351,7 @@ class MCPGateway:
 
         @wraps(f)
         def decorated(*args: Any, **kwargs: Any) -> Any:
+            """Run the wrapped view when the request carries valid credentials."""
             # Try Bearer token first
             auth_header = request.headers.get("Authorization", "")
             server_config = self.config.get("server", {})
@@ -571,6 +578,7 @@ class MCPGateway:
 
         @self.app.errorhandler(Exception)
         def handle_error(error: Exception) -> Any:
+            """Log an unhandled error and return a 500 JSON response."""
             logger.error(f"Unhandled error: {error}")
             return jsonify({"error": "Internal server error"}), 500
 

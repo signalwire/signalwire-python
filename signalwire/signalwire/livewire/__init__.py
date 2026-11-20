@@ -125,11 +125,22 @@ class _NoopTracker:
     """Ensures each noop message is printed at most once."""
 
     def __init__(self) -> None:
+        """Create a tracker with no messages logged yet."""
         self._lock = threading.Lock()
         self._logged: dict[str, bool] = {}
 
     def once(self, key: str, message: str) -> bool:
-        """Log *message* once for *key*.  Returns True if it was logged."""
+        """Log a message the first time its key is seen.
+
+        Args:
+            key: Identifies the message. Later calls with the same key log
+                nothing.
+            message: Text logged at info level with a ``[LiveWire]`` prefix.
+
+        Returns:
+            True if the message was logged now, False if the key was seen
+            before.
+        """
         with self._lock:
             if self._logged.get(key):
                 return False
@@ -138,10 +149,19 @@ class _NoopTracker:
             return True
 
     def was_logged(self, key: str) -> bool:
+        """Check whether a message was already logged for ``key``.
+
+        Args:
+            key: The message key passed to ``once()``.
+
+        Returns:
+            True if ``once()`` logged a message for this key.
+        """
         with self._lock:
             return self._logged.get(key, False)
 
     def reset(self) -> None:
+        """Forget every logged key so each message can be logged again."""
         with self._lock:
             self._logged.clear()
 
@@ -170,6 +190,12 @@ class AgentHandoff:
     """Signals a handoff to another agent in multi-agent scenarios."""
 
     def __init__(self, agent: Any, *, returns: Any = None) -> None:
+        """Store the agent to hand off to and an optional return value.
+
+        Args:
+            agent: The agent to hand off to.
+            returns: A value to return from the tool. Stored as ``returns``.
+        """
         self.agent = agent
         self.returns = returns
 
@@ -183,9 +209,19 @@ class ChatContext:
     """Minimal stub mirroring livekit ChatContext."""
 
     def __init__(self) -> None:
+        """Create an empty message list."""
         self.messages: list[dict[str, str]] = []
 
     def append(self, *, role: str = "user", text: str = "") -> "ChatContext":
+        """Add a message to the context.
+
+        Args:
+            role: The message role, such as "user" or "assistant".
+            text: The message text, stored under the ``content`` key.
+
+        Returns:
+            This context, so calls can be chained.
+        """
         self.messages.append({"role": role, "content": text})
         return self
 
@@ -206,9 +242,21 @@ def function_tool(
     Wraps a plain function so it can be passed into ``Agent(tools=[...])``.
     Parameters are extracted from type-hints; the docstring is used as the
     description when *description* is not provided explicitly.
+
+    Args:
+        func: The function to wrap. Leave it out to use the decorator with
+            arguments.
+        name: The tool name. Defaults to the function's name.
+        description: The tool description. Defaults to the function's
+            docstring.
+
+    Returns:
+        The same function with tool metadata attached, or a decorator that
+        does this when ``func`` is not given.
     """
 
     def _wrap(fn: "Callable[..., Any]") -> "Callable[..., Any]":
+        """Attach tool metadata and a parameter schema to ``fn``."""
         tool_name = name or fn.__name__
         tool_desc = description or (inspect.getdoc(fn) or "")
 
@@ -287,12 +335,22 @@ class RunContext:
         speech_handle: Any = None,
         function_call: Any = None,
     ) -> None:
+        """Store the session and call details for a tool handler.
+
+        Args:
+            session: The AgentSession the tool runs in, or None.
+            speech_handle: Stored as ``speech_handle``; nothing in this module
+                reads it.
+            function_call: Stored as ``function_call``; nothing in this module
+                reads it.
+        """
         self.session = session
         self.speech_handle = speech_handle
         self.function_call = function_call
 
     @property
     def userdata(self) -> Any:
+        """The session's userdata, or an empty dict when there is no session."""
         if self.session is not None:
             return self.session.userdata
         return {}
@@ -322,6 +380,32 @@ class Agent:
         min_endpointing_delay: Any = NOT_GIVEN,
         max_endpointing_delay: Any = NOT_GIVEN,
     ):
+        """Create an agent with instructions and tools.
+
+        Only ``instructions``, ``tools``, ``llm``, ``allow_interruptions`` and
+        the two endpointing delays change the SignalWire agent. The other
+        options are accepted and ignored; the first use of each logs a message.
+
+        Args:
+            instructions: The agent's prompt text.
+            tools: Functions decorated with ``function_tool``.
+            chat_ctx: Stored on the agent; the SignalWire mapping does not use
+                it.
+            stt: Ignored. Speech recognition is not configured from here.
+            tts: Ignored. Text-to-speech is not configured from here.
+            llm: A model name or plugin object. The session's own ``llm`` takes
+                precedence. The name is sent as the ``model`` AI parameter,
+                without a "provider/" prefix.
+            vad: Ignored. Voice activity detection is not configured from here.
+            turn_detection: Ignored. Turn detection is not configured from here.
+            mcp_servers: Ignored. MCP servers are not supported.
+            allow_interruptions: Overrides the session setting. When false the
+                agent is built with ``enable_barge`` off.
+            min_endpointing_delay: Overrides the session setting. Seconds,
+                sent as ``end_of_speech_timeout`` in milliseconds.
+            max_endpointing_delay: Overrides the session setting. Seconds,
+                sent as ``attention_timeout`` in milliseconds.
+        """
         self.instructions = instructions
         self._tools: list[Any] = list(tools or [])
         self._chat_ctx = chat_ctx
@@ -368,10 +452,16 @@ class Agent:
 
     @property
     def session(self) -> Optional["AgentSession"]:
+        """The AgentSession this agent is bound to, or None."""
         return self._session
 
     @session.setter
     def session(self, value: "AgentSession | None") -> None:
+        """Bind the agent to a session.
+
+        Args:
+            value: The AgentSession, or None to unbind.
+        """
         self._session = value
 
     # ------------------------------------------------------------------
@@ -389,7 +479,14 @@ class Agent:
     async def on_user_turn_completed(
         self, turn_ctx: Any = None, new_message: Any = None
     ) -> None:
-        """Called when the user finishes speaking.  Override in subclass."""
+        """Called when the user finishes speaking.  Override in subclass.
+
+        The SignalWire mapping never calls this hook.
+
+        Args:
+            turn_ctx: The turn's chat context.
+            new_message: The user's message.
+        """
         pass
 
     # ------------------------------------------------------------------
@@ -397,7 +494,14 @@ class Agent:
     # ------------------------------------------------------------------
 
     async def stt_node(self, audio: Any = None, model_settings: Any = None) -> None:
-        """Noop -- SignalWire handles STT in its control plane."""
+        """Do nothing; speech recognition is not run from this class.
+
+        Logs a message the first time it is called.
+
+        Args:
+            audio: Ignored.
+            model_settings: Ignored.
+        """
         _global_noop.once(
             "stt_node",
             "Agent.stt_node(): SignalWire's control plane handles speech "
@@ -407,7 +511,15 @@ class Agent:
     async def llm_node(
         self, chat_ctx: Any = None, tools: Any = None, model_settings: Any = None
     ) -> None:
-        """Noop -- SignalWire handles LLM in its control plane."""
+        """Do nothing; the language model is not run from this class.
+
+        Logs a message the first time it is called.
+
+        Args:
+            chat_ctx: Ignored.
+            tools: Ignored.
+            model_settings: Ignored.
+        """
         _global_noop.once(
             "llm_node",
             "Agent.llm_node(): SignalWire's control plane handles LLM "
@@ -415,7 +527,14 @@ class Agent:
         )
 
     async def tts_node(self, text: Any = None, model_settings: Any = None) -> None:
-        """Noop -- SignalWire handles TTS in its control plane."""
+        """Do nothing; text-to-speech is not run from this class.
+
+        Logs a message the first time it is called.
+
+        Args:
+            text: Ignored.
+            model_settings: Ignored.
+        """
         _global_noop.once(
             "tts_node",
             "Agent.tts_node(): SignalWire's control plane handles "
@@ -427,11 +546,25 @@ class Agent:
     # ------------------------------------------------------------------
 
     async def update_instructions(self, instructions: str) -> None:
-        """Update the agent's instructions mid-session."""
+        """Update the agent's instructions mid-session.
+
+        This changes ``self.instructions`` only. A SignalWire agent that was
+        already built from the session keeps its old prompt.
+
+        Args:
+            instructions: The new prompt text.
+        """
         self.instructions = instructions
 
     async def update_tools(self, tools: list[Any]) -> None:
-        """Update the agent's tool list mid-session."""
+        """Update the agent's tool list mid-session.
+
+        This replaces the stored list only. A SignalWire agent that was already
+        built from the session keeps its old tools.
+
+        Args:
+            tools: The new list of tools.
+        """
         self._tools = list(tools)
 
 
@@ -462,6 +595,38 @@ class AgentSession:
         max_tool_steps: int = 3,
         preemptive_generation: bool = False,
     ):
+        """Create a session that maps a LiveWire Agent to a SignalWire agent.
+
+        ``llm``, ``tools``, ``userdata``, ``allow_interruptions`` and the two
+        endpointing delays are used. ``stt``, ``tts``, ``vad``,
+        ``turn_detection`` and ``mcp_servers`` are accepted and ignored, and
+        the first use of each logs a message. ``min_interruption_duration``,
+        ``max_tool_steps`` and ``preemptive_generation`` are stored but not
+        applied.
+
+        Args:
+            stt: Ignored.
+            tts: Ignored.
+            llm: A model name or plugin object. Sent as the ``model`` AI
+                parameter, without a "provider/" prefix.
+            vad: Ignored.
+            turn_detection: Ignored.
+            tools: Functions decorated with ``function_tool``, registered
+                along with the agent's own tools.
+            mcp_servers: Ignored. MCP servers are not supported.
+            userdata: Data shared with tools through ``RunContext.userdata``.
+                Defaults to an empty dict.
+            allow_interruptions: When false the agent is built with
+                ``enable_barge`` off.
+            min_interruption_duration: Stored, not applied.
+            min_endpointing_delay: Seconds, sent as ``end_of_speech_timeout``
+                in milliseconds when greater than zero.
+            max_endpointing_delay: Seconds, sent as ``attention_timeout`` in
+                milliseconds when greater than zero.
+            max_tool_steps: Stored, not applied. A value other than 3 logs a
+                message.
+            preemptive_generation: Stored, not applied.
+        """
         # Noop pipeline stubs
         if stt is not None:
             _global_noop.once(
@@ -528,14 +693,21 @@ class AgentSession:
 
     @property
     def userdata(self) -> Any:
+        """The data shared with tools through the session."""
         return self._userdata
 
     @userdata.setter
     def userdata(self, val: Any) -> None:
+        """Replace the session's userdata.
+
+        Args:
+            val: The new userdata.
+        """
         self._userdata = val
 
     @property
     def history(self) -> list[dict[str, str]]:
+        """The session's message history list."""
         return self._history
 
     # ------------------------------------------------------------------
@@ -552,6 +724,11 @@ class AgentSession:
         SignalWire agent from the last session started and runs it. The
         agent is built then, not here, so ``say()``, ``generate_reply()`` and
         ``update_agent()`` calls that follow still apply.
+
+        Args:
+            agent: The Agent to bind to this session.
+            room: Ignored.
+            record: Ignored.
         """
         self._agent = agent
         agent.session = self
@@ -567,6 +744,9 @@ class AgentSession:
         speaks as the agent's first words; several calls are joined. Once the
         agent is built, SignalWire can't add speech from here, so a later
         call is ignored with a log message.
+
+        Args:
+            text: The words the agent says first.
         """
         if self._sw_agent is not None:
             self._noop.once(
@@ -583,6 +763,9 @@ class AgentSession:
         ``instructions`` is added to the prompt, under "Initial Greeting".
         Without instructions there's nothing to add: the agent replies on its
         own. Once the agent is built, a call is ignored with a log message.
+
+        Args:
+            instructions: Extra prompt text for the first reply.
         """
         if not instructions:
             return
@@ -604,7 +787,14 @@ class AgentSession:
         )
 
     def update_agent(self, agent: Agent) -> None:
-        """Swap in a new Agent."""
+        """Swap in a new Agent.
+
+        This changes the bound Agent only. It does not rebuild a SignalWire
+        agent that was already built.
+
+        Args:
+            agent: The Agent to bind to this session.
+        """
         self._agent = agent
         agent.session = self
 
@@ -613,7 +803,14 @@ class AgentSession:
     # ------------------------------------------------------------------
 
     def _build_sw_agent(self) -> Any:
-        """Translate the LiveWire session into a SignalWire AgentBase."""
+        """Translate the LiveWire session into a SignalWire AgentBase.
+
+        Returns:
+            The configured AgentBase.
+
+        Raises:
+            RuntimeError: If no Agent is bound to the session.
+        """
         from signalwire import AgentBase as _AgentBase
 
         agent = self._agent
@@ -683,7 +880,12 @@ class AgentSession:
 
 
 def _register_function_tool(sw_agent: Any, fn: "Callable[..., Any]") -> None:
-    """Register a @function_tool-decorated function on a SignalWire AgentBase."""
+    """Register a @function_tool-decorated function on a SignalWire AgentBase.
+
+    Args:
+        sw_agent: The AgentBase to add the tool to.
+        fn: The function decorated with ``function_tool``.
+    """
     tool_name = fn._tool_name  # type: ignore[attr-defined]  # dynamic attr set by function_tool()
     tool_desc = fn._tool_description  # type: ignore[attr-defined]  # dynamic attr set by function_tool()
     tool_params = fn._tool_parameters  # type: ignore[attr-defined]  # dynamic attr set by function_tool()
@@ -692,6 +894,15 @@ def _register_function_tool(sw_agent: Any, fn: "Callable[..., Any]") -> None:
     def handler(
         args: dict[str, Any], raw_data: dict[str, Any] | None = None
     ) -> "FunctionResult":
+        """Call the wrapped function with the SWAIG arguments.
+
+        Args:
+            args: The arguments the AI supplied.
+            raw_data: The raw SWAIG request. Unused.
+
+        Returns:
+            The function's return value as a FunctionResult.
+        """
         from signalwire.core.function_result import FunctionResult
 
         sig = inspect.signature(fn)
@@ -736,6 +947,7 @@ class JobProcess:
     """Mirrors a livekit JobProcess -- used for prewarm/setup."""
 
     def __init__(self) -> None:
+        """Create a process with an empty userdata dict."""
         self.userdata: dict[str, Any] = {}
 
 
@@ -743,6 +955,7 @@ class JobContext:
     """Mirrors a livekit JobContext -- provides room and connection info."""
 
     def __init__(self) -> None:
+        """Create a job context with a stub room and process."""
         self.room = Room()
         self.proc = JobProcess()
         # An AgentBase to run, if the entrypoint sets one itself
@@ -760,7 +973,13 @@ class JobContext:
         )
 
     async def wait_for_participant(self, *, identity: Any = None) -> None:
-        """Noop -- SignalWire handles participant management automatically."""
+        """Do nothing; participants are not managed from here.
+
+        Logs a message the first time it is called.
+
+        Args:
+            identity: Ignored.
+        """
         _global_noop.once(
             "wait_for_participant",
             "JobContext.wait_for_participant(): SignalWire's control plane "
@@ -777,6 +996,11 @@ class AgentServer:
     """Mirrors a livekit AgentServer -- registers entrypoints and starts."""
 
     def __init__(self, **kwargs: Any) -> None:
+        """Create a server with no entrypoint registered.
+
+        Args:
+            **kwargs: Ignored.
+        """
         self.setup_fnc: Callable[..., Any] | None = None
         self._entrypoint: Callable[..., Any] | None = None
         self._agent_name: str = ""
@@ -790,7 +1014,20 @@ class AgentServer:
         on_request: Any = None,
         on_session_end: Any = None,
     ) -> "Callable[..., Any]":
-        """Decorator that registers the session entrypoint."""
+        """Decorator that registers the session entrypoint.
+
+        Args:
+            func: The entrypoint function. Leave it out to use the decorator
+                with arguments.
+            agent_name: Stored as the server's agent name when not empty.
+            type: Anything other than "room" logs a message; the value changes
+                nothing else.
+            on_request: Ignored.
+            on_session_end: Ignored.
+
+        Returns:
+            The entrypoint function, or a decorator when ``func`` is not given.
+        """
         if type != "room":
             _global_noop.once(
                 "server_type",
@@ -799,6 +1036,7 @@ class AgentServer:
             )
 
         def _decorator(fn: "Callable[..., Any]") -> "Callable[..., Any]":
+            """Register ``fn`` as the entrypoint and return it."""
             self._entrypoint = fn
             if agent_name:
                 self._agent_name = agent_name
@@ -831,6 +1069,12 @@ class InferenceSTT:
     """Stub for livekit inference.STT."""
 
     def __init__(self, model: str = "", **kwargs: Any) -> None:
+        """Store the model name and log that the stub does nothing.
+
+        Args:
+            model: The model name. Stored as ``model``.
+            **kwargs: Ignored.
+        """
         self.model = model
         _global_noop.once(
             "inference_stt",
@@ -843,6 +1087,13 @@ class InferenceLLM:
     """Stub for livekit inference.LLM."""
 
     def __init__(self, model: str = "", **kwargs: Any) -> None:
+        """Store the model name.
+
+        Args:
+            model: The model name. Stored as ``model`` and used as the AI
+                ``model`` parameter when passed as ``llm``.
+            **kwargs: Ignored.
+        """
         self.model = model
 
 
@@ -850,6 +1101,12 @@ class InferenceTTS:
     """Stub for livekit inference.TTS."""
 
     def __init__(self, model: str = "", **kwargs: Any) -> None:
+        """Store the model name and log that the stub does nothing.
+
+        Args:
+            model: The model name. Stored as ``model``.
+            **kwargs: Ignored.
+        """
         self.model = model
         _global_noop.once(
             "inference_tts",
@@ -866,17 +1123,23 @@ class InferenceTTS:
 
 
 class _VoiceNamespace:
+    """Namespace that exposes Agent and AgentSession, like livekit's ``voice``."""
+
     Agent = Agent
     AgentSession = AgentSession
 
 
 class _LLMNamespace:
+    """Namespace that exposes ``tool``, ToolError and ChatContext (livekit ``llm``)."""
+
     tool = staticmethod(function_tool)
     ToolError = ToolError
     ChatContext = ChatContext
 
 
 class _InferenceNamespace:
+    """Namespace that exposes the inference stubs STT, LLM and TTS."""
+
     STT = InferenceSTT
     LLM = InferenceLLM
     TTS = InferenceTTS
@@ -899,6 +1162,9 @@ def run_app(server: AgentServer) -> None:
     The entrypoint runs with a :class:`JobContext`; when it returns, the
     SignalWire agent built from the last ``AgentSession`` it started is run,
     which serves HTTP until the process stops.
+
+    Args:
+        server: The AgentServer whose entrypoint to run.
     """
     _print_banner()
 
@@ -943,6 +1209,8 @@ def run_app(server: AgentServer) -> None:
 
 # Also provide a cli_ns namespace for ``from livewire import cli_ns``
 class _CLINamespace:
+    """Namespace that exposes ``run_app``, like livekit's ``cli``."""
+
     run_app = staticmethod(run_app)
 
 

@@ -125,11 +125,13 @@ class ApiNinjasTriviaSkill(SkillBase):
                 )
 
     def setup(self) -> bool:
-        """
-        Setup the skill - validates API key is available.
+        """Set up the skill. Nothing to check here.
+
+        The constructor already validated the configuration, API key
+        included, and raised ``ValueError`` if it was invalid.
 
         Returns:
-            True if setup successful
+            Always True.
         """
         # API key validation already done in _validate_config
         return True
@@ -209,10 +211,12 @@ class ApiNinjasTriviaSkill(SkillBase):
 
     @classmethod
     def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
-        """
-        Get the parameter schema for the API Ninjas Trivia skill.
+        """Get the parameter schema for the API Ninjas Trivia skill.
 
         Returns parameter definitions for GUI configuration.
+
+        Returns:
+            The base skill parameter schema plus the trivia parameters.
         """
         schema = super().get_parameter_schema()
 

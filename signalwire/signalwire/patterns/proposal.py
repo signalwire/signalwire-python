@@ -40,6 +40,7 @@ class Proposal:
         order = Proposal("place_order", decline_tool="change_order")
 
         def review_order(args, raw_data):
+            '''Read the order back and record it as the pending proposal.'''
             text = f"That's {args['item']} for pickup at {args['time']}. Is that right?"
             return order.propose(text, raw_data=raw_data, details={"item": args["item"]})
 
@@ -184,6 +185,15 @@ class Proposal:
         )
 
         def blocked(why: str, then: str) -> FunctionResult:
+            """Build the result for a confirm call that did not run.
+
+            Args:
+                why: What the model is told about why the tool did not run.
+                then: The prompt that follows the result.
+
+            Returns:
+                A result that does not chain to another function.
+            """
             return FunctionResult(
                 tool_result=f"{tool} was not run. {why}",
                 tool_prompt=then,
@@ -296,6 +306,14 @@ def current(raw_data: Mapping[str, Any] | None) -> dict[str, Any] | None:
 
 
 def _revision(raw_data: Mapping[str, Any] | None) -> int:
+    """The proposal's revision number.
+
+    Args:
+        raw_data: The call's raw data, or None.
+
+    Returns:
+        The recorded revision, or 0 when there is none or it is not an int.
+    """
     state = current(raw_data)
     revision = state.get("revision") if state else 0
     return (

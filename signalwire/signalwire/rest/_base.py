@@ -87,6 +87,17 @@ class SignalWireRestError(Exception):
         method: str = "GET",
         headers: dict[str, str] | None = None,
     ) -> None:
+        """Build the error and its message from the failed request.
+
+        Args:
+            status_code: HTTP status code, or None when no response arrived.
+            body: Parsed JSON error body, the raw response text, or the
+                transport error message.
+            url: Full request URL, including the query string.
+            method: HTTP method of the request.
+            headers: Response headers, or None when no response arrived.
+                The request id is read from these.
+        """
         self.status_code = status_code
         self.body = body
         self.url = url
@@ -113,6 +124,15 @@ _REQUEST_ID_HEADERS = (
 
 
 def _extract_request_id(headers: dict[str, str] | None) -> str | None:
+    """Find a request id in the response headers.
+
+    Args:
+        headers: Response headers, or None.
+
+    Returns:
+        The value of the first matching request-id header (names are compared
+        without regard to case), or None if there are no headers or none match.
+    """
     if not headers:
         return None
     lowered = {k.lower(): v for k, v in headers.items()}
@@ -134,6 +154,13 @@ class SignalWireRestTransportError(SignalWireRestError):
     """
 
     def __init__(self, body: Any, url: str, method: str = "GET") -> None:
+        """Build a transport error with no status code and no headers.
+
+        Args:
+            body: The underlying transport error message.
+            url: Full request URL, including the query string.
+            method: HTTP method of the request.
+        """
         super().__init__(None, body, url, method, headers=None)
 
 
@@ -147,6 +174,19 @@ class HttpClient:
         host: str,
         request_options: RequestOptions | None = None,
     ) -> None:
+        """Create a session that sends Basic Auth and JSON headers.
+
+        Requests go to ``https://<host>``, or to ``http://<host>`` when the
+        host is a loopback address. If ``SIGNALWIRE_REST_CA_FILE`` is set, that
+        file is used as the TLS verification bundle.
+
+        Args:
+            project: Project ID, used as the Basic Auth user name.
+            token: API token, used as the Basic Auth password.
+            host: Space host name, with an optional port.
+            request_options: Default timeout, retry and cancellation settings
+                for every request this client sends.
+        """
         # A loopback host (127.0.0.1[:port] / localhost[:port]) is a local mock/dev
         # server that speaks plain HTTP — use http:// for it. Every other host is the
         # real platform over https://. This lets a shipped example run verbatim against
@@ -208,6 +248,29 @@ class HttpClient:
         params: dict[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> Any:
+        """Send one request, retrying as the request options allow.
+
+        Sends the body as JSON and the params as the query string. Retries a
+        transport error after an exponential backoff, and a retryable status
+        for the method after its ``Retry-After`` delay or the same backoff.
+
+        Args:
+            method: HTTP method.
+            path: Request path, appended to the base URL.
+            body: JSON-serializable request body, or None.
+            params: Query string parameters. Entries are sent as given.
+            request_options: Per-call overrides of the client default options.
+
+        Returns:
+            The decoded JSON response, or an empty dict for a 204 or an empty
+            body.
+
+        Raises:
+            SignalWireRestTransportError: If the abort signal is set before an
+                attempt, or no response arrives once retries are used up.
+            SignalWireRestError: If the response status is 400 or higher, or
+                a successful response's body is not valid JSON.
+        """
         url = self._base_url + path
         # D1 (owner-approved 2026-07-18): error.url is the FULL URL WITH the query
         # string preserved — the reference decision the fleet never actually took (the
@@ -299,6 +362,16 @@ class HttpClient:
         params: dict[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> Any:
+        """Send a GET request.
+
+        Args:
+            path: Request path, appended to the base URL.
+            params: Query string parameters.
+            request_options: Per-call overrides of the client default options.
+
+        Returns:
+            The decoded JSON response. See ``_request`` for the errors raised.
+        """
         return self._request(
             "GET", path, params=params, request_options=request_options
         )
@@ -310,6 +383,17 @@ class HttpClient:
         params: dict[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> Any:
+        """Send a POST request with a JSON body.
+
+        Args:
+            path: Request path, appended to the base URL.
+            body: JSON-serializable request body.
+            params: Query string parameters.
+            request_options: Per-call overrides of the client default options.
+
+        Returns:
+            The decoded JSON response. See ``_request`` for the errors raised.
+        """
         return self._request(
             "POST", path, body=body, params=params, request_options=request_options
         )
@@ -320,6 +404,16 @@ class HttpClient:
         body: Any = None,
         request_options: RequestOptions | None = None,
     ) -> Any:
+        """Send a PUT request with a JSON body.
+
+        Args:
+            path: Request path, appended to the base URL.
+            body: JSON-serializable request body.
+            request_options: Per-call overrides of the client default options.
+
+        Returns:
+            The decoded JSON response. See ``_request`` for the errors raised.
+        """
         return self._request("PUT", path, body=body, request_options=request_options)
 
     def patch(
@@ -328,9 +422,29 @@ class HttpClient:
         body: Any = None,
         request_options: RequestOptions | None = None,
     ) -> Any:
+        """Send a PATCH request with a JSON body.
+
+        Args:
+            path: Request path, appended to the base URL.
+            body: JSON-serializable request body.
+            request_options: Per-call overrides of the client default options.
+
+        Returns:
+            The decoded JSON response. See ``_request`` for the errors raised.
+        """
         return self._request("PATCH", path, body=body, request_options=request_options)
 
     def delete(self, path: str, request_options: RequestOptions | None = None) -> Any:
+        """Send a DELETE request.
+
+        Args:
+            path: Request path, appended to the base URL.
+            request_options: Per-call overrides of the client default options.
+
+        Returns:
+            The decoded JSON response, or an empty dict for a 204. See
+            ``_request`` for the errors raised.
+        """
         return self._request("DELETE", path, request_options=request_options)
 
 
@@ -338,10 +452,24 @@ class BaseResource:
     """Base for all namespace/resource classes."""
 
     def __init__(self, http: HttpClient, base_path: str) -> None:
+        """Store the HTTP client and the resource's base path.
+
+        Args:
+            http: Client used to send every request.
+            base_path: Path prefix for this resource's endpoints.
+        """
         self._http = http
         self._base_path = base_path
 
     def _path(self, *parts: Any) -> str:
+        """Join the base path and parts with ``/``.
+
+        Args:
+            *parts: Path segments to append. Each is converted with ``str``.
+
+        Returns:
+            The joined path.
+        """
         return "/".join([self._base_path] + [str(p) for p in parts])
 
 
@@ -356,6 +484,15 @@ class ReadResource(BaseResource, Generic[TList, TItem]):
     def list(
         self, *, request_options: RequestOptions | None = None, **params: Any
     ) -> TList:
+        """Fetch one page of the collection with a GET on the base path.
+
+        Args:
+            request_options: Per-call timeout, retry and cancellation overrides.
+            **params: Query string parameters, such as filters or page size.
+
+        Returns:
+            The decoded JSON response for that page.
+        """
         return cast(
             TList,
             self._http.get(
@@ -381,6 +518,14 @@ class ReadResource(BaseResource, Generic[TList, TItem]):
         ``resp["data"]`` and follows ``resp["links"]["next"]``), so callers no
         longer hand-construct the path + token loop. ``request_options`` (a per-call
         timeout / retry / header override) is applied to EVERY page fetch.
+
+        Args:
+            request_options: Per-call timeout, retry and cancellation overrides,
+                applied to every page fetch.
+            **params: Query string parameters for the first page.
+
+        Returns:
+            An iterator over the items of every page.
         """
         return PaginatedIterator(
             self._http,
@@ -393,6 +538,15 @@ class ReadResource(BaseResource, Generic[TList, TItem]):
     def get(
         self, resource_id: str, *, request_options: RequestOptions | None = None
     ) -> TItem:
+        """Fetch one item with a GET on the base path plus the ID.
+
+        Args:
+            resource_id: ID of the item.
+            request_options: Per-call timeout, retry and cancellation overrides.
+
+        Returns:
+            The decoded JSON item.
+        """
         return cast(
             TItem,
             self._http.get(self._path(resource_id), request_options=request_options),
@@ -414,6 +568,15 @@ class CrudResource(ReadResource[TList, TItem], Generic[TList, TItem, TCreate, TU
     def create(
         self, *, request_options: RequestOptions | None = None, **kwargs: Any
     ) -> TItem:
+        """Create an item with a POST on the base path.
+
+        Args:
+            request_options: Per-call timeout, retry and cancellation overrides.
+            **kwargs: Fields sent as the JSON request body.
+
+        Returns:
+            The decoded JSON item.
+        """
         # Honest fallback: the body accepts arbitrary wire fields and at runtime
         # is a plain dict. Concrete resources override this with a generated
         # CLOSED typed signature (explicit spec fields + an ``extras`` door); the
@@ -436,6 +599,16 @@ class CrudResource(ReadResource[TList, TItem], Generic[TList, TItem, TCreate, TU
         request_options: RequestOptions | None = None,
         **kwargs: Any,
     ) -> TItem:
+        """Update an item with PATCH (PUT for some subclasses) on its path.
+
+        Args:
+            resource_id: ID of the item. Positional only.
+            request_options: Per-call timeout, retry and cancellation overrides.
+            **kwargs: Fields sent as the JSON request body.
+
+        Returns:
+            The decoded JSON item.
+        """
         # resource_id is positional-only so a subclass may rename it without an LSP
         # override conflict. Same contract as ``create``: honest ``**kwargs: Any``
         # fallback; the concrete generated override carries the closed typed shape, the
@@ -453,6 +626,15 @@ class CrudResource(ReadResource[TList, TItem], Generic[TList, TItem, TCreate, TU
     def delete(
         self, resource_id: str, *, request_options: RequestOptions | None = None
     ) -> TItem:
+        """Delete an item with a DELETE on its path.
+
+        Args:
+            resource_id: ID of the item.
+            request_options: Per-call timeout, retry and cancellation overrides.
+
+        Returns:
+            The decoded JSON response, an empty dict for a 204.
+        """
         return cast(
             TItem,
             self._http.delete(self._path(resource_id), request_options=request_options),
@@ -469,6 +651,16 @@ class CrudWithAddresses(CrudResource[TList, TItem, TCreate, TUpdate]):
         request_options: RequestOptions | None = None,
         **params: Any,
     ) -> Any:
+        """List the addresses of one item with a GET on ``<id>/addresses``.
+
+        Args:
+            resource_id: ID of the item.
+            request_options: Per-call timeout, retry and cancellation overrides.
+            **params: Query string parameters.
+
+        Returns:
+            The decoded JSON response.
+        """
         return self._http.get(
             self._path(resource_id, "addresses"),
             params=params or None,

@@ -847,7 +847,17 @@ class IndexBuilder:
             conn.close()
 
     def validate_index(self, index_file: str) -> dict[str, Any]:
-        """Validate an existing search index"""
+        """Validate an existing search index.
+
+        Args:
+            index_file: Path to the SQLite ``.swsearch`` index file.
+
+        Returns:
+            A dict with ``valid`` set to False and an ``error`` message when
+            the file is missing, lacks a required table or cannot be read.
+            Otherwise ``valid`` is True, with ``chunk_count``, ``file_count``
+            and ``config``.
+        """
         if not Path(index_file).exists():
             return {"valid": False, "error": "Index file does not exist"}
 

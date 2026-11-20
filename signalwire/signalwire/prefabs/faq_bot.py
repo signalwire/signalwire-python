@@ -228,6 +228,14 @@ class FAQBotAgent(AgentBase):
 
         This function helps find relevant FAQs based on a search query or category.
         It returns matching FAQs in order of relevance.
+
+        Args:
+            args: The tool arguments: ``query`` and an optional ``category``.
+            raw_data: The raw SWAIG request data. Unused.
+
+        Returns:
+            A FunctionResult listing up to three matching questions, best
+            match first, or a message that nothing matched.
         """
         query = args.get("query", "").lower()
         category = args.get("category", "").lower()

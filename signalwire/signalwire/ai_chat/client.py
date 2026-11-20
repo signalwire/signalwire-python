@@ -260,6 +260,19 @@ class AIChatClient:
 
     @staticmethod
     def _resolve_url(url: str | None, space: str) -> str:
+        """Work out the service URL to connect to.
+
+        Args:
+            url: An explicit URL. Returned as given when set.
+            space: A space name or host, used when no URL is found earlier.
+
+        Returns:
+            ``url`` when set. Otherwise the ``RAILS_DEV_MODE`` value when it looks
+            like a URL, or else the chat URL for the space.
+
+        Raises:
+            ValueError: If no URL, dev URL or space is available.
+        """
         if url:
             return url
         dev_url = os.environ.get("RAILS_DEV_MODE", "").strip()

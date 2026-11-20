@@ -35,7 +35,11 @@ class MCPGatewaySkill(SkillBase):
 
     @classmethod
     def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
-        """Get parameter schema for MCP Gateway skill"""
+        """Get parameter schema for MCP Gateway skill
+
+        Returns:
+            The base skill parameter schema plus the gateway parameters.
+        """
         schema = super().get_parameter_schema()
         schema.update(
             {
@@ -115,7 +119,16 @@ class MCPGatewaySkill(SkillBase):
         return schema
 
     def setup(self) -> bool:
-        """Setup and validate skill configuration"""
+        """Setup and validate skill configuration
+
+        Returns:
+            True if all of these hold, False otherwise: `gateway_url` is set
+            with either `auth_token` or both `auth_user` and
+            `auth_password`; the URL passes the SSRF check of
+            `validate_url()`; and a GET to the gateway's `/health` endpoint,
+            sent with those credentials, succeeds. A configured gateway that
+            can't be reached returns False.
+        """
         # Check for auth method - either token or basic auth
         self.auth_token = self.params.get("auth_token")
         if not self.auth_token:
@@ -284,6 +297,15 @@ class MCPGatewaySkill(SkillBase):
 
         # Create handler function
         def handler(args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
+            """Call the MCP tool through the gateway.
+
+            Args:
+                args: The tool arguments the AI sent, passed on to the MCP tool.
+                raw_data: The full SWAIG request payload.
+
+            Returns:
+                The FunctionResult built from the gateway's response.
+            """
             return self._call_mcp_tool(service_name, tool_name, args, raw_data)
 
         # Register the SWAIG function. Forward the MCP tool's required-argument
@@ -420,7 +442,11 @@ class MCPGatewaySkill(SkillBase):
         return FunctionResult("Session cleanup complete")
 
     def get_hints(self) -> list[str]:
-        """Return speech recognition hints"""
+        """Return speech recognition hints
+
+        Returns:
+            The words `MCP` and `gateway` plus the configured service names.
+        """
         hints = ["MCP", "gateway"]
 
         # Add service names as hints
@@ -433,7 +459,11 @@ class MCPGatewaySkill(SkillBase):
         return hints
 
     def get_global_data(self) -> dict[str, Any]:
-        """Return global data for DataMap variables"""
+        """Return global data for DataMap variables
+
+        Returns:
+            A dict with the gateway URL, the session ID and the service names.
+        """
         return {
             "mcp_gateway_url": self.gateway_url,
             "mcp_session_id": self.session_id,
@@ -443,7 +473,11 @@ class MCPGatewaySkill(SkillBase):
         }
 
     def get_prompt_sections(self) -> list[dict[str, Any]]:
-        """Return prompt sections to add to agent"""
+        """Return prompt sections to add to agent
+
+        Returns:
+            A list of prompt sections describing the configured MCP services.
+        """
         sections = []
 
         # Build service list for prompt

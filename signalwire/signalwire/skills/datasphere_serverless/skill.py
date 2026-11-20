@@ -35,7 +35,11 @@ class DataSphereServerlessSkill(SkillBase):
 
     @classmethod
     def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
-        """Get parameter schema for DataSphere Serverless skill"""
+        """Get parameter schema for DataSphere Serverless skill
+
+        Returns:
+            The base skill parameter schema plus the DataSphere parameters.
+        """
         schema = super().get_parameter_schema()
         schema.update(
             {
@@ -121,16 +125,22 @@ class DataSphereServerlessSkill(SkillBase):
         return schema
 
     def get_instance_key(self) -> str:
-        """
-        Get the key used to track this skill instance
+        """Get the key used to track this skill instance
 
         For DataSphere Serverless, we use 'search_knowledge' as the default tool name
+
+        Returns:
+            The skill name plus the configured tool name (default `search_knowledge`).
         """
         tool_name = self.params.get("tool_name", "search_knowledge")
         return f"{self.SKILL_NAME}_{tool_name}"
 
     def setup(self) -> bool:
-        """Setup the datasphere serverless skill"""
+        """Setup the datasphere serverless skill
+
+        Returns:
+            True if all required parameters are set, False if any is missing.
+        """
         # Validate required parameters
         required_params = ["space_name", "project_id", "token", "document_id"]
         missing_params = [
@@ -252,11 +262,20 @@ class DataSphereServerlessSkill(SkillBase):
         self.agent.register_swaig_function(swaig_function)
 
     def get_hints(self) -> list[str]:
-        """Return speech recognition hints"""
+        """Return speech recognition hints
+
+        Returns:
+            An empty list.
+        """
         return []
 
     def get_global_data(self) -> dict[str, Any]:
-        """Return global data for agent context"""
+        """Return global data for agent context
+
+        Returns:
+            A dict with `datasphere_serverless_enabled`, `document_id` and
+            `knowledge_provider`.
+        """
         return {
             "datasphere_serverless_enabled": True,
             "document_id": self.document_id,
@@ -264,7 +283,11 @@ class DataSphereServerlessSkill(SkillBase):
         }
 
     def get_prompt_sections(self) -> list[dict[str, Any]]:
-        """Return prompt sections to add to agent"""
+        """Return prompt sections to add to agent
+
+        Returns:
+            A list with one prompt section describing the knowledge search tool.
+        """
         return [
             {
                 "title": "Knowledge Search Capability (Serverless)",

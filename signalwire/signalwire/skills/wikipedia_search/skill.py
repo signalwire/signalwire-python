@@ -50,7 +50,11 @@ class WikipediaSearchSkill(SkillBase):
 
     @classmethod
     def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
-        """Get parameter schema for Wikipedia search skill"""
+        """Get parameter schema for Wikipedia search skill
+
+        Returns:
+            The base skill parameter schema plus the search parameters.
+        """
         schema = super().get_parameter_schema()
         schema.update(
             {
@@ -77,7 +81,7 @@ class WikipediaSearchSkill(SkillBase):
         Setup the Wikipedia search skill.
 
         Returns:
-            True if setup successful, False otherwise
+            True if the required packages are available, False otherwise.
         """
         # Extract configuration from params
         self.num_results = max(

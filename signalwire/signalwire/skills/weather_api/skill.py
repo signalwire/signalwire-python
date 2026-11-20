@@ -47,7 +47,11 @@ class WeatherApiSkill(SkillBase):
 
     @classmethod
     def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
-        """Get parameter schema for weather API skill"""
+        """Get parameter schema for weather API skill
+
+        Returns:
+            The base skill parameter schema plus the weather parameters.
+        """
         schema = super().get_parameter_schema()
         schema.update(
             {
@@ -111,11 +115,13 @@ class WeatherApiSkill(SkillBase):
             )
 
     def setup(self) -> bool:
-        """
-        Setup the skill - validates API key is available.
+        """Set up the skill. Nothing to check here.
+
+        The constructor already validated the configuration, API key
+        included, and raised ``ValueError`` if it was invalid.
 
         Returns:
-            True if setup successful
+            Always True.
         """
         # API key validation already done in _validate_config
         return True

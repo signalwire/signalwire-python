@@ -24,6 +24,7 @@ class SkillRegistry:
     """Global registry for on-demand skill loading"""
 
     def __init__(self) -> None:
+        """Create an empty registry."""
         self._skills: dict[str, type[SkillBase]] = {}
         self._external_paths: list[Path] = []  # Additional paths to search for skills
         self._entry_points_loaded = False
@@ -321,6 +322,12 @@ class SkillRegistry:
 
         # Helper function to add skill to schema
         def add_skill_to_schema(skill_class: type[SkillBase], source: str) -> None:
+            """Add one skill's description to the schema being built.
+
+            Args:
+                skill_class: The skill class to describe.
+                source: Where the skill came from, stored as ``source``.
+            """
             try:
                 skill_name = skill_class.SKILL_NAME
                 if skill_name is None:

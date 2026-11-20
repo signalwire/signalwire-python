@@ -32,6 +32,11 @@ class InfoGathererSkill(SkillBase):
 
     @classmethod
     def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
+        """Return the parameter schema for the info gatherer skill.
+
+        Returns:
+            The base skill parameter schema plus the question parameters.
+        """
         schema = super().get_parameter_schema()
         schema.update(
             {
@@ -84,6 +89,11 @@ class InfoGathererSkill(SkillBase):
     # ------------------------------------------------------------------ #
 
     def get_instance_key(self) -> str:
+        """Return the key that identifies this skill instance.
+
+        Returns:
+            `info_gatherer`, with the `prefix` parameter appended when set.
+        """
         prefix = self.params.get("prefix")
         if prefix:
             return f"info_gatherer_{prefix}"
@@ -94,6 +104,11 @@ class InfoGathererSkill(SkillBase):
     # ------------------------------------------------------------------ #
 
     def setup(self) -> bool:
+        """Validate the questions and derive the tool names.
+
+        Returns:
+            True if `questions` is set and valid, False otherwise.
+        """
         questions = self.params.get("questions")
         if questions is None:
             self.logger.error("'questions' parameter is required")
@@ -130,6 +145,12 @@ class InfoGathererSkill(SkillBase):
     # ------------------------------------------------------------------ #
 
     def get_global_data(self) -> dict[str, Any]:
+        """Return the initial question state for the call.
+
+        Returns:
+            A dict that maps the skill namespace to the questions, a question
+            index of 0 and an empty answer list.
+        """
         namespace = self._get_skill_namespace()
         return {
             namespace: {
@@ -144,6 +165,11 @@ class InfoGathererSkill(SkillBase):
     # ------------------------------------------------------------------ #
 
     def _get_prompt_sections(self) -> list[dict[str, Any]]:
+        """Return the prompt section that tells the AI how to run the question flow.
+
+        Returns:
+            A list with one prompt section.
+        """
         return [
             {
                 "title": f"Info Gatherer ({self.get_instance_key()})",
@@ -165,6 +191,10 @@ class InfoGathererSkill(SkillBase):
     # ------------------------------------------------------------------ #
 
     def register_tools(self) -> None:
+        """Register the start and submit tools.
+
+        The tool names use the `prefix` parameter when it is set.
+        """
         self.define_tool(
             name=self.start_tool_name,
             description="Start the question sequence with the first question",
@@ -195,6 +225,17 @@ class InfoGathererSkill(SkillBase):
     def _handle_start_questions(
         self, args: dict[str, Any], raw_data: dict[str, Any]
     ) -> FunctionResult:
+        """Return the first question.
+
+        Args:
+            args: The tool arguments the AI sent. This tool takes none.
+            raw_data: The full SWAIG request payload, used to read the saved
+                question state.
+
+        Returns:
+            A FunctionResult with the instruction to ask the current question,
+            or a message that there are no questions.
+        """
         state = self.get_skill_data(raw_data)
         questions = state.get("questions", [])
         question_index = state.get("question_index", 0)
@@ -217,6 +258,20 @@ class InfoGathererSkill(SkillBase):
     def _handle_submit_answer(
         self, args: dict[str, Any], raw_data: dict[str, Any]
     ) -> FunctionResult:
+        """Save an answer and return the next question.
+
+        Args:
+            args: The tool arguments the AI sent. Reads `answer` and
+                `confirmed_by_user`.
+            raw_data: The full SWAIG request payload, used to read the saved
+                question state.
+
+        Returns:
+            A FunctionResult with the next question, or the completion message
+            after the last one. It asks for a read-back when the question needs
+            confirmation and `confirmed_by_user` is not true. The saved state is
+            updated with the answer.
+        """
         answer = args.get("answer", "")
         confirmed = args.get("confirmed_by_user", False)
         state = self.get_skill_data(raw_data)
@@ -286,6 +341,20 @@ class InfoGathererSkill(SkillBase):
         question_number: int = 1,
         total_questions: int = 1,
     ) -> str:
+        """Build the instruction that tells the AI which question to ask.
+
+        Args:
+            question_text: The question to ask.
+            needs_confirmation: Whether the AI must read the answer back first.
+            is_first_question: Whether this is the first question in the flow.
+            prompt_add: Extra note to add to the instruction.
+            submit_tool_name: The name of the tool that submits answers.
+            question_number: The 1-based position of this question.
+            total_questions: The number of questions in the flow.
+
+        Returns:
+            The instruction text.
+        """
         if is_first_question:
             instruction = (
                 f"Ask each question one at a time, wait for the user's answer, "
@@ -309,6 +378,15 @@ class InfoGathererSkill(SkillBase):
 
     @staticmethod
     def _validate_questions(questions: Any) -> None:
+        """Check that the questions are a non-empty list of valid dicts.
+
+        Args:
+            questions: The value of the `questions` parameter.
+
+        Raises:
+            ValueError: If the list is empty or not a list, or an item is not a
+                dict or lacks `key_name` or `question_text`.
+        """
         if not questions:
             raise ValueError("At least one question is required")
         if not isinstance(questions, list):

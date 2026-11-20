@@ -204,6 +204,19 @@ class HandoffRouter:
         capture_timeout: float = DEFAULT_CAPTURE_TIMEOUT,
         registry: dict[str, NonceEntry] | None = None,
     ) -> None:
+        """Set up the router and its nonce table.
+
+        Args:
+            gateway: The gateway that owns the conversations.
+            capture_leg: Callback that ends a leg and writes its record.
+            end_call: Callback that hangs up the call.
+            send_message: Callback that injects typed text into the call.
+            next_conversation_id: Callback that returns the id for the new leg.
+            nonce_ttl: Seconds a nonce stays usable.
+            max_messages_per_call: Ceiling on typed messages for one call.
+            capture_timeout: Seconds to wait for ``capture_leg``.
+            registry: Optional shared mapping for the nonce table.
+        """
         self.gateway = gateway
         self.capture_leg = capture_leg
         self.end_call = end_call
@@ -457,6 +470,14 @@ class HandoffRouter:
         router = APIRouter()
 
         def _forbidden_origin(request: Request) -> JSONResponse | None:
+            """A 403 response when the request's origin is not allowed.
+
+            Args:
+                request: The incoming request.
+
+            Returns:
+                The 403 response, or None when the origin is allowed.
+            """
             try:
                 self.gateway.check_origin(request.headers.get("origin"))
             except Exception:
@@ -477,6 +498,14 @@ class HandoffRouter:
             return data if isinstance(data, dict) else {}
 
         def _rejected(rej: GatewayRejection) -> JSONResponse:
+            """Build the JSON error response for a rejection.
+
+            Args:
+                rej: The rejection to report.
+
+            Returns:
+                A response carrying the rejection's reason and status.
+            """
             return JSONResponse({"error": rej.reason}, status_code=rej.status)
 
         @router.post("/handoff")

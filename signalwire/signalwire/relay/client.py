@@ -149,16 +149,37 @@ def _build_relay_ssl_context() -> ssl_module.SSLContext | None:
 class RelayClient:
     """Manages a WebSocket connection to SignalWire RELAY.
 
-    Usage::
+    Handles authentication, automatic reconnection with backoff, inbound
+    event dispatch, outbound dialing and SMS/MMS messaging. Authenticate with
+    a project ID and API token, or with a JWT. Credentials can be passed
+    directly or read from environment variables. The client also works as an
+    async context manager that connects on entry and disconnects on exit.
 
-        client = RelayClient(project="...", token="...", contexts=["default"])
+    Example:
+        ```python
+        from signalwire.relay import RelayClient
+
+        client = RelayClient(
+            project="your-project-id",
+            token="your-api-token",
+            contexts=["default"],
+        )
 
         @client.on_call
-        async def handle(call):
+        async def handle_call(call):
             await call.answer()
+            action = await call.play(
+                [{"type": "tts", "params": {"text": "Hello from Relay!"}}]
+            )
+            await action.wait()
             await call.hangup()
 
+        @client.on_message
+        async def handle_message(message):
+            print(f"SMS from {message.from_number}: {message.body}")
+
         client.run()
+        ```
     """
 
     def __init__(
@@ -170,6 +191,27 @@ class RelayClient:
         contexts: list[str] | None = None,
         max_active_calls: int | None = None,
     ):
+        """Create a RELAY client. Does not connect until `connect()` or `run()`.
+
+        Args:
+            project: SignalWire project ID. Defaults to the
+                `SIGNALWIRE_PROJECT_ID` environment variable.
+            token: API token. Defaults to the `SIGNALWIRE_API_TOKEN`
+                environment variable.
+            jwt_token: JWT for authentication instead of project and token.
+                Defaults to the `SIGNALWIRE_JWT_TOKEN` environment variable.
+            host: RELAY WebSocket host. Defaults to the
+                `SIGNALWIRE_RELAY_HOST` environment variable, then
+                `SIGNALWIRE_SPACE`, then the default RELAY host.
+            contexts: Contexts to subscribe to for inbound calls and messages.
+            max_active_calls: Maximum number of concurrent calls to track,
+                minimum 1. Defaults to the `RELAY_MAX_ACTIVE_CALLS`
+                environment variable, then the built-in default.
+
+        Raises:
+            ValueError: If no JWT is given and the project or token is
+                missing, or if the host is not a bare hostname.
+        """
         self.project = project or os.environ.get("SIGNALWIRE_PROJECT_ID", "")
         self.token = token or os.environ.get("SIGNALWIRE_API_TOKEN", "")
         self.jwt_token = jwt_token or os.environ.get("SIGNALWIRE_JWT_TOKEN", "")
@@ -279,6 +321,7 @@ class RelayClient:
         self._auth_reject_attempts: int = 0
 
     def __del__(self) -> None:
+        """Remove this client from the active-client registry."""
         _active_clients.discard(id(self))
 
     async def __aenter__(self) -> RelayClient:
@@ -334,12 +377,53 @@ class RelayClient:
     # ------------------------------------------------------------------
 
     def on_call(self, handler: CallHandler) -> CallHandler:
-        """Register the inbound call handler (decorator)."""
+        """Register the inbound call handler (decorator).
+
+        The handler runs once for each inbound call on the subscribed
+        contexts and receives a `Call`. Registering a new handler replaces
+        the previous one.
+
+        Args:
+            handler: Async function that takes a `Call`.
+
+        Returns:
+            The same handler, so the decorator leaves the function usable.
+
+        Example:
+            ```python
+            from signalwire.relay import RelayClient
+            from signalwire.relay.call import Call
+
+            client = RelayClient(
+                project="your-project-id",
+                token="your-api-token",
+                contexts=["default"],
+            )
+
+            @client.on_call
+            async def handle_call(call: Call) -> None:
+                await call.answer()
+                print(f"Received call: {call.call_id}")
+
+            client.run()
+            ```
+        """
         self._on_call_handler = handler
         return handler
 
     def on_message(self, handler: MessageHandler) -> MessageHandler:
-        """Register the inbound message handler (decorator)."""
+        """Register the inbound message handler (decorator).
+
+        The handler runs for each inbound message on the subscribed contexts
+        and receives a `Message`. Registering a new handler replaces the
+        previous one.
+
+        Args:
+            handler: Async function that takes a `Message`.
+
+        Returns:
+            The same handler, so the decorator leaves the function usable.
+        """
         self._on_message_handler = handler
         return handler
 
@@ -506,6 +590,13 @@ class RelayClient:
 
         If the connection is not ready, the request is queued and sent
         after re-authentication completes.
+
+        Args:
+            method: Full JSON-RPC method name, such as `calling.answer`.
+            params: Parameters for the request.
+
+        Returns:
+            The result dict from the server's response.
         """
         return await self._send_request(method, params)
 
@@ -531,8 +622,47 @@ class RelayClient:
                  if not supplied.
             max_duration: Optional max call duration in seconds.
             dial_timeout: How long (seconds) to wait for the dial to
-                          complete before raising TimeoutError.  Defaults
+                          complete before raising `RelayError`.  Defaults
                           to 120s.
+
+        Returns:
+            The answered `Call`, with valid call and node identifiers.
+
+        Raises:
+            RelayError: If the dial fails, if the connection closes during
+                the dial, or if no answer arrives within ``dial_timeout``.
+
+        Example:
+            ```python
+            import asyncio
+            from signalwire.relay import RelayClient
+
+            client = RelayClient(
+                project="your-project-id",
+                token="your-api-token",
+                contexts=["default"],
+            )
+
+            async def main():
+                async with client:
+                    call = await client.dial(
+                        devices=[[{
+                            "type": "phone",
+                            "params": {
+                                "from_number": "+15551234567",
+                                "to_number": "+15559876543",
+                                "timeout": 30,
+                            },
+                        }]],
+                    )
+                    action = await call.play(
+                        [{"type": "tts", "params": {"text": "Hello!"}}]
+                    )
+                    await action.wait()
+                    await call.hangup()
+
+            asyncio.run(main())
+            ```
         """
         dial_tag = tag or str(uuid.uuid4())
         params: dict[str, Any] = {
@@ -604,6 +734,12 @@ class RelayClient:
             region: Optional origination region.
             on_completed: Optional callback fired when a terminal state
                           (delivered/undelivered/failed) is reached.
+
+        Returns:
+            A `Message` that tracks state changes for the sent message.
+
+        Raises:
+            ValueError: If neither `body` nor `media` is given.
         """
         if not body and not media:
             raise ValueError("At least one of body or media is required")
@@ -654,6 +790,9 @@ class RelayClient:
         Sends ``signalwire.receive`` on the assigned protocol to start
         receiving inbound calls on the given contexts.  Can be called
         after ``connect()`` to dynamically add contexts without reconnecting.
+
+        Args:
+            contexts: Contexts to subscribe to. An empty list does nothing.
         """
         if not contexts:
             return
@@ -670,6 +809,10 @@ class RelayClient:
 
         Sends ``signalwire.unreceive`` to stop receiving inbound calls
         on the given contexts.
+
+        Args:
+            contexts: Contexts to unsubscribe from. An empty list does
+                nothing.
         """
         if not contexts:
             return
@@ -1314,6 +1457,7 @@ class RelayClient:
         )
 
     def _cancel_check_ping(self) -> None:
+        """Cancel the pending server-ping check timer, if one is set."""
         if self._check_ping_handle:
             self._check_ping_handle.cancel()
             self._check_ping_handle = None
@@ -1343,6 +1487,13 @@ class RelayError(Exception):
     """Error returned by the RELAY server."""
 
     def __init__(self, code: int, message: str):
+        """Create a RELAY error.
+
+        Args:
+            code: Error code from the server. The client uses -1 for errors
+                it raises itself, such as timeouts and a closed connection.
+            message: Human-readable error message.
+        """
         self.code = code
         self.message = message
         super().__init__(f"RELAY error {code}: {message}")

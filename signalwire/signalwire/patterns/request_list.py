@@ -39,6 +39,7 @@ class RequestList:
         agent.set_global_data(later.defaults())
 
         def note_request(args, raw_data):
+            '''Add the caller's request to the list.'''
             return later.note(raw_data, args["kind"], args["about"])
 
         ctx.add_step("take_order").set_text(
@@ -176,6 +177,15 @@ class RequestList:
     def _store(
         self, result: FunctionResult, requests: list[dict[str, str]]
     ) -> FunctionResult:
+        """Write the requests and their text into global data.
+
+        Args:
+            result: The result to update.
+            requests: The full list of requests.
+
+        Returns:
+            The result with the global data update added.
+        """
         return result.update_global_data(
             {self.global_key: requests, self.text_key: self.as_text(requests)}
         )

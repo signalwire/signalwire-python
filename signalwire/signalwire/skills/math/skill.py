@@ -25,7 +25,11 @@ class MathSkill(SkillBase):
     REQUIRED_ENV_VARS: ClassVar[list[str]] = []
 
     def setup(self) -> bool:
-        """Setup the math skill"""
+        """Setup the math skill
+
+        Returns:
+            Always True.
+        """
         return True
 
     def register_tools(self) -> None:
@@ -114,7 +118,11 @@ class MathSkill(SkillBase):
             )
 
     def get_hints(self) -> list[str]:
-        """Return speech recognition hints"""
+        """Return speech recognition hints
+
+        Returns:
+            An empty list.
+        """
         # Currently no hints provided, but you could add them like:
         # return [
         #     "calculate", "math", "plus", "minus", "times", "multiply",
@@ -123,7 +131,11 @@ class MathSkill(SkillBase):
         return []
 
     def get_prompt_sections(self) -> list[dict[str, Any]]:
-        """Return prompt sections to add to agent"""
+        """Return prompt sections to add to agent
+
+        Returns:
+            A list with one prompt section describing the calculate tool.
+        """
         return [
             {
                 "title": "Mathematical Calculations",
@@ -138,11 +150,13 @@ class MathSkill(SkillBase):
 
     @classmethod
     def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
-        """
-        Get the parameter schema for the math skill
+        """Get the parameter schema for the math skill
 
         The math skill has no custom parameters - it inherits only
         the base parameters from SkillBase.
+
+        Returns:
+            The base skill parameter schema, unchanged.
         """
         # Get base schema from parent
         return super().get_parameter_schema()

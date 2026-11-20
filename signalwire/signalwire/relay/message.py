@@ -55,6 +55,21 @@ class Message:
         reason: str = "",
         tags: list[str] | None = None,
     ):
+        """Create a message and the future that tracks its completion.
+
+        Args:
+            message_id: ID of the message.
+            context: Context the message belongs to.
+            direction: Message direction.
+            from_number: Sender number.
+            to_number: Recipient number.
+            body: Text body.
+            media: Media URLs. Defaults to an empty list.
+            segments: Number of segments.
+            state: Current message state.
+            reason: Reason attached to the state, if any.
+            tags: Tags on the message. Defaults to an empty list.
+        """
         self.message_id = message_id
         self.context = context
         self.direction = direction
@@ -142,6 +157,11 @@ class Message:
                 )
 
     def __repr__(self) -> str:
+        """Return a short string with the ID, direction, state and numbers.
+
+        Returns:
+            The representation string.
+        """
         return (
             f"Message(id={self.message_id!r}, direction={self.direction!r}, "
             f"state={self.state!r}, from={self.from_number!r}, to={self.to_number!r})"

@@ -518,6 +518,7 @@ class DocumentProcessor:
         current_has_code = False
 
         def flush() -> None:
+            """Turn the buffered lines into a chunk and reset the buffer."""
             nonlocal current_lines, current_start_line, current_end_line
             nonlocal \
                 current_size, \

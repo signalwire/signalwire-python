@@ -57,6 +57,14 @@ class SessionManager:
     """Manages MCP server sessions with automatic cleanup"""
 
     def __init__(self, config: dict[str, Any], max_total_sessions: int = 500):
+        """Set up the session table and start the cleanup thread.
+
+        Args:
+            config: The gateway configuration. The ``session`` section sets the
+                cleanup interval, per-service and total session limits, and the
+                default timeout.
+            max_total_sessions: Total session limit used when the config has none.
+        """
         self.config = config
         self.sessions: dict[str, Session] = {}
         self.lock = threading.RLock()

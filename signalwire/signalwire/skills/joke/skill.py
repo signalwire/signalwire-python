@@ -27,7 +27,11 @@ class JokeSkill(SkillBase):
 
     @classmethod
     def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
-        """Get parameter schema for joke skill"""
+        """Get parameter schema for joke skill
+
+        Returns:
+            The base skill parameter schema plus the joke parameters.
+        """
         schema = super().get_parameter_schema()
         schema.update(
             {
@@ -49,7 +53,11 @@ class JokeSkill(SkillBase):
         return schema
 
     def setup(self) -> bool:
-        """Setup the joke skill"""
+        """Setup the joke skill
+
+        Returns:
+            True if the API key is set, False otherwise.
+        """
         # Validate required parameters
         required_params = ["api_key"]
         missing_params = [
@@ -102,7 +110,11 @@ class JokeSkill(SkillBase):
         self.agent.register_swaig_function(joke_tool.to_swaig_function())
 
     def get_hints(self) -> list[str]:
-        """Return speech recognition hints"""
+        """Return speech recognition hints
+
+        Returns:
+            An empty list.
+        """
         # Currently no hints are provided, but you could add them like:
         # return [
         #     "joke", "tell me a joke", "funny", "humor", "dad joke",
@@ -111,11 +123,19 @@ class JokeSkill(SkillBase):
         return []
 
     def get_global_data(self) -> dict[str, Any]:
-        """Return global data to be available in DataMap variables"""
+        """Return global data to be available in DataMap variables
+
+        Returns:
+            A dict with `joke_skill_enabled` set to True.
+        """
         return {"joke_skill_enabled": True}
 
     def get_prompt_sections(self) -> list[dict[str, Any]]:
-        """Return prompt sections to add to agent"""
+        """Return prompt sections to add to agent
+
+        Returns:
+            A list with one prompt section describing the joke tool.
+        """
         return [
             {
                 "title": "Joke Telling",

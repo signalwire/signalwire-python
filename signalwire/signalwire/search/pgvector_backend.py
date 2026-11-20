@@ -392,7 +392,15 @@ class PgVectorBackend:
             )
 
     def get_stats(self, collection_name: str) -> dict[str, Any]:
-        """Get statistics for a collection"""
+        """Get statistics for a collection.
+
+        Args:
+            collection_name: The collection to describe.
+
+        Returns:
+            A dict with ``total_chunks``, ``total_files`` and ``config``. The
+            config dict is empty when the collection has no stored config.
+        """
         self._ensure_connection()
 
         collection_name = _sanitize_collection_name(collection_name)
@@ -440,7 +448,11 @@ class PgVectorBackend:
             }
 
     def list_collections(self) -> list[str]:
-        """List all collections in the database"""
+        """List all collections in the database.
+
+        Returns:
+            The collection names, sorted alphabetically.
+        """
         self._ensure_connection()
 
         with self.conn.cursor() as cursor:
@@ -450,7 +462,11 @@ class PgVectorBackend:
             return [row[0] for row in cursor.fetchall()]
 
     def delete_collection(self, collection_name: str) -> None:
-        """Delete a collection and its data"""
+        """Delete a collection and its data.
+
+        Args:
+            collection_name: The collection to delete.
+        """
         self._ensure_connection()
 
         import re
@@ -1043,6 +1059,19 @@ class PgVectorSearchBackend:
                 'sources': {source_type: True, ...},
                 'source_scores': {source_type: raw_score, ...},
             }
+
+        Args:
+            query_vector: The embedding of the query.
+            enhanced_text: The preprocessed query text for keyword and
+                metadata matching.
+            count: How many results each search source returns.
+            similarity_threshold: Minimum vector score to keep a vector hit.
+            tags: Only match chunks with these tags.
+            original_query: The query as typed, used for filename matching.
+                Defaults to ``enhanced_text``.
+
+        Returns:
+            One dict per candidate chunk, in no particular order.
         """
         self._ensure_connection()
         query_terms = enhanced_text.lower().split()
@@ -1126,6 +1155,17 @@ class PgVectorSearchBackend:
         results_map: dict[Any, dict[str, Any]],
         agreement_boost: float,
     ) -> None:
+        """Score each candidate in place from the sources that found it.
+
+        Sets ``score``, ``sources`` and ``final_score`` on every result. A
+        vector hit keeps its cosine score plus a capped agreement boost. A
+        chunk with no vector hit is scaled to stay below the best vector score.
+
+        Args:
+            all_sources: Per-chunk source scores, keyed by chunk id.
+            results_map: The result dict for each chunk id, updated in place.
+            agreement_boost: Boost added for each extra source that agrees.
+        """
         # max, not min: vector search returns `count` rows, so the weakest one
         # is the count-th best cosine and a floor built from it would move with
         # `count` -- making the same candidate score differently depending on
@@ -1228,7 +1268,12 @@ class PgVectorSearchBackend:
         return merged
 
     def get_stats(self) -> dict[str, Any]:
-        """Get statistics for the collection"""
+        """Get statistics for the collection.
+
+        Returns:
+            The stats dict from ``PgVectorBackend.get_stats()``: ``total_chunks``,
+            ``total_files`` and ``config``.
+        """
         backend = PgVectorBackend(self.connection_string)
         stats = backend.get_stats(self.collection_name)
         backend.close()

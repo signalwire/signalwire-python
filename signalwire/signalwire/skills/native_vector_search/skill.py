@@ -43,6 +43,9 @@ class NativeVectorSearchSkill(SkillBase):
         1. Network Mode: Set 'remote_url' to connect to a remote search server
         2. Local pgvector: Set backend='pgvector' with connection_string and collection_name
         3. Local SQLite: Set 'index_file' to use a local .swsearch file (default)
+
+        Returns:
+            The base skill parameter schema plus the search parameters.
         """
         schema = super().get_parameter_schema()
         schema.update(
@@ -241,17 +244,23 @@ class NativeVectorSearchSkill(SkillBase):
         return schema
 
     def get_instance_key(self) -> str:
-        """
-        Get the key used to track this skill instance
+        """Get the key used to track this skill instance
 
         For native vector search, we use the tool name to differentiate instances
+
+        Returns:
+            The skill name, tool name and index file joined together.
         """
         tool_name = self.params.get("tool_name", "search_knowledge")
         index_file = self.params.get("index_file", "default")
         return f"{self.SKILL_NAME}_{tool_name}_{index_file}"
 
     def setup(self) -> bool:
-        """Setup the native vector search skill"""
+        """Setup the native vector search skill
+
+        Returns:
+            True if the search backend initialized, False otherwise.
+        """
 
         # Get configuration first
         self.tool_name = self.params.get("tool_name", "search_knowledge")
@@ -963,7 +972,11 @@ class NativeVectorSearchSkill(SkillBase):
             return []
 
     def get_hints(self) -> list[str]:
-        """Return speech recognition hints for this skill"""
+        """Return speech recognition hints for this skill
+
+        Returns:
+            Default search words plus any custom `hints` from the parameters.
+        """
         hints = ["search", "find", "look up", "documentation", "knowledge base"]
 
         # Add custom hints from params
@@ -973,7 +986,11 @@ class NativeVectorSearchSkill(SkillBase):
         return hints
 
     def get_global_data(self) -> dict[str, Any]:
-        """Return data to add to agent's global context"""
+        """Return data to add to agent's global context
+
+        Returns:
+            A dict with `search_stats` when the search engine can report them.
+        """
         global_data = {}
 
         if self.search_engine:
@@ -986,7 +1003,11 @@ class NativeVectorSearchSkill(SkillBase):
         return global_data
 
     def get_prompt_sections(self) -> list[dict[str, Any]]:
-        """Return prompt sections to add to agent"""
+        """Return prompt sections to add to agent
+
+        Returns:
+            An empty list. The prompt section is added when the skill loads.
+        """
         # We'll handle this in register_tools after the agent is set
         return []
 

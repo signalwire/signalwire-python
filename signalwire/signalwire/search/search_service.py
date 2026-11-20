@@ -51,6 +51,8 @@ logger = get_logger("search_service")
 if BaseModel is not None:
 
     class SearchRequest(BaseModel):
+        """The body of a search request."""
+
         query: str
         index_name: str = "default"
         count: int = 3
@@ -59,17 +61,23 @@ if BaseModel is not None:
         language: str | None = None
 
     class SearchResult(BaseModel):
+        """One search hit."""
+
         content: str
         score: float
         metadata: dict[str, Any]
 
     class SearchResponse(BaseModel):
+        """The body of a search response."""
+
         results: list[SearchResult]
         query_analysis: dict[str, Any] | None = None
 else:
     # Fallback classes when FastAPI is not available; these intentionally
     # shadow the pydantic versions above when the optional dep is absent.
     class SearchRequest:  # type: ignore[no-redef]
+        """Plain-class stand-in for the search request model."""
+
         def __init__(
             self,
             query: str,
@@ -79,6 +87,16 @@ else:
             tags: list[str] | None = None,
             language: str | None = None,
         ):
+            """Store the request fields.
+
+            Args:
+                query: The search text.
+                index_name: The index to search.
+                count: The number of results to return.
+                similarity_threshold: Minimum score for a result.
+                tags: Only match chunks with these tags.
+                language: Query language, or None to detect it.
+            """
             self.query = query
             self.index_name = index_name
             self.count = count
@@ -87,17 +105,34 @@ else:
             self.language = language
 
     class SearchResult:  # type: ignore[no-redef]
+        """Plain-class stand-in for the search result model."""
+
         def __init__(self, content: str, score: float, metadata: dict[str, Any]):
+            """Store the result fields.
+
+            Args:
+                content: The chunk text.
+                score: The result's score.
+                metadata: The chunk's metadata.
+            """
             self.content = content
             self.score = score
             self.metadata = metadata
 
     class SearchResponse:  # type: ignore[no-redef]
+        """Plain-class stand-in for the search response model."""
+
         def __init__(
             self,
             results: list[SearchResult],
             query_analysis: dict[str, Any] | None = None,
         ):
+            """Store the response fields.
+
+            Args:
+                results: The matching results.
+                query_analysis: Details of how the query was processed, if any.
+            """
             self.results = results
             self.query_analysis = query_analysis
 
@@ -140,6 +175,22 @@ class SearchService:
         backend: str = "sqlite",
         connection_string: str | None = None,
     ):
+        """Create the service, set up its HTTP routes and load its indexes.
+
+        The routes exist only when FastAPI is installed.
+
+        Args:
+            port: Port the HTTP service listens on.
+            indexes: Map of index name to index path. Overrides indexes from
+                the config file.
+            basic_auth: A (username, password) pair. Defaults to the
+                security configuration's credentials.
+            config_file: Path to a config file. Defaults to the search config
+                found by the config loader.
+            backend: The storage backend, "sqlite" or "pgvector".
+            connection_string: The PostgreSQL connection string for the
+                pgvector backend.
+        """
         # Load configuration first
         self._load_config(config_file)
 
@@ -284,6 +335,7 @@ class SearchService:
 
         # Create dependency for authenticated routes
         def get_authenticated() -> Any:
+            """Return the HTTP basic security scheme, or None if unavailable."""
             if security:
                 return security
             return None
@@ -637,7 +689,21 @@ class SearchService:
         tags: list[str] | None = None,
         language: str | None = None,
     ) -> dict[str, Any]:
-        """Direct search method (non-async) for programmatic use"""
+        """Direct search method (non-async) for programmatic use.
+
+        Args:
+            query: The search text.
+            index_name: The index to search.
+            count: The number of results to return.
+            distance: Minimum score for a result. Sent as the request's
+                similarity threshold.
+            tags: Only match chunks with these tags.
+            language: Query language, or None to detect it.
+
+        Returns:
+            A dict with ``results``, a list of dicts with ``content``,
+            ``score`` and ``metadata``, and ``query_analysis``.
+        """
         request = SearchRequest(
             query=query,
             index_name=index_name,

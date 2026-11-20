@@ -58,6 +58,14 @@ def document_key(metadata: Mapping[str, Any] | None) -> str | None:
     Used wherever "the same document" matters: resetting heading context
     between documents in a JSON file, and penalising several chunks of one
     document in a result list. One definition, so the two cannot disagree.
+
+    Args:
+        metadata: A chunk's metadata, or None.
+
+    Returns:
+        The first non-empty value among the ``document``, ``url``, ``source``
+        and ``filename`` keys, as a string. None if there is no metadata or
+        none of those keys has a value.
     """
     if not metadata:
         return None
