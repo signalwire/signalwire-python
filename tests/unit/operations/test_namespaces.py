@@ -159,3 +159,13 @@ def test_service_agent_passes_operations_arguments_on() -> None:
                          suppress_logs=True)
     assert agent.ops._names.record == "shop"
     assert agent.ops._rules == ["One rule."]
+
+
+def test_service_agents_registration_methods_are_its_own() -> None:
+    # Methods of the class, so the reference lists them, and the ones that set something up chain on the agent
+    for name in ("operation", "lookup", "phase", "offer", "confirm_gates", "identify", "writes_with", "transfer_with"):
+        assert name in vars(ServiceAgent), name
+    agent = ServiceAgent("s", role="r", suppress_logs=True)
+    assert agent.phase("intro", "Say hello.") is agent and agent.offer("weather") is agent
+    assert agent.ops._phases[0][0] == "intro" and agent.ops._offers[0][0] == ["weather"]
+    assert agent.confirm_gates()[0].id == "agreed"
