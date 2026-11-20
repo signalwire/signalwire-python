@@ -1292,23 +1292,27 @@ class FunctionResult:
         return self.add_action("replace_in_history", text)
 
     def update_settings(self, settings: dict[str, Any]) -> "FunctionResult":
-        """Update agent runtime settings.
+        """Update the model's settings during the call.
 
-        Changes take effect for subsequent LLM turns. Supported settings:
+        Adds a `settings` action. Changes take effect for subsequent LLM turns.
+        Keys may use hyphens or underscores (`top-p` or `top_p`). Common keys,
+        with the platform's general limits (a model can set its own):
 
-        - `frequency-penalty`: Float (-2.0 to 2.0)
-        - `presence-penalty`: Float (-2.0 to 2.0)
-        - `max-tokens`: Integer (0 to 4096)
-        - `top-p`: Float (0.0 to 1.0)
-        - `confidence`: Float (0.0 to 1.0)
-        - `barge-confidence`: Float (0.0 to 1.0)
-        - `temperature`: Float (0.0 to 2.0, clamped to 1.5)
+        - `temperature`: Float, 0.0 to 2.0.
+        - `top_p`: Float, 0.0 to 1.0.
+        - `frequency_penalty`: Float, -2.0 to 2.0.
+        - `presence_penalty`: Float, -2.0 to 2.0.
+        - `max_tokens`: Integer, at least 1.
 
-        Each key named replaces its current value; every other setting keeps
-        its value, the prompt's own included. A key the model doesn't take is
-        ignored. A key can't be removed: to undo one, set it to the value you
-        want, such as the model's default. Platform releases before the merge
-        reset every key not named to the model's default.
+        A key the current model doesn't accept is ignored, and a value out of
+        range is replaced by a default value. The platform applies
+        the action only when the `swaig_allow_settings` AI parameter is on,
+        which is the default.
+
+        Warning:
+            Name every setting you want to keep. On the current platform, a
+            setting you don't name returns to the model's default, even one
+            the agent's prompt set.
 
         Args:
             settings: Dictionary of settings to update, keyed as listed above.

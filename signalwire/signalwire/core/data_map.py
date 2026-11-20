@@ -718,6 +718,8 @@ class DataMap:
 
         Example:
             ```python
+            from signalwire import DataMap, FunctionResult, SemanticGate
+
             cancel_order = (
                 DataMap("cancel_order")
                 .purpose("Cancel one of the caller's open orders")
@@ -869,6 +871,8 @@ def create_simple_api_tool(
 
     Example:
         ```python
+        from signalwire import create_simple_api_tool
+
         weather = create_simple_api_tool(
             name="get_weather",
             url="https://api.weatherapi.com/v1/current.json?q=${enc:args.city}",
@@ -937,6 +941,8 @@ def create_expression_tool(
 
     Example:
         ```python
+        from signalwire import FunctionResult, create_expression_tool
+
         greeting = create_expression_tool(
             name="greet",
             patterns={

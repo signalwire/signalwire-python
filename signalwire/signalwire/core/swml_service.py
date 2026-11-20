@@ -567,11 +567,13 @@ class SWMLService(ToolMixin):
 
         Example:
             ```python
+            from signalwire import SWMLService
+
             service = SWMLService(name="ivr")
             service.add_verb("answer", {})
             service.add_verb("play", {"url": "https://example.com/greeting.mp3"})
             service.add_verb("sleep", 2000)
-            service.add_verb("hangup", {"reason": "completed"})
+            service.add_verb("hangup", {})
             print(service.render_document())
             ```
         """
@@ -740,6 +742,9 @@ class SWMLService(ToolMixin):
 
         Example:
             ```python
+            from signalwire import SWMLService
+            from signalwire.core.swml_handler import SWMLVerbHandler
+
             class PlayHandler(SWMLVerbHandler):
                 def get_verb_name(self):
                     return "play"
@@ -753,6 +758,7 @@ class SWMLService(ToolMixin):
                 def build_config(self, **kwargs):
                     return {"url": kwargs.get("url")}
 
+            service = SWMLService(name="ivr")
             service.register_verb_handler(PlayHandler())
             service.add_verb("play", {"url": "https://example.com/welcome.mp3"})
             ```

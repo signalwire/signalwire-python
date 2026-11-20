@@ -490,8 +490,6 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
         - `inactivity_timeout`: inactivity delay in milliseconds before the call is
           disconnected. Default 600000; 0 turns it off, otherwise 10000 to
           3600000.
-        - `speech_timeout`: maximum length in milliseconds of a single recognized
-          utterance. Default 60000.
 
         Behavior parameters:
 

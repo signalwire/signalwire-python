@@ -48,13 +48,10 @@ class SkillMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at r
             ```python
             agent.add_skill("datetime")
             agent.add_skill("math")
-            ```
-
-        Example:
-            ```python
             agent.add_skill("web_search", params={
-                "api_key": "your-search-api-key",
-                "max_results": 5,
+                "api_key": "your-google-api-key",
+                "search_engine_id": "your-search-engine-id",
+                "num_results": 5,
             })
             ```
         """
