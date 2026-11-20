@@ -27,7 +27,7 @@
 # The package is nested (signalwire/signalwire/) and mkdocstrings needs the
 # editable install to resolve imports — that is preserved here.
 #
-# Usage:  reference/gen.sh              # generate pages + strict `mkdocs build`
+# Usage:  reference/gen.sh              # generate pages + strict `mkdocs build` + llms.txt check
 #         reference/gen.sh --no-build   # generate pages only (the caller builds/deploys)
 #         reference/gen.sh --no-install # skip the pip installs (the caller installed already)
 #         Both flags are accepted together, in either order.
@@ -341,3 +341,32 @@ fi
 # --strict so a local run fails on the same warnings CI fails on.
 python3 -m mkdocs build --strict --config-file "$CFG"
 echo "python -> $HERE/_site ($(find "$HERE/_site" -name '*.html' | wc -l) pages)"
+
+# llms.txt must list every page, and each listed page must have its Markdown copy.
+# The llmstxt sections in mkdocs.yml select pages by glob, so a page written
+# outside those globs would otherwise drop out of llms.txt silently.
+python3 - "$HERE/_site" "$CFG" <<'PY'
+import os
+import re
+import sys
+
+site, cfg = sys.argv[1], sys.argv[2]
+base = re.search(r"^site_url:\s*(\S+)", open(cfg).read(), re.M).group(1).rstrip("/") + "/"
+pages = {
+    os.path.relpath(os.path.join(d, f), site)[:-len(".html")]
+    for d, _, fs in os.walk(site) for f in fs if f.endswith(".html")
+} - {"404"}  # Material's error page, not a docs page
+listed = set()
+for url in re.findall(r"^- \[.*?\]\((\S+?)\)", open(os.path.join(site, "llms.txt")).read(), re.M):
+    if url.startswith(base) and url.endswith(".md"):
+        listed.add(url[len(base):-len(".md")])
+missing = sorted(pages - listed)
+no_md = sorted(p for p in listed if not os.path.isfile(os.path.join(site, p + ".md")))
+if missing or no_md:
+    for p in missing:
+        print(f"llms.txt does not list {p}.html (extend the llmstxt sections in mkdocs.yml)", file=sys.stderr)
+    for p in no_md:
+        print(f"llms.txt lists {p}.md, which was not written", file=sys.stderr)
+    sys.exit(1)
+print(f"llms.txt lists all {len(pages)} pages, each with a Markdown copy")
+PY

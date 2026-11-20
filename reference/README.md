@@ -90,6 +90,24 @@ builds in a separate step.
 `use_directory_urls: false`, so every page is a real `.html` file and the site
 works under the `/signalwire-python/` base path.
 
+## llms.txt and Markdown pages
+
+The `mkdocs-llmstxt` plugin writes three things into the built site, for LLMs
+and other tools that read Markdown better than HTML:
+
+- `llms.txt` at the site root: one link per page, to that page's Markdown copy.
+- a Markdown copy of every page next to its HTML, converted from the rendered
+  page: `api/core/agent_base.html` has `api/core/agent_base.md`. Links inside
+  the copies are absolute and point to the HTML pages.
+- `llms-full.txt` at the site root: every page's Markdown in one file.
+
+The `sections` in `mkdocs.yml` select the pages by glob (`index.md`, then
+`api/*.md`, where `*` also matches `/`). After the build, `gen.sh` checks that
+`llms.txt` lists every HTML page except `404.html` and that each listed `.md`
+file exists, and fails if not. If you add a page outside those globs, extend
+`sections`. `gh-deploy` adds `.nojekyll`, so GitHub Pages serves the `.md` files
+as they are.
+
 ## Deploy
 
 The site is unversioned: `mkdocs gh-deploy` publishes it to the `gh-pages` branch,
@@ -104,7 +122,8 @@ Two workflows, both plain `actions/setup-python`, no Docker.
 `.github/workflows/reference-check.yml` builds on every PR touching `signalwire/`,
 `reference/`, or `pyproject.toml`. It runs `gen.sh --no-install`, whose strict
 `mkdocs build` fails the check on a generator error or a new unresolved
-cross-reference. It does **not** catch a
+cross-reference, and the `llms.txt` check after it fails on a page missing from
+`llms.txt`. It does **not** catch a
 submodule with a missing runtime dependency: mkdocstrings analyses statically
 through griffe, so that module still renders a clean page. Build only:
 `contents: read`, never deploys.
@@ -175,5 +194,5 @@ This site covers a fixed set of concerns, and leaves the rest out on purpose:
 - **Theme toggle:** drives Material's own light/dark color scheme. There is no
   cross-origin `localStorage` theme sync with signalwire.com/docs, which is a
   different origin.
-- **Not included:** versioning (mike), llms.txt/markdown emission, Docker, other
+- **Not included:** versioning (mike), Docker, other
   languages, custom domain.
