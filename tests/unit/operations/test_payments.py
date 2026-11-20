@@ -64,6 +64,7 @@ def test_a_payment_is_read_back_taken_and_recorded() -> None:
     assert (pay["charge_amount"], pay["currency"], pay["language"], pay["voice"]) == (
         "54.04", "usd", "en-US", "rime.spore")
     assert pay["token_type"] == "one-time" and pay["description"] == "invoice 1042"
+    assert pay["valid_card_types"] == "visa mastercard amex", "the pay helper's own, as documented"
     finished = next(a["SWML"] for a in started.actions if isinstance(a, dict) and "SWML" in a)
     assert finished["sections"]["main"][1]["set"]["ai_response"] == (
         "The payment has finished. Call payment_result now, and say nothing before it.")

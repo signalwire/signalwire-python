@@ -239,7 +239,7 @@ Two prefabs in `signalwire.prefabs` put the packs together. Each is a `ServiceAg
 
 `FrontDeskAgent` is a business's front desk. `departments` are where callers can be put through to, each a `Department` with what callers go to it for, where the call goes, and an optional `open(call)`: while a department isn't taking calls, the caller is told so and offered a message. `appointments`, `messages` and `knowledge` (an `InfoBotKnowledge`, offered before the caller is identified) are each used when given. Its own words are in `FrontDeskAgent.WORDING`, and `desk_wording` replaces them.
 
-`PersonalAssistantAgent` answers the phone for one person. It asks who's calling and what it's about, then puts the call through: the person's phone rings, and once they answer they hear a whisper ("Bo is calling about the contract. Press 1 to take the call."). The caller hears ringing meanwhile. If the person presses 1, the calls are joined, and the caller's call ends when theirs does. If they don't answer or don't take it, the assistant carries on with the caller and offers a message or a time on their calendar, from `messages` and `appointments`. `available(call)` keeps the call from ringing them when they aren't taking calls. `ring_seconds`, `answer_seconds`, `whisper_voice` and `whisper_language` set the ringing and the whisper. Its own words are in `PersonalAssistantAgent.WORDING`.
+`PersonalAssistantAgent` answers the phone for one person. It asks who's calling and what it's about, then puts the call through: the person's phone rings, and once they answer they hear a whisper ("Bo is calling about the contract. Press 1 to take the call."). The caller hears ringing meanwhile. If the person presses the key (`accept_key`, 1 unless set), the calls are joined, and the caller's call ends when theirs does. If they don't answer or don't take it, the assistant carries on with the caller and offers a message or a time on their calendar, from `messages` and `appointments`. `available(call)` keeps the call from ringing them when they aren't taking calls. `ring_seconds`, `answer_seconds`, `whisper_voice` and `whisper_language` set the ringing and the whisper. Its own words are in `PersonalAssistantAgent.WORDING`.
 
 ```python
 from signalwire.operations import Messages
@@ -270,7 +270,7 @@ from signalwire.rest import RestClient
 
 CONSENT = {"+15557654321": True}
 dialer = Dialer(
-    RestClient(project="your-project", token="your-token", host="example.signalwire.com"),
+    RestClient(),  # SIGNALWIRE_PROJECT_ID, SIGNALWIRE_API_TOKEN, SIGNALWIRE_SPACE
     from_number="+15550001111",
     url="https://agents.example.com/reminders",
     checks=[consented(lambda callee: CONSENT.get(callee.number)), calling_hours(time(9), time(20))],

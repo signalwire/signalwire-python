@@ -45,7 +45,7 @@ ASSISTANT_WORDING: Mapping[str, str] = MappingProxyType(
         "tool.reason": "What it's about, in a few words.",
         "ask.name": "Who's calling?",
         "ask.reason": "What's it about?",
-        "whisper": "{name} is calling about {reason}. Press 1 to take the call.",
+        "whisper": "{name} is calling about {reason}. Press {key} to take the call.",
         "trying": "Seeing whether {owner} can take it.",
         "trying.then": "Tell them you'll see if {owner} can take it, and say nothing more.",
         "unavailable": "{owner} isn't taking calls now.",
@@ -99,6 +99,7 @@ class PersonalAssistantAgent(ServiceAgent):
         answer_seconds: int = 15,
         whisper_voice: str | None = None,
         whisper_language: str | None = None,
+        accept_key: str = "1",
         tool: str = "put_through",
         assistant_wording: Mapping[str, str] | None = None,
         **kwargs: Any,
@@ -127,6 +128,7 @@ class PersonalAssistantAgent(ServiceAgent):
                 platform's default when None.
             whisper_language: The whisper's language code, such as
                 ``"en-US"``; the platform's default when None.
+            accept_key: The key they press to take the call.
             tool: The put-through tool's name.
             assistant_wording: Words in place of the assistant's own
                 defaults, by key; the keys are those of
@@ -145,6 +147,11 @@ class PersonalAssistantAgent(ServiceAgent):
         self._caller_id = caller_id
         self._ring, self._answer = ring_seconds, answer_seconds
         self._voice, self._language = whisper_voice, whisper_language
+        if not (len(accept_key) == 1 and accept_key in "0123456789*#"):
+            raise ValueError(
+                f"accept_key must be one key of the keypad, not {accept_key!r}"
+            )
+        self._key = accept_key
         self._message_tool = messages.tool if messages is not None else None
         self._appointment_tool = (
             appointments.tools["openings"] if appointments is not None else None
@@ -216,12 +223,14 @@ class PersonalAssistantAgent(ServiceAgent):
     def _ring_them(self, name: str, reason: str) -> dict[str, Any]:
         """
         The SWML that rings them with the whisper. Their leg hears it once
-        they answer, and the call is bridged only when they press 1; any
-        other key, or none, hangs their leg up and the caller stays with the
+        they answer, and the call is bridged only when they press the
+        accept key; any other key, or none, hangs their leg up and the caller stays with the
         assistant. Once a bridged call ends, so does the caller's.
         """
         w = self._w_assistant
-        whisper = w("whisper", name=_spoken(name), reason=_spoken(reason))
+        whisper = w(
+            "whisper", name=_spoken(name), reason=_spoken(reason), key=self._key
+        )
         prompt: dict[str, Any] = {
             "play": f"say:{whisper}",
             "max_digits": 1,
@@ -239,12 +248,12 @@ class PersonalAssistantAgent(ServiceAgent):
                 {
                     "switch": {
                         "variable": "prompt_value",
-                        "case": {"1": [{"set": {"screened": "taken"}}]},
+                        "case": {self._key: [{"set": {"screened": "taken"}}]},
                         "default": [{"hangup": {}}],
                     }
                 },
             ],
-            # From their answer: the whisper, then the time they have to press 1
+            # From their answer: the whisper, then the time they have to press the key
             "confirm_timeout": self._answer + 30,
         }
         if self._caller_id:

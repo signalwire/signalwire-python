@@ -123,6 +123,7 @@ class Payments:
         security_code: bool = True,
         postal_code: bool = True,
         max_attempts: int = 1,
+        reusable: bool = False,
         card_types: Sequence[str] | None = None,
         status_url: str | None = None,
         connector_parameters: Mapping[str, str] | None = None,
@@ -151,8 +152,11 @@ class Payments:
             security_code: Whether the card's security code is asked for.
             postal_code: Whether the billing postal code is asked for.
             max_attempts: How many times the caller may try the card.
+            reusable: True for a token the connector can charge again (a
+                card kept on file), False for one charge.
             card_types: The card types taken, such as ``["visa",
-                "mastercard"]``; the platform's default when None.
+                "mastercard"]``; Visa, Mastercard and American Express when
+                None, as ``FunctionResult.pay`` takes them.
             status_url: Where the platform posts each step of the payment.
             connector_parameters: More name/value pairs for the connector.
             on_result: ``on_result(call, result)`` gets every
@@ -176,6 +180,7 @@ class Payments:
         )
         self._security_code, self._postal_code = security_code, postal_code
         self._attempts = max_attempts
+        self._token = "reusable" if reusable else "one-time"
         self._cards = " ".join(card_types) if card_types else None
         self._status_url = status_url
         self._parameters = [
@@ -348,7 +353,7 @@ class Payments:
             "security_code": self._security_code,
             "postal_code": self._postal_code,
             "max_attempts": self._attempts,
-            "token_type": "one-time",
+            "token_type": self._token,
             "ai_response": self._w("finished", tool=self.result_tool),
         }
         if voice:

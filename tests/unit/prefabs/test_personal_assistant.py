@@ -72,3 +72,16 @@ def test_when_they_arent_taking_calls_a_message_is_offered() -> None:
     assert out.response == "Ann isn't taking calls now."
     assert out.tool_prompt == "Tell them, and offer to take a message with take_message."
     assert not any(isinstance(a, dict) and "SWML" in a for a in out.actions)
+
+
+def test_the_accept_key_can_be_another() -> None:
+    import pytest
+
+    sim = CallSimulator(assistant(accept_key="5", assistant_wording={
+        "whisper": "Llama {name} por {reason}. Pulse {key} para atender."}))
+    out = sim.call("put_through", said({"name": "Bo", "reason": "el contrato"}))
+    connect = swml_of(out.actions)["sections"]["main"][0]["connect"]
+    assert connect["confirm"][0]["prompt"]["play"] == "say:Llama Bo por el contrato. Pulse 5 para atender."
+    assert list(connect["confirm"][1]["switch"]["case"]) == ["5"]
+    with pytest.raises(ValueError, match="one key"):
+        assistant(accept_key="12")
