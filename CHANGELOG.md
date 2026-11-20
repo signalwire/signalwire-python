@@ -11,10 +11,20 @@
   the writes, the record. A request made while another change waits is
   combined with it, set aside, or refused by per-operation hooks.
   `ServiceAgent` is the prefab; `Operations(...).install(agent)` puts it on
-  any `AgentBase`, beside other layers such as `InfoBotKnowledge`. See
-  docs/operations.md. The module is new and its names may still change: it
-  isn't part of the cross-SDK reference yet, and TypeScript will port it
-  first.
+  any `AgentBase`, adding to the agent's own prompt sections, steps and
+  initial step rather than replacing them. Nothing about the call is
+  assumed: money is exact, in the currency each change or the service gives
+  (`currency=`, `format_money`, `CURRENCIES`, `money_format=`); the medium is
+  given (`medium=`) or found on each call's first request; every generated
+  string has a key in `DEFAULT_WORDING` that `wording=` replaces; the rules
+  change by key; and `namespace=` names everything a service generates, so
+  two can share an agent. The record carries a version (`v`). See
+  docs/operations.md.
+- `signalwire.operations.infobot`: `InfoBotKnowledge` answers from a corpus
+  with a search you supply (sync or async) and your own ranking and
+  grounding rules, and can take a caller's details for a follow-up;
+  `Continuity` carries a conversation between voice and chat; and
+  `say_into_call` speaks on a live call through the REST API.
 
 ### Changed
 - A vouched tool's `data_supplied_by_user` argument now asks the model

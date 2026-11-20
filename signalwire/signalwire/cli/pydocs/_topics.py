@@ -535,14 +535,17 @@ the writes, the record.
 - `offer(*tools)` adds tools the service didn't make, such as skills, to its
   steps; `phase()` declares steps of your own.
 - `CallSimulator` tests one offline, record and steps included.
-
-The module is new and still settling; its names may change before it is
-ported to the other SDKs.
+- Nothing is assumed about the call: `currency=` and `Change.currency` for
+  money (`format_money`), `medium=` or the request's own for voice or chat,
+  and `wording=` for every string it generates (`DEFAULT_WORDING`).
+- `namespace=` names everything it generates, for two services on one agent.
+- `signalwire.operations.infobot` answers from a corpus (`InfoBotKnowledge`)
+  and carries a conversation between voice and chat (`Continuity`).
 """,
     docs=(
         (
             "docs/operations.md",
-            "Operations, the change lifecycle, identity, lookups and testing",
+            "Operations, the change lifecycle, identity, lookups, money, wording, namespaces, InfoBot and testing",
         ),
     ),
     api=(
