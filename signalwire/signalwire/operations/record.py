@@ -136,6 +136,7 @@ def _waiting_entry(
         "money": [str(m) for m in change.money_moved()],
         "currency": change.currency or currency or "",
         "done": change.done_lines(done_default),
+        **({"then": change.then} if change.then else {}),
         "args": dict(args),
         "revision": revision,
     }

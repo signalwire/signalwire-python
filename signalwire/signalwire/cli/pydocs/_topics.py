@@ -496,12 +496,25 @@ self.add_skill("web_search", {"api_key": "...", "search_engine_id": "..."})
 _PREFABS = Topic(
     name="prefabs",
     title="Prefab agents",
-    summary="Ready-made agents for surveys, intake, reception, FAQs and concierge",
+    summary="Ready-made agents: a front desk, a personal assistant, surveys, intake, reception, FAQs and concierge",
     body="""\
 Prefabs are `AgentBase` subclasses for common jobs. Configure one with
 constructor arguments, or subclass it to change its prompt and tools.
+
+`FrontDeskAgent` and `PersonalAssistantAgent` are built on
+`signalwire.operations`, against your own backend given as functions: a
+front desk puts callers through to departments while they're taking calls,
+books appointments, takes messages and answers from documents; a personal
+assistant screens callers, puts them through with a whisper when the person
+takes the call, and otherwise takes a message or books time.
 """,
-    docs=(("docs/agent_guide.md", "Prefab agents and their options"),),
+    docs=(
+        ("docs/agent_guide.md", "Prefab agents and their options"),
+        (
+            "docs/operations.md",
+            "The front desk, the personal assistant and the task packs they're built from",
+        ),
+    ),
     examples=(
         "examples/info_gatherer_example.py",
         "examples/dynamic_info_gatherer_example.py",
@@ -539,6 +552,8 @@ the writes, the record.
   money (`format_money`), `medium=` or the request's own for voice or chat,
   and `wording=` for every string it generates (`DEFAULT_WORDING`).
 - `namespace=` names everything it generates, for two services on one agent.
+- Task packs add common operations against your backend: `Appointments`,
+  `Messages` and `Payments` (a card payment the model never hears).
 - `signalwire.operations.infobot` answers from a corpus (`InfoBotKnowledge`)
   and carries a conversation between voice and chat (`Continuity`).
 """,

@@ -41,6 +41,12 @@ from signalwire.operations.appointments import (
 )
 from signalwire.operations.messages import MESSAGES_WORDING, Message, Messages
 from signalwire.operations.money import CURRENCIES, format_money
+from signalwire.operations.payments import (
+    PAYMENTS_WORDING,
+    Charge,
+    PaymentResult,
+    Payments,
+)
 from signalwire.operations.wording import DEFAULT_WORDING
 
 __all__ = [
@@ -50,16 +56,20 @@ __all__ = [
     "DEFAULT_WORDING",
     "MESSAGES_WORDING",
     "NOT_SAID",
+    "PAYMENTS_WORDING",
     "Appointment",
     "Appointments",
     "CallContext",
     "Change",
+    "Charge",
     "Field",
     "Message",
     "Messages",
     "Need",
     "Operation",
     "Operations",
+    "PaymentResult",
+    "Payments",
     "Refuse",
     "ServiceAgent",
     "Slot",

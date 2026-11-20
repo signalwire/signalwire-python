@@ -184,6 +184,11 @@ class Change:
     after_why: str = ""
     """Why the other change goes first, in a clause: "an order's items change
     last, since after that nothing else in it can change"."""
+    then: str | None = None
+    """What the model is told to do once it's made, in place of everything
+    the service would tell it ("Tell them it's done", and what's next): for
+    a change whose effect comes after the tool's result, such as a payment
+    the platform takes next. None: the service's words."""
 
     def done_lines(self, default: str = "It's done: {statement}") -> list[str]:
         """
@@ -205,10 +210,13 @@ class Change:
         ]
 
     def money_moved(self) -> list[Decimal]:
-        """The money each write moves, one amount per write."""
+        """The money each write moves, one amount per write; a change with no writes moves all of it once it's
+        made."""
         from signalwire.operations.money import amount_of
 
         moved = [amount_of(m) for m in (self.money or [])]
+        if not self.writes:
+            return moved
         return (moved + [Decimal(0)] * len(self.writes))[: len(self.writes)]
 
 

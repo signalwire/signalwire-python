@@ -12,6 +12,8 @@ An operations agent is written as what it can do for a caller. You write each op
 - [Lookups](#lookups)
 - [Money](#money)
 - [Appointments and Messages](#appointments-and-messages)
+- [Payments](#payments)
+- [A Front Desk and a Personal Assistant](#a-front-desk-and-a-personal-assistant)
 - [What the SDK Generates](#what-the-sdk-generates)
 - [The Call's Record](#the-calls-record)
 - [Words, Languages and the Medium](#words-languages-and-the-medium)
@@ -91,6 +93,8 @@ An operation is a class with `Field` attributes, a docstring (what it does, as t
 | raises `Refuse(why, then)` | The request breaks a rule | Tells the model why and what can be done instead; nothing changes |
 
 A `Change` carries `read_back` (the words the caller says yes to: put the change itself in the first clause), `touches` (stable keys for what it acts on, such as `order:#W1`), `writes` (the backend writes, kept as data), `money` (what each write moves, and `currency`, see [Money](#money)) and `done` (what to tell the caller once each write went through).
+
+`then` is what the model is told once a change is made, in place of everything the service would tell it ("Tell them it's done", and what's next), for a change whose effect comes after the tool's result, such as a payment the platform takes next.
 
 A change that has to wait for another one the caller asked for names that one's kind in `after` (and why, in `after_why`): an item change that would leave the order's address unchangeable, while they've also asked to change the address. It isn't read back yet. It's set aside, the model is told to call that kind's tool now, and it's offered once a change of that kind is settled.
 
@@ -208,6 +212,49 @@ Appointments(
     before_identity=True,
 ).add_to(agent)
 Messages(save=lambda call, message: print(message), recipients={"Dr. Lee": "the dentist"}).add_to(agent)
+```
+
+## Payments
+
+`Payments` takes a card payment the caller agreed to, without the model ever hearing the card. The amount comes from your `charge(call, paying_for)` function, never from the model: the caller names what they're paying, such as an invoice, `charge` returns a `Charge` (the amount, what it's for, and its currency), and that's read back for their yes. Then the platform's pay verb takes the card on the keypad and charges it through your payment connector (`connector_url`). When it has finished, the model is told to call `payment_result`, which reads the outcome the platform recorded rather than anything the model says. A payment that went through goes into the call's history with its money; one that didn't charges nothing, and the model is told why. `on_result(call, result)` gets every `PaymentResult`, the platform's details included, for your records.
+
+The pack asks the platform to post the pay verb's variables with each tool request (`swaig_post_swml_vars`). A payment needs a currency, the `Charge`'s, the pack's or the service's, and a language for the card prompts, the pack's `language` or the agent's first; an agent with neither fails when it's set up. Its words are in `PAYMENTS_WORDING`.
+
+```python
+from signalwire.operations import Charge, Payments, ServiceAgent
+
+BALANCES = {"1042": "54.04"}
+agent = ServiceAgent("billing", role="You take payments for a water utility.", currency="USD")
+agent.add_language("English", "en-US", "rime.spore")
+Payments(
+    connector_url="https://pay.example.com/connector",
+    charge=lambda call, invoice: Charge(BALANCES[invoice], f"invoice {invoice}"),
+).add_to(agent)
+```
+
+## A Front Desk and a Personal Assistant
+
+Two prefabs in `signalwire.prefabs` put the packs together. Each is a `ServiceAgent`, and takes its keyword arguments.
+
+`FrontDeskAgent` is a business's front desk. `departments` are where callers can be put through to, each a `Department` with what callers go to it for, where the call goes, and an optional `open(call)`: while a department isn't taking calls, the caller is told so and offered a message. `appointments`, `messages` and `knowledge` (an `InfoBotKnowledge`, offered before the caller is identified) are each used when given. Its own words are in `FrontDeskAgent.WORDING`, and `desk_wording` replaces them.
+
+`PersonalAssistantAgent` answers the phone for one person. It asks who's calling and what it's about, then puts the call through: the person's phone rings, and once they answer they hear a whisper ("Bo is calling about the contract. Press 1 to take the call."). The caller hears ringing meanwhile. If the person presses 1, the calls are joined, and the caller's call ends when theirs does. If they don't answer or don't take it, the assistant carries on with the caller and offers a message or a time on their calendar, from `messages` and `appointments`. `available(call)` keeps the call from ringing them when they aren't taking calls. `ring_seconds`, `answer_seconds`, `whisper_voice` and `whisper_language` set the ringing and the whisper. Its own words are in `PersonalAssistantAgent.WORDING`.
+
+```python
+from signalwire.operations import Messages
+from signalwire.prefabs import Department, FrontDeskAgent, PersonalAssistantAgent
+
+desk = FrontDeskAgent(
+    role="You answer the phone for Bayside Dental. You are warm and brief.",
+    departments={"billing": Department("questions about a bill", "+15550100001")},
+    messages=Messages(save=lambda call, message: print(message)),
+)
+assistant = PersonalAssistantAgent(
+    role="You answer Ann Lee's phone. You are friendly and brief.",
+    owner="Ann",
+    reach="+15550100002",
+    messages=Messages(save=lambda call, message: print(message)),
+)
 ```
 
 ## What the SDK Generates

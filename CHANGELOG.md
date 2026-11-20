@@ -25,6 +25,21 @@
   grounding rules, and can take a caller's details for a follow-up;
   `Continuity` carries a conversation between voice and chat; and
   `say_into_call` speaks on a live call through the REST API.
+- Task packs for `signalwire.operations`, against your own backend given as
+  functions: `Appointments` (find open times, book, move and cancel, with
+  every date said by your calendar), `Messages` (take a message, read back,
+  with the caller's number offered for them to agree to) and `Payments` (a
+  card payment the model never hears: the amount comes from your `charge`
+  function, the platform's pay verb takes the card, and the outcome is read
+  from what the platform recorded). `Change.then` tells the model what to do
+  once a change is made, for one whose effect comes after the tool's result.
+- `FrontDeskAgent` and `PersonalAssistantAgent` in `signalwire.prefabs`: a
+  business's front desk (departments with opening hours, appointments,
+  messages, answers from documents) and an assistant for one person, who
+  screens callers and puts them through with a whisper the person accepts
+  with a key, and otherwise takes a message or books time.
+- `CallSimulator(request_fields=...)` adds fields such as `caller_id_num` to
+  every tool request, as the platform sends them for a call.
 
 ### Changed
 - A vouched tool's `data_supplied_by_user` argument now asks the model

@@ -84,7 +84,7 @@ def test_without_messages_a_closed_department_asks_how_else_to_help() -> None:
     out = CallSimulator(agent).call("transfer_to_human", {"summary": "x", "to": "billing"})
     assert out.response == "billing está cerrado ahora."
     assert out.tool_prompt == "Tell them, and ask how else you can help."
-    with pytest.raises(ValueError, match="FRONT_DESK_WORDING"):
+    with pytest.raises(ValueError, match="FrontDeskAgent.WORDING"):
         FrontDeskAgent(role="r", desk_wording={"open": "x"}, suppress_logs=True)
 
 

@@ -45,14 +45,17 @@ FRONT_DESK_WORDING: Mapping[str, str] = MappingProxyType(
         "closed.then.no_messages": "Tell them, and ask how else you can help.",
     }
 )
-"""Every key ``FrontDeskAgent``'s own words come from, with its default. The
-rest of its words are its ``Operations``' and the packs'."""
+"""Every key ``FrontDeskAgent``'s own words come from, with its default
+(``FrontDeskAgent.WORDING``). The rest of its words are its ``Operations``'
+and the packs'."""
 
 
 class FrontDeskAgent(ServiceAgent):
     """
     A business's front desk: departments to put callers through to,
     appointments, messages and answers from its documents, each when given.
+
+    Its own words are in ``FrontDeskAgent.WORDING``, by key.
 
     Example:
         desk = FrontDeskAgent(
@@ -66,6 +69,9 @@ class FrontDeskAgent(ServiceAgent):
             knowledge=InfoBotKnowledge(search=search_faq),
         )
     """
+
+    WORDING: Mapping[str, str] = FRONT_DESK_WORDING
+    """Every key the desk's own words come from, with its default; ``desk_wording`` replaces any."""
 
     def __init__(
         self,
@@ -95,14 +101,14 @@ class FrontDeskAgent(ServiceAgent):
             caller_id: The number calls put through come from; the
                 platform's default when None.
             desk_wording: Words in place of the desk's own defaults, by key;
-                the keys are those of ``FRONT_DESK_WORDING``.
+                the keys are those of ``FrontDeskAgent.WORDING``.
             **kwargs: ``ServiceAgent``'s: ``Operations``' keyword arguments
                 (``rules``, ``wording``, ``currency``, ``medium`` and the
                 rest) and ``AgentBase``'s.
         """
         super().__init__(name, role=role, **kwargs)
         self._w_desk = _Wording(
-            FRONT_DESK_WORDING, desk_wording, "FrontDeskAgent", "FRONT_DESK_WORDING"
+            FRONT_DESK_WORDING, desk_wording, "FrontDeskAgent", "FrontDeskAgent.WORDING"
         )
         self._departments = dict(departments or {})
         self._messages = messages
@@ -140,4 +146,4 @@ class FrontDeskAgent(ServiceAgent):
         )
 
 
-__all__ = ["FRONT_DESK_WORDING", "Department", "FrontDeskAgent"]
+__all__ = ["Department", "FrontDeskAgent"]

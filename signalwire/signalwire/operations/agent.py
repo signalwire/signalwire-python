@@ -111,7 +111,7 @@ MEDIUMS = ("voice", "chat")
 """The mediums a service can be given or find on a request: a call, or a chat."""
 
 
-class _Said(Refuse):
+class _Said(Refuse):  # also raised by the task packs
     """A refusal the service makes in whole words: the operation handler's "Nothing is changed: " doesn't go
     before it."""
 
@@ -398,6 +398,8 @@ class Operations:
         self._writer: Callable[..., Any] | None = None
         self._transfer: _Transfer | None = None
         self._offers: list[tuple[list[str], bool, list[str] | None]] = []
+        # What a task pack needs of the agent it's installed on, such as SWML variables posted with each request
+        self._install_hooks: list[Callable[[AgentBase], None]] = []
         self._phases: list[tuple[str, str, list[str] | None, bool]] = []
         self.proposal = Proposal(self._names.confirm, decline_tool=self._names.decline)
 
@@ -687,6 +689,8 @@ class Operations:
                 f"the agent already has tools named {', '.join(taken)}: give this Operations a namespace= "
                 "(or the tools other names) so they can sit side by side"
             )
+        for hook in self._install_hooks:
+            hook(agent)
         _add_to_section(agent, "Role", body=self._role)
         rules = self._rule_texts()
         if rules:
@@ -1001,7 +1005,8 @@ class Operations:
                 params,
                 self._wrapped(op.tool, self._operation_handler(op)),
                 required=[k for k, f in fields.items() if f.required],
-                vouched=True,
+                # Nothing to vouch for in an operation that takes nothing from the caller
+                vouched=bool(fields),
                 nullable_optional=True,
                 fillers=_fillers(op.fillers),
                 secure=op.secure,
@@ -1652,7 +1657,9 @@ class Operations:
                 "outcome": outcome,
                 **({"reason": reply} if outcome != "made" else {}),
                 "done": done,
-                "money": str(sum(moved[:made], Decimal(0))),
+                "money": str(
+                    sum(moved if outcome == "made" else moved[:made], Decimal(0))
+                ),
                 "currency": change.currency or self._currency or "",
                 **(
                     {"writes_made": [w.to_dict() for w in change.writes[:made]]}
@@ -1675,7 +1682,8 @@ class Operations:
                 tool_prompt=w("then.going_on"),
             ).update_global_data(update)
         return FunctionResult(
-            tool_result=w("applied", done=done), tool_prompt=w("applied.then")
+            tool_result=w("applied", done=done),
+            tool_prompt=change.then or w("applied.then"),
         ).update_global_data(update)
 
     def _waiting_named(
@@ -1739,9 +1747,8 @@ class Operations:
         total = self._in_all(now["history"])
         result = FunctionResult(
             tool_result=self._w("confirm.done", done=made_now, total=total),
-            tool_prompt=self._w(
-                "confirm.done.total.then" if total else "confirm.done.then"
-            )
+            tool_prompt=waiting.get("then")
+            or self._w("confirm.done.total.then" if total else "confirm.done.then")
             + (_next_up(data, tool_of, self._w) or self._w("then.anything_else")),
         )
         return self._finish(
