@@ -57,14 +57,20 @@ plugins:
             show_if_no_docstring: true
   # Publishes llms.txt at the site root, plus a Markdown copy of every page next
   # to its HTML (api/core/agent_base.html -> api/core/agent_base.md). The globs
-  # cover every page gen.sh writes; gen.sh fails the build if llms.txt misses one.
+  # must cover every page: the llmstxt_hooks.py hook fails the build otherwise.
   - llmstxt:
       full_output: llms-full.txt
+      preprocess: llmstxt_hooks.py
       sections:
         Overview:
           - index.md
         API reference:
           - api/*.md
+
+# Runs after the llmstxt plugin: full module paths as llms.txt titles, then the
+# coverage and link check. See llmstxt_hooks.py.
+hooks:
+  - llmstxt_hooks.py
 
 markdown_extensions:
   - admonition

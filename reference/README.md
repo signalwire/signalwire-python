@@ -17,6 +17,7 @@ The directory holds the MkDocs config, generator scripts, and Fern theme assets:
 ```
 reference/
   mkdocs.yml          MkDocs Material + mkdocstrings config (docs_dir = _docs)
+  llmstxt_hooks.py    llms.txt titles, .md-to-.md links, and the llms.txt check
   requirements.txt    pinned doc toolchain (MkDocs Material, mkdocstrings)
   gen.sh              installs the SDK editable, generates the API pages, builds
   dev-server.sh       generates the pages, then serves them with live reload
@@ -96,17 +97,24 @@ The `mkdocs-llmstxt` plugin writes three things into the built site, for LLMs
 and other tools that read Markdown better than HTML:
 
 - `llms.txt` at the site root: one link per page, to that page's Markdown copy.
+  Each API link is titled with the full module path (`signalwire.core.agent_base`).
 - a Markdown copy of every page next to its HTML, converted from the rendered
-  page: `api/core/agent_base.html` has `api/core/agent_base.md`. Links inside
-  the copies are absolute and point to the HTML pages.
+  page: `api/core/agent_base.html` has `api/core/agent_base.md`. Links between
+  pages are absolute and point to the other pages' Markdown copies.
 - `llms-full.txt` at the site root: every page's Markdown in one file.
 
+`llmstxt_hooks.py` does the parts the plugin can't. The plugin calls the file's
+`preprocess()` on each page, which points links at the `.md` copies. The file also
+runs as an MkDocs hook after the plugin. That hook retitles the `llms.txt`
+links, then checks the output. `llms.txt` must list every HTML page except
+`404.html`, each listed `.md` file must exist, and each link in a copy must
+reach a file in the site. If not, the build fails. The check runs in every
+`mkdocs build` and `mkdocs gh-deploy`, so it gates both CI workflows.
+
 The `sections` in `mkdocs.yml` select the pages by glob (`index.md`, then
-`api/*.md`, where `*` also matches `/`). After the build, `gen.sh` checks that
-`llms.txt` lists every HTML page except `404.html` and that each listed `.md`
-file exists, and fails if not. If you add a page outside those globs, extend
-`sections`. `gh-deploy` adds `.nojekyll`, so GitHub Pages serves the `.md` files
-as they are.
+`api/*.md`, where `*` also matches `/`). If you add a page outside those globs,
+extend `sections`. `gh-deploy` adds `.nojekyll`, so GitHub Pages serves the
+`.md` files as they are.
 
 ## Deploy
 
@@ -122,8 +130,8 @@ Two workflows, both plain `actions/setup-python`, no Docker.
 `.github/workflows/reference-check.yml` builds on every PR touching `signalwire/`,
 `reference/`, or `pyproject.toml`. It runs `gen.sh --no-install`, whose strict
 `mkdocs build` fails the check on a generator error or a new unresolved
-cross-reference, and the `llms.txt` check after it fails on a page missing from
-`llms.txt`. It does **not** catch a
+cross-reference, and on a failed [`llms.txt` check](#llmstxt-and-markdown-pages).
+It does **not** catch a
 submodule with a missing runtime dependency: mkdocstrings analyses statically
 through griffe, so that module still renders a clean page. Build only:
 `contents: read`, never deploys.
