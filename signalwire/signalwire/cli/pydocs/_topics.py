@@ -507,6 +507,9 @@ front desk puts callers through to departments while they're taking calls,
 books appointments, takes messages and answers from documents; a personal
 assistant screens callers, puts them through with a whisper when the person
 takes the call, and otherwise takes a message or books time.
+
+`ReceptionistAgent`, `ConciergeAgent` and `FAQBotAgent` are deprecated: use
+`FrontDeskAgent`, and `InfoBotKnowledge` for answers.
 """,
     docs=(
         ("docs/agent_guide.md", "Prefab agents and their options"),

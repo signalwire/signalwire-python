@@ -45,6 +45,13 @@
 - `CallSimulator(request_fields=...)` adds fields such as `caller_id_num` to
   every tool request, as the platform sends them for a call.
 
+### Deprecated
+- `ConciergeAgent`, whose availability check answers yes for any listed
+  service with no calendar behind it; use `FrontDeskAgent` with
+  `Appointments` and `InfoBotKnowledge`. `ReceptionistAgent`; use
+  `FrontDeskAgent`. `FAQBotAgent`; use `InfoBotKnowledge`. Each still works,
+  and warns when it's made.
+
 ### Changed
 - A vouched tool's `data_supplied_by_user` argument now asks the model
   whether the user gave the details the call needs themselves. It asked

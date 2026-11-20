@@ -9,6 +9,7 @@ See LICENSE file in the project root for full license information.
 ReceptionistAgent - Prefab agent for greeting callers and transferring them to appropriate departments
 """
 
+import warnings
 from typing import Any
 
 from signalwire.core.agent_base import AgentBase
@@ -21,6 +22,8 @@ if TYPE_CHECKING:
 
 class ReceptionistAgent(AgentBase):
     """
+    Deprecated: use FrontDeskAgent, whose departments can say when they're taking calls and which takes a message when one isn't. It still works, and warns when made.
+
     A prefab agent designed to act as a receptionist that:
     1. Greets callers
     2. Collects basic information about their needs
@@ -58,6 +61,11 @@ class ReceptionistAgent(AgentBase):
             voice: Voice ID to use
             **kwargs: Additional arguments for AgentBase
         """
+        warnings.warn(
+            "ReceptionistAgent is deprecated: use FrontDeskAgent, whose departments can say when they're taking calls and which takes a message when one isn't.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         # Initialize the base agent
         super().__init__(name=name, route=route, use_pom=True, **kwargs)
 

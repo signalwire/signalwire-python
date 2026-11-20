@@ -2573,7 +2573,7 @@ Prefab agents are pre-configured agent implementations designed for specific use
 
 ### Built-in Prefabs
 
-The SDK includes several built-in prefab agents:
+The SDK includes several built-in prefab agents. `FrontDeskAgent` (a business's front desk: departments with opening hours, appointments, messages and answers from documents) and `PersonalAssistantAgent` (screens callers for one person and puts them through with a whisper) are built on `signalwire.operations`, against your own backend; see [Operations](operations.md#a-front-desk-and-a-personal-assistant).
 
 #### InfoGathererAgent
 
@@ -2598,6 +2598,8 @@ agent.serve(host="0.0.0.0", port=8000)
 
 #### FAQBotAgent
 
+Deprecated: use `InfoBotKnowledge`, which answers from any search you give it, a list of questions and answers included. `FAQBotAgent` still works, and warns when it's made.
+
 Answers questions based on a knowledge base:
 
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
@@ -2618,6 +2620,8 @@ agent.serve(host="0.0.0.0", port=8000)
 ```
 
 #### ConciergeAgent
+
+Deprecated: its availability check answers yes for any listed service, with no calendar behind it. Use `FrontDeskAgent`, with `Appointments` for bookings and `InfoBotKnowledge` for amenities and hours. `ConciergeAgent` still works, and warns when it's made.
 
 Routes users to specialized agents:
 
@@ -2672,6 +2676,8 @@ agent.serve(host="0.0.0.0", port=8000)
 ```
 
 #### ReceptionistAgent
+
+Deprecated: use `FrontDeskAgent`, whose departments can say when they're taking calls and which takes a message when one isn't. `ReceptionistAgent` still works, and warns when it's made.
 
 Handles call routing and department transfers:
 

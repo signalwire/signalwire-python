@@ -9,6 +9,7 @@ See LICENSE file in the project root for full license information.
 FAQBotAgent - Prefab agent for answering frequently asked questions
 """
 
+import warnings
 from typing import Any
 import json
 
@@ -22,6 +23,8 @@ if TYPE_CHECKING:
 
 class FAQBotAgent(AgentBase):
     """
+    Deprecated: use InfoBotKnowledge, which answers from any search you give it, a list of questions and answers included. It still works, and warns when made.
+
     A prefab agent designed to answer frequently asked questions based on
     a provided list of question/answer pairs.
 
@@ -68,6 +71,11 @@ class FAQBotAgent(AgentBase):
             route: HTTP route for this agent
             **kwargs: Additional arguments for AgentBase
         """
+        warnings.warn(
+            "FAQBotAgent is deprecated: use InfoBotKnowledge, which answers from any search you give it, a list of questions and answers included.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         # Initialize the base agent
         super().__init__(name=name, route=route, use_pom=True, **kwargs)
 
