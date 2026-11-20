@@ -128,17 +128,67 @@ def _as_response(result: "Response | dict[str, Any]") -> "Response":
 
 
 class SWMLService(ToolMixin):
-    """
-    Base class for creating and serving SWML documents.
+    """Base class for creating and serving SWML documents.
 
     This class provides core functionality for:
-    - Loading and validating SWML schema
+
+    - Loading and validating the SWML schema
     - Creating SWML documents
     - Setting up web endpoints for serving SWML
     - Managing authentication
     - Registering SWML functions
 
-    It serves as the foundation for more specialized services like AgentBase.
+    It is the foundation for more specialized services like `AgentBase`, which
+    extends it and inherits all the document generation, serving and
+    authentication features documented here. Most developers use `AgentBase`.
+    Use `SWMLService` when you need low-level control over SWML document
+    construction without the AI agent abstractions.
+
+    A service also hosts SWAIG tools directly. It owns a tool registry (through
+    `ToolMixin`) and serves a ``/swaig`` endpoint, so SWAIG functions can be
+    registered and dispatched without subclassing `AgentBase`.
+
+    The service builds a convenience method for every verb in the SWML schema,
+    such as ``service.play(url=...)`` and ``service.connect(to=...)``. They
+    call `add_verb()` internally. Use `add_verb()` directly to pass a pre-built
+    config or to add a custom verb.
+
+    Attributes:
+        name: Service name, used in logging and server startup messages.
+        route: HTTP route path where the service is reachable. Trailing
+            slashes are stripped.
+        host: Host address the web server binds to.
+        port: Port the web server binds to.
+        schema_utils: Schema validation utilities for SWML documents: verb
+            validation, verb name enumeration and schema property lookups.
+        verb_registry: Registry of specialized verb handlers, for verbs that
+            need logic beyond generic schema validation (such as ``ai``).
+        log: Structured logger bound to the service name.
+        security: Security configuration loaded from environment variables and
+            an optional config file. It controls SSL, CORS and the host
+            allowlist.
+        ssl_enabled: Whether SSL/HTTPS is enabled. Mirrors
+            ``security.ssl_enabled``.
+        ssl_cert_path: Path to the SSL certificate file. Mirrors
+            ``security.ssl_cert_path``.
+        ssl_key_path: Path to the SSL private key file. Mirrors
+            ``security.ssl_key_path``.
+        domain: Domain name for SSL certificates. Mirrors ``security.domain``.
+
+    Note:
+        The constructor's ``basic_auth``, ``schema_path``, ``config_file`` and
+        ``schema_validation`` arguments aren't kept as public attributes. Use
+        `get_basic_auth_credentials()` for the credentials and
+        `full_validation_enabled` for the validation status.
+
+    Example:
+        ```python
+        service = SWMLService(name="ivr", route="/swml", port=8080)
+        service.add_verb("answer", {})
+        service.add_verb("play", {"url": "https://example.com/welcome.mp3"})
+        service.add_verb("hangup", {})
+        service.serve()
+        ```
     """
 
     def __init__(
@@ -152,19 +202,29 @@ class SWMLService(ToolMixin):
         config_file: str | None = None,
         schema_validation: bool = True,
     ):
-        """
-        Initialize a new SWML service
+        """Initialize a new SWML service.
 
         Args:
-            name: Service name/identifier
-            route: HTTP route path for this service
-            host: Host to bind the web server to
-            port: Port to bind the web server to
-            basic_auth: Optional (username, password) tuple for basic auth
-            schema_path: Optional path to the schema file
-            config_file: Optional path to configuration file
-            schema_validation: Enable schema validation. Default True. Can also be
-                              disabled via SWML_SKIP_SCHEMA_VALIDATION=1 env var.
+            name: Service name/identifier.
+            route: HTTP route path for this service. Trailing slashes are
+                stripped. Defaults to "/".
+            host: Host to bind the web server to. Defaults to "0.0.0.0".
+            port: Port to bind the web server to. When None, the ``PORT``
+                environment variable, or 3000 if that isn't set.
+            basic_auth: Optional ``(username, password)`` tuple for basic auth.
+                Without it, the credentials come from the
+                ``SWML_BASIC_AUTH_USER`` and ``SWML_BASIC_AUTH_PASSWORD``
+                environment variables, or are generated at startup.
+            schema_path: Optional path to the schema file. When None, the
+                service looks for the schema that ships with the SDK.
+            config_file: Optional path to a configuration file.
+            schema_validation: Enable schema validation. Default True. Can also
+                be disabled via the ``SWML_SKIP_SCHEMA_VALIDATION=1``
+                environment variable.
+
+        Raises:
+            ValueError: If ``schema_path`` is given and the schema can't be
+                loaded.
         """
         self._schema_validation = schema_validation
         self.name = name
@@ -299,8 +359,7 @@ class SWMLService(ToolMixin):
         return method
 
     def __getattr__(self, name: str) -> Any:
-        """
-        Dynamically generate and return SWML verb methods when accessed
+        """Dynamically generate and return SWML verb methods when accessed.
 
         This method is called when an attribute lookup fails through the normal
         mechanisms. It checks if the attribute name corresponds to a SWML verb
@@ -381,11 +440,11 @@ class SWMLService(ToolMixin):
 
     @property
     def full_validation_enabled(self) -> bool:
-        """
-        Check if full JSON Schema validation is enabled.
+        """Whether full JSON Schema validation is active (read-only).
 
-        Returns:
-            True if schema validator is initialized
+        It is True when the schema validator is initialized. The
+        ``schema_validation`` constructor argument and the
+        ``SWML_SKIP_SCHEMA_VALIDATION`` environment variable control it.
         """
         return (
             self.schema_utils.full_validation_available if self.schema_utils else False
@@ -466,21 +525,37 @@ class SWMLService(ToolMixin):
         return {"version": "1.0.0", "sections": {"main": []}}
 
     def reset_document(self) -> None:
-        """
-        Reset the current document to an empty state
+        """Reset the current document to an empty state.
+
+        This clears all sections and verbs and leaves only an empty ``main``
+        section. Use it to rebuild the document without creating a new service.
+
+        Example:
+            ```python
+            service.add_verb("play", {"url": "https://example.com/old.mp3"})
+            service.reset_document()
+            service.add_verb("answer", {})
+            ```
         """
         self._current_document = self._create_empty_document()
 
     def add_verb(self, verb_name: str, config: Any) -> bool:
-        """
-        Add a verb to the main section of the current document
+        """Add a verb to the main section of the current document.
+
+        The verb is validated against the SWML schema, or against its custom
+        handler, before it is appended. For a verb with a registered handler,
+        such as ``ai``, the handler validates the verb's shape and the
+        top-level keys are then checked against the schema, so a misspelled or
+        unknown top-level key raises. Nested shapes such as ``ai.params`` are
+        left to the handler.
 
         Args:
-            verb_name: The name of the verb to add
+            verb_name: The name of the verb to add, such as "answer", "play",
+                "ai", "hangup" or "connect".
             config: The verb's body: an object for most verbs, or the string,
                 number or array some take, such as ``label``'s name,
                 ``unset``'s variable names, ``cond``'s conditions or
-                ``sleep``'s duration
+                ``sleep``'s duration.
 
         Returns:
             True. A body that isn't valid raises rather than being dropped.
@@ -489,6 +564,16 @@ class SWMLService(ToolMixin):
             SchemaValidationError: When schema validation is on and the body
                 doesn't fit the verb.
             TypeError: For a body that isn't a JSON value.
+
+        Example:
+            ```python
+            service = SWMLService(name="ivr")
+            service.add_verb("answer", {})
+            service.add_verb("play", {"url": "https://example.com/greeting.mp3"})
+            service.add_verb("sleep", 2000)
+            service.add_verb("hangup", {"reason": "completed"})
+            print(service.render_document())
+            ```
         """
         self._current_document["sections"]["main"].append(
             self._verb_entry(verb_name, config)
@@ -533,14 +618,26 @@ class SWMLService(ToolMixin):
         return {verb_name: config}
 
     def add_section(self, section_name: str) -> bool:
-        """
-        Add a new section to the document
+        """Add a new empty section to the document.
+
+        Sections are named containers for ordered lists of verbs. Every
+        document starts with a ``main`` section.
 
         Args:
-            section_name: Name of the section to add
+            section_name: Name of the section to add. It must be unique within
+                the document.
 
         Returns:
-            True if the section was added, False if it already exists
+            True if the section was added, False if it already exists.
+
+        Example:
+            ```python
+            service.add_section("fallback")
+            service.add_verb_to_section(
+                "fallback", "play", {"url": "https://example.com/sorry.mp3"}
+            )
+            service.add_verb_to_section("fallback", "hangup", {})
+            ```
         """
         if section_name in self._current_document["sections"]:
             return False
@@ -551,13 +648,15 @@ class SWMLService(ToolMixin):
     def add_verb_to_section(
         self, section_name: str, verb_name: str, config: Any
     ) -> bool:
-        """
-        Add a verb to a specific section
+        """Add a verb to a specific section.
+
+        If the section doesn't exist, it is created before the verb is
+        appended. Validation is the same as for `add_verb()`.
 
         Args:
-            section_name: Name of the section to add to, created if it's new
-            verb_name: The name of the verb to add
-            config: The verb's body, as for ``add_verb``
+            section_name: Name of the section to add to, created if it's new.
+            verb_name: The name of the verb to add.
+            config: The verb's body, as for `add_verb()`.
 
         Returns:
             True. A body that isn't valid raises rather than being dropped.
@@ -566,6 +665,16 @@ class SWMLService(ToolMixin):
             SchemaValidationError: When schema validation is on and the body
                 doesn't fit the verb.
             TypeError: For a body that isn't a JSON value.
+
+        Example:
+            ```python
+            service.add_verb("answer", {})
+            service.add_verb_to_section(
+                "transfer",
+                "connect",
+                {"to": "+15551234567", "from": "+15559876543"},
+            )
+            ```
         """
         entry = self._verb_entry(verb_name, config)
         if section_name not in self._current_document["sections"]:
@@ -574,39 +683,108 @@ class SWMLService(ToolMixin):
         return True
 
     def get_document(self) -> dict[str, Any]:
-        """
-        Get the current SWML document
+        """Get the current SWML document as a Python dictionary.
 
         Returns:
-            The current SWML document as a dictionary
+            The current SWML document, with ``version`` and ``sections`` keys.
+            This is the live document, not a copy: ``{"version": "1.0.0",
+            "sections": {"main": [{"answer": {}}, ...]}}``.
+
+        Example:
+            ```python
+            service.add_verb("answer", {})
+            doc = service.get_document()
+            print(doc["version"], len(doc["sections"]["main"]))
+            ```
         """
         return self._current_document
 
     def render_document(self) -> str:
-        """
-        Render the current SWML document as a JSON string
+        """Render the current SWML document as a JSON string.
+
+        This is the serialized form returned to SignalWire when a call requests
+        SWML.
 
         Returns:
-            The current SWML document as a JSON string
+            The current SWML document as a JSON string.
+
+        Example:
+            ```python
+            service.add_verb("answer", {})
+            print(service.render_document())
+            ```
         """
         return json.dumps(self._current_document)
 
     def register_verb_handler(self, handler: SWMLVerbHandler) -> None:
-        """
-        Register a custom verb handler
+        """Register a custom verb handler.
+
+        A handler gives specialized validation and configuration for a SWML
+        verb. When a verb with a registered handler is added with `add_verb()`,
+        the handler's ``validate_config()`` is used instead of generic schema
+        validation. The SDK ships a built-in handler for the ``ai`` verb.
+        Register your own for custom verbs or to override the default
+        validation, for example for mutually exclusive parameters or
+        conditional requirements.
+
+        After the handler accepts a verb's config, `add_verb()` also checks the
+        config's top-level keys against the SWML schema, so a verb that isn't
+        in the schema is still rejected.
 
         Args:
-            handler: The verb handler to register
+            handler: An instance of a `SWMLVerbHandler` subclass. It
+                implements ``get_verb_name()``, which returns the verb name
+                it manages; ``validate_config(config)``, which returns an
+                ``(is_valid, errors)`` tuple; and ``build_config(**kwargs)``,
+                which returns a configuration dict for the verb.
+
+        Example:
+            ```python
+            class PlayHandler(SWMLVerbHandler):
+                def get_verb_name(self):
+                    return "play"
+
+                def validate_config(self, config):
+                    errors = []
+                    if "url" not in config and "urls" not in config:
+                        errors.append("play needs a url")
+                    return len(errors) == 0, errors
+
+                def build_config(self, **kwargs):
+                    return {"url": kwargs.get("url")}
+
+            service.register_verb_handler(PlayHandler())
+            service.add_verb("play", {"url": "https://example.com/welcome.mp3"})
+            ```
         """
         self.verb_registry.register_handler(handler)
 
     def as_router(self) -> "HostAppRouter":
-        """
-        Create a router to embed this service's routes in a host web app.
+        """Create a router to embed this service's routes in a host web app.
+
+        Use it to mount the service into an existing FastAPI application,
+        rather than running a standalone server with `serve()`. It suits
+        production deployments where you control the ASGI application
+        lifecycle, or hosting several services on one FastAPI instance (see
+        `AgentServer`). The router handles GET and POST at the root path and
+        at every registered routing callback path. It also registers the GET
+        and POST ``/swaig`` endpoint, so SWAIG tools hosted on the service are
+        reachable when it is mounted this way.
 
         Returns:
-            HostAppRouter: a FastAPI ``APIRouter`` subclass (behaviourally an
-            ``APIRouter``; the named type is the cross-port ``as_router`` contract).
+            A `HostAppRouter`, a FastAPI ``APIRouter`` subclass with all the
+            endpoints registered. It adds no behavior; the subclass gives the
+            return type a stable name.
+
+        Example:
+            ```python
+            from fastapi import FastAPI
+
+            app = FastAPI()
+            service = SWMLService(name="ivr", route="/ivr")
+            service.add_verb("answer", {})
+            app.include_router(service.as_router(), prefix="/ivr")
+            ```
         """
         router = HostAppRouter(redirect_slashes=False)
 
@@ -901,25 +1079,49 @@ class SWMLService(ToolMixin):
         callback_fn: Callable[[dict[str, Any], dict[str, Any]], str | None],
         path: str = "/sip",
     ) -> None:
-        """
-        Register a callback function that will be called to determine routing
-        based on POST data.
+        """Register a callback that decides routing from the POST data.
 
-        When a routing callback is registered, an endpoint at the specified path is automatically
-        created that will handle requests. This endpoint will use the callback to
-        determine if the request should be processed by this service or redirected.
+        When a request arrives at the path, the callback inspects the POST
+        body and decides whether to route the request to a different endpoint
+        or let normal processing continue. It is mostly used for SIP routing,
+        where the destination depends on the incoming SIP URI.
 
-        The callback receives the parsed request body dictionary and the request
-        headers dictionary — ``callback_fn(body, headers)`` — and returns:
-        - A route string if it should be routed to a different endpoint
-        - None if normal processing should continue
+        An endpoint at the path is created automatically when the service
+        starts. The path is registered by this call, but the FastAPI route is
+        created when `serve()` runs or `as_router()` builds the router, so
+        register all callbacks before you start the server.
 
-        This framework-free ``(body, headers) -> str | None`` shape matches the
-        decomposed :meth:`handle_request` core and the other SDK ports.
+        The callback receives the parsed request body and the request headers,
+        both as dicts, ``callback_fn(body, headers)``, and returns:
+
+        - A route string, to redirect the request to a different endpoint.
+          The service answers with HTTP 307, which keeps the POST method and
+          body.
+        - None, to continue normal SWML document serving.
+
+        This is also how you receive the webhook callbacks of an
+        ``ai_sidecar`` verb: register a callback at the path the verb's
+        ``url`` points to, such as ``/events``, and return None to acknowledge
+        each one. The callback's body wraps the event under ``sidecar_event``.
 
         Args:
             callback_fn: The callback function to register, ``(body, headers)``.
-            path: The path where this callback should be registered (default: "/sip")
+            path: The URL path where the callback is registered. It is
+                normalized to start with "/" and have no trailing slash.
+                Defaults to "/sip".
+
+        Example:
+            ```python
+            def route_sip_call(body, headers):
+                username = SWMLService.extract_sip_username(body)
+                if username == "sales":
+                    return "/agents/sales"
+                if username == "support":
+                    return "/agents/support"
+                return None
+
+            service.register_routing_callback(route_sip_call, path="/sip")
+            ```
         """
         # Normalize the path to ensure consistent lookup
         normalized_path = path.rstrip("/")
@@ -931,17 +1133,28 @@ class SWMLService(ToolMixin):
 
     @staticmethod
     def extract_sip_username(request_body: dict[str, Any]) -> str | None:
-        """
-        Extract SIP username from request body
+        """Extract the SIP username from a request body.
 
-        This extracts the username portion of a SIP URI from the 'to' field
-        in the call data of a request body.
+        This extracts the username portion of the ``call.to`` field. It
+        handles ``sip:username@domain``, ``tel:+1234567890`` and plain string
+        formats.
 
         Args:
-            request_body: The parsed JSON body of the request
+            request_body: The parsed JSON body of the request. It is expected
+                to hold a ``call.to`` field with a SIP URI, TEL URI or phone
+                number string.
 
         Returns:
-            The extracted SIP username, or None if not found
+            The extracted username or phone number, or None if ``call.to`` is
+            missing or can't be parsed.
+
+        Example:
+            ```python
+            body = {"call": {"to": "sip:sales@example.sip.signalwire.com"}}
+            SWMLService.extract_sip_username(body)  # "sales"
+            body = {"call": {"to": "tel:+15551234567"}}
+            SWMLService.extract_sip_username(body)  # "+15551234567"
+            ```
         """
         try:
             # Check if we have call data with a 'to' field
@@ -978,32 +1191,44 @@ class SWMLService(ToolMixin):
         headers: dict[str, str],
         body: dict[str, Any] | None = None,
     ) -> tuple[int, dict[str, str], str]:
-        """
-        Framework-free request-dispatch core.
+        """Dispatch a request over plain values instead of FastAPI objects.
 
-        This is the primitive dispatch surface the SDK ports share (mirrors, e.g.,
-        the dotnet ``(int, Dictionary, string) HandleRequest(method, path, headers,
-        body)``). It performs proxy detection, basic-auth, the routing-callback
-        check, and ``on_request`` modification exactly as the FastAPI
-        :meth:`_handle_request` path does, but over plain primitives instead of
-        FastAPI ``Request``/``Response`` objects.
-
-        The FastAPI :meth:`_handle_request` adapter delegates here so both paths
-        produce identical responses (same status codes, same headers, same body).
+        It performs proxy detection, basic auth, the routing callback check
+        and the `on_request()` modification, then renders the document. The
+        FastAPI routes delegate to the same logic, so both paths return
+        identical responses (same status codes, headers and body). Basic auth
+        is always on: pass ``basic_auth`` to the constructor and send a
+        matching ``Authorization`` header, or the call returns 401.
 
         Args:
-            method: HTTP method, e.g. ``"GET"`` or ``"POST"``.
-            url: The full request URL as a string (used for proxy detection and
-                to derive the callback path).
+            method: HTTP method, such as ``"GET"`` or ``"POST"``.
+            url: The full request URL. It is used for proxy detection and to
+                match a registered routing callback path.
             headers: Request headers as a plain dict.
-            body: The already-parsed JSON body for POST requests, or ``None``.
+            body: The already-parsed JSON body for POST requests, or None.
 
         Returns:
-            A ``(status_code, response_headers, body_string)`` triple. The
-            body_string is a JSON document for 200 responses; for a routing
-            redirect it is empty and ``status_code`` is 307 with a ``Location``
-            header; for an auth failure it is a JSON error with status 401 and a
-            ``WWW-Authenticate: Basic`` header.
+            A ``(status_code, response_headers, body)`` triple. The status is
+            200 with the SWML document as a JSON string; 307 with a
+            ``Location`` header and an empty body when a routing callback
+            returned a destination; or 401 with ``WWW-Authenticate: Basic`` and
+            a JSON error when basic auth fails.
+
+        Example:
+            ```python
+            import base64
+
+            service = SWMLService(
+                name="greeting", route="/greeting", basic_auth=("greeting", "s3cret")
+            )
+            service.add_verb("answer", {})
+            token = base64.b64encode(b"greeting:s3cret").decode()
+            status, headers, body = service.handle_request(
+                "GET",
+                "https://example.com/greeting",
+                {"authorization": f"Basic {token}"},
+            )
+            ```
         """
         callback_path = self._callback_path_for_url(url)
         return self._handle_request_core(
@@ -1214,17 +1439,46 @@ class SWMLService(ToolMixin):
         request_data: dict[str, Any] | None = None,
         callback_path: str | None = None,
     ) -> dict[str, Any] | None:
-        """
-        Called when SWML is requested, with request data when available
+        """Hook called each time SWML is requested, before the document is returned.
 
-        Subclasses can override this to inspect or modify SWML based on the request
+        Override it in a subclass to inspect the request and modify the SWML
+        document per request. That gives dynamic SWML that varies with who is
+        calling, which SIP route matched, or any data in the POST body. It is
+        called on GET and POST requests alike.
+
+        The default implementation returns None, which serves the document
+        unchanged. When you return a dict, each of its keys that the document
+        already has, such as ``sections``, replaces the document's value for
+        that key. Other keys are ignored.
 
         Args:
-            request_data: Optional dictionary containing the parsed POST body
-            callback_path: Optional callback path
+            request_data: The parsed POST body as a dict, typically call
+                metadata such as ``call.to``, ``call.from`` and
+                ``call.headers``. For a GET request it is an empty dict.
+            callback_path: The routing callback path that matched the request,
+                when it came through a path registered with
+                `register_routing_callback()`. None for the main route.
 
         Returns:
-            Optional dict to modify/augment the SWML document
+            None to serve the document unchanged, or a dict of top-level keys
+            to replace in the document.
+
+        Example:
+            ```python
+            class DynamicService(SWMLService):
+                def on_request(self, request_data=None, callback_path=None):
+                    caller = (request_data or {}).get("call", {}).get("from", "")
+                    if caller.startswith("+1555"):
+                        return {
+                            "sections": {
+                                "main": [
+                                    {"answer": {}},
+                                    {"play": {"url": "https://example.com/vip.mp3"}},
+                                ]
+                            }
+                        }
+                    return None
+            ```
         """
         # Default implementation does nothing
         return None
@@ -1238,16 +1492,38 @@ class SWMLService(ToolMixin):
         ssl_enabled: bool | None = None,
         domain: str | None = None,
     ) -> None:
-        """
-        Start a web server for this service
+        """Start a web server for this service.
+
+        This starts a FastAPI/Uvicorn server that serves the SWML document
+        over HTTP. It is a blocking call that runs until the server is
+        stopped. The server answers GET and POST at the configured route with
+        the current SWML document as JSON. On startup it prints the service
+        URL and the basic auth username, and the URLs of any routing callback
+        endpoints.
+
+        Warning:
+            `serve()` blocks the current thread. For production deployments,
+            consider `as_router()` to integrate with an existing ASGI
+            application instead.
 
         Args:
-            host: Host to bind to (defaults to self.host)
-            port: Port to bind to (defaults to self.port)
-            ssl_cert: Path to SSL certificate file
-            ssl_key: Path to SSL key file
-            ssl_enabled: Whether to enable SSL
-            domain: Domain name for SSL certificate
+            host: Host to bind to. When None, the constructor's ``host``.
+            port: Port to bind to. When None, the constructor's ``port``.
+            ssl_cert: Path to an SSL certificate file. Overrides the
+                ``SWML_SSL_CERT_PATH`` environment variable.
+            ssl_key: Path to an SSL private key file. Overrides the
+                ``SWML_SSL_KEY_PATH`` environment variable.
+            ssl_enabled: Explicitly enable or disable SSL. Overrides the
+                ``SWML_SSL_ENABLED`` environment variable.
+            domain: Domain name for the SSL certificate, used for URL
+                generation when SSL is enabled.
+
+        Example:
+            ```python
+            service = SWMLService(name="my-service", route="/swml")
+            service.add_verb("answer", {})
+            service.serve(host="127.0.0.1", port=8080)
+            ```
         """
         import uvicorn
 
@@ -1393,8 +1669,13 @@ class SWMLService(ToolMixin):
             uvicorn.run(self._app, host=host, port=port)
 
     def stop(self) -> None:
-        """
-        Stop the web server
+        """Set the service's internal running flag to False.
+
+        Warning:
+            This doesn't stop a running Uvicorn server. `serve()` calls
+            ``uvicorn.run()``, which blocks in its own event loop and never
+            checks the flag. To stop the server, send ``SIGINT`` or
+            ``SIGTERM`` to the process.
         """
         self._running = False
 
@@ -1453,14 +1734,31 @@ class SWMLService(ToolMixin):
     def get_basic_auth_credentials(
         self, include_source: bool = False
     ) -> tuple[str, str] | tuple[str, str, str]:
-        """
-        Get the basic auth credentials
+        """Get the HTTP basic auth credentials of this service.
+
+        Every service has credentials: passed to the constructor, read from the
+        ``SWML_BASIC_AUTH_USER`` and ``SWML_BASIC_AUTH_PASSWORD`` environment
+        variables, or generated at startup.
 
         Args:
-            include_source: Whether to include the source of the credentials
+            include_source: When True, return the credential source as a third
+                element. The source is "provided" for credentials passed to
+                the constructor, "environment" for the environment variables,
+                "config file" for a config file, or "generated" for
+                credentials created at startup. Defaults to False.
 
         Returns:
-            (username, password) tuple or (username, password, source) tuple if include_source is True
+            A ``(username, password)`` tuple, or a
+            ``(username, password, source)`` tuple when ``include_source`` is
+            True.
+
+        Example:
+            ```python
+            username, password = service.get_basic_auth_credentials()
+            username, password, source = service.get_basic_auth_credentials(
+                include_source=True
+            )
+            ```
         """
         username, password = self._basic_auth
 
@@ -1791,13 +2089,26 @@ class SWMLService(ToolMixin):
             )
 
     def manual_set_proxy_url(self, proxy_url: str) -> None:
-        """
-        Manually set the proxy URL base for webhook callbacks
+        """Manually set the proxy URL base for webhook callbacks.
 
-        This can be called at runtime to set or update the proxy URL
+        Call it when automatic proxy detection doesn't work for your
+        deployment, such as behind a custom load balancer or tunneling service.
+        It can be called at runtime to set or update the proxy URL, and it
+        overrides a value from the ``SWML_PROXY_URL_BASE`` environment variable
+        or one detected from request headers.
+
+        The proxy URL is used to build the webhook URLs for SWAIG function
+        callbacks, the post-prompt URL and other webhook endpoints.
 
         Args:
-            proxy_url: The base URL to use for webhooks (e.g., https://example.ngrok.io)
+            proxy_url: The base URL to use for webhooks, such as
+                ``"https://my-agent.ngrok.io"``. Trailing slashes are
+                stripped. An empty value is ignored.
+
+        Example:
+            ```python
+            service.manual_set_proxy_url("https://abc123.ngrok.io")
+            ```
         """
         if proxy_url:
             self._proxy_url_base = proxy_url.rstrip("/")

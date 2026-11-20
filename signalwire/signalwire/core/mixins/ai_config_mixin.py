@@ -30,13 +30,23 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
 
     def add_hint(self, hint: str) -> "AgentBase":
         """
-        Add a simple string hint to help the AI agent understand certain words better
+        Add a single speech recognition hint.
+
+        Hints boost the speech recognition (ASR) engine's accuracy for specific words
+        or phrases that it may otherwise misrecognize, such as product names,
+        technical jargon, or uncommon proper nouns. Empty or non-string values are
+        ignored.
 
         Args:
-            hint: The hint string to add
+            hint: A word or phrase to boost recognition accuracy for.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.add_hint("SignalWire")
+            ```
         """
         if isinstance(hint, str) and hint:
             self._hints.append(hint)
@@ -44,13 +54,20 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
 
     def add_hints(self, hints: list[str]) -> "AgentBase":
         """
-        Add multiple string hints
+        Add multiple speech recognition hints at once.
+
+        Empty or non-string entries in the list are skipped.
 
         Args:
-            hints: List of hint strings
+            hints: A list of words or phrases to boost recognition accuracy for.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.add_hints(["SWML", "SWAIG", "FreeSWITCH"])
+            ```
         """
         if hints and isinstance(hints, list):
             for hint in hints:
@@ -62,16 +79,33 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
         self, hint: str, pattern: str, replace: str, ignore_case: bool = False
     ) -> "AgentBase":
         """
-        Add a complex hint with pattern matching
+        Add a hint with pattern matching and replacement.
+
+        This lets you intercept specific speech recognition output and rewrite it
+        before it reaches the AI. It is useful for correcting consistent
+        misrecognitions or normalizing variations. The hint is ignored unless
+        `hint`, `pattern` and `replace` are all non-empty.
 
         Args:
-            hint: The hint to match
-            pattern: Regular expression pattern
-            replace: Text to replace the hint with
-            ignore_case: Whether to ignore case when matching
+            hint: The hint string to match against recognition output.
+            pattern: Regular expression pattern to match.
+            replace: Replacement text to substitute when the pattern matches.
+            ignore_case: Whether to ignore case when matching the pattern. Default
+                False.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            # Correct a common misrecognition
+            agent.add_pattern_hint(
+                hint="SignalWire",
+                pattern=r"signal\\s*wire|signal\\s*wired",
+                replace="SignalWire",
+                ignore_case=True,
+            )
+            ```
         """
         if hint and pattern and replace:
             self._hints.append(
@@ -96,38 +130,78 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
         params: dict[str, Any] | None = None,
     ) -> "AgentBase":
         """
-        Add a language configuration to support multilingual conversations
+        Add a language configuration with voice settings.
+
+        The agent uses these configurations to support multilingual conversations
+        with the matching text-to-speech voices. Each call appends one entry to the
+        `languages` array of the AI verb in the SWML document.
+
+        Name the engine, either in the `voice` string or through `engine`. A bare
+        voice name such as `"en-US-Neural2-F"` is resolved against a default
+        engine, and that default can change.
+
+        Voice formats:
+
+        - `engine.voice:model`, for example `"elevenlabs.josh:eleven_turbo_v2_5"`.
+          The SDK splits a string that contains both `.` and `:` into the engine,
+          voice and model fields.
+        - `engine.voice`, for example `"rime.spore"`. The string is passed through
+          as it is.
+        - A bare voice name such as `"josh"`, together with the `engine` or `model`
+          argument. When either is given, `voice` is used as it is.
 
         Args:
-            name: Name of the language (e.g., "English", "French")
-            code: Language code (e.g., "en-US", "fr-FR")
-            voice: TTS voice to use. Can be a simple name (e.g., "en-US-Neural2-F")
-                  or a combined format "engine.voice:model" (e.g., "elevenlabs.josh:eleven_turbo_v2_5")
-            speech_fillers: Optional list of filler phrases for natural speech
-            function_fillers: Optional list of filler phrases during function calls
-            engine: Optional explicit engine name (e.g., "elevenlabs", "rime")
-            model: Optional explicit model name (e.g., "eleven_turbo_v2_5", "arcana")
-            params: Optional per-language params dict (engine-specific tuning,
-                voice settings, etc.). Emitted as the language object's
-                ``params`` key in SWML.
+            name: Human-readable language name (e.g., "English", "French").
+            code: Language code (e.g., "en-US", "fr-FR", "es-MX").
+            voice: TTS voice identifier, in one of the formats above.
+            speech_fillers: Filler phrases used during natural speech pauses
+                (e.g., ["Um...", "Let me see..."]).
+            function_fillers: Filler phrases spoken while SWAIG functions run
+                (e.g., ["One moment please...", "Looking that up..."]). When only
+                one of the two filler lists is given, it is emitted under the
+                deprecated `fillers` key instead.
+            engine: Explicit TTS engine name (e.g., "elevenlabs", "rime"). When
+                given, the combined voice string is not parsed.
+            model: Explicit TTS model name (e.g., "eleven_turbo_v2_5"). When
+                given, the combined voice string is not parsed.
+            params: Per-language params for engine-specific tuning and voice
+                settings. Emitted as the language object's `params` key in SWML,
+                and only when non-empty.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
 
-        Examples:
-            # Simple voice name
-            agent.add_language("English", "en-US", "en-US-Neural2-F")
+        Example:
+            ```python
+            # Engine and voice
+            agent.add_language("English", "en-US", "rime.spore")
 
-            # Explicit parameters
-            agent.add_language("English", "en-US", "josh", engine="elevenlabs", model="eleven_turbo_v2_5")
+            # Combined engine, voice and model
+            agent.add_language(
+                "English", "en-US", "elevenlabs.josh:eleven_turbo_v2_5"
+            )
 
-            # Combined format
-            agent.add_language("English", "en-US", "elevenlabs.josh:eleven_turbo_v2_5")
+            # Explicit engine and model
+            agent.add_language(
+                "English", "en-US", "josh",
+                engine="elevenlabs",
+                model="eleven_turbo_v2_5",
+            )
 
-            # Per-language params (engine-specific knobs)
-            agent.add_language("English", "en-US", "josh",
-                               engine="elevenlabs",
-                               params={"stability": 0.5, "similarity_boost": 0.75})
+            # With fillers
+            agent.add_language(
+                "English", "en-US", "rime.spore",
+                speech_fillers=["Um...", "Let me think..."],
+                function_fillers=["One moment please...", "Looking that up..."],
+            )
+
+            # With per-language params
+            agent.add_language(
+                "English", "en-US", "josh",
+                engine="elevenlabs",
+                params={"stability": 0.5, "similarity_boost": 0.75},
+            )
+            ```
         """
         language: dict[str, Any] = {"name": name, "code": code}
 
@@ -175,17 +249,29 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
 
     def set_language_params(self, code: str, params: dict[str, Any]) -> "AgentBase":
         """
-        Set (or replace) the per-language ``params`` dict on an already-added
-        language. Useful when language entries are built up via add_language()
-        first and engine-specific tuning is added later (e.g., from a config
-        loader). Returns self for chaining.
+        Set or replace the engine-specific `params` on an added language.
+
+        Useful when language entries are built with `add_language()` first and
+        engine-specific tuning is added later, for example from a config loader.
+        The params are emitted as the language object's `params` key in SWML.
+        Read them back with `get_language_params()`.
 
         Args:
-            code: Language code as previously passed to ``add_language`` (e.g. ``"en-US"``).
-            params: Engine-specific params dict to attach. Empty dict removes the key.
+            code: Language code as previously passed to `add_language()` (e.g.,
+                "en-US").
+            params: Engine-specific params to attach. An empty dict removes the
+                `params` key.
 
         Returns:
-            Self for method chaining. No-op if the code isn't found.
+            This agent, for chaining. Nothing changes if the code isn't found.
+
+        Example:
+            ```python
+            agent.add_language("English", "en-US", "josh", engine="elevenlabs")
+            agent.set_language_params(
+                "en-US", {"stability": 0.5, "similarity_boost": 0.75}
+            )
+            ```
         """
         for language in self._languages:
             if language.get("code") == code:
@@ -198,13 +284,26 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
 
     def get_language_params(self, code: str) -> dict[str, Any] | None:
         """
-        Read the per-language ``params`` dict for a previously-added language.
+        Read the engine-specific `params` of a language that was already added.
+
+        Set or replace the params with `set_language_params()`. The params map to
+        the `params` key of the matching entry in the `languages` array of the SWML
+        AI verb.
 
         Args:
-            code: Language code as previously passed to ``add_language``.
+            code: Language code as previously passed to `add_language()` (e.g.,
+                "en-US").
 
         Returns:
-            The params dict if set, ``None`` otherwise (including when the code is unknown).
+            The params dict if set, `None` otherwise, including when the code is
+            unknown.
+
+        Example:
+            ```python
+            agent.add_language("English", "en-US", "josh", engine="elevenlabs")
+            agent.set_language_params("en-US", {"stability": 0.5})
+            params = agent.get_language_params("en-US")  # {"stability": 0.5}
+            ```
         """
         for language in self._languages:
             if language.get("code") == code:
@@ -213,13 +312,28 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
 
     def set_languages(self, languages: list[dict[str, Any]]) -> "AgentBase":
         """
-        Set all language configurations at once
+        Replace all language configurations at once with raw dictionaries.
+
+        To let the caller switch languages mid-call instead, use
+        `set_multilingual()`; the two are mutually exclusive. An empty list is
+        ignored and leaves the current languages in place.
 
         Args:
-            languages: List of language configuration dictionaries
+            languages: List of language configuration dictionaries. Each should
+                include `name`, `code` and `voice` keys, and optionally `engine`,
+                `model`, `speech_fillers` and `function_fillers`.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.set_languages([
+                {"name": "English", "code": "en-US", "voice": "rime.spore"},
+                {"name": "Spanish", "code": "es-MX", "voice": "rime.luna"},
+                {"name": "French", "code": "fr-FR", "voice": "rime.soleil"},
+            ])
+            ```
         """
         if languages and isinstance(languages, list):
             self._languages = languages
@@ -227,20 +341,43 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
 
     def set_multilingual(self, config: dict[str, Any]) -> "AgentBase":
         """
-        Configure ASR-driven multilingual mode (Mode B).
+        Configure recognizer-driven multilingual mode.
 
-        Emits a top-level ``multilingual`` object on the AI verb. The recognizer
-        runs in code-switching mode and the agent answers in whatever language
-        the caller actually spoke - the model does not pick the language. This is
-        mutually exclusive with set_languages(); if both are set the server uses
-        ``multilingual`` and ignores ``languages``.
+        The speech recognizer runs in code-switching mode and the agent answers in
+        whichever language the caller actually spoke; the model doesn't pick the
+        language. The SDK emits the object as the top-level `multilingual` key of
+        the AI verb.
+
+        This is mutually exclusive with `set_languages()` and `add_language()`. If
+        both are set, the platform uses `multilingual` and ignores `languages`.
+
+        In multilingual mode, speech recognition hints added with `add_hints()` or
+        `add_dynamic_hints()` are not used, and no error is returned. Pattern hints
+        from `add_pattern_hint()` still rewrite what the agent hears.
 
         Args:
-            config: The multilingual config object (languages, allowed,
-                start_language, min_switch_words, fillers, etc.).
+            config: The multilingual configuration object, passed through
+                unchanged. Its keys include the language list (`languages`), the
+                languages the caller may switch to (`allowed`), the starting
+                language (`start_language`), switching thresholds such as
+                `min_switch_words`, and `fillers`. An empty or non-dict value is
+                ignored.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.set_multilingual({
+                "start_language": "en",
+                "allowed": ["en", "es", "fr"],
+                "languages": [
+                    {"language": "default", "voice": "elevenlabs.rachel"},
+                    {"language": "es", "voice": "elevenlabs.maria"},
+                    {"language": "fr", "voice": "gcloud.fr-FR-Neural2-B"},
+                ],
+            })
+            ```
         """
         if config and isinstance(config, dict):
             self._multilingual = config
@@ -250,15 +387,27 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
         self, replace: str, with_text: str, ignore_case: bool = False
     ) -> "AgentBase":
         """
-        Add a pronunciation rule to help the AI speak certain words correctly
+        Add a pronunciation rule that tells the TTS engine how to say a word.
+
+        Useful for brand names, acronyms, and technical terms that text-to-speech
+        engines commonly mispronounce. The rule is ignored unless both `replace`
+        and `with_text` are non-empty.
 
         Args:
-            replace: The expression to replace
-            with_text: The phonetic spelling to use instead
-            ignore_case: Whether to ignore case when matching
+            replace: The expression to match in the AI's output text.
+            with_text: The phonetic spelling or alternative text the TTS engine
+                should speak instead. Emitted as the rule's `with` key.
+            ignore_case: Whether to ignore case when matching `replace`. Default
+                False; the `ignore_case` key is only emitted when True.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.add_pronunciation("SQL", "sequel")
+            agent.add_pronunciation("SWAIG", "swig", ignore_case=True)
+            ```
         """
         if replace and with_text:
             rule: dict[str, Any] = {"replace": replace, "with": with_text}
@@ -270,13 +419,25 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
 
     def set_pronunciations(self, pronunciations: list[dict[str, Any]]) -> "AgentBase":
         """
-        Set all pronunciation rules at once
+        Replace all pronunciation rules at once with raw rule dictionaries.
+
+        An empty list is ignored and leaves the current rules in place.
 
         Args:
-            pronunciations: List of pronunciation rule dictionaries
+            pronunciations: List of pronunciation rule dictionaries. Each must
+                contain `replace` and `with` keys, and optionally `ignore_case`.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.set_pronunciations([
+                {"replace": "SQL", "with": "sequel"},
+                {"replace": "SWML", "with": "swimmel", "ignore_case": True},
+                {"replace": "IEEE", "with": "I triple E"},
+            ])
+            ```
         """
         if pronunciations and isinstance(pronunciations, list):
             self._pronounce = pronunciations
@@ -284,14 +445,26 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
 
     def set_param(self, key: str, value: Any) -> "AgentBase":
         """
-        Set a single AI parameter
+        Set a single AI parameter by key.
+
+        AI parameters map to the `params` object of the SWML AI verb and control
+        speech recognition, timing, barge-in and other agent behavior. They are not
+        LLM sampling settings; set those with `set_prompt_llm_params()`. The SDK
+        sends only the parameters you set. See `set_params()` for the common ones.
 
         Args:
-            key: Parameter name
-            value: Parameter value
+            key: Parameter name (e.g., "end_of_speech_timeout", "barge_min_words").
+                An empty key is ignored.
+            value: Parameter value. The type depends on the parameter being set.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.set_param("end_of_speech_timeout", 700)
+            agent.set_param("barge_min_words", 2)
+            ```
         """
         if key:
             self._params[key] = value
@@ -299,13 +472,60 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
 
     def set_params(self, params: dict[str, Any]) -> "AgentBase":
         """
-        Set multiple AI parameters at once
+        Set multiple AI parameters at once, merging into any already set.
+
+        These parameters map to the `params` object of the SWML AI verb. They
+        control speech recognition, timing, audio and agent behavior. LLM sampling
+        settings such as `temperature` and `top_p` are not AI parameters; set them
+        with `set_prompt_llm_params()`. The SDK sends no defaults: only parameters
+        you set are included in the SWML document. The defaults noted below are
+        applied by the platform when a parameter is omitted.
+
+        Timing parameters:
+
+        - `end_of_speech_timeout`: silence in milliseconds that marks the end of
+          speech. Default 700, range 0 to 10000.
+        - `attention_timeout`: silence in milliseconds before the AI re-engages
+          the caller. Default 5000; 0 turns it off, otherwise 1000 to 600000.
+        - `inactivity_timeout`: inactivity delay in milliseconds before the call is
+          disconnected. Default 600000; 0 turns it off, otherwise 10000 to
+          3600000.
+        - `speech_timeout`: maximum length in milliseconds of a single recognized
+          utterance. Default 60000.
+
+        Behavior parameters:
+
+        - `wait_for_user`: wait for the caller to speak before the AI begins
+          talking. Default False.
+        - `transparent_barge`: fold the caller's interrupting speech into the
+          conversation. Default True.
+        - `barge_min_words`: how many words the caller must speak to interrupt the
+          AI. See also `enable_barge`.
+        - `save_conversation`: persist the conversation summary after the call
+          ends. Ignored unless `conversation_id` is also set. Default False.
+
+        Audio parameters:
+
+        - `ai_volume`: AI voice volume adjustment, -50 to 50. Default 0.
+        - `background_file`: URL of an audio file to play in the background during
+          the conversation.
+        - `hold_music`: URL of hold music, or a tone string such as "tone:440".
 
         Args:
-            params: Dictionary of parameter name/value pairs
+            params: Dictionary of parameter name/value pairs. An empty or non-dict
+                value is ignored.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.set_params({
+                "end_of_speech_timeout": 1000,
+                "attention_timeout": 10000,
+                "wait_for_user": True,
+            })
+            ```
         """
         if params and isinstance(params, dict):
             self._params.update(params)
@@ -319,18 +539,20 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
         dialogue: str | None = None,
     ) -> "AgentBase":
         """
-        Set how the call checks its functions' semantic gates
+        Set how the call checks its functions' semantic gates.
 
-        Each argument left as None keeps the platform's default.
+        Each argument sets one AI parameter. Each argument left as None keeps
+        the platform's default.
 
         Args:
             enabled: False dispatches gated functions without checking their
-                gates. Default True.
+                gates. Sets `semantic_gates_enabled`. Default True.
             timeout_ms: The time one check may take, 500 to 10000
                 milliseconds, preparing the request and any retry included.
-                A check that runs out blocks the call. Default 2500.
+                A check that runs out blocks the call. Sets
+                `semantic_gate_timeout_ms`. Default 2500.
             history: How many recent dialogue entries the decision model
-                sees, 0 to 100. Default 20.
+                sees, 0 to 100. Sets `semantic_gate_history`. Default 20.
             dialogue: Which dialogue the decision model judges: "window",
                 the newest ``history`` entries, or "proposal", those since
                 ``global_data.semantic_state`` last changed (see
@@ -338,13 +560,19 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
                 first turn after it: the read-back and the caller's reply.
                 With no ``semantic_state`` set, the window. A gate's own
                 ``dialogue`` and ``history`` take the place of these for its
-                function. Default "window".
+                function. Sets `semantic_gate_dialogue`. Default "window".
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
 
         Raises:
-            ValueError: If a value has the wrong type or is out of range
+            ValueError: If a value has the wrong type or is out of range. Values
+                checked before the one that raised stay set.
+
+        Example:
+            ```python
+            agent.set_semantic_gates(timeout_ms=4000, history=40)
+            ```
         """
         if enabled is not None:
             if not isinstance(enabled, bool):
@@ -391,7 +619,10 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
             text: The text, as the ``unavailable_function_response`` param.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Raises:
+            ValueError: If `text` is not a non-empty string.
         """
         if not isinstance(text, str) or not text:
             raise ValueError("text must be a non-empty string")
@@ -400,16 +631,28 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
 
     def set_global_data(self, data: dict[str, Any]) -> "AgentBase":
         """
-        Merge data into the global data available to the AI throughout the conversation.
+        Merge data into the global data available to the AI during the conversation.
 
-        This merges (not replaces) so that skills and other callers can each
-        contribute keys without clobbering each other.
+        This merges rather than replaces, so skills, dynamic config callbacks and
+        other callers can each contribute keys without clobbering each other. The
+        method is thread-safe: concurrent calls are serialized by an internal lock.
 
         Args:
-            data: Dictionary of global data to merge
+            data: Dictionary of key/value pairs to merge into global data. Values
+                can be any JSON-serializable type. An empty or non-dict value is
+                ignored.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.set_global_data({
+                "company_name": "Acme Corp",
+                "support_hours": "9am-5pm EST",
+                "user_tier": "standard",
+            })
+            ```
         """
         if data and isinstance(data, dict):
             if not hasattr(self, "_global_data_lock"):
@@ -420,13 +663,26 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
 
     def update_global_data(self, data: dict[str, Any]) -> "AgentBase":
         """
-        Update the global data with new values
+        Update the global data with new values.
+
+        Functionally identical to `set_global_data()`: both merge the dictionary
+        into the existing global data. The method is thread-safe.
 
         Args:
-            data: Dictionary of global data to update
+            data: Dictionary of key/value pairs to merge into global data. An empty
+                or non-dict value is ignored.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.update_global_data({
+                "authenticated": True,
+                "user_name": "Alice",
+                "user_tier": "gold",
+            })
+            ```
         """
         if data and isinstance(data, dict):
             if not hasattr(self, "_global_data_lock"):
@@ -437,13 +693,29 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
 
     def set_native_functions(self, function_names: list[str]) -> "AgentBase":
         """
-        Set the list of native functions to enable
+        Set the list of native SWAIG functions to enable.
+
+        Native functions are built into the SignalWire platform and run
+        server-side without a webhook. They provide common utility operations the
+        AI can invoke during a conversation. They can also be passed at
+        construction time through the `native_functions` constructor parameter.
 
         Args:
-            function_names: List of native function names
+            function_names: Native function names to enable: "check_time" (the
+                current time, optionally in a timezone), "wait_for_user" (wait
+                until the caller speaks again, for when they ask the agent to
+                hold on), "wait_seconds" (pause for a number of seconds) and
+                "adjust_response_latency" (make the agent respond slower or
+                faster). Non-string entries are dropped; an empty list is
+                ignored.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.set_native_functions(["check_time", "wait_for_user"])
+            ```
         """
         if function_names and isinstance(function_names, list):
             self.native_functions = [
@@ -481,15 +753,15 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
 
         Supported function names (matches the SWAIGInternalFiller schema):
 
-            hangup                  — when the agent is hanging up
-            check_time              — when checking the time
-            wait_for_user           — when waiting for user input
-            wait_seconds            — during deliberate pauses
-            adjust_response_latency — when adjusting response timing
-            next_step               — transitioning between steps in prompt.contexts
-            change_context          — switching between contexts in prompt.contexts
-            get_visual_input        — processing visual input (enable_vision=True)
-            get_ideal_strategy      — thinking (enable_thinking=True)
+        - `hangup`: when the agent is hanging up
+        - `check_time`: when checking the time
+        - `wait_for_user`: when waiting for user input
+        - `wait_seconds`: during deliberate pauses
+        - `adjust_response_latency`: when adjusting response timing
+        - `next_step`: transitioning between steps in prompt.contexts
+        - `change_context`: switching between contexts in prompt.contexts
+        - `get_visual_input`: processing visual input (enable_vision=True)
+        - `get_ideal_strategy`: thinking (enable_thinking=True)
 
         Notably NOT supported: change_step, gather_submit, or arbitrary
         user-defined SWAIG function names. The runtime only honors fillers
@@ -498,7 +770,7 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
         an unknown name so you catch the typo early.
 
         Without internal fillers, callers hear dead air during context
-        switches and other internal transitions — set this on every agent
+        switches and other internal transitions. Set this on every agent
         that uses contexts/steps with audio.
 
         Args:
@@ -507,21 +779,23 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
                 Format: {"function_name": {"language_code": ["phrase1", "phrase2"]}}
 
         Returns:
-            Self for method chaining.
+            This agent, for chaining.
 
         Example:
+            ```python
             agent.set_internal_fillers({
                 "next_step": {
-                    "en-US": ["Moving to the next step...", "Great, let's continue..."],
-                    "es": ["Pasando al siguiente paso...", "Excelente, continuemos..."]
+                    "en-US": ["Moving on...", "Great, let's continue..."],
+                    "es": ["Pasando al siguiente paso...", "Continuemos..."],
                 },
                 "change_context": {
-                    "en-US": ["Let me switch modes...", "One moment..."]
+                    "en-US": ["Let me switch modes...", "One moment..."],
                 },
                 "check_time": {
-                    "en-US": ["Let me check the time...", "Getting the current time..."]
-                }
+                    "en-US": ["Let me check the time...", "One moment..."],
+                },
             })
+            ```
         """
         if internal_fillers and isinstance(internal_fillers, dict):
             unknown = sorted(
@@ -552,26 +826,33 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
         """
         Add internal fillers for a single internal function and language.
 
-        See set_internal_fillers() for the complete list of supported
-        function_name values and an explanation of what fillers do.
+        See `set_internal_fillers()` for the complete list of supported function
+        names and an explanation of what fillers do.
 
         Args:
-            function_name: One of the supported internal function names
-                (see SUPPORTED_INTERNAL_FILLER_NAMES). Common values:
-                'next_step', 'change_context', 'check_time', 'wait_for_user',
-                'hangup'. Names outside the supported set log a warning and
-                are ignored by the runtime.
-            language_code: Language code (e.g. 'en-US', 'es', 'fr').
-            fillers: List of filler phrases for this function and language.
+            function_name: One of the supported internal function names (see
+                `SUPPORTED_INTERNAL_FILLER_NAMES`). Common values are "next_step",
+                "change_context", "check_time", "wait_for_user" and "hangup". A
+                name outside the supported set logs a warning and is ignored by
+                the runtime.
+            language_code: Language code (e.g., "en-US", "es", "fr").
+            fillers: Filler phrases for this function and language. The AI
+                randomly selects one each time the function runs.
 
         Returns:
-            Self for method chaining.
+            This agent, for chaining.
 
         Example:
+            ```python
             agent.add_internal_filler(
-                "change_context", "en-US",
-                ["Let me switch over to that...", "One moment..."]
+                "next_step", "en-US",
+                ["Moving to the next step...", "Great, let's continue..."],
             )
+            agent.add_internal_filler(
+                "next_step", "es",
+                ["Pasando al siguiente paso...", "Continuemos..."],
+            )
+            ```
         """
         if function_name and language_code and fillers and isinstance(fillers, list):
             if function_name not in self.SUPPORTED_INTERNAL_FILLER_NAMES:
@@ -598,29 +879,33 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
 
     def enable_debug_events(self, level: int = 1) -> "AgentBase":
         """
-        Enable debug event webhook for this agent.
+        Enable the debug event webhook for this agent.
 
-        When enabled, the AI module will POST real-time debug events to a
-        /debug_events endpoint on this agent during calls. Events are
-        automatically logged via the agent's structured logger, and can
-        optionally be handled with a custom callback via on_debug_event().
+        When enabled, the SDK wires a `debug_webhook_url` into the AI parameters and
+        registers a `/debug_events` endpoint. The AI module then POSTs real-time
+        debug events to that endpoint during calls. Events are logged through the
+        agent's structured logger, and can optionally be handled with a custom
+        callback registered through `on_debug_event()`.
 
         Args:
             level: Debug event verbosity level.
-                   1 = high-level events (barge, errors, session start/end, step changes)
-                   2+ = adds high-volume events (every LLM request/response, conversation_add)
+                1 = high-level events (barge, errors, session start/end, step
+                changes).
+                2 and above add high-volume events (every LLM request/response,
+                conversation_add).
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
 
         Example:
-            agent = AgentBase("my_agent")
+            ```python
             agent.enable_debug_events(level=1)
 
             @agent.on_debug_event
             def handle_debug(event_type, data):
                 if event_type == "llm_error":
                     alert_ops_team(data)
+            ```
         """
         self._debug_events_enabled = True
         self._debug_events_level = level
@@ -630,15 +915,30 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
         self, url: str, functions: list[str], meta_data: dict[str, Any] | None = None
     ) -> "AgentBase":
         """
-        Add a remote function include to the SWAIG configuration
+        Add a remote SWAIG function include to the SWAIG configuration.
+
+        The agent can then call tools hosted on an external server. The remote
+        endpoint is contacted at session start and the listed functions become
+        available to the AI like locally defined tools. Each include is added to the
+        `includes` array of the `SWAIG` object in the SWML document.
 
         Args:
-            url: URL to fetch remote functions from
-            functions: List of function names to include
-            meta_data: Optional metadata to include with the function include
+            url: URL of the remote SWAIG server that hosts the functions.
+            functions: Names of the functions to include from the remote server.
+            meta_data: Metadata passed along with the include, for example to
+                provide authentication tokens or context to the remote server.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.add_function_include(
+                url="https://tools.example.com/swaig",
+                functions=["lookup_order", "cancel_order"],
+                meta_data={"auth_token": "secret-token"},
+            )
+            ```
         """
         if url and functions and isinstance(functions, list):
             include: dict[str, Any] = {"url": url, "functions": functions}
@@ -650,13 +950,34 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
 
     def set_function_includes(self, includes: list[dict[str, Any]]) -> "AgentBase":
         """
-        Set the complete list of function includes
+        Replace the entire list of remote SWAIG function includes at once.
+
+        Each entry must contain a `url` and a `functions` list. Invalid entries,
+        with a missing key or a `functions` value that is not a list, are silently
+        dropped. Use `add_function_include()` to append a single include without
+        replacing the existing ones.
 
         Args:
-            includes: List of include objects, each with url and functions properties
+            includes: List of include objects. Each has `url` (the remote SWAIG
+                server URL) and `functions` (the function names to include).
+                Optional keys such as `meta_data` are passed through unchanged.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.set_function_includes([
+                {
+                    "url": "https://tools.example.com/swaig",
+                    "functions": ["lookup_order"],
+                },
+                {
+                    "url": "https://billing.example.com/swaig",
+                    "functions": ["get_invoice", "process_refund"],
+                },
+            ])
+            ```
         """
         if includes and isinstance(includes, list):
             # Validate each include has required properties
@@ -684,18 +1005,37 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
         """
         Add an external MCP server for tool discovery and invocation.
 
-        Tools are discovered via the MCP protocol at session start and
-        registered as SWAIG functions. Resources are optionally fetched
-        into global_data.
+        This connects your agent to an MCP (Model Context Protocol) server as a
+        client. Tools are discovered via the MCP protocol at session start and
+        registered as SWAIG functions. Resources are optionally fetched into
+        `global_data`. Each server added appears in the `mcp_servers` field of the
+        `SWAIG` object in the SWML document.
+
+        To expose the agent's own tools as an MCP server instead, use
+        `enable_mcp_server()`.
 
         Args:
-            url: MCP server HTTP endpoint URL
-            headers: Optional HTTP headers (e.g. {"Authorization": "Bearer sk-xxx"})
-            resources: Whether to fetch resources into global_data
-            resource_vars: Variables for URI template substitution (e.g. {"caller_id": "${caller_id_number}"})
+            url: MCP server HTTP endpoint URL.
+            headers: HTTP headers sent with every request to the MCP server (e.g.,
+                {"Authorization": "Bearer sk-xxx"}).
+            resources: Whether to fetch the server's resources into `global_data`.
+                Default False.
+            resource_vars: Variables for URI template substitution when fetching
+                resources. Supports SignalWire call variables such as
+                "${caller_id_number}".
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.add_mcp_server(
+                url="https://mcp.example.com/sse",
+                headers={"Authorization": "Bearer sk-xxx"},
+                resources=True,
+                resource_vars={"caller_id": "${caller_id_number}"},
+            )
+            ```
         """
         server: dict[str, Any] = {"url": url}
         if headers:
@@ -709,15 +1049,29 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
 
     def enable_mcp_server(self) -> "AgentBase":
         """
-        Expose this agent's @tool functions as an MCP server endpoint.
+        Expose this agent's `@tool` functions as an MCP server endpoint.
 
-        Adds a /mcp route that speaks JSON-RPC 2.0 (MCP protocol).
-        Other MCP clients (Claude Desktop, other agents, etc.) can
-        connect and use the same tools. The agent's SWML output also
-        references this endpoint for native MCP tool discovery.
+        Adds a `/mcp` route that speaks JSON-RPC 2.0 (the MCP protocol), so
+        external MCP clients such as Claude Desktop or other agents can discover
+        and invoke the same tools.
+
+        Note:
+            This method only registers the `/mcp` HTTP route. To include the
+            endpoint in the SWML document for native tool discovery, also call
+            `add_mcp_server()` with the agent's own `/mcp` URL. To connect your
+            agent to an external MCP server as a client, use `add_mcp_server()`.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            @agent.tool(name="get_weather", description="Get weather for a city")
+            def get_weather(args, raw_data):
+                return FunctionResult(f"It is sunny in {args.get('city')}.")
+
+            agent.enable_mcp_server()
+            ```
         """
         self._mcp_server_enabled = True
         return self
@@ -726,28 +1080,43 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
         """
         Set LLM parameters for the main prompt.
 
-        Accepts any parameters which will be passed through to the SignalWire server.
-        The server will validate and apply parameters based on the target model's capabilities.
+        Accepts any keyword arguments and passes them through to the SignalWire
+        server, which validates them against the target model's capabilities. The
+        SDK sends only the parameters you set and injects no defaults. Parameters
+        that don't apply to the selected model are handled or ignored by the
+        server.
 
-        Common parameters include:
-            model: The AI model to use (gpt-4o-mini, gpt-4.1-mini, gpt-4.1-nano, nova-micro, nova-lite, qwen3-235b-A22b-instruct)
-            temperature: Randomness setting. Lower values make output more deterministic.
-            top_p: Alternative to temperature. Controls nucleus sampling.
-            presence_penalty: Topic diversity. Positive values encourage new topics.
-            frequency_penalty: Repetition control. Positive values reduce repetition.
+        LLM parameters tune the language model's output. Interruption (barge-in) is
+        not one of them: tune it with AI parameters through `set_param()` or
+        `set_params()` (for example `barge_min_words`), or with `enable_barge`.
 
-        Note: Parameters are model-specific and will be validated by the server.
-        Invalid parameters for the selected model will be handled/ignored by the server.
+        The common parameters are listed below.
+
+        - `model`: the AI model to use (gpt-4o-mini, gpt-4.1-mini, gpt-4.1-nano,
+          nova-micro, nova-lite, qwen3-235b-A22b-instruct).
+        - `temperature`: randomness. Lower values make output more deterministic.
+        - `top_p`: alternative to temperature; controls nucleus sampling.
+        - `presence_penalty`: topic diversity. Positive values encourage new topics.
+        - `frequency_penalty`: repetition control. Positive values reduce
+          repetition.
+        - `max_tokens`: the maximum number of tokens in a response.
+
+        Args:
+            **params: LLM parameter names and values, such as `model`,
+                `temperature`, `top_p`, `presence_penalty`, `frequency_penalty` or
+                `max_tokens`. Calls merge into any parameters already set.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
 
         Example:
+            ```python
             agent.set_prompt_llm_params(
-                model="nova-micro",  # Using Amazon's nova-micro model
+                model="nova-micro",
                 temperature=0.7,
-                top_p=0.9
+                top_p=0.9,
             )
+            ```
         """
         # Accept any parameters without validation
         if params:
@@ -759,28 +1128,39 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
         """
         Set LLM parameters for the post-prompt.
 
-        Accepts any parameters which will be passed through to the SignalWire server.
-        The server will validate and apply parameters based on the target model's capabilities.
+        Accepts the same keyword arguments as `set_prompt_llm_params()` and passes
+        them through to the SignalWire server, which validates them against the
+        target model's capabilities. The SDK sends only the parameters you set and
+        injects no defaults. Use it to give the post-prompt summary different
+        settings from the main prompt, such as a lower temperature.
 
-        Common parameters include:
-            model: The AI model to use (gpt-4o-mini, gpt-4.1-mini, gpt-4.1-nano, nova-micro, nova-lite, qwen3-235b-A22b-instruct)
-            temperature: Randomness setting. Lower values make output more deterministic.
-            top_p: Alternative to temperature. Controls nucleus sampling.
-            presence_penalty: Topic diversity. Positive values encourage new topics.
-            frequency_penalty: Repetition control. Positive values reduce repetition.
+        The common parameters are listed below.
 
-        Note: Parameters are model-specific and will be validated by the server.
-        Invalid parameters for the selected model will be handled/ignored by the server.
+        - `model`: the AI model to use (gpt-4o-mini, gpt-4.1-mini, gpt-4.1-nano,
+          nova-micro, nova-lite, qwen3-235b-A22b-instruct).
+        - `temperature`: randomness. Lower values make output more deterministic.
+        - `top_p`: alternative to temperature; controls nucleus sampling.
+        - `presence_penalty`: topic diversity. Positive values encourage new topics.
+        - `frequency_penalty`: repetition control. Positive values reduce
+          repetition.
+        - `max_tokens`: the maximum number of tokens in a response.
+
+        Args:
+            **params: LLM parameter names and values, as for
+                `set_prompt_llm_params()`. Calls merge into any parameters already
+                set.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
 
         Example:
+            ```python
+            agent.set_post_prompt("Summarize this call as JSON.")
             agent.set_post_prompt_llm_params(
                 model="gpt-4o-mini",
-                temperature=0.5,  # More deterministic for post-prompt
-                top_p=0.9
+                temperature=0.3,
             )
+            ```
         """
         # Accept any parameters without validation
         if params:

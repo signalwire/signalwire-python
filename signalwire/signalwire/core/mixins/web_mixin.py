@@ -81,9 +81,7 @@ async def _call_ai_event_handler(
 
 
 class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at runtime; AgentBase under TYPE_CHECKING — intentional split
-    """
-    Mixin class containing all web server and routing-related methods for AgentBase
-    """
+    """Mixin containing the web server and routing methods for AgentBase."""
 
     # Host attributes WebMixin reads and writes. They are owned/initialised by
     # SWMLService/AgentBase; declared here (with their true Optional types) so the
@@ -149,14 +147,36 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         self._per_call_configs = [] if callback is None else [callback]
 
     def get_app(self) -> FastAPI:
-        """
-        Get the FastAPI application instance for deployment adapters like Lambda/Mangum
+        """Get the fully initialized FastAPI application instance.
 
-        This method ensures the FastAPI app is properly initialized and configured,
-        then returns it for use with deployment adapters like Mangum for AWS Lambda.
+        If the app has not been created yet, this initializes it with all routes,
+        middleware, health checks, and security headers, the same configuration
+        that `serve()` creates. It is mainly used with deployment adapters such as
+        Mangum (AWS Lambda), or to embed the agent in a larger FastAPI application.
+
+        Note:
+            To add routers or static files to the agent's own app, use `mount()`
+            rather than `get_app().include_router(...)`. Routes added by hand land
+            behind the agent's catch-all route and never run.
 
         Returns:
-            FastAPI: The configured FastAPI application instance
+            The configured FastAPI application, with all agent endpoints
+            registered.
+
+        Example:
+            ```python
+            from mangum import Mangum
+
+            handler = Mangum(agent.get_app())
+            ```
+
+        Example:
+            ```python
+            from fastapi import FastAPI
+
+            main_app = FastAPI()
+            main_app.mount("/ai", agent.get_app())
+            ```
         """
         if self._app is None:
             # Initialize the app if it hasn't been created yet
@@ -249,8 +269,7 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         prefix: str = "",
         name: str | None = None,
     ) -> "AgentBase":
-        """
-        Mount an extra router or ASGI app alongside this agent's own routes.
+        """Mount an extra router or ASGI app alongside this agent's own routes.
 
         Use this instead of reaching for ``get_app()`` and mounting by hand.
         Three separate details have to be right for an added route to work, all
@@ -278,15 +297,28 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             app_or_router: A FastAPI ``APIRouter`` (included at ``prefix``) or
                 any other ASGI app such as ``StaticFiles`` (mounted at
                 ``prefix``).
-            prefix: Path prefix. No trailing slash.
-            name: Optional mount name, only used for ASGI apps.
+            prefix: Path prefix, without a trailing slash. Keyword-only.
+                Defaults to ``""``.
+            name: Mount name, used only for ASGI apps. Keyword-only. Defaults
+                to None.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
 
         Example:
-            agent.mount(gateway.router(), prefix="/chat")
-            agent.mount(StaticFiles(directory="web", html=True), prefix="/demo")
+            ```python
+            from fastapi import APIRouter
+            from fastapi.staticfiles import StaticFiles
+
+            router = APIRouter()
+
+            @router.get("/ping")
+            def ping():
+                return {"ok": True}
+
+            agent.mount(router, prefix="/chat")
+            agent.mount(StaticFiles(directory=".", html=True), prefix="/demo")
+            ```
         """
         from fastapi import APIRouter
 
@@ -335,8 +367,8 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         Get a router to embed this agent's routes in a host web app.
 
         Returns:
-            HostAppRouter: a FastAPI ``APIRouter`` subclass (behaviourally an
-            ``APIRouter``; the named type is the cross-port ``as_router`` contract).
+            A FastAPI ``APIRouter`` subclass (behaviourally an ``APIRouter``)
+            holding this agent's routes.
         """
         # Create a router with explicit redirect_slashes=False
         router = HostAppRouter(redirect_slashes=False)
@@ -354,12 +386,36 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         return router
 
     def serve(self, host: str | None = None, port: int | None = None) -> None:
-        """
-        Start a web server for this agent
+        """Start a uvicorn web server for this agent.
+
+        The server exposes endpoints for SWML document delivery, SWAIG function
+        execution, post-prompt summary handling, and health checks. This method
+        blocks until the server is shut down, for example by SIGINT.
+
+        The server includes:
+
+        - the SWML document endpoint at the agent's route
+        - SWAIG function endpoints for each registered tool
+        - `/health` and `/ready` health check endpoints
+        - a security headers middleware
+        - SSL support when configured through environment variables
+
+        Note:
+            For most cases, use `run()` instead. It detects the environment and
+            calls `serve()` in server mode, or dispatches to a serverless handler.
 
         Args:
-            host: Optional host to override the default
-            port: Optional port to override the default
+            host: Host override. Defaults to the host set in the constructor.
+            port: Port override. Defaults to the port set in the constructor
+                (3000 unless configured otherwise).
+
+        Returns:
+            None. The call does not return until the server stops.
+
+        Example:
+            ```python
+            agent.serve(host="0.0.0.0", port=3000)  # blocks, serving on port 3000
+            ```
         """
         import uvicorn
 
@@ -499,18 +555,40 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         host: str | None = None,
         port: int | None = None,
     ) -> str | dict[str, Any] | None:
-        """
-        Smart run method that automatically detects environment and handles accordingly
+        """Run the agent in whatever environment it detects.
+
+        This is the universal entry point. In a server environment it calls
+        `serve()`. In a serverless environment (Lambda, Cloud Functions, Azure
+        Functions, CGI) it delegates to `handle_serverless_request()`. Use `run()`
+        as the default entry point so the same agent code works in development,
+        Docker, and serverless deployments.
 
         Args:
-            event: Serverless event object (Lambda, Cloud Functions)
-            context: Serverless context object (Lambda, Cloud Functions)
-            force_mode: Override automatic mode detection for testing
-            host: Host override for server mode
-            port: Port override for server mode
+            event: Serverless event object. Pass the Lambda event, the Cloud
+                Functions request, or the Azure Functions HttpRequest.
+            context: Serverless context object, such as the Lambda context.
+            force_mode: Override automatic environment detection. One of
+                `"server"`, `"lambda"`, `"cgi"`, `"google_cloud_function"`, or
+                `"azure_function"`. Defaults to None (auto-detect).
+            host: Host override for server mode.
+            port: Port override for server mode.
 
         Returns:
-            Response for serverless modes, None for server mode
+            In serverless modes, the platform-specific response: a string in CGI
+            mode, a dict otherwise. In server mode this blocks until shutdown and
+            returns None.
+
+        Example:
+            ```python
+            if __name__ == "__main__":
+                agent.run()
+            ```
+
+        Example:
+            ```python
+            def handler(event, context):
+                return agent.run(event=event, context=context)
+            ```
         """
         mode = force_mode or get_execution_mode()
 
@@ -1651,18 +1729,18 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         request_data: dict[str, Any] | None = None,
         callback_path: str | None = None,
     ) -> dict[str, Any] | None:
-        """
-        Called when SWML is requested, with request data when available
+        """Handle a SWML request, with request data when available.
 
-        This method overrides SWMLService's on_request to properly handle SWML generation
-        for AI Agents.
+        This overrides the base service's `on_request` so SWML generation works for
+        AI agents. It calls `on_swml_request`.
 
         Args:
-            request_data: Optional dictionary containing the parsed POST body
-            callback_path: Optional callback path
+            request_data: Parsed POST body, if available.
+            callback_path: Callback path, if any.
 
         Returns:
-            None to use the default SWML rendering (which will call _render_swml)
+            The result of `on_swml_request`. None means use the default SWML
+            rendering.
         """
         # Call on_swml_request for customization
         if hasattr(self, "on_swml_request") and callable(self.on_swml_request):
@@ -1677,16 +1755,46 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         callback_path: str | None = None,
         request: Request | None = None,
     ) -> dict[str, Any] | None:
-        """
-        Customization point for subclasses to modify SWML based on request data
+        """Customize the SWML document for a request.
+
+        This hook runs during SWML rendering, before the document is returned.
+        Override it in a subclass to inspect request data and return
+        modifications to apply to the SWML document.
+
+        The default implementation checks for a callback set with
+        `set_dynamic_config_callback` and, if there is one, returns an internal
+        marker that makes the renderer use an ephemeral copy of the agent. For
+        most per-request customization, `set_dynamic_config_callback` is the
+        simpler approach: it gives you the query params, body, headers, and the
+        agent copy.
+
+        Note:
+            This is a separate hook from the base service's `on_request`. It
+            adds support for dynamic configuration and ephemeral agent copies.
 
         Args:
-            request_data: Optional dictionary containing the parsed POST body
-            callback_path: Optional callback path
-            request: Optional FastAPI Request object for accessing query params, headers, etc.
+            request_data: Parsed POST body of the incoming request, if available.
+            callback_path: The path segment that triggered this request.
+            request: The FastAPI `Request`, for query parameters, headers, and
+                other HTTP metadata.
 
         Returns:
-            Optional dict with modifications to apply to the SWML document
+            A dict of modifications to apply to the SWML document, or None for no
+            modifications. The keys depend on the rendering pipeline.
+
+        Example:
+            ```python
+            class MultiTenantAgent(AgentBase):
+                def on_swml_request(
+                    self, request_data=None, callback_path=None, request=None
+                ):
+                    tenant = request.headers.get("X-Tenant-ID") if request else None
+                    if tenant:
+                        return {"global_data": {"tenant_id": tenant}}
+                    return super().on_swml_request(
+                        request_data, callback_path, request
+                    )
+            ```
         """
         # Dynamic config is handled differently now - we don't modify the agent here
         # Instead, we'll return a marker that tells _render_swml to use an ephemeral copy
@@ -1720,25 +1828,46 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         callback_fn: Callable[[dict[str, Any], dict[str, Any]], str | None],
         path: str = "/sip",
     ) -> None:
-        """
-        Register a callback function that will be called to determine routing
-        based on POST data.
+        """Register a callback that decides where to route a request.
 
-        When a routing callback is registered, an endpoint at the specified path is automatically
-        created that will handle requests. This endpoint will use the callback to
-        determine if the request should be processed by this service or redirected.
+        When a request arrives at `path`, the callback inspects the POST body and
+        decides whether to send the request to a different endpoint or let normal
+        processing continue. This is mainly used for SIP routing, where the
+        destination depends on the incoming SIP URI. For simpler routing based on
+        agent name matching, use `enable_sip_routing` instead.
 
         The callback receives the parsed request body dictionary and the request
-        headers dictionary — ``callback_fn(body, headers)`` — and returns:
-        - A route string if it should be routed to a different endpoint
-        - None if normal processing should continue
+        headers dictionary, ``callback_fn(body, headers)``, and returns:
 
-        This framework-free ``(body, headers) -> str | None`` shape matches the
-        decomposed request-dispatch core and the other SDK ports.
+        - a route string, to route the request to a different endpoint
+        - None, to continue with normal processing
+
+        Note:
+            The callback path is registered immediately, but the FastAPI route is
+            created when `serve()` is called or when `as_router()` builds the
+            router. Register all callbacks before starting the server.
 
         Args:
-            callback_fn: The callback function to register, ``(body, headers)``.
-            path: The path where this callback should be registered (default: "/sip")
+            callback_fn: The callback to register, called as ``(body, headers)``.
+                Return a route string to redirect the request (the SDK responds
+                with HTTP 307, which keeps the POST method and body), or None to
+                continue with normal SWML serving.
+            path: The URL path where the routing endpoint is created. The path is
+                normalized to start with `/`, and trailing slashes are removed.
+                Defaults to `"/sip"`.
+
+        Example:
+            ```python
+            def route_sip_call(body, headers):
+                username = SWMLService.extract_sip_username(body)
+                if username == "sales":
+                    return "/agents/sales"
+                if username == "support":
+                    return "/agents/support"
+                return None
+
+            agent.register_routing_callback(route_sip_call, path="/sip")
+            ```
         """
         # Normalize the path (remove trailing slash)
         normalized_path = path.rstrip("/")
@@ -1757,9 +1886,9 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             [dict[str, Any], dict[str, Any], dict[str, Any], "AgentBase"], None
         ],
     ) -> "AgentBase":
-        """
-        Set a callback function for dynamic agent configuration
+        """Set a callback that configures the agent for each request.
 
+        This is the main mechanism for multi-tenant or per-caller customization.
         The callback receives a copy of the agent made for this request, and can
         configure any aspect of it from the request's data: skills, prompts,
         parameters and so on. Its changes apply to this request only. The
@@ -1770,24 +1899,31 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         worker thread, so callbacks for different calls can run at once.
 
         Args:
-            callback: Function that takes (query_params, body_params, headers, agent)
-                     and configures the agent using any available methods like:
-                     - agent.add_skill(...)
-                     - agent.add_language(...)
-                     - agent.prompt_add_section(...)
-                     - agent.set_params(...)
-                     - agent.set_global_data(...)
-                     - agent.define_tool(...)
+            callback: Function called as
+                ``(query_params, body_params, headers, agent)``. Use the `agent`
+                argument, the per-request copy, to call any configuration method:
+
+                - `agent.add_skill(...)`
+                - `agent.add_language(...)`
+                - `agent.prompt_add_section(...)`
+                - `agent.set_params(...)`
+                - `agent.set_global_data(...)`
+                - `agent.define_tool(...)`
+
+        Returns:
+            This agent, for chaining.
 
         Example:
-            def my_config(query_params, body_params, headers, agent):
-                if query_params.get('tier') == 'premium':
-                    agent.add_skill("advanced_search")
-                    agent.add_language("English", "en-US", "premium_voice")
+            ```python
+            def configure_per_request(query_params, body_params, headers, agent):
+                tier = query_params.get("tier", "standard")
+                if tier == "premium":
+                    agent.add_skill("web_search")
                     agent.set_params({"end_of_speech_timeout": 500})
-                agent.set_global_data({"tier": query_params.get('tier', 'standard')})
+                agent.set_global_data({"tier": tier})
 
-            my_agent.set_dynamic_config_callback(my_config)
+            agent.set_dynamic_config_callback(configure_per_request)
+            ```
 
         Note:
             This REPLACES any previously registered per-call configuration.
@@ -1820,8 +1956,7 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         self,
         callback: Callable[[dict[str, Any], dict[str, Any], dict[str, Any], Any], None],
     ) -> "AgentBase":
-        """
-        Register a per-request configuration callback, keeping any already set
+        """Register a per-request configuration callback, keeping any already set.
 
         Same signature and contract as `set_dynamic_config_callback`, except
         that callbacks accumulate instead of overwriting. They run in
@@ -1854,12 +1989,21 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
                       never `self`, or the configuration leaks across callers.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
 
         Example:
-            agent.add_per_call_config(configure_voice)
-            agent.add_per_call_config(configure_page_context)
-            # both run, in that order, on every request
+            ```python
+            def pick_language(query_params, body_params, headers, agent):
+                if query_params.get("lang") == "es":
+                    agent.add_language("Spanish", "es-MX", "rime.marsh")
+
+            def tag_tenant(query_params, body_params, headers, agent):
+                agent.set_global_data({"tenant": query_params.get("tenant", "default")})
+
+            # both run, in this order, on every request
+            agent.add_per_call_config(pick_language)
+            agent.add_per_call_config(tag_tenant)
+            ```
         """
         callbacks = self.__dict__.get("_per_call_configs")
         if callbacks is None:
@@ -1871,16 +2015,16 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         return self
 
     def manual_set_proxy_url(self, proxy_url: str) -> "AgentBase":
-        """
-        Manually set the proxy URL base for webhook callbacks
+        """Manually set the proxy URL base for webhook callbacks.
 
-        This can be called at runtime to set or update the proxy URL
+        This can be called at runtime to set or update the proxy URL.
 
         Args:
-            proxy_url: The base URL to use for webhooks (e.g., https://example.ngrok.io)
+            proxy_url: The base URL to use for webhooks, for example
+                `https://example.ngrok.io`. An empty value changes nothing.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
         """
         if proxy_url:
             # Set on self
@@ -1895,8 +2039,18 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         return self
 
     def setup_graceful_shutdown(self) -> None:
-        """
-        Setup signal handlers for graceful shutdown (useful for Kubernetes)
+        """Register signal handlers so the agent shuts down cleanly.
+
+        Handlers are installed for `SIGTERM` and `SIGINT`. On either signal the
+        agent logs the shutdown, runs its cleanup, and exits. This is especially
+        useful in Kubernetes deployments, where the pod receives `SIGTERM` before
+        termination.
+
+        Example:
+            ```python
+            agent.setup_graceful_shutdown()
+            agent.serve()
+            ```
         """
 
         def signal_handler(signum: int, frame: Any) -> None:
@@ -1922,11 +2076,18 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         self.log.debug("graceful_shutdown_handlers_registered")
 
     def enable_debug_routes(self) -> "AgentBase":
-        """
-        Enable debug routes for testing and development
+        """Enable debug routes on the agent's server for development and testing.
+
+        Debug routes are registered automatically during route setup. This method
+        is an explicit opt-in that exists for backward compatibility.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.enable_debug_routes()
+            ```
         """
         # Debug routes are automatically registered in _register_routes
         # This method exists for backward compatibility

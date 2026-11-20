@@ -248,9 +248,7 @@ def _cgi_request() -> _ServerlessRequest:
 
 
 class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at runtime; AgentBase under TYPE_CHECKING — intentional split
-    """
-    Mixin class containing all serverless/cloud platform methods for AgentBase
-    """
+    """Mixin containing the serverless and cloud platform methods for AgentBase."""
 
     def handle_serverless_request(
         self,
@@ -258,17 +256,62 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
         context: Any = None,
         mode: str | None = None,
     ) -> Any:
-        """
-        Handle serverless environment requests (CGI, Lambda, Cloud Functions)
+        """Handle a request in a serverless environment.
+
+        This dispatches to the handler for the detected (or forced) execution
+        mode: CGI, Lambda, Google Cloud Functions, or Azure Functions. In most
+        cases use `run()` instead, which detects the environment and calls this
+        method when needed. Call it directly only when you need explicit control
+        over the serverless dispatch.
+
+        The method:
+
+        - parses the request body for SWAIG function calls
+        - routes to the correct SWAIG function handler
+        - returns the SWML document for root path requests
+        - validates authentication credentials
+
+        Note:
+            Supported platforms are AWS Lambda (HTTP API v1 and v2), Google Cloud
+            Functions (Flask), Azure Functions (HttpRequest and HttpResponse), and
+            CGI.
 
         Args:
-            event: Serverless event object (Lambda, Cloud Functions)
-            context: Serverless context object (Lambda, Cloud Functions)
-            mode: Override execution mode (from force_mode in run())
+            event: Platform-specific event or request object. For Lambda, the
+                event dict from the handler. For Google Cloud Functions, the
+                Flask `request`. For Azure Functions, the `HttpRequest`. CGI does
+                not use it: the request comes from `stdin` and the environment.
+            context: Platform-specific context object, such as the Lambda
+                context.
+            mode: Override the detected execution mode: `"cgi"`, `"lambda"`,
+                `"google_cloud_function"`, or `"azure_function"`. Defaults to
+                None (auto-detect).
 
         Returns:
-            Response appropriate for the serverless platform: a complete CGI
-            response, a Lambda response dict, or the Flask or Azure response
+            The platform-specific response. Lambda: a dict with `statusCode`,
+            `headers`, and `body`. Google Cloud Functions: a Flask `Response`.
+            Azure Functions: an `HttpResponse`. CGI: a complete response string,
+            for you to print to stdout.
+
+        Example:
+            ```python
+            def handler(event, context):
+                return agent.handle_serverless_request(event, context, mode="lambda")
+            ```
+
+        Example:
+            ```python
+            def main(request):
+                return agent.handle_serverless_request(
+                    request, mode="google_cloud_function"
+                )
+            ```
+
+        Example:
+            ```python
+            def main(req):
+                return agent.handle_serverless_request(req, mode="azure_function")
+            ```
         """
         if mode is None:
             mode = get_execution_mode()

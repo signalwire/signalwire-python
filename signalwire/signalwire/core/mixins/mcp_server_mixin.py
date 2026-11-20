@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class MCPServerMixin:
-    """Mixin that adds MCP server endpoint to an agent"""
+    """Mixin that adds an MCP server endpoint to an agent."""
 
     def _mcp_tools(self) -> dict[str, Any]:
         """The agent's tools that this endpoint can run, by name.

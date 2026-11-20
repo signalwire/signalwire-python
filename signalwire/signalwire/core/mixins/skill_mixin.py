@@ -24,18 +24,39 @@ class SkillMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at r
     def add_skill(
         self, skill_name: str, params: dict[str, Any] | None = None
     ) -> "AgentBase":
-        """
-        Add a skill to this agent
+        """Add a skill to this agent.
+
+        Skills are pluggable capability modules that register their own tools,
+        prompts, and configuration. The SDK ships with built-in skills for common
+        tasks such as `datetime`, `web_search`, and `math`.
 
         Args:
-            skill_name: Name of the skill to add
-            params: Optional parameters to pass to the skill for configuration
+            skill_name: Registered skill name, for example `"datetime"`,
+                `"web_search"`, or `"math"`.
+            params: Skill-specific configuration parameters. Each skill documents
+                its own supported parameters. Defaults to None.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
 
         Raises:
-            ValueError: If skill not found or failed to load with detailed error message
+            ValueError: If the skill is not found or fails to load. The message
+                includes the loader's error. Call `list_skills()` to see the
+                skills that are currently loaded.
+
+        Example:
+            ```python
+            agent.add_skill("datetime")
+            agent.add_skill("math")
+            ```
+
+        Example:
+            ```python
+            agent.add_skill("web_search", params={
+                "api_key": "your-search-api-key",
+                "max_results": 5,
+            })
+            ```
         """
         # Debug logging
         self.log.debug(
@@ -56,17 +77,59 @@ class SkillMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at r
         return self
 
     def remove_skill(self, skill_name: str) -> "AgentBase":
-        """Remove a skill from this agent"""
+        """Remove a skill from this agent.
+
+        The skill's tools and configuration are unloaded.
+
+        Args:
+            skill_name: Name of the skill to remove.
+
+        Returns:
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.add_skill("datetime")
+            agent.add_skill("math")
+            agent.remove_skill("math")
+            agent.list_skills()  # ["datetime"]
+            ```
+        """
         self.skill_manager.unload_skill(skill_name)
         return self
 
     def list_skills(self) -> list[str]:
-        """List currently loaded skills"""
+        """List the names of the skills currently loaded on this agent.
+
+        Returns:
+            The loaded skill names.
+
+        Example:
+            ```python
+            agent.add_skill("datetime")
+            agent.add_skill("math")
+            agent.list_skills()  # ["datetime", "math"]
+            ```
+        """
         # `skill_manager` is host-Any (mixin pattern); SkillManager
         # .list_loaded_skills() is declared -> list[str].
         return cast(list[str], self.skill_manager.list_loaded_skills())
 
     def has_skill(self, skill_name: str) -> bool:
-        """Check if skill is loaded"""
+        """Check whether a skill is currently loaded on this agent.
+
+        Args:
+            skill_name: Skill name to check.
+
+        Returns:
+            True if the skill is loaded, False otherwise.
+
+        Example:
+            ```python
+            agent.add_skill("datetime")
+            agent.has_skill("datetime")  # True
+            agent.has_skill("web_search")  # False
+            ```
+        """
         # `skill_manager` is host-Any; SkillManager.has_skill() -> bool.
         return cast(bool, self.skill_manager.has_skill(skill_name))

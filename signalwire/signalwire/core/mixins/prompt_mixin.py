@@ -132,17 +132,62 @@ class PromptMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at 
         self, contexts: "dict[str, Any] | ContextBuilder | None" = None
     ) -> Union["AgentBase", "ContextBuilder"]:
         """
-        Define contexts and steps for this agent (alternative to POM/prompt)
+        Define contexts and steps for multi-step conversation workflows.
 
-        Args:
-            contexts: Optional context configuration (dict or ContextBuilder)
+        Contexts let an agent guide the caller through a structured sequence of
+        interactions, such as gathering information, verifying identity, and then
+        performing an action. This is an alternative to a single prompt.
 
-        Returns:
-            ContextBuilder for method chaining if no contexts provided
+        When called with an argument, it sets the context configuration directly and
+        returns the agent. When called without arguments, it returns the
+        `ContextBuilder` for fluent context definition.
 
         Note:
-            Contexts can coexist with traditional prompts. The restriction is only
-            that you can't mix POM sections with raw text in the main prompt.
+            Contexts can coexist with traditional prompts. The only restriction is
+            that POM sections and raw text cannot be mixed in the main prompt.
+
+        Args:
+            contexts: Context configuration, as a dictionary or a `ContextBuilder`,
+                to set contexts directly. Omit it to receive a `ContextBuilder`.
+
+        Returns:
+            This agent, for chaining, when `contexts` is provided. The
+            `ContextBuilder` when called with no arguments.
+
+        Example:
+            ```python
+            # Fluent ContextBuilder
+            ctx = agent.define_contexts()
+            default = ctx.add_context("default")
+            (
+                default.add_step("greeting")
+                .set_text("Greet the caller and ask for their name.")
+                .set_step_criteria("The caller has provided their name.")
+                .set_valid_steps(["verify"])
+            )
+            (
+                default.add_step("verify")
+                .set_text("Verify the caller's identity.")
+                .set_step_criteria("Identity verified.")
+                .set_valid_steps(["assist"])
+            )
+            default.add_step("assist").set_text("Help the caller with their request.")
+            ```
+
+            ```python
+            # Direct dictionary configuration
+            agent.define_contexts({
+                "default": {
+                    "steps": {
+                        "greeting": {
+                            "text": "Greet the caller.",
+                            "valid_steps": ["verify"],
+                        },
+                        "verify": {"text": "Verify identity.", "valid_steps": []},
+                    }
+                }
+            })
+            ```
         """
         if contexts is not None:
             # New behavior - set contexts
@@ -170,20 +215,23 @@ class PromptMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at 
         """
         Remove all contexts, returning the agent to a no-contexts state.
 
-        This is a convenience wrapper around ``define_contexts().reset()``.
-        Use it in a dynamic config callback when you need to rebuild
-        contexts from scratch for a specific request.
+        This is a convenience wrapper around `define_contexts().reset()`. Use it in
+        a dynamic config callback when you need to rebuild contexts from scratch for
+        a specific request.
 
         Returns:
-            Self for method chaining.
+            This agent, for chaining.
 
-        Example::
-
+        Example:
+            ```python
             def on_dynamic_config(query, body, headers, agent):
                 if query.get("transfer"):
                     agent.reset_contexts()
                     ctx = agent.define_contexts().add_context("default")
                     ctx.add_step("route").set_text("Route the caller.")
+
+            agent.set_dynamic_config_callback(on_dynamic_config)
+            ```
         """
         if self._contexts_builder is not None:
             self._contexts_builder.reset()
@@ -200,39 +248,110 @@ class PromptMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at 
 
     def set_prompt_text(self, text: str) -> "AgentBase":
         """
-        Set the prompt as raw text instead of using POM
+        Set the agent's system prompt as raw text instead of using POM.
+
+        This is the simplest way to configure what the AI knows and how it behaves.
+        It sets the `prompt` of the SWML AI verb.
+
+        Warning:
+            Cannot be mixed with POM-based prompt sections (`prompt_add_section()`)
+            in the same agent. Use one approach or the other for the main prompt.
+            Contexts can still be used alongside either approach.
 
         Args:
-            text: The raw prompt text
+            text: The complete system prompt text. Multi-line strings are fine.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.set_prompt_text(
+                "You are a customer support agent for Acme Corp. "
+                "You help customers with billing, order tracking and returns. "
+                "Always be polite and professional."
+            )
+            ```
         """
         self._prompt_manager.set_prompt_text(text)
         return self
 
     def set_post_prompt(self, text: str) -> "AgentBase":
         """
-        Set the post-prompt text for summary generation
+        Set the post-prompt text for summary generation.
+
+        After a conversation ends, the AI uses this prompt to analyze the
+        conversation and generate a structured summary. The summary is delivered to
+        your `on_summary()` callback or to the endpoint set with
+        `set_post_prompt_url()`.
 
         Args:
-            text: The post-prompt text
+            text: Instructions for summary generation. Tell the AI what to extract
+                from the conversation, for example caller intent, resolution
+                status, or action items.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.set_post_prompt(
+                "Summarize this conversation as JSON with these fields: "
+                "caller_intent (what the caller wanted), resolution "
+                "(yes, no or partial), action_items (follow-ups needed) "
+                "and sentiment (positive, neutral or negative)."
+            )
+            ```
         """
         self._prompt_manager.set_post_prompt(text)
         return self
 
     def set_prompt_pom(self, pom: list[dict[str, Any]]) -> "AgentBase":
         """
-        Set the prompt as a POM dictionary
+        Set the prompt directly as a POM (Prompt Object Model) structure.
+
+        This is a low-level method that accepts the POM data format directly. For
+        most cases, use `prompt_add_section()` to build POM prompts incrementally.
+
+        The POM format structures a prompt into titled sections with body text,
+        bullet points, and nested subsections. This structure helps the AI model
+        parse complex instructions more reliably than flat text.
 
         Args:
-            pom: POM dictionary structure
+            pom: POM structure, a list of section dictionaries. Each section has
+                `title` (the heading), `body` (the text), optional `bullets` (a
+                list of strings), optional `numbered` (whether the section is
+                numbered), and optional `subsections` (nested sections with the
+                same keys).
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.set_prompt_pom([
+                {
+                    "title": "Role",
+                    "body": "You are a customer support agent for Acme Corp.",
+                },
+                {
+                    "title": "Guidelines",
+                    "body": "",
+                    "bullets": [
+                        "Always greet the caller by name if available",
+                        "Never share internal pricing details",
+                    ],
+                },
+                {
+                    "title": "Capabilities",
+                    "body": "You can help with the following:",
+                    "subsections": [
+                        {"title": "Orders", "body": "Look up order status"},
+                        {"title": "Billing", "body": "Check balances"},
+                    ],
+                },
+            ])
+            ```
         """
         self._prompt_manager.set_prompt_pom(pom)
         return self
@@ -247,18 +366,40 @@ class PromptMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at 
         subsections: list[dict[str, Any]] | None = None,
     ) -> "AgentBase":
         """
-        Add a section to the prompt
+        Add a section to the prompt.
+
+        Sections give the AI structured instructions that are easier to follow than
+        a single block of text. Each section has a title and optional body text,
+        bullet points, and subsections.
+
+        Warning:
+            POM sections cannot be mixed with `set_prompt_text()` in the same
+            agent. Use one approach or the other.
 
         Args:
-            title: Section title
-            body: Optional section body text
-            bullets: Optional list of bullet points
-            numbered: Whether this section should be numbered
-            numbered_bullets: Whether bullets should be numbered
-            subsections: Optional list of subsection objects
+            title: Section heading shown to the AI.
+            body: Section body text. Default empty.
+            bullets: List of bullet point strings.
+            numbered: Whether the section itself should be numbered. Default False.
+            numbered_bullets: Whether the bullet points should be numbered instead
+                of bulleted. Default False.
+            subsections: List of subsection dictionaries, each with `title`,
+                `body`, and optional `bullets`.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.prompt_add_section(
+                "Role", body="You are a customer support agent for Acme Corp."
+            )
+            agent.prompt_add_section("Guidelines", bullets=[
+                "Always greet the caller by name if available",
+                "Never share internal pricing details",
+                "Escalate to a human if the caller asks",
+            ])
+            ```
         """
         self._prompt_manager.prompt_add_section(
             title=title,
@@ -278,16 +419,26 @@ class PromptMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at 
         bullets: list[str] | None = None,
     ) -> "AgentBase":
         """
-        Add content to an existing section (creating it if needed)
+        Add content to an existing section, creating the section if needed.
 
         Args:
-            title: Section title
-            body: Optional text to append to section body
-            bullet: Optional single bullet point to add
-            bullets: Optional list of bullet points to add
+            title: Title of the section to update (or create).
+            body: Text to append to the section body.
+            bullet: A single bullet point to add.
+            bullets: Multiple bullet points to add.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.prompt_add_section("Rules", bullets=["Be polite"])
+            agent.prompt_add_to_section("Rules", bullet="Never lie")
+            agent.prompt_add_to_section("Rules", bullets=[
+                "Keep responses concise",
+                "Ask clarifying questions when needed",
+            ])
+            ```
         """
         self._prompt_manager.prompt_add_to_section(
             title=title, body=body, bullet=bullet, bullets=bullets
@@ -302,16 +453,32 @@ class PromptMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at 
         bullets: list[str] | None = None,
     ) -> "AgentBase":
         """
-        Add a subsection to an existing section (creating parent if needed)
+        Add a subsection to an existing section, creating the parent if needed.
 
         Args:
-            parent_title: Parent section title
-            title: Subsection title
-            body: Optional subsection body text
-            bullets: Optional list of bullet points
+            parent_title: Title of the parent section. If no such section exists,
+                it is created.
+            title: Subsection heading.
+            body: Subsection body text. Default empty.
+            bullets: Subsection bullet points.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.prompt_add_section(
+                "Capabilities", body="You can help with the following:"
+            )
+            agent.prompt_add_subsection(
+                "Capabilities", "Orders",
+                body="Look up order status, process returns and exchanges.",
+            )
+            agent.prompt_add_subsection(
+                "Capabilities", "Billing",
+                body="Check account balances and explain recent charges.",
+            )
+            ```
         """
         self._prompt_manager.prompt_add_subsection(
             parent_title=parent_title, title=title, body=body, bullets=bullets
@@ -320,13 +487,23 @@ class PromptMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at 
 
     def prompt_has_section(self, title: str) -> bool:
         """
-        Check if a section exists in the prompt
+        Check whether a named section exists in the agent's POM prompt.
+
+        Useful for conditionally adding content to avoid duplicate sections.
 
         Args:
-            title: Section title to check
+            title: The section title to look up. It must match the title passed to
+                `prompt_add_section()`.
 
         Returns:
-            True if section exists, False otherwise
+            True if a section with the given title exists, False otherwise.
+
+        Example:
+            ```python
+            agent.prompt_add_section("Greeting", body="Greet the caller by name.")
+            if not agent.prompt_has_section("Policies"):
+                agent.prompt_add_section("Policies", body="Follow company guidelines.")
+            ```
         """
         # `_prompt_manager` is host-Any (mixin pattern); PromptManager
         # .prompt_has_section() is declared -> bool.
@@ -334,10 +511,21 @@ class PromptMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at 
 
     def get_prompt(self) -> str | list[dict[str, Any]]:
         """
-        Get the prompt for the agent
+        Get the agent's current prompt.
+
+        Returns a string if `set_prompt_text()` was used, or the POM structure (a
+        list of dictionaries) if prompt sections were used. If neither was set, it
+        returns the default prompt, "You are {name}, a helpful AI assistant.".
 
         Returns:
-            Either a string prompt or a POM object as list of dicts
+            The current prompt, either a string or a POM list of section
+            dictionaries, in whatever format was configured.
+
+        Example:
+            ```python
+            agent.set_prompt_text("You are a customer support agent for Acme Corp.")
+            prompt = agent.get_prompt()
+            ```
         """
         # First check if prompt manager has a prompt. `_prompt_manager` is
         # host-Any (mixin pattern); PromptManager.get_prompt() is declared
@@ -387,10 +575,16 @@ class PromptMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at 
 
     def get_post_prompt(self) -> str | None:
         """
-        Get the post-prompt for the agent
+        Get the current post-prompt text.
 
         Returns:
-            Post-prompt text or None if not set
+            The post-prompt text, or None if it is not set.
+
+        Example:
+            ```python
+            agent.set_post_prompt("Summarize this call as JSON.")
+            post_prompt = agent.get_post_prompt()
+            ```
         """
         # `_prompt_manager` is host-Any; PromptManager.get_post_prompt() -> str | None.
         return cast("str | None", self._prompt_manager.get_post_prompt())

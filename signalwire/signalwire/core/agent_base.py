@@ -193,20 +193,83 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
     StateMixin,
     MCPServerMixin,
 ):
-    """
-    Base class for all SignalWire AI Agents.
+    """Base class for all SignalWire AI Agents.
 
-    This class extends SWMLService and provides enhanced functionality for building agents including:
-    - Prompt building and customization
+    `AgentBase` is the central class in the SDK. It provides a framework for
+    building AI-powered voice agents, combining prompt management, tool
+    definitions, skill loading, speech configuration, and web serving in one
+    composable interface. It generates a SWML document with the `ai` verb.
+
+    It extends `SWMLService` and composes the functionality of nine mixins:
+    `PromptMixin`, `ToolMixin`, `SkillMixin`, `AIConfigMixin`, `WebMixin`,
+    `AuthMixin`, `ServerlessMixin`, `StateMixin`, and `MCPServerMixin`. All setter
+    methods return the agent, so calls can be chained.
+
+    It provides:
+
+    - prompt building and customization
     - SWML rendering
     - SWAIG function definition and execution
-    - Web service for serving SWML and handling webhooks
-    - Security and session management
+    - a web service for serving SWML and handling webhooks
+    - security and session management
 
     Subclassing options:
-    1. Simple override of get_prompt() for raw text
-    2. Using prompt_* methods for structured prompts
-    3. Declarative PROMPT_SECTIONS class attribute
+
+    1. Override `get_prompt()` to return raw text.
+    2. Use the `prompt_*` methods for a structured prompt.
+    3. Set the `PROMPT_SECTIONS` class attribute to declare prompt sections.
+
+    Attributes:
+        name: The agent's display name, set at construction. Used in logging,
+            SIP username mapping, and the default prompt fallback.
+        route: HTTP route path where this agent is served. `AgentServer` uses it
+            when it hosts several agents in one process.
+        host: Network interface the web server binds to.
+        port: Port the web server listens on. Defaults to the `PORT` environment
+            variable, falling back to 3000.
+        agent_id: Unique identifier for this agent instance. Auto-generated as a
+            UUID if not provided.
+        pom: The Prompt Object Model used for structured prompts. None when
+            `use_pom=False`.
+        skill_manager: The manager that loads and unloads skills. Use
+            `add_skill()` and `list_skills()` rather than reaching into it.
+        PROMPT_SECTIONS: Class-level attribute. A subclass can set it to define
+            prompt sections declaratively instead of calling
+            `prompt_add_section()` in its constructor. Defaults to None.
+
+    Example:
+        ```python
+        agent = AgentBase(name="support-agent", route="/support")
+        agent.add_language("English", "en-US", "rime.spore")
+        agent.set_prompt_text("You are a friendly customer support agent.")
+        agent.add_hints(["SignalWire", "SWML", "SWAIG"])
+        agent.set_params({"end_of_speech_timeout": 1000})
+        agent.set_prompt_llm_params(temperature=0.7)
+
+        @agent.tool(
+            description="Look up an order by ID",
+            parameters={"order_id": {"type": "string", "description": "Order ID"}},
+        )
+        def lookup_order(args, raw_data=None):
+            order_id = args.get("order_id")
+            return FunctionResult(f"Order {order_id} shipped on March 28.")
+
+        if __name__ == "__main__":
+            agent.run()
+        ```
+
+    Note:
+        When `signing_key` is set, the `POST /`, `/swaig`, and `/post_prompt`
+        endpoints are signature-validated. The signature arrives in the
+        `X-SignalWire-Signature` request header, and `X-Twilio-Signature` is
+        accepted as an alias for legacy callers.
+
+    Note:
+        Synchronous tool handlers and callbacks run in worker threads, so
+        handlers for different calls run concurrently. A tool method's `self` is
+        the shared agent, or the request's copy when a per-request configuration
+        callback is set. Guard shared state. Set the environment variable
+        `SWML_SYNC_HANDLERS_INLINE=true` to run them one at a time.
     """
 
     # Subclasses can define this to declaratively set prompt sections
@@ -245,51 +308,73 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         trust_proxy_for_signature: bool = False,
         swaig_secret: str | None = None,
     ):
-        """
-        Initialize a new agent
+        """Initialize a new agent.
 
         Args:
-            name: Agent name/identifier
-            route: HTTP route path for this agent
-            host: Host to bind the web server to
-            port: Port to bind the web server to
-            basic_auth: Optional (username, password) tuple for basic auth
-            use_pom: Whether to use POM for prompt building
-            token_expiry_secs: Seconds until tokens expire
-            auto_answer: Whether to automatically answer calls
-            record_call: Whether to record calls
-            record_format: Recording format
-            record_stereo: Whether to record in stereo
-            default_webhook_url: Optional default webhook URL for all SWAIG functions
-            agent_id: Optional unique ID for this agent, generated if not provided
-            native_functions: Optional list of native functions to include in the SWAIG object
-            schema_path: Optional path to the schema file
-            suppress_logs: Whether to suppress structured logs
-            enable_post_prompt_override: Whether to enable post-prompt override
-            check_for_input_override: Whether to enable check-for-input override
-            config_file: Optional path to configuration file
-            schema_validation: Enable SWML schema validation. Default True. Can also
-                              be disabled via SWML_SKIP_SCHEMA_VALIDATION=1 env var.
-            signing_key: Optional SignalWire Signing Key (from Dashboard → API
-                         Credentials). When set, webhook signature validation is
-                         enforced on POST /, /swaig, /post_prompt — unsigned or
-                         invalidly-signed requests get a 403. Falls back to the
-                         SIGNALWIRE_SIGNING_KEY env var if not passed.
-            swaig_secret: Optional secret used to sign this agent's per-call
-                         SWAIG function tokens. Falls back to the
-                         SIGNALWIRE_SWAIG_SECRET env var. When neither is set a
-                         random secret is generated per process, so tokens
-                         issued before a restart stop verifying afterwards and
-                         callers still on those calls see "the security token
-                         for this function is invalid or expired" on their next
-                         tool call. Set it in production, and whenever more
-                         than one replica serves the same agent. Distinct from
-                         `signing_key`, which validates inbound webhooks.
-            trust_proxy_for_signature: If True, honor X-Forwarded-Proto /
-                         X-Forwarded-Host when reconstructing the URL during
-                         signature validation. Default False — proxy headers
-                         are spoofable, so opt in only when you control the
-                         proxy chain.
+            name: Agent name or identifier. Used in logging, SIP username mapping,
+                and the default prompt fallback.
+            route: HTTP route path for this agent. Defaults to `"/"`.
+            host: Network interface the web server binds to. Defaults to
+                `"0.0.0.0"`.
+            port: Port the web server listens on. If None, the port comes from
+                the config file, then the `PORT` environment variable, then 3000.
+            basic_auth: Explicit `(username, password)` for HTTP Basic Auth on all
+                endpoints. If not set, credentials are read from the
+                `SWML_BASIC_AUTH_USER` and `SWML_BASIC_AUTH_PASSWORD` environment
+                variables, or auto-generated on startup.
+            use_pom: Use the Prompt Object Model for structured prompt building.
+                Set to False to use plain text prompts only. Defaults to True.
+            token_expiry_secs: Seconds until SWAIG function authentication tokens
+                expire. Defaults to 3600.
+            auto_answer: Add an `answer` verb before the AI verb in the SWML
+                document. Defaults to True.
+            record_call: Record calls. When True, a `record_call` verb is added to
+                the SWML document. Defaults to False.
+            record_format: Recording file format, such as `"mp4"` or `"wav"`.
+                Defaults to `"mp4"`.
+            record_stereo: Record in stereo, with a separate channel for each
+                party. Defaults to True.
+            default_webhook_url: Accepted but currently has no effect: the SDK
+                stores it and never reads it. The SWAIG webhook URL is built from
+                the incoming request or `SWML_PROXY_URL_BASE`; to override it,
+                use `set_web_hook_url()`.
+            agent_id: Unique ID for this agent instance. Generated as a UUID if
+                not provided.
+            native_functions: Names of native SWAIG functions to enable at
+                construction, such as `["check_time", "wait_for_user"]`. Can also
+                be set later with `set_native_functions()`.
+            schema_path: Path to a custom SWML schema file for validation. If not
+                provided, the SDK searches the default paths.
+            suppress_logs: Suppress SDK log output. Useful in testing or when
+                integrating with external logging. Defaults to False.
+            enable_post_prompt_override: Accepted but currently has no effect.
+                Defaults to False.
+            check_for_input_override: Accepted but currently has no effect.
+                Defaults to False.
+            config_file: Path to a JSON config file. If not provided, the SDK
+                searches the default paths.
+            schema_validation: Enable SWML schema validation. Defaults to True.
+                Can also be disabled with the `SWML_SKIP_SCHEMA_VALIDATION=1`
+                environment variable.
+            signing_key: SignalWire Signing Key (Dashboard, API Credentials). When
+                set, webhook signature validation is enforced on `POST /`,
+                `/swaig`, and `/post_prompt`, and unsigned or invalidly signed
+                requests get a 403. Falls back to the `SIGNALWIRE_SIGNING_KEY`
+                environment variable. When unset, the SDK logs a one-time startup
+                warning.
+            trust_proxy_for_signature: If True, honor the `X-Forwarded-Proto` and
+                `X-Forwarded-Host` headers when reconstructing the URL during
+                signature validation. Defaults to False, because proxy headers
+                can be spoofed. Opt in only when you control the proxy chain.
+            swaig_secret: Secret used to sign this agent's per-call SWAIG function
+                tokens. Falls back to the `SIGNALWIRE_SWAIG_SECRET` environment
+                variable. When neither is set, a random secret is generated per
+                process, so tokens issued before a restart stop verifying
+                afterwards, and callers still on those calls see "the security
+                token for this function is invalid or expired" on their next tool
+                call. Set it in production, and whenever more than one replica
+                serves the same agent. Distinct from `signing_key`, which
+                validates inbound webhooks.
         """
         # Import SWMLService here to avoid circular imports
 
@@ -523,23 +608,41 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         return {}
 
     def get_name(self) -> str:
-        """
-        Get agent name
+        """Get the agent's display name, as set at construction time.
 
         Returns:
-            Agent name
+            The agent name.
+
+        Example:
+            ```python
+            agent = AgentBase(name="support", route="/support")
+            agent.get_name()  # "support"
+            ```
         """
         return self.name
 
     def get_full_url(self, include_auth: bool = False) -> str:
-        """
-        Get the full URL for this agent's endpoint
+        """Get the full URL for this agent's endpoint.
+
+        The URL is built from the agent's host, port, and route. In serverless
+        environments it is derived from platform-specific environment variables.
+        When the agent is behind a proxy, the `SWML_PROXY_URL_BASE` environment
+        variable or `manual_set_proxy_url()` takes precedence.
 
         Args:
-            include_auth: Whether to include authentication credentials in the URL
+            include_auth: Embed the Basic Auth credentials in the URL, as in
+                `https://user:pass@host:port/route`. Defaults to False.
 
         Returns:
-            Full URL including host, port, and route (with auth if requested)
+            The full URL, including host, port, and route, with credentials if
+            requested.
+
+        Example:
+            ```python
+            agent.get_full_url()  # "http://localhost:3000/support"
+            agent.get_full_url(include_auth=True)
+            # "http://user:pass@localhost:3000/support"
+            ```
         """
         # If _proxy_url_base is set (e.g., from request URL detection), use it
         if hasattr(self, "_proxy_url_base") and self._proxy_url_base:
@@ -659,12 +762,32 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         summary: "PostPromptData | None",
         raw_data: "PostPrompt | None" = None,
     ) -> None:
-        """
-        Called when a post-prompt summary is received
+        """Handle the post-prompt summary received after a conversation ends.
+
+        Override this method in a subclass to process summaries, for example to
+        save them to a CRM, start a follow-up workflow, or log call outcomes. The
+        default implementation does nothing.
+
+        A post-prompt must be configured with `set_post_prompt()` for summaries
+        to be generated. Alternatively, call `set_post_prompt_url()` to receive
+        summaries at an external endpoint. For the full transcript at hangup
+        rather than the summary, register `on_call_end()`. To read voice and chat
+        post-prompt bodies with one shape, see `normalize_post_prompt()`.
 
         Args:
-            summary: The summary object or None if no summary was found
-            raw_data: The complete raw POST data from the request
+            summary: The summary the AI generated from your post-prompt
+                instructions, or None if no summary could be extracted.
+            raw_data: The complete raw POST data from the request, including
+                metadata such as `call_id` and the full AI response.
+
+        Example:
+            ```python
+            class SupportAgent(AgentBase):
+                def on_summary(self, summary, raw_data=None):
+                    if summary:
+                        call_id = raw_data.get("call_id") if raw_data else "unknown"
+                        print(f"Call {call_id} summary: {summary}")
+            ```
         """
         # Default implementation does nothing
         pass
@@ -678,10 +801,10 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         Usable as a decorator or called directly. Handlers run in registration
         order and receive:
 
-            call_log (list[dict]): the conversation as the platform recorded
-                it, already resolved from whichever field carried it.
-            raw_data (dict): the complete SWAIG request, including
-                `global_data` and `call_id`.
+        - `call_log` (list[dict]): the conversation as the platform recorded
+          it, already resolved from whichever field carried it.
+        - `raw_data` (dict): the complete SWAIG request, including
+          `global_data` and `call_id`.
 
         This wraps the platform's reserved `hangup_hook` function. That name is
         internal: it fires on hangup and is never offered to the model as
@@ -700,7 +823,10 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
 
         The return value is ignored -- the call is over and there is nobody to
         speak to. Exceptions are caught and logged rather than raised, since a
-        failing teardown handler must not turn into a failed hangup.
+        failing teardown handler must not turn into a failed hangup. For the
+        post-prompt summary, see `on_summary()`. To handle voice and chat
+        transcripts with one shape, pass `raw_data` through
+        `normalize_post_prompt()`.
 
         Args:
             handler: Callable taking (call_log, raw_data).
@@ -709,10 +835,12 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
             The handler, so this can be used as a decorator.
 
         Example:
+            ```python
             @agent.on_call_end
             def archive(call_log, raw_data):
                 conversation_id = raw_data.get("global_data", {}).get("conversation_id")
-                store(conversation_id, call_log)
+                print(conversation_id, len(call_log), "turns")
+            ```
         """
         handlers = self.__dict__.get("_call_end_handlers")
         if handlers is None:
@@ -773,8 +901,8 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         Usable as a decorator or called directly. Handlers run in registration
         order and receive:
 
-            raw_data (dict): the complete SWAIG request, including `call_id`,
-                `global_data` and the caller's details.
+        - `raw_data` (dict): the complete SWAIG request, including `call_id`,
+          `global_data` and the caller's details.
 
         This wraps the platform's reserved `startup_hook` function, the
         counterpart of the `hangup_hook` behind `on_call_end`. That name is
@@ -791,6 +919,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
 
         A handler may return a `FunctionResult`, or None. What the platform
         does with the hook's reply:
+
         - its actions run at once, in registration order across handlers
           (for example `update_global_data()` to give the call data before
           the conversation starts);
@@ -800,6 +929,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
           OpenAI Realtime agent runs the actions but drops the text, so put
           what its first greeting needs in the prompt from a per-call
           configuration callback instead.
+
         `post_process` is not used: the combined result runs its actions at
         once. The text pipeline adds every hook reply to the conversation, so
         a hook whose handlers return no text still adds a short placeholder
@@ -817,11 +947,13 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
             The handler, so this can be used as a decorator.
 
         Example:
+            ```python
             @agent.on_call_start
             def load_caller(raw_data):
-                caller = lookup(raw_data.get("caller_id_num"))
-                result = FunctionResult(f"The caller's name is {caller.name}.")
-                return result.update_global_data({"customer_id": caller.id})
+                name = raw_data.get("caller_id_name", "unknown")
+                result = FunctionResult(f"The caller's name is {name}.")
+                return result.update_global_data({"caller": name})
+            ```
         """
         handlers = self.__dict__.get("_call_start_handlers")
         if handlers is None:
@@ -880,29 +1012,42 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         )
 
     def on_debug_event(self, handler: Callable[..., Any]) -> Callable[..., Any]:
-        """
-        Register a handler for debug webhook events.
+        """Register a handler for the debug events posted to `/debug_events`.
 
         Use as a decorator to receive real-time debug events from the AI module
-        during calls. Requires enable_debug_events() to be called first.
+        during calls. Both sync and async handlers are supported.
+
+        Note:
+            Call `enable_debug_events()` first. Events are not delivered until
+            it has been called.
 
         The handler receives:
-            event_type (str): The event label (e.g. "barge", "llm_error", "session_start")
-            data (dict): The full event payload including call_id, label, and event-specific fields
 
-        The handler may be sync or async.
+        - `event_type` (str): The event label, such as `"barge"`, `"llm_error"`,
+          `"session_start"`, or `"step_change"`.
+        - `data` (dict): The full event payload, including `call_id`, `label`,
+          and event-specific fields.
 
         Args:
-            handler: Callback function with signature (event_type: str, data: dict)
+            handler: Callback with the signature
+                ``(event_type: str, data: dict)``.
 
         Returns:
-            The handler function (unchanged), for use as a decorator
+            The handler, unchanged, so this works as a decorator.
 
         Example:
+            ```python
+            agent.enable_debug_events(level=1)
+
             @agent.on_debug_event
-            def handle(event_type, data):
-                if event_type == "barge":
+            def handle_debug(event_type, data):
+                if event_type == "llm_error":
+                    print(f"LLM error: {data}")
+                elif event_type == "barge":
                     print(f"Barge detected: {data.get('barge_elapsed_ms')}ms")
+                elif event_type == "step_change":
+                    print(f"Step changed to: {data.get('step')}")
+            ```
         """
         self._debug_event_handler = handler
         return handler
@@ -920,9 +1065,10 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         agent's web server, not in serverless modes.
 
         The handler receives:
-            event_type (str): The event, such as "ai.speech_detect".
-            params (dict): Its fields, with the ``call_id``.
-            event (dict): The whole event as posted, with its ``timestamp``.
+
+        - `event_type` (str): The event, such as `"ai.speech_detect"`.
+        - `params` (dict): Its fields, with the `call_id`.
+        - `event` (dict): The whole event as posted, with its `timestamp`.
 
         It may be sync or async. Its return value is ignored, and an
         exception is logged.
@@ -934,10 +1080,12 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
             The handler, so this can be used as a decorator.
 
         Example:
+            ```python
             @agent.on_ai_event
             def heard(event_type, params, event):
                 if event_type == "ai.speech_detect":
-                    log.info("caller", call_id=params["call_id"], text=params["text"])
+                    print("caller", params["call_id"], params["text"])
+            ```
         """
         self._ai_event_handlers = [*self._ai_event_handlers, handler]
         self._warn_if_event_webhook_taken()
@@ -966,7 +1114,12 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
             max_finals: The most finals to keep for one call.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.record_speech_finals(max_calls=100, max_finals=50)
+            ```
         """
         if self._speech_log is None:
             self._speech_log = SpeechLog(max_calls=max_calls, max_finals=max_finals)
@@ -1014,30 +1167,39 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         verbs are safe to use before answering:
 
         Safe verbs: transfer, execute, return, label, goto, request, switch,
-                   cond, if, eval, set, unset, hangup, send_sms, sleep,
-                   stop_record_call, stop_denoise, stop_tap
+        cond, if, eval, set, unset, hangup, send_sms, sleep, stop_record_call,
+        stop_denoise, stop_tap
 
-        Verbs with auto_answer option (play, connect): Must include
-        "auto_answer": False in config to prevent automatic answering.
+        Verbs with an `auto_answer` option (`play`, `connect`) are allowed, but
+        their config should include `"auto_answer": False` to prevent automatic
+        answering. Omitting it logs a warning.
+
+        Warning:
+            Only the verbs listed above are safe before answering. Any other
+            verb raises `ValueError`.
 
         Args:
-            verb_name: The SWML verb name (e.g., "play", "sleep", "request")
+            verb_name: The SWML verb name, such as `"play"`, `"sleep"`, or
+                `"request"`.
             config: The verb's body: an object, or the string, number or
-                array some verbs take, such as sleep's duration
+                array some verbs take, such as sleep's duration. See the SWML
+                reference for verb-specific parameters.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
 
         Raises:
             ValueError: If verb is not safe for pre-answer use
             SchemaValidationError: If the config doesn't fit the verb's schema
 
         Example:
-            # Play ringback tone before answering
+            ```python
+            # Play a ringback tone before answering
             agent.add_pre_answer_verb("play", {
                 "urls": ["ring:us"],
-                "auto_answer": False
+                "auto_answer": False,
             })
+            ```
         """
         # Validate verb is safe for pre-answer use
         if verb_name in self._AUTO_ANSWER_VERBS:
@@ -1066,17 +1228,20 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         answer behavior, such as setting max_duration.
 
         Args:
-            config: Optional answer verb configuration (e.g., {"max_duration": 3600})
+            config: Answer verb configuration, such as
+                `{"max_duration": 3600}`. Defaults to None (an empty config).
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
 
         Raises:
             SchemaValidationError: If the config doesn't fit the answer verb
 
         Example:
-            # Set maximum call duration to 1 hour
+            ```python
+            # Set a maximum call duration of 1 hour
             agent.add_answer_verb({"max_duration": 3600})
+            ```
         """
         self._verb_entry("answer", config or {})
         self._answer_config = config or {}
@@ -1087,26 +1252,28 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         Add a verb to run after the call is answered but before the AI starts.
 
         Post-answer verbs run after the call is connected. Common uses include
-        welcome messages, legal disclaimers, and hold music.
+        welcome messages, legal disclaimers, hold music, and brief pauses.
 
         Args:
-            verb_name: The SWML verb name (e.g., "play", "sleep")
+            verb_name: The SWML verb name, such as `"play"` or `"sleep"`.
             config: The verb's body: an object, or the string, number or
                 array some verbs take, such as sleep's duration
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
 
         Raises:
             SchemaValidationError: If the config doesn't fit the verb's schema
 
         Example:
-            # Play welcome message
+            ```python
+            # Play a welcome message
             agent.add_post_answer_verb("play", {
-                "url": "say:Welcome to Acme Corporation."
+                "url": "say:Welcome to Acme Corporation. This call may be recorded."
             })
             # Brief pause
             agent.add_post_answer_verb("sleep", 500)
+            ```
         """
         self._verb_entry(verb_name, config)
         self._post_answer_verbs.append((verb_name, config))
@@ -1117,57 +1284,81 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         Add a verb to run after the AI conversation ends.
 
         Post-AI verbs run when the AI completes its conversation. Common uses
-        include clean disconnects, transfers, and logging.
+        include logging, cleanup transfers, clean disconnects, and an explicit
+        hangup.
 
         Args:
-            verb_name: The SWML verb name (e.g., "hangup", "transfer", "request")
+            verb_name: The SWML verb name, such as `"hangup"`, `"transfer"`, or
+                `"request"`.
             config: The verb's body: an object, or the string, number or
                 array some verbs take, such as sleep's duration
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
 
         Raises:
             SchemaValidationError: If the config doesn't fit the verb's schema
 
         Example:
+            ```python
             # Log call completion and hang up
             agent.add_post_ai_verb("request", {
                 "url": "https://api.example.com/call-complete",
-                "method": "POST"
+                "method": "POST",
             })
             agent.add_post_ai_verb("hangup", {})
+            ```
         """
         self._verb_entry(verb_name, config)
         self._post_ai_verbs.append((verb_name, config))
         return self
 
     def clear_pre_answer_verbs(self) -> "AgentBase":
-        """
-        Remove all pre-answer verbs.
+        """Remove all pre-answer verbs.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.add_pre_answer_verb("play", {
+                "urls": ["ring:us"],
+                "auto_answer": False,
+            })
+            agent.clear_pre_answer_verbs()
+            ```
         """
         self._pre_answer_verbs = []
         return self
 
     def clear_post_answer_verbs(self) -> "AgentBase":
-        """
-        Remove all post-answer verbs.
+        """Remove all post-answer verbs.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.add_post_answer_verb(
+                "play", {"url": "say:Welcome to Acme Corporation."}
+            )
+            agent.clear_post_answer_verbs()
+            ```
         """
         self._post_answer_verbs = []
         return self
 
     def clear_post_ai_verbs(self) -> "AgentBase":
-        """
-        Remove all post-AI verbs.
+        """Remove all post-AI verbs.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.add_post_ai_verb("hangup", {})
+            agent.clear_post_ai_verbs()
+            ```
         """
         self._post_ai_verbs = []
         return self
@@ -1177,20 +1368,25 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
     def enable_sip_routing(
         self, auto_map: bool = True, path: str = "/sip"
     ) -> "AgentBase":
-        """
-        Enable SIP-based routing for this agent
+        """Enable SIP-based routing for this agent.
 
-        This allows the agent to automatically route SIP requests based on SIP usernames.
-        When enabled, an endpoint at the specified path is automatically created
-        that will handle SIP requests and deliver them to this agent.
+        This lets the agent route SIP requests by SIP username. A routing
+        callback endpoint is registered at `path`. Incoming SIP calls are matched
+        against the registered usernames and directed to this agent.
 
         Args:
-            auto_map: Whether to automatically map common SIP usernames to this agent
-                     (based on the agent name and route path)
-            path: The path to register the SIP routing endpoint (default: "/sip")
+            auto_map: Automatically register SIP usernames derived from the agent
+                name and route path, by calling `auto_map_sip_usernames()`.
+                Defaults to True.
+            path: URL path for the SIP routing endpoint. Defaults to `"/sip"`.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.enable_sip_routing()
+            ```
         """
 
         # Create a routing callback that handles SIP usernames.
@@ -1228,14 +1424,22 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         return self
 
     def register_sip_username(self, sip_username: str) -> "AgentBase":
-        """
-        Register a SIP username that should be routed to this agent
+        """Register a SIP username that should be routed to this agent.
+
+        Usernames are matched case-insensitively.
 
         Args:
-            sip_username: SIP username to register
+            sip_username: SIP username to register for this agent.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.enable_sip_routing()
+            agent.register_sip_username("help-desk")
+            agent.register_sip_username("customer-service")
+            ```
         """
         if not hasattr(self, "_sip_usernames"):
             self._sip_usernames = set()
@@ -1246,12 +1450,33 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         return self
 
     def auto_map_sip_usernames(self) -> "AgentBase":
-        """
-        Automatically register common SIP usernames based on this agent's
-        name and route
+        """Register SIP usernames derived from this agent's name and route.
+
+        This is a convenience that registers common username variations, so
+        callers can reach the agent over SIP without manual registration. It
+        registers:
+
+        - a lowercase, alphanumeric version of the agent name
+        - a lowercase, alphanumeric version of the route
+        - a vowel-removed abbreviation of the name, when the name is longer than
+          3 characters
+
+        Note:
+            `enable_sip_routing()` calls this method when `auto_map=True`, the
+            default. Call it directly only if you disabled auto-mapping and want
+            to trigger it later. To register specific usernames instead, use
+            `register_sip_username()`.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent = AgentBase(name="Support Agent", route="/support")
+            agent.enable_sip_routing(auto_map=False)
+            agent.auto_map_sip_usernames()
+            # Registers "supportagent", "support", and "spprtgnt"
+            ```
         """
         # Register username based on agent name
         clean_name = re.sub(r"[^a-z0-9_]", "", self.name.lower())
@@ -1273,63 +1498,100 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         return self
 
     def set_web_hook_url(self, url: str) -> "AgentBase":
-        """
-        Override the default web_hook_url with a supplied URL string
+        """Override the webhook URL used for SWAIG function calls.
+
+        By default, the SDK computes this URL from the agent's host, port, and
+        route. Use this method when the agent is behind a reverse proxy, load
+        balancer, or tunnel such as ngrok, and the detected URL does not match
+        the external address. The `SWML_PROXY_URL_BASE` environment variable
+        overrides the base URL globally without calling this method.
 
         Args:
-            url: The URL to use for SWAIG function webhooks
+            url: The full URL to use for this agent's SWAIG endpoints.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            # The agent is behind ngrok
+            agent.set_web_hook_url("https://abc123.ngrok.io/support")
+            ```
         """
         self._web_hook_url_override = url
         return self
 
     def set_post_prompt_url(self, url: str) -> "AgentBase":
-        """
-        Override the default post_prompt_url with a supplied URL string
+        """Override the URL where post-prompt summaries are delivered.
+
+        By default, summaries are sent to the agent's own `/post_prompt`
+        endpoint. Use this method to send them to an external service instead.
 
         Args:
-            url: The URL to use for post-prompt summary delivery
+            url: The URL that post-prompt summaries are POSTed to.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            agent.set_post_prompt("Summarize this call as JSON.")
+            agent.set_post_prompt_url("https://analytics.example.com/call-summaries")
+            ```
         """
         self._post_prompt_url_override = url
         return self
 
     def add_swaig_query_params(self, params: dict[str, str]) -> "AgentBase":
-        """
-        Add query parameters that will be included in all SWAIG webhook URLs
+        """Add query parameters that are included in all SWAIG webhook URLs.
 
-        This is particularly useful for preserving dynamic configuration state
-        across SWAIG callbacks. For example, if your dynamic config adds skills
-        based on query parameters, you can pass those same parameters through
-        to the SWAIG webhook so the same configuration is applied.
+        This is useful for preserving dynamic configuration state across SWAIG
+        callbacks. For example, if your dynamic config adds skills based on query
+        parameters, pass those same parameters through to the SWAIG webhook so the
+        same configuration is applied, such as a tenant identifier or feature
+        tier.
 
         Args:
-            params: Dictionary of query parameters to add to SWAIG URLs
+            params: Query parameters to merge into every SWAIG URL. Later calls
+                merge into the existing set rather than replacing it. Pass the
+                same key again to overwrite its value.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
 
         Example:
+            ```python
             def dynamic_config(query_params, body_params, headers, agent):
-                if query_params.get('tier') == 'premium':
-                    agent.add_skill('advanced_search')
-                    # Preserve the tier param so SWAIG callbacks work
-                    agent.add_swaig_query_params({'tier': 'premium'})
+                tier = query_params.get("tier", "free")
+                if tier == "premium":
+                    agent.add_skill("math")
+                # Preserve the tier so SWAIG callbacks get the same configuration
+                agent.add_swaig_query_params({"tier": tier})
+
+            agent.set_dynamic_config_callback(dynamic_config)
+            ```
         """
         if params and isinstance(params, dict):
             self._swaig_query_params.update(params)
         return self
 
     def clear_swaig_query_params(self) -> "AgentBase":
-        """
-        Clear all SWAIG query parameters
+        """Clear all query parameters added with `add_swaig_query_params()`.
+
+        After this call, SWAIG webhook URLs carry no extra query parameters.
 
         Returns:
-            Self for method chaining
+            This agent, for chaining.
+
+        Example:
+            ```python
+            def dynamic_config(query_params, body_params, headers, agent):
+                # Start fresh each request to avoid stale params
+                agent.clear_swaig_query_params()
+                agent.add_swaig_query_params({"tier": query_params.get("tier", "free")})
+
+            agent.set_dynamic_config_callback(dynamic_config)
+            ```
         """
         self._swaig_query_params = {}
         return self
@@ -2349,25 +2611,51 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         headers: dict[str, Any],
         body: dict[str, Any] | None = None,
     ) -> tuple[int, dict[str, Any], str]:
-        """
-        Framework-free request-dispatch core for AgentBase.
+        """Dispatch one HTTP request over plain values, without a web framework.
 
-        Overrides :meth:`SWMLService.handle_request` so the primitive dispatch
-        surface renders SWML via AgentBase's :meth:`_render_swml` (mirroring the
-        FastAPI ``_handle_root_request`` path), instead of the base
-        ``render_document``. Performs proxy detection, basic-auth, the
-        routing-callback check, and ``on_swml_request`` modification over plain
-        primitives, returning a ``(status, headers, body_string)`` triple with the
-        401-auth and 307-redirect behavior preserved.
+        This performs proxy detection, basic auth, the routing callback check, and
+        the `on_swml_request()` modification, then renders the SWML document. It
+        mirrors the response the FastAPI routes produce for the same request.
+        Basic auth is always on: pass `basic_auth` to the constructor and send a
+        matching `Authorization` header, or the call returns 401.
+
+        Use it to serve an agent from a framework the SDK has no adapter for. For
+        the supported serverless platforms, use `handle_serverless_request()`.
 
         Args:
-            method: HTTP method, e.g. ``"GET"`` or ``"POST"``.
-            url: The full request URL as a string.
+            method: HTTP method, such as `"GET"` or `"POST"`.
+            url: The full request URL. Used for proxy detection and to match a
+                registered routing callback path.
             headers: Request headers as a plain dict.
-            body: The already-parsed JSON body for POST requests, or ``None``.
+            body: The already-parsed JSON body for POST requests. Defaults to
+                None.
 
         Returns:
-            A ``(status_code, response_headers, body_string)`` triple.
+            A `(status_code, response_headers, body)` tuple. The status is 200
+            with the SWML document as a JSON string; 307 with a `Location` header
+            and an empty body when a routing callback returned a destination; or
+            401 with `WWW-Authenticate: Basic` and a JSON error when basic auth
+            fails.
+
+        Example:
+            ```python
+            import base64
+            import json
+
+            agent = AgentBase(
+                name="dispatch", route="/dispatch", basic_auth=("dispatch", "s3cret")
+            )
+            credentials = base64.b64encode(b"dispatch:s3cret").decode()
+            status, headers, body = agent.handle_request(
+                "POST",
+                "https://bayview-taxi.example.com/dispatch",
+                {
+                    "content-type": "application/json",
+                    "authorization": f"Basic {credentials}",
+                },
+                {"call": {"call_id": "abc-123"}},
+            )
+            ```
         """
         body = body if body is not None else {}
         callback_path = self._callback_path_for_url(url)
