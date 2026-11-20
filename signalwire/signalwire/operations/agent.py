@@ -22,6 +22,7 @@ import re
 import threading
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from decimal import Decimal
+from types import MappingProxyType
 from typing import Any
 
 from signalwire.core.agent_base import AgentBase
@@ -96,12 +97,18 @@ class _Names:
         return self._prefix + name
 
 
-DEFAULT_RULES = (
-    "This is a phone call. Keep each reply short, but give every fact the caller asks for.",
-    "State only facts that came from a tool result. Never guess records, prices or policies.",
-    "Nothing changes until the caller says yes to a change read back to them and it is confirmed.",
+DEFAULT_RULES: Mapping[str, str] = MappingProxyType(
+    {
+        "reply": "Keep each reply short, but give every fact the caller asks for.",
+        "facts": "State only facts that came from a tool result. Never guess records, prices or policies.",
+        "confirm": "Nothing changes until the caller says yes to a change read back to them and it is confirmed.",
+    }
 )
-"""The rules every operations agent's prompt carries, unless replaced."""
+"""The rules every operations agent's prompt carries, by key, unless replaced. ``confirm`` is left out of a
+service with no operations; with a ``medium``, ``reply`` starts with it ("This is a phone call.")."""
+
+MEDIUMS = ("voice", "chat")
+"""The mediums a service can be given or find on a request: a call, or a chat."""
 
 
 class _Said(Refuse):
@@ -177,6 +184,12 @@ class CallContext:
     def call_id(self) -> str:
         """The platform's id for the call."""
         return str(self.raw_data.get("call_id") or "")
+
+    @property
+    def medium(self) -> str:
+        """``"voice"`` or ``"chat"``: the service's ``medium``, or the one found on the call's first request;
+        ``""`` when neither says."""
+        return str(self.data.get("medium") or self.service._medium or "")
 
 
 class _Lookup:
@@ -295,7 +308,7 @@ class Operations:
         self,
         *,
         role: str,
-        rules: Sequence[str] | None = None,
+        rules: Sequence[str] | Mapping[str, str | None] | None = None,
         wording: Mapping[str, str] | None = None,
         confirm_gates: Sequence[SemanticGate] | None = None,
         tool_fillers: Mapping[str, Any] | None = None,
@@ -306,13 +319,15 @@ class Operations:
         context: str = "default",
         currency: str | None = None,
         money_format: Callable[[Decimal, str | None], str] | None = None,
+        medium: str | None = None,
     ) -> None:
         """
         Args:
             role: Who the agent is and how it sounds, the prompt's Role section.
-            rules: The prompt's Rules section; defaults to ``DEFAULT_RULES``
-                (without the rule about changes when there are no
-                operations).
+            rules: The prompt's Rules section. A mapping changes
+                ``DEFAULT_RULES`` by key: a new key adds a rule after them,
+                a key of theirs replaces that rule, and None removes it. A
+                list replaces them all.
             wording: Words to use in place of the generated ones, by key:
                 the steps' text (``step.main``), the tools' descriptions,
                 tool results and prompts, the gates, the transfer notice
@@ -348,7 +363,18 @@ class Operations:
                 amount (a ``Decimal``, never below 0) in the totals the
                 service states, in place of ``format_money``; ``currency``
                 is the code, or None.
+            medium: ``"voice"`` or ``"chat"`` for a service that only takes
+                calls, or only chats: the ``reply`` rule starts with it.
+                None: each call's medium is found on its first request, from
+                the platform's ``conversation_type`` (``prefilled``, which
+                ``ServiceAgent`` applies), and the record's ``now`` line
+                starts with it ("This is a chat.").
         """
+        if medium is not None and medium not in MEDIUMS:
+            raise ValueError(
+                f"medium must be one of {', '.join(MEDIUMS)}, or None to find it on each request"
+            )
+        self._medium = medium
         self._names = _Names(namespace, context)
         self._w = _Wording(DEFAULT_WORDING, wording, "Operations")
         self._currency = check_currency(currency)
@@ -359,7 +385,13 @@ class Operations:
         self._gate_fillers = dict(gate_fillers) if gate_fillers else None
         self._wrap = wrap
         self._customize = customize
-        self._rules = list(rules) if rules is not None else None
+        self._rules: list[str] | dict[str, str | None] | None = (
+            None
+            if rules is None
+            else dict(rules)
+            if isinstance(rules, Mapping)
+            else list(rules)
+        )
         self._operations: dict[str, Operation] = {}
         self._lookups: list[_Lookup] = []
         self._identity: _Identity | None = None
@@ -647,18 +679,6 @@ class Operations:
         that exist keep their text and tools, an initial step it chose
         stands, and the conscience gets this service's line appended.
         """
-        _add_to_section(agent, "Role", body=self._role)
-        rules = (
-            self._rules
-            if self._rules is not None
-            else [
-                r
-                for r in DEFAULT_RULES
-                if self._operations or r is not DEFAULT_RULES[2]
-            ]
-        )
-        if rules:
-            _add_to_section(agent, "Rules", bullets=list(rules))
         taken = [
             n for n in self._tool_names() if n in agent._tool_registry._swaig_functions
         ]
@@ -667,6 +687,10 @@ class Operations:
                 f"the agent already has tools named {', '.join(taken)}: give this Operations a namespace= "
                 "(or the tools other names) so they can sit side by side"
             )
+        _add_to_section(agent, "Role", body=self._role)
+        rules = self._rule_texts()
+        if rules:
+            _add_to_section(agent, "Rules", bullets=rules)
         if self._operations or self._identity is not None:
             agent.update_global_data(_opening_data(self._names.record, self._w))
             line = f"${{global_data.{self._names.record}.now}}"
@@ -687,6 +711,17 @@ class Operations:
         """What the changes made in the call come to, once more than one moved money."""
         return _in_all(history, self._w, self._money_format)
 
+    def _rule_texts(self) -> list[str]:
+        """The Rules section's bullets: the defaults as changed by key, or the list given."""
+        if isinstance(self._rules, list):
+            return list(self._rules)
+        rules: dict[str, str | None] = {**DEFAULT_RULES, **(self._rules or {})}
+        if not self._operations:
+            rules.pop("confirm", None)
+        if self._medium and rules.get("reply"):
+            rules["reply"] = f"{self._w('medium.' + self._medium)} {rules['reply']}"
+        return [r for r in rules.values() if r]
+
     def _tool_names(self) -> list[str]:
         """Every tool this service defines on install."""
         names = [lk.tool for lk in self._lookups] + [
@@ -704,11 +739,29 @@ class Operations:
         self, request_data: Mapping[str, Any] | None, request: Any = None
     ) -> dict[str, Any] | None:
         """
-        The ``global_data`` a call starts with when ``identify``'s ``prefill``
-        already knows the caller (caller ID, a chat widget, the page): the
-        record, identified, or None. ``ServiceAgent`` applies it on each SWML
-        request; an agent configured per request applies it itself.
+        The ``global_data`` a call starts with, from its first request: the
+        record, with the call's medium when the request shows it (and the
+        service has no ``medium`` of its own), identified when ``identify``'s
+        ``prefill`` already knows the caller (caller ID, a chat widget, the
+        page). None when there's nothing to add to the record ``install``
+        gave. ``ServiceAgent`` applies it on each SWML request; an agent
+        configured per request applies it itself, as global data.
         """
+        if not (self._operations or self._identity is not None):
+            return None
+        changes: dict[str, Any] = {}
+        medium = None if self._medium else _medium_of_request(request_data)
+        if medium:
+            changes["medium"] = medium
+        changes.update(self._prefilled_account(request_data, request) or {})
+        if not changes:
+            return None
+        return self._update(_opening(self._w), **changes)
+
+    def _prefilled_account(
+        self, request_data: Mapping[str, Any] | None, request: Any
+    ) -> dict[str, Any] | None:
+        """The account ``identify``'s ``prefill`` finds for the call, or None."""
         idn = self._identity
         if idn is None or idn.prefill is None:
             return None
@@ -732,7 +785,7 @@ class Operations:
         except Exception:  # unknown: the call starts unidentified, and identify asks
             logger.exception("operations: prefill could not identify the caller")
             return None
-        return self._update(call.data, account_id=call.data["account_id"], account=text)
+        return {"account_id": call.data["account_id"], "account": text}
 
     def _gated(self) -> bool:
         """Whether the call starts in a step of its own that asks who the caller is."""
@@ -1036,11 +1089,19 @@ class Operations:
         doesn't count when they asked for this change itself to be different.
         """
         agreed = next(g for g in self.proposal.confirm_gates() if g.id == "agreed")
+        refused = FunctionResult(
+            tool_result=self._w("gate.confirm.refused", tool=self._names.confirm),
+            tool_prompt=self._w(
+                "gate.confirm.refused.then",
+                read_back="${global_data.semantic_state.proposal}",
+                decline=self._names.decline,
+            ),
+        ).back_to_back_functions(False)
         return [
             SemanticGate(
                 self._w("gate.confirm"),
                 threshold=agreed.threshold,
-                on_fail=agreed.on_fail,
+                on_fail=refused,
                 id=agreed.id,
                 dialogue=agreed.dialogue,
                 true_means=self._w("gate.confirm.true"),
@@ -1402,6 +1463,7 @@ class Operations:
         """The read-back, proposed, with what the model is to do next."""
         result = self.proposal.propose(read_back, raw_data=raw_data, result=result)
         if isinstance(result.response, dict):
+            result.response["tool_result"] = self._w("read_back", read_back=read_back)
             # In place of the Proposal pattern's own ("If they say no or want a change, call decline_change"):
             # the confirm step's words, and more asked for added to it. Told only to wait for a yes, a model told
             # the caller nothing more could be asked for until they answered. A question answered in between left
@@ -1868,6 +1930,8 @@ class ServiceAgent(AgentBase):
         self.ops = Operations(role=role, **ops_kwargs)
         self._installed = False
         self._install_lock = threading.Lock()
+        # The global data a request's call starts with, while its SWML renders on a per-request copy
+        self._rendering = threading.local()
         self.operation = self.ops.operation
         self.lookup = self.ops.lookup
         self.phase = self.ops.phase
@@ -1897,10 +1961,11 @@ class ServiceAgent(AgentBase):
         callback_path: str | None = None,
         request: Any = None,
     ) -> dict[str, Any] | None:
-        """Start the call identified when ``identify``'s ``prefill`` already knows the caller."""
+        """Start the call with its record from this request: its medium, and identified when ``identify``'s
+        ``prefill`` already knows the caller (``Operations.prefilled``)."""
         mods = super().on_swml_request(request_data, callback_path, request)
         if mods and mods.get("__use_ephemeral_agent"):
-            return mods
+            return mods  # rendered on a per-request copy, which gets it (_create_ephemeral_copy)
         known = self.ops.prefilled(request_data, request)
         if not known:
             return mods
@@ -1928,7 +1993,24 @@ class ServiceAgent(AgentBase):
         self, call_id: str | None = None, modifications: dict[str, Any] | None = None
     ) -> str:
         self.compile()
-        return super()._render_swml(call_id, modifications)
+        if not (modifications and modifications.get("__use_ephemeral_agent")):
+            return super()._render_swml(call_id, modifications)
+        # A per-request configuration callback renders on a copy, and the
+        # modifications don't reach it: the copy gets the record instead
+        self._rendering.known = self.ops.prefilled(
+            modifications.get("__request_data"), modifications.get("__request")
+        )
+        try:
+            return super()._render_swml(call_id, modifications)
+        finally:
+            self._rendering.known = None
+
+    def _create_ephemeral_copy(self) -> AgentBase:
+        copy = super()._create_ephemeral_copy()
+        known = getattr(self._rendering, "known", None)
+        if known:
+            copy.update_global_data(known)
+        return copy
 
     def on_function_call(
         self, name: str, args: dict[str, Any], raw_data: dict[str, Any] | None = None
@@ -1960,6 +2042,24 @@ def _contribute(ctx: Any, name: str, text: str, tools: list[str]) -> Any:
             .set_valid_steps([])
         )
     return step._extend(text, tools, section="What else you can do")
+
+
+def _medium_of_request(data: Mapping[str, Any] | None) -> str | None:
+    """
+    The medium a SWML request shows: the platform's ``conversation_type``
+    (``chat``, or a call), else a call's details. None when it doesn't say,
+    or names a medium the service doesn't know.
+    """
+    d = data if isinstance(data, Mapping) else {}
+    kind = str(d.get("conversation_type") or "").strip().lower()
+    if kind == "chat":
+        return "chat"
+    if kind in ("voice", "call", "phone"):
+        return "voice"
+    if kind:
+        return None
+    call = d.get("call")
+    return "voice" if isinstance(call, Mapping) and call.get("call_id") else None
 
 
 def _add_to_section(

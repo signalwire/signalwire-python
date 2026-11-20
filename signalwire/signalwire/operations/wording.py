@@ -84,6 +84,9 @@ DEFAULT_WORDING: Mapping[str, str] = MappingProxyType(
         "gate.confirm.false": "They said no, hesitated, only made a listening sound, only asked a question, asked "
         "for something else with no yes, asked for this change to be different, or haven't spoken since the "
         "change was asked.",
+        "gate.confirm.refused": "{tool} was not run. The caller has not said yes to this change.",
+        "gate.confirm.refused.then": 'Read it back, "{read_back}", and ask for a plain yes or no, or call {decline} '
+        "if they no longer want it.",
         "gate.transfer": "In their latest turns in `conversation`, has the caller asked to speak with a person, or "
         "said yes when the agent offered to transfer them to one?",
         "gate.transfer.true": "They asked for a person, a human, a representative or a supervisor, or said yes to "
@@ -104,6 +107,7 @@ DEFAULT_WORDING: Mapping[str, str] = MappingProxyType(
         "then.next_up": ' Then, as they asked, call {tool} again for the change set aside: "{read_back}"',
         "then.its_tool": "its tool",
         # Tool results
+        "read_back": "Read back to the caller: {read_back}",
         "refused.prefix": "Nothing is changed: ",
         "lookup.need": "Nothing was looked up yet: {ask}",
         "account.unfound": "Their account isn't found yet.",

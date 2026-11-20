@@ -41,6 +41,7 @@ RECORD_KEYS = (
     "history",
     "proposals",
     "state",
+    "medium",
     "now",
 )
 """The keys of the record."""
@@ -60,6 +61,7 @@ def _opening(w: _Wording) -> dict[str, Any]:
         history=[],
         proposals=0,
         state={},
+        medium="",
     )
 
 
@@ -96,7 +98,9 @@ def _now_line(data: Mapping[str, Any], w: _Wording) -> str:
     set aside for after it."""
     done = " ".join(h["done"] for h in data.get("history") or [] if h.get("done"))
     waiting, queued = data.get("waiting") or {}, data.get("queued") or []
+    medium = data.get("medium")
     parts = [
+        w(f"medium.{medium}") if medium in ("voice", "chat") else "",
         w("now.asked", asked=data["asked"]) if data.get("asked") else "",
         w("now.done", done=done) if done else "",
         w("now.waiting", read_back=waiting["read_back"])
