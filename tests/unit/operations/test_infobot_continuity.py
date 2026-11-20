@@ -155,3 +155,39 @@ def test_visitor_context_merges_global_data(tmp_path: Path) -> None:
     agent = AgentBase(name="v", route="/v", suppress_logs=True)
     c._seed_callback({}, {"conversation_id": "x"}, {}, agent)
     assert agent._global_data.get("visitor") == "acme"
+
+
+def test_install_runs_the_agents_own_callback_first(tmp_path: Path) -> None:
+    ran: list[str] = []
+    agent = AgentBase(name="ch", route="/ch", suppress_logs=True)
+    agent.set_dynamic_config_callback(lambda q, b, h, a: ran.append("own"))
+    c = Continuity(store=LegStore(cache_dir=str(tmp_path)), visitor_context=lambda body: ran.append("seed") or None)
+    c.install(agent)
+    agent._dynamic_config_callback({}, {"conversation_id": "x"}, {}, agent)
+    assert ran == ["own", "seed"]
+
+
+def test_a_leg_records_its_medium_and_the_seed_uses_it(tmp_path: Path) -> None:
+    c = Continuity(store=LegStore(cache_dir=str(tmp_path)), switch_turn=lambda now: f"Cambio a {now}.")
+    agent = AgentBase(name="m", route="/m", suppress_logs=True)
+    # the chat leg's request says it's chat; its end, which may not, finds it in global_data
+    c._seed_callback({}, {"conversation_id": "r", "conversation_type": "chat"}, {}, agent)
+    assert agent._global_data["conversation_type"] == "chat"
+    c._capture_leg([{"role": "user", "content": "hola"}], {"conversation_id": "r", "global_data": agent._global_data})
+    assert c.store.legs("r")[0]["medium"] == "chat"
+    c._seed_callback({}, {"conversation_id": "r.2", "conversation_type": "chat"}, {}, agent)
+    convo = agent._params["convo"]
+    assert convo[-2]["content"] == "Cambio a chat."
+    assert "from chat to chat" in convo[-1]["content"], "the medium recorded, not a guess"
+
+
+def test_the_file_store_keeps_every_leg_appended_at_once(tmp_path: Path) -> None:
+    import threading
+
+    store = LegStore(cache_dir=str(tmp_path))
+    threads = [threading.Thread(target=store.record, args=("c", {"n": i})) for i in range(20)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert sorted(leg["n"] for leg in store.legs("c")) == list(range(20))

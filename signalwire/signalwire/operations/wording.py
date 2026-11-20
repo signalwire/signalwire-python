@@ -212,12 +212,13 @@ class _Wording:
         defaults: Mapping[str, str],
         overrides: Mapping[str, str] | None,
         owner: str,
+        table: str = "DEFAULT_WORDING",
     ) -> None:
         overrides = dict(overrides or {})
         unknown = sorted(k for k in overrides if k not in defaults)
         if unknown:
             raise ValueError(
-                f"{owner} has no wording {', '.join(map(repr, unknown))}; the keys are those of its DEFAULT_WORDING"
+                f"{owner} has no wording {', '.join(map(repr, unknown))}; the keys are those of {table}"
             )
         for key, text in overrides.items():
             if not isinstance(text, str):

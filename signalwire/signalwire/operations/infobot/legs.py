@@ -14,11 +14,15 @@ from __future__ import annotations
 import json
 import re
 import tempfile
+import threading
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 Leg = dict[str, Any]
+
+_FILES_LOCK = threading.Lock()
+"""Serializes the default file store's read-modify-write in this process."""
 
 
 class LegStore:
@@ -28,8 +32,10 @@ class LegStore:
     opens another; because an ended conversation cannot be reopened, the next
     leg gets a fresh id while the store keys every leg off the ROOT id, so the
     history travels across the switch. The default persistence is one JSON file
-    per conversation under a temp dir; ``set_store`` replaces it (e.g. a
-    database) with a ``load(id) -> [leg]`` / ``append(id, leg) -> ok`` pair.
+    per conversation under a temp dir, on this host, kept consistent within one
+    process: for development. ``set_store`` replaces it (a database, for more
+    than one process or host) with a ``load(id) -> [leg]`` /
+    ``append(id, leg) -> ok`` pair.
     """
 
     SEP = "."
@@ -84,10 +90,13 @@ class LegStore:
 
     def _default_append(self, conversation_id: str, leg: Leg) -> bool:
         try:
-            self._cache_dir.mkdir(parents=True, exist_ok=True)
-            legs = self._default_load(conversation_id)
-            legs.append(leg)
-            self._path(conversation_id).write_text(json.dumps({"legs": legs}, indent=1))
+            with _FILES_LOCK:
+                self._cache_dir.mkdir(parents=True, exist_ok=True)
+                legs = self._default_load(conversation_id)
+                legs.append(leg)
+                self._path(conversation_id).write_text(
+                    json.dumps({"legs": legs}, indent=1)
+                )
         except OSError:
             return False
         return True

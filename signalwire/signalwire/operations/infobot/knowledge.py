@@ -11,12 +11,51 @@ A knowledge-search layer an agent installs to answer callers from a corpus.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+import inspect
+from collections.abc import Callable, Mapping, Sequence
+from types import MappingProxyType
 from typing import Any
 
 from signalwire import AgentBase, FunctionResult
+from signalwire.operations.model import Field
+from signalwire.operations.wording import _Wording
 
 Result = dict[str, Any]
+
+KNOWLEDGE_WORDING: Mapping[str, str] = MappingProxyType(
+    {
+        "tool.search": "{description} Changes nothing.",
+        "tool.search.query": "What to look up, in the caller's words.",
+        "tool.search.query_type": "The kind of lookup.",
+        "search.no_query": "Ask them what to look up - there was no query.",
+        "search.unconfigured": "Search isn't configured.",
+        "search.not_covered": "The results do not cover it.",
+        "step.section": "Knowledge",
+        "step.text": "Answer the caller's question from {tool}, not memory.",
+        "tool.contact": "Record the caller's contact details for a human follow-up. Call this only after they "
+        "have agreed they would like someone to follow up.",
+        "contact.ask": "Ask them for {field}.",
+        "contact.any_of": "Ask them for {choices}.",
+        "contact.thanks": "Thanks - I've passed that along and someone will follow up.",
+        "list.and": " and ",
+        "list.or": " or ",
+        "list.comma": ", ",
+    }
+)
+"""Every key ``InfoBotKnowledge``'s words come from, with its default."""
+
+CONTACT_FIELDS: Mapping[str, Field] = MappingProxyType(
+    {
+        "name": Field(str, "The caller's name.", required=False),
+        "email": Field(
+            str,
+            "An email address to reach them.",
+            ask="Ask them for an email address to reach them at.",
+        ),
+        "topic": Field(str, "What they want followed up, in brief.", required=False),
+    }
+)
+"""The contact tool's fields unless ``contact_fields`` replaces them."""
 
 
 class InfoBotKnowledge:
@@ -39,9 +78,8 @@ class InfoBotKnowledge:
     refused gate elsewhere in a composed agent does not strand the model
     one-tool-per-turn.
 
-    Compose with ``Operations`` by installing this FIRST, then ``Operations``;
-    the generated ``main`` step keeps these tools and gains the operation ones,
-    and each layer's record line stays in its own ``global_data`` namespace.
+    It installs beside ``Operations`` on one agent, in either order: both
+    add to the same ``main`` step, which keeps every layer's text and tools.
     """
 
     _GROUNDING = (
@@ -55,20 +93,68 @@ class InfoBotKnowledge:
         *,
         tool: str = "search_knowledge",
         description: str = "Search the documentation and answer only from the results.",
-        namespace: str = "infobot",
         result_limit: int = 5,
         grounding: str = _GROUNDING,
         contact: Callable[[dict[str, Any]], None] | None = None,
         contact_tool: str = "collect_contact",
+        contact_fields: Mapping[str, Field] | None = None,
+        contact_any_of: Sequence[Sequence[str]] | None = None,
+        wording: Mapping[str, str] | None = None,
+        context: str = "default",
+        step: str = "main",
     ) -> None:
+        """
+        Args:
+            search: ``search(query)`` returns the raw results; it may be
+                ``async``. Or call ``use_search_service``.
+            tool: The search tool's name.
+            description: What the search tool does, as the model reads it.
+            result_limit: The most results handed to the model.
+            grounding: The line that goes with the results, unless rules
+                are added.
+            contact: ``contact(fields)`` takes the details the contact tool
+                collects; without it there's no contact tool.
+            contact_tool: The contact tool's name.
+            contact_fields: The contact tool's fields, in place of
+                ``CONTACT_FIELDS`` (name, email and topic). A field's
+                ``ask`` is what the model is told when it's missing.
+            contact_any_of: Sets of fields, any one of which is enough, such
+                as ``[["email"], ["phone"]]``. Defaults to the required
+                fields, all of them.
+            wording: Words to use in place of the defaults, by key; the keys
+                are those of ``KNOWLEDGE_WORDING``.
+            context: The context of the step its tools go in.
+            step: The step its tools go in, made if it isn't there, added to
+                if it is.
+        """
         self._search = search
         self._tool = tool
         self._description = description
-        self._namespace = namespace
         self._result_limit = result_limit
         self._grounding = grounding
         self._contact = contact
         self._contact_tool = contact_tool
+        self._contact_fields = dict(contact_fields or CONTACT_FIELDS)
+        self._contact_any_of = [
+            list(s)
+            for s in (
+                contact_any_of
+                if contact_any_of is not None
+                else [[k for k, f in self._contact_fields.items() if f.required]]
+            )
+        ]
+        unknown = sorted(
+            {k for s in self._contact_any_of for k in s} - set(self._contact_fields)
+        )
+        if unknown:
+            raise ValueError(
+                f"contact_any_of names fields there aren't: {', '.join(unknown)}"
+            )
+        self._w = _Wording(
+            KNOWLEDGE_WORDING, wording, "InfoBotKnowledge", "KNOWLEDGE_WORDING"
+        )
+        self._context_name = context
+        self._step_name = step
         self._exclude: Callable[[Result, str], bool] | None = None
         self._demote: Callable[[Result], bool] | None = None
         self._context: Callable[[Result], str | None] | None = None
@@ -193,7 +279,7 @@ class InfoBotKnowledge:
     # -- install -----------------------------------------------------------
 
     def install(self, agent: AgentBase) -> AgentBase:
-        """Add the tools, the ``main`` step and the conscience line."""
+        """Add the tools, and the step that offers them."""
         if self._search is None:
             raise ValueError(
                 "InfoBotKnowledge needs a search backend: pass search=fn or call "
@@ -203,43 +289,68 @@ class InfoBotKnowledge:
         if self._contact is not None:
             self._define_contact(agent)
         self._ensure_main(agent)
-        self._compose_conscience(agent)
         return agent
 
     def _define_search(self, agent: AgentBase) -> None:
+        w = self._w
         params: dict[str, Any] = {
             "query": {
                 "type": "string",
-                "description": "What to look up, in the caller's words.",
+                "description": w("tool.search.query"),
             }
         }
         if self._query_types:
             params["query_type"] = {
                 "type": "string",
                 "enum": sorted(self._query_types),
-                "description": self._query_type_help or "The kind of lookup.",
+                "description": self._query_type_help or w("tool.search.query_type"),
             }
+        # An async search gets a handler on the event loop; a sync one stays
+        # sync, run in a worker thread like any sync handler
+        handler = (
+            self._handle_search_async
+            if inspect.iscoroutinefunction(self._search)
+            else self._handle_search
+        )
         agent.define_tool(
             self._tool,
-            f"{self._description} Changes nothing.",
+            w("tool.search", description=self._description),
             params,
-            self._handle_search,
+            handler,
             required=["query"],
         )
 
-    def _handle_search(self, args: dict[str, Any], raw: Any) -> FunctionResult:
-        args = args or {}
+    def _query_of(self, args: dict[str, Any]) -> tuple[str, str]:
+        """The caller's query, and the one searched: transformed, with its qualifier."""
         query = (args.get("query") or "").strip()
-        if not query:
-            return FunctionResult("Ask them what to look up - there was no query.")
-        search = self._search
-        if search is None:
-            return FunctionResult("Search isn't configured.")
         # The qualifier aids retrieval only; grounding stays the caller's own words.
         base = self._query_transform(query) if self._query_transform else query
         qualifier = self._query_types.get((args.get("query_type") or "").strip())
-        effective = f"{base} {qualifier}" if qualifier else base
+        return query, f"{base} {qualifier}" if qualifier else base
+
+    def _handle_search(self, args: dict[str, Any], raw: Any) -> FunctionResult:
+        query, effective = self._query_of(args or {})
+        if not query:
+            return FunctionResult(self._w("search.no_query"))
+        search = self._search
+        if search is None:
+            return FunctionResult(self._w("search.unconfigured"))
         blob = self._format(query, list(search(effective) or []))
+        return FunctionResult(blob).back_to_back_functions("forever")
+
+    async def _handle_search_async(
+        self, args: dict[str, Any], raw: Any
+    ) -> FunctionResult:
+        query, effective = self._query_of(args or {})
+        if not query:
+            return FunctionResult(self._w("search.no_query"))
+        search = self._search
+        if search is None:
+            return FunctionResult(self._w("search.unconfigured"))
+        found = search(effective)
+        if inspect.isawaitable(found):
+            found = await found
+        blob = self._format(query, list(found or []))
         return FunctionResult(blob).back_to_back_functions("forever")
 
     def _rank_key(self, r: Result) -> tuple[int, int, float]:
@@ -262,7 +373,7 @@ class InfoBotKnowledge:
                 if text:
                     return str(text)
             return "\n\n".join(
-                [*self._rules_for("empty"), "The results do not cover it."]
+                [*self._rules_for("empty"), self._w("search.not_covered")]
             )
         blocks = self._rules_for("results")
         for r in kept:
@@ -275,54 +386,61 @@ class InfoBotKnowledge:
         return "\n\n".join(blocks)
 
     def _define_contact(self, agent: AgentBase) -> None:
+        sets = self._contact_any_of
+        required = [
+            k for k in self._contact_fields if sets and all(k in s for s in sets)
+        ]
         agent.define_tool(
             self._contact_tool,
-            "Record the caller's contact details for a human follow-up. Call this "
-            "only after they have agreed they would like someone to follow up.",
-            {
-                "name": {"type": "string", "description": "The caller's name."},
-                "email": {
-                    "type": "string",
-                    "description": "An email address to reach them.",
-                },
-                "topic": {
-                    "type": "string",
-                    "description": "What they want followed up, in brief.",
-                },
-            },
+            self._w("tool.contact"),
+            {k: f.schema() for k, f in self._contact_fields.items()},
             self._handle_contact,
-            required=["email"],
+            required=required or None,
         )
 
     def _handle_contact(self, args: dict[str, Any], raw: Any) -> FunctionResult:
         fields: dict[str, Any] = {
-            k: str((args or {}).get(k) or "").strip()
-            for k in ("name", "email", "topic")
+            k: str((args or {}).get(k) or "").strip() for k in self._contact_fields
         }
-        if not fields["email"]:
-            return FunctionResult("Ask them for an email address to reach them at.")
+        sets = self._contact_any_of
+        if sets and not any(all(fields[k] for k in s) for s in sets):
+            return FunctionResult(self._missing_contact(fields))
         if self._contact is not None:
             self._contact(fields)
-        return FunctionResult(
-            "Thanks - I've passed that along and someone will follow up."
-        ).back_to_back_functions("forever")
+        return FunctionResult(self._w("contact.thanks")).back_to_back_functions(
+            "forever"
+        )
+
+    def _missing_contact(self, fields: Mapping[str, str]) -> str:
+        """What to ask for: the missing fields of the one set, or a choice of the sets."""
+        w = self._w
+
+        def ask(k: str) -> str:
+            f = self._contact_fields[k]
+            return f.ask or w("contact.ask", field=k.replace("_", " "))
+
+        if len(self._contact_any_of) == 1:
+            return " ".join(ask(k) for k in self._contact_any_of[0] if not fields[k])
+        choices = [
+            w.joined([k.replace("_", " ") for k in s]) for s in self._contact_any_of
+        ]
+        return w("contact.any_of", choices=w.joined(choices, "list.or"))
 
     def _ensure_main(self, agent: AgentBase) -> None:
-        step = agent.define_contexts().add_context("default").add_step("main")
-        step.add_section(
-            "Knowledge", f"Answer the caller's question from {self._tool}, not memory."
+        builder = agent.define_contexts()
+        ctx = builder.get_context(self._context_name) or builder.add_context(
+            self._context_name
         )
         tools = [self._tool]
         if self._contact is not None:
             tools.append(self._contact_tool)
-        step.set_functions(tools)
-
-    def _compose_conscience(self, agent: AgentBase) -> None:
-        # Match Operations: append this layer's record line to whatever conscience
-        # is already set, a blank line between, never replacing it.
-        line = f"${{global_data.{self._namespace}.now}}"
-        existing = getattr(agent, "_params", {}).get("conscience", "")
-        agent.set_param("conscience", f"{existing}\n\n{line}" if existing else line)
+        title = self._w("step.section")
+        text = self._w("step.text", tool=self._tool)
+        step = ctx.get_step(self._step_name)
+        if step is None:
+            ctx.add_step(self._step_name).add_section(title, text).set_functions(tools)
+        else:
+            step._extend(text, tools, section=title)
 
 
 def _score(result: Result) -> float:

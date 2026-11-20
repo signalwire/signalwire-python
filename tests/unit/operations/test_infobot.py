@@ -12,12 +12,14 @@ Operations on one agent, and governs its search results.
 
 from __future__ import annotations
 
+import asyncio
+
 from typing import Any
 
 import pytest
 
 from signalwire import AgentBase
-from signalwire.operations import Change, Operation, Operations
+from signalwire.operations import Change, Field, Operation, Operations
 from signalwire.operations.infobot import InfoBotKnowledge
 
 
@@ -33,7 +35,7 @@ def test_knowledge_installs_standalone() -> None:
     main = _main_step(agent)
     assert "search_knowledge" in main["functions"]
     assert "search_knowledge" in main["text"]
-    assert agent._params["conscience"] == "${global_data.infobot.now}"
+    assert "conscience" not in agent._params, "search keeps no record, so it adds no conscience line"
 
 
 def test_knowledge_composes_beside_operations() -> None:
@@ -56,10 +58,7 @@ def test_knowledge_composes_beside_operations() -> None:
     assert "search_knowledge" in main["functions"]
     assert "cancel_order" in main["functions"]
     assert "cancel_order" in main["text"]
-    assert (
-        agent._params["conscience"]
-        == "${global_data.infobot.now}\n\n${global_data.ops.now}"
-    )
+    assert agent._params["conscience"] == "${global_data.ops.now}"
 
 
 def test_blank_query_asks_rather_than_searches() -> None:
@@ -279,3 +278,80 @@ def test_expander_transforms_kept_results() -> None:
         ]
     )
     assert "short (expanded)" in str(kb._handle_search({"query": "q"}, {}).response)
+
+
+def _ops_with_cancel() -> Operations:
+    ops = Operations(role="You help customers.")
+    ops.writes_with(lambda call, w: None)
+
+    @ops.operation(tool="cancel_order")
+    class Cancel(Operation):
+        """Cancel an order."""
+
+        def prepare(self, call: Any, f: Any) -> Change:
+            return Change(read_back="Cancel it. Shall I?")
+
+    return ops
+
+
+def test_knowledge_installs_after_operations_too() -> None:
+    agent = AgentBase(name="later", route="/later", suppress_logs=True)
+    _ops_with_cancel().install(agent)
+    InfoBotKnowledge(search=lambda q: [], contact=lambda f: None).install(agent)
+    main = _main_step(agent)
+    assert {"cancel_order", "search_knowledge", "collect_contact"} <= set(main["functions"])
+    assert "cancel_order" in main["text"] and "from search_knowledge, not memory" in main["text"]
+
+
+def test_knowledge_goes_in_the_step_named() -> None:
+    agent = AgentBase(name="faq", route="/faq", suppress_logs=True)
+    InfoBotKnowledge(search=lambda q: [], step="answers").install(agent)
+    steps = agent.define_contexts().to_dict()["default"]["steps"]
+    assert [s["name"] for s in steps] == ["answers"] and steps[0]["functions"] == ["search_knowledge"]
+
+
+def test_contact_takes_any_one_of_its_field_sets() -> None:
+    took: list[dict[str, Any]] = []
+    kb = InfoBotKnowledge(
+        search=lambda q: [],
+        contact=took.append,
+        contact_fields={
+            "name": Field(str, "The caller's name.", required=False),
+            "email": Field(str, "An email address."),
+            "phone": Field(str, "A phone number to call back.", ask="Ask for a number to call them back on."),
+        },
+        contact_any_of=[["email"], ["phone"]],
+    )
+    agent = AgentBase(name="cb", route="/cb", suppress_logs=True)
+    kb.install(agent)
+    fn = agent._tool_registry._swaig_functions["collect_contact"].to_swaig(base_url="http://x")
+    assert "required" not in fn["parameters"] or not fn["parameters"]["required"]
+    asked = kb._handle_contact({"name": "Ann"}, None).to_dict()["response"]
+    assert asked == "Ask them for email or phone."
+    done = kb._handle_contact({"phone": "555"}, None).to_dict()["response"]
+    assert done.startswith("Thanks") and took == [{"name": "", "email": "", "phone": "555"}]
+    with pytest.raises(ValueError, match="fax"):
+        InfoBotKnowledge(search=lambda q: [], contact_any_of=[["fax"]])
+
+
+def test_one_contact_set_asks_with_each_fields_own_words() -> None:
+    kb = InfoBotKnowledge(search=lambda q: [], contact=lambda f: None)
+    assert kb._handle_contact({}, None).to_dict()["response"] == "Ask them for an email address to reach them at."
+
+
+def test_an_async_search_is_awaited() -> None:
+    async def search(q: str) -> list[dict[str, Any]]:
+        return [{"content": f"about {q}", "score": 1.0}]
+
+    kb = InfoBotKnowledge(search=search)
+    agent = AgentBase(name="as", route="/as", suppress_logs=True)
+    kb.install(agent)
+    out = asyncio.run(kb._handle_search_async({"query": "hours"}, None))
+    assert "about hours" in out.to_dict()["response"]
+
+
+def test_knowledge_wording_overrides_its_words() -> None:
+    kb = InfoBotKnowledge(search=lambda q: [], wording={"search.not_covered": "No lo cubren."})
+    assert kb._format("q", []).endswith("No lo cubren.")
+    with pytest.raises(ValueError, match="KNOWLEDGE_WORDING"):
+        InfoBotKnowledge(search=lambda q: [], wording={"nope": "x"})

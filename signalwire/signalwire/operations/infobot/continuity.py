@@ -80,12 +80,18 @@ def default_switch_note(prev: str, now: str) -> str:
     )
 
 
+def default_switch_turn(now: str) -> str:
+    """The user turn recording the switch the caller just made."""
+    return f"I want to switch to {now}."
+
+
 def build_seed(
     legs: list[dict[str, Any]],
     now_medium: str,
     *,
     include_tools: bool = True,
     switch_note: Callable[[str, str], str] = default_switch_note,
+    switch_turn: Callable[[str], str] = default_switch_turn,
 ) -> list[Turn]:
     """Build the ``convo`` seed for a resuming leg from the prior legs.
 
@@ -98,10 +104,12 @@ def build_seed(
     carry.
     """
     dialog: list[Turn] = []
+    prev = ""
     for leg in reversed(legs or []):
         turns = leg.get("turns")
         if turns:
             dialog = turns
+            prev = str(leg.get("medium") or "")
             break
     if not dialog:
         return []
@@ -139,8 +147,9 @@ def build_seed(
     if not convo:
         return []
 
-    prev = "chat" if now_medium == "voice" else "voice"
-    convo.append({"role": "user", "content": f"I want to switch to {now_medium}."})
+    # A leg recorded without its medium: the other of the two
+    prev = prev or ("chat" if now_medium == "voice" else "voice")
+    convo.append({"role": "user", "content": switch_turn(now_medium)})
     convo.append({"role": "system", "content": switch_note(prev, now_medium)})
     return convo
 
@@ -162,9 +171,13 @@ class Continuity:
 
     Install on any ``AgentBase``: on each request it seeds the resuming leg with
     the prior dialog (via :func:`build_seed`), and at each leg's end it records
-    that leg's transcript so the next one can continue. Persistence is a
-    :class:`LegStore` (swap its backend with ``store.set_store``); the medium and
-    the switch directive come from :func:`medium_of` / ``switch_note``.
+    that leg's transcript and medium so the next one can continue. Persistence
+    is a :class:`LegStore` (swap its backend with ``store.set_store``); the
+    medium comes from :func:`medium_of`, and the turns recording the switch
+    from ``switch_turn`` and ``switch_note``.
+
+    It works through the agent's per-request configuration callback, after
+    the one the agent has when it's installed, so set the agent's own first.
     """
 
     def __init__(
@@ -173,6 +186,7 @@ class Continuity:
         store: LegStore | None = None,
         include_tools: bool = True,
         switch_note: Callable[[str, str], str] = default_switch_note,
+        switch_turn: Callable[[str], str] = default_switch_turn,
         resolve_id: Callable[[dict[str, Any]], str] | None = None,
         report: Callable[[dict[str, Any]], None] | None = None,
         visitor_context: Callable[[dict[str, Any]], dict[str, Any] | None]
@@ -181,6 +195,7 @@ class Continuity:
         self._store = store or LegStore()
         self._include_tools = include_tools
         self._switch_note = switch_note
+        self._switch_turn = switch_turn
         self._resolve_id = resolve_id
         self._report = report
         self._visitor_context = visitor_context
@@ -193,7 +208,20 @@ class Continuity:
         return (self._resolve_id or default_conversation_id)(raw_data or {})
 
     def install(self, agent: AgentBase) -> AgentBase:
-        agent.set_dynamic_config_callback(self._seed_callback)
+        """Seed each request and record each leg; the agent's own per-request callback still runs, first."""
+        before = agent._dynamic_config_callback
+
+        def seed(
+            query_params: dict[str, Any],
+            body: dict[str, Any],
+            headers: dict[str, Any],
+            copy: AgentBase,
+        ) -> None:
+            if before is not None:
+                before(query_params, body, headers, copy)
+            self._seed_callback(query_params, body, headers, copy)
+
+        agent.set_dynamic_config_callback(seed)
         agent.on_call_end(self._capture_leg)
         return agent
 
@@ -208,6 +236,11 @@ class Continuity:
             ctx = self._visitor_context(body)
             if ctx:
                 agent.set_global_data(ctx)
+        # Kept in global_data, so the request at the leg's end, which may not
+        # carry it, records the leg's medium
+        kind = (body or {}).get("conversation_type")
+        if kind:
+            agent.update_global_data({"conversation_type": kind})
         cid = self.resolve_conversation_id(body)
         if not cid:
             return
@@ -217,6 +250,7 @@ class Continuity:
             medium_of(body),
             include_tools=self._include_tools,
             switch_note=self._switch_note,
+            switch_turn=self._switch_turn,
         )
         if convo:
             agent.set_params({"convo": convo})
@@ -234,7 +268,9 @@ class Continuity:
             and t.get("role") in ("user", "assistant", "system", "tool")
         ]
         root = LegStore.root_id(cid)
-        self._store.record(root, {"cid": cid, "turns": turns})
+        self._store.record(
+            root, {"cid": cid, "medium": medium_of(raw_data), "turns": turns}
+        )
         # Hand the whole conversation so far to the report sink. The record is
         # complete at every leg end (the last one covers the full conversation),
         # so a sink can simply keep the latest. Default: no report.
