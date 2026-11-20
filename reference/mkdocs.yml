@@ -45,6 +45,9 @@ extra_javascript:
 plugins:
   - search
   - mkdocstrings:
+      # Template overrides (templates/python/material/): a TypedDict renders its
+      # fields as one table instead of one heading per field.
+      custom_templates: templates
       handlers:
         python:
           paths: [../signalwire]   # the nested package: signalwire/signalwire

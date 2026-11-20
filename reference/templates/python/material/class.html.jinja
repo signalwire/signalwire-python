@@ -1,0 +1,64 @@
+{#- Class template override: a TypedDict renders its fields as one table.
+
+The stock template gives every field its own heading and table-of-contents
+entry. The generated REST, SWML and RELAY type modules declare over a thousand
+TypedDict fields between them, which made a single page megabytes long.
+Here a TypedDict lists its fields in one Field / Type table instead, with a
+Description column only when a field has a docstring. Every other class
+renders exactly as before.
+
+A type name in the Type column links to the same-page heading when it names a
+public class or type alias of the TypedDict's own module (the generated
+modules reference only their own types). It is a plain fragment link rather
+than an autorefs cross-reference: autorefs adds a full-path tooltip to every
+link, and with ~1,500 fields that tooltip alone was hundreds of kilobytes.
+Every other name (str, Any, Literal, ...) renders as text.
+-#}
+{% extends "_base/class.html.jinja" %}
+
+{%- macro field_type(expression, module) -%}
+  {#- griffe gives a plain string for a constant annotation such as `None`. -#}
+  {%- for element in ([expression] if expression is string else expression.iterate(flat=True)) -%}
+    {%- if element is string -%}
+      {{ element }}
+    {%- else -%}
+      {%- set target = module.members.get(element.name) -%}
+      {%- if target and not target.is_alias and not element.name.startswith("_") and (target.is_class or target.is_attribute) -%}
+        <a href="#{{ target.path }}">{{ element.name }}</a>
+      {%- else -%}
+        {{ element.name }}
+      {%- endif -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- endmacro -%}
+
+{% block children scoped %}
+  {%- set typeddict_bases = ["TypedDict", "typing.TypedDict", "typing_extensions.TypedDict"] -%}
+  {%- if class.bases|map("string")|select("in", typeddict_bases)|list -%}
+    {%- set fields = class.attributes.values()|list -%}
+    {%- if fields -%}
+      {%- set described = fields|selectattr("docstring")|list -%}
+      <table class="doc-typeddict-fields"><thead><tr><th>Field</th><th>Type</th>
+      {%- if described %}<th>Description</th>{% endif -%}
+      </tr></thead><tbody>
+      {%- for field in fields -%}
+        <tr><td><code>{{ field.name }}</code></td><td>
+        {%- if field.annotation -%}
+          <code>{{ field_type(field.annotation, class.module) }}</code>
+        {%- endif -%}
+        </td>
+        {%- if described -%}
+          <td>
+          {%- if field.docstring -%}
+            {{ field.docstring.value|convert_markdown(heading_level, field.path) }}
+          {%- endif -%}
+          </td>
+        {%- endif -%}
+        </tr>
+      {%- endfor -%}
+      </tbody></table>
+    {%- endif -%}
+  {%- else -%}
+    {{ super() }}
+  {%- endif -%}
+{% endblock children %}
