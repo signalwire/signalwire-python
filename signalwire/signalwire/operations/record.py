@@ -15,10 +15,12 @@ the steps, and is worked out again on every update, so it is never behind.
 from __future__ import annotations
 
 import copy
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
+from decimal import Decimal
 from typing import Any
 
 from signalwire.operations.model import Change
+from signalwire.operations.money import amount_of
 from signalwire.operations.wording import _Wording
 
 RECORD = "ops"
@@ -113,15 +115,22 @@ def _now_line(data: Mapping[str, Any], w: _Wording) -> str:
 
 
 def _waiting_entry(
-    kind: str, args: Mapping[str, Any], change: Change, revision: int, done_default: str
+    kind: str,
+    args: Mapping[str, Any],
+    change: Change,
+    revision: int,
+    done_default: str,
+    currency: str | None,
 ) -> dict[str, Any]:
-    """A change as it waits for the caller's yes: everything needed to carry it out, frozen."""
+    """A change as it waits for the caller's yes: everything needed to carry it out, frozen. Money is kept as
+    exact decimal strings, with its currency."""
     return {
         "kind": kind,
         "read_back": change.read_back,
         "touches": list(change.touches),
         "writes": [w.to_dict() for w in change.writes],
-        "money": change.money_moved(),
+        "money": [str(m) for m in change.money_moved()],
+        "currency": change.currency or currency or "",
         "done": change.done_lines(done_default),
         "args": dict(args),
         "revision": revision,
@@ -147,33 +156,41 @@ def _settle(
     through (all of them once made, else the first ``made``).
     """
     waiting = data.get("waiting") or {}
-    moved = [float(m) for m in waiting.get("money") or []]
+    moved = [amount_of(m) for m in waiting.get("money") or []]
     entry = {
         "kind": waiting.get("kind", ""),
         "touches": list(waiting.get("touches") or []),
         "read_back": waiting.get("read_back", ""),
         "outcome": outcome,
         "done": done,
-        "money": round(sum(moved if outcome == "made" else moved[:made]), 2),
+        "money": str(sum(moved if outcome == "made" else moved[:made], Decimal(0))),
+        "currency": waiting.get("currency") or "",
     }
     return {"waiting": {}, "history": [*(data.get("history") or []), entry]}
 
 
-def _money(amount: float) -> str:
-    return f"${abs(amount):,.2f}"
-
-
-def _in_all(history: Sequence[Mapping[str, Any]], w: _Wording) -> str:
-    """What the changes made in the call come to, once more than one moved money."""
+def _in_all(
+    history: Sequence[Mapping[str, Any]],
+    w: _Wording,
+    money: Callable[[Decimal, str | None], str],
+) -> str:
+    """What the changes made in the call come to, once more than one moved money: for each currency, what went
+    back to them and what was charged. ``money(amount, currency)`` writes an amount."""
     moved = [
-        float(h.get("money") or 0) for h in history if h.get("money")
+        (amount_of(h["money"]), h.get("currency") or None)
+        for h in history
+        if h.get("money") and amount_of(h["money"]) != 0
     ]  # only writes that went through count
     if len(moved) < 2:
         return ""
-    back, charged = -sum(m for m in moved if m < 0), sum(m for m in moved if m > 0)
-    parts = ([w("money.back", amount=_money(back))] if back > 0.005 else []) + (
-        [w("money.charged", amount=_money(charged))] if charged > 0.005 else []
-    )
+    parts: list[str] = []
+    for code in dict.fromkeys(c for _, c in moved):
+        back = -sum((a for a, c in moved if c == code and a < 0), Decimal(0))
+        charged = sum((a for a, c in moved if c == code and a > 0), Decimal(0))
+        if back > 0:
+            parts.append(w("money.back", amount=money(back, code)))
+        if charged > 0:
+            parts.append(w("money.charged", amount=money(charged, code)))
     return w("money.in_all", amounts=w.joined(parts)) if parts else ""
 
 

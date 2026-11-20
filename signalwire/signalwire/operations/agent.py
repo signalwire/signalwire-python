@@ -21,6 +21,7 @@ import logging
 import re
 import threading
 from collections.abc import Awaitable, Callable, Mapping, Sequence
+from decimal import Decimal
 from typing import Any
 
 from signalwire.core.agent_base import AgentBase
@@ -52,6 +53,7 @@ from signalwire.operations.record import (
     _waiting_entry,
     _whole,
 )
+from signalwire.operations.money import check_currency, format_money
 from signalwire.operations.record import _update as _record_update
 from signalwire.operations.wording import DEFAULT_WORDING, _Wording
 from signalwire.patterns.proposal import Proposal, current
@@ -302,6 +304,8 @@ class Operations:
         customize: Callable[[Any], None] | None = None,
         namespace: str | None = None,
         context: str = "default",
+        currency: str | None = None,
+        money_format: Callable[[Decimal, str | None], str] | None = None,
     ) -> None:
         """
         Args:
@@ -337,9 +341,18 @@ class Operations:
                 another ``Operations``, or beside tools and steps of the same
                 names.
             context: The context its steps go in.
+            currency: The ISO 4217 code of the money changes move, such as
+                ``"EUR"``, for those that don't give their own
+                (``Change.currency``). None: amounts are stated without one.
+            money_format: ``money_format(amount, currency)`` writes an
+                amount (a ``Decimal``, never below 0) in the totals the
+                service states, in place of ``format_money``; ``currency``
+                is the code, or None.
         """
         self._names = _Names(namespace, context)
         self._w = _Wording(DEFAULT_WORDING, wording, "Operations")
+        self._currency = check_currency(currency)
+        self._money_format = money_format or format_money
         self._role = role
         self._confirm_gates = list(confirm_gates) if confirm_gates is not None else None
         self._tool_fillers = dict(tool_fillers or {})
@@ -672,7 +685,7 @@ class Operations:
 
     def _in_all(self, history: Sequence[Mapping[str, Any]]) -> str:
         """What the changes made in the call come to, once more than one moved money."""
-        return _in_all(history, self._w)
+        return _in_all(history, self._w, self._money_format)
 
     def _tool_names(self) -> list[str]:
         """Every tool this service defines on install."""
@@ -1147,6 +1160,13 @@ class Operations:
             raise ValueError(
                 f"{type(op).__name__}.prepare returned a Change with no read_back"
             )
+        try:
+            check_currency(change.currency)
+            change.money_moved()
+        except (TypeError, ValueError) as e:
+            raise type(e)(
+                f"{type(op).__name__}.prepare returned a Change whose money {e}"
+            ) from e
         return change
 
     def _finish(
@@ -1346,7 +1366,12 @@ class Operations:
         )
         revision = int(data.get("proposals") or 0) + 1
         entry = _waiting_entry(
-            op.kind, args, change, revision, self._w.template("done.default")
+            op.kind,
+            args,
+            change,
+            revision,
+            self._w.template("done.default"),
+            self._currency,
         )
         result = (
             FunctionResult()
@@ -1560,7 +1585,8 @@ class Operations:
                 "read_back": change.read_back,
                 "outcome": outcome,
                 "done": done,
-                "money": round(sum(moved[:made]), 2),
+                "money": str(sum(moved[:made], Decimal(0))),
+                "currency": change.currency or self._currency or "",
                 **(
                     {"writes_made": [w.to_dict() for w in change.writes[:made]]}
                     if outcome != "made"
@@ -2019,6 +2045,7 @@ def _change_of(entry: Mapping[str, Any]) -> Change:
         touches=list(entry.get("touches") or []),
         writes=[Write.from_dict(w) for w in entry.get("writes") or []],
         money=list(entry.get("money") or []),
+        currency=entry.get("currency") or None,
         done=list(entry.get("done") or []),
     )
 

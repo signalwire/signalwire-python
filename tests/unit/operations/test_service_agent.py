@@ -58,7 +58,7 @@ def write(call: Any, w: Write) -> None:
 
 
 def build_agent() -> ServiceAgent:
-    agent = ServiceAgent("shop", role="You answer the phone for a small shop.")
+    agent = ServiceAgent("shop", role="You answer the phone for a small shop.", currency="USD")
     agent.identify(
         any_of=[["email"], ["name", "zip"]],
         find=lambda call, keys: "u1" if keys.get("email") == "a@b.c" or keys.get("zip") == "12345" else _no_account(),
@@ -217,7 +217,8 @@ def test_cancel_read_back_yes_and_record(sim: CallSimulator) -> None:
     assert WRITES == [("cancel", {"order_id": "#W1", "reason": "no longer needed"})]
     assert sim.step == "main"
     assert sim.global_data["ops"]["history"][-1]["outcome"] == "made"
-    assert sim.global_data["ops"]["history"][-1]["money"] == -30.0
+    assert sim.global_data["ops"]["history"][-1]["money"] == "-30.0"
+    assert sim.global_data["ops"]["history"][-1]["currency"] == "USD"
 
 
 def test_missing_reason_is_asked_not_guessed(sim: CallSimulator) -> None:
@@ -307,7 +308,7 @@ def test_partial_failure_counts_only_what_went_through(sim: CallSimulator) -> No
     sim.caller("yes")
     out = sim.call("confirm_change", {"change": "cancel"})
     assert out.response.startswith("The change didn't go through: cancel was refused.")
-    assert sim.global_data["ops"]["history"][-1]["money"] == 0
+    assert sim.global_data["ops"]["history"][-1]["money"] == "0"
 
 
 def test_totals_after_two_changes(sim: CallSimulator) -> None:

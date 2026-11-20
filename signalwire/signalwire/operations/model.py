@@ -17,6 +17,7 @@ import re
 import types
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import Any, ClassVar, Literal, Union, get_args, get_origin, get_type_hints
 
 try:  # Python 3.10 has is_typeddict in typing; keep the import local to one place
@@ -149,6 +150,7 @@ class Change:
             touches=["order:#W1234567"],
             writes=[Write("cancel_pending_order", order_id="#W1234567", reason="no longer needed")],
             money=[-54.04],
+            currency="USD",
             done=["Order #W1234567 is cancelled; $54.04 goes back to the card."],
         )
     """
@@ -163,9 +165,13 @@ class Change:
     by these."""
     writes: Sequence[Write] = ()
     """The backend writes, in order."""
-    money: Sequence[float] | None = None
+    money: Sequence[int | float | Decimal | str] | None = None
     """The money each write moves: more than 0 charged, less than 0 back to
-    the caller. Kept in the call's record for totals."""
+    the caller, as a number, a numeric string or a ``Decimal``. Kept exactly
+    in the call's record, for totals."""
+    currency: str | None = None
+    """The ISO 4217 code of that money, such as ``"EUR"``; defaults to the
+    service's ``currency``. Totals are kept for each currency apart."""
     done: Sequence[str] | str | None = None
     """What to tell the caller once each write went through, one per write, or
     one sentence for the whole change."""
@@ -198,10 +204,12 @@ class Change:
             default.replace("{statement}", _statement(self.read_back))
         ]
 
-    def money_moved(self) -> list[float]:
-        """The money each write moves."""
-        moved = [float(m) for m in (self.money or [])]
-        return (moved + [0.0] * len(self.writes))[: len(self.writes)]
+    def money_moved(self) -> list[Decimal]:
+        """The money each write moves, one amount per write."""
+        from signalwire.operations.money import amount_of
+
+        moved = [amount_of(m) for m in (self.money or [])]
+        return (moved + [Decimal(0)] * len(self.writes))[: len(self.writes)]
 
 
 @dataclass(frozen=True)
