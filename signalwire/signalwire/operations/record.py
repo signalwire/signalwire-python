@@ -152,12 +152,17 @@ def _queued_entry(kind: str, args: Mapping[str, Any], change: Change) -> dict[st
 
 
 def _settle(
-    data: Mapping[str, Any], outcome: str, done: str = "", made: int = 0
+    data: Mapping[str, Any],
+    outcome: str,
+    done: str = "",
+    made: int = 0,
+    reason: str = "",
 ) -> dict[str, Any]:
     """
-    The change waiting, settled into history: how (made, not made, declined,
-    replaced), what was done, and the money moved by the writes that went
-    through (all of them once made, else the first ``made``).
+    The change waiting, settled into history: how (``made``, ``not made``
+    with the ``reason`` the backend gave, ``declined``, ``replaced``), what
+    was done, and the money moved by the writes that went through (all of
+    them once made, else the first ``made``).
     """
     waiting = data.get("waiting") or {}
     moved = [amount_of(m) for m in waiting.get("money") or []]
@@ -166,6 +171,7 @@ def _settle(
         "touches": list(waiting.get("touches") or []),
         "read_back": waiting.get("read_back", ""),
         "outcome": outcome,
+        **({"reason": reason} if reason else {}),
         "done": done,
         "money": str(sum(moved if outcome == "made" else moved[:made], Decimal(0))),
         "currency": waiting.get("currency") or "",

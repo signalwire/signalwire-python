@@ -308,7 +308,9 @@ def test_partial_failure_counts_only_what_went_through(sim: CallSimulator) -> No
     sim.caller("yes")
     out = sim.call("confirm_change", {"change": "cancel"})
     assert out.response.startswith("The change didn't go through: cancel was refused.")
-    assert sim.global_data["ops"]["history"][-1]["money"] == "0"
+    last = sim.global_data["ops"]["history"][-1]
+    assert last["money"] == "0"
+    assert (last["outcome"], last["reason"]) == ("not made", "cancel was refused"), "a code, and the reason apart"
 
 
 def test_totals_after_two_changes(sim: CallSimulator) -> None:

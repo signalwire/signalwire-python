@@ -46,6 +46,7 @@ DEFAULT_WORDING: Mapping[str, str] = MappingProxyType(
         "first, and nothing asked for is lost.{transfer}",
         "step.guidance": "{account}{guidance} When you have what it needs, call {tool}. {help}",
         "step.transferred": "The caller is being transferred. Say nothing more.",
+        "step.more": "What else you can do",
         "step.lookups": "To look something up, call {lookups}. ",
         "step.operations": "To make a change, call its tool with everything the caller asked for: {operations}. "
         "The tool checks it and reads it back to them. ",
@@ -154,6 +155,7 @@ DEFAULT_WORDING: Mapping[str, str] = MappingProxyType(
         "queue.dropped": "The change set aside for later no longer goes ahead, since this one takes its place: "
         '"{read_back}" ',
         "write.unknown": "its outcome isn't known ({error})",
+        "write.no_writer": "no writer is set for {write}",
         "applied.failed": "It didn't go through: {reason}.{part}",
         "applied.part": " What went through first: {done}",
         "applied": "Done. {done}",

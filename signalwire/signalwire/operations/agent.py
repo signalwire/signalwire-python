@@ -664,7 +664,7 @@ class Operations:
     def apply_write(self, call: CallContext, write: Write) -> Any:
         """Carry out one write with the agent's writer (``writes_with``)."""
         if self._writer is None:
-            raise WriteFailed(f"no writer is set for {write.name}")
+            raise WriteFailed(self._w("write.no_writer", write=write.name))
         return self._writer(call, write)
 
     # ------------------------------------------------------------------ generation
@@ -863,7 +863,7 @@ class Operations:
                 if early_lookups
                 else ""
             )
-            _contribute(
+            self._contribute(
                 ctx,
                 names.step(IDENTIFY_STEP),
                 w(
@@ -875,14 +875,14 @@ class Operations:
                 ),
                 self._tools_for(IDENTIFY_STEP),
             )
-        _contribute(
+        self._contribute(
             ctx,
             names.step(MAIN_STEP),
             w("step.main", account=where, help=help_with),
             self._tools_for(MAIN_STEP),
         )
         if any(op.confirm for op in self._operations.values()):
-            _contribute(
+            self._contribute(
                 ctx,
                 names.step(CONFIRM_STEP),
                 w(
@@ -896,7 +896,7 @@ class Operations:
             )
         for op in self._operations.values():
             if op.guidance:
-                _contribute(
+                self._contribute(
                     ctx,
                     names.step(op.kind),
                     w(
@@ -931,7 +931,7 @@ class Operations:
                 raise ValueError(
                     f"phase {pname!r} offers tools that don't exist: {', '.join(unknown)}"
                 )
-            _contribute(ctx, pname, f"{where}{ptext}", tools)
+            self._contribute(ctx, pname, f"{where}{ptext}", tools)
             first = first or (pname if initial else None)
         if ctx._initial_step is None:  # one the agent or another layer chose stands
             ctx.set_initial_step(
@@ -943,10 +943,14 @@ class Operations:
             gone = builder.get_context(names.transferred) or builder.add_context(
                 names.transferred
             )
-            _contribute(gone, names.transferred, w("step.transferred"), [])
+            self._contribute(gone, names.transferred, w("step.transferred"), [])
             gone.set_initial_step(names.transferred)
         if self._customize is not None:
             self._customize(builder)
+
+    def _contribute(self, ctx: Any, name: str, text: str, tools: list[str]) -> Any:
+        """A generated step (see ``_contribute``), added to under ``step.more`` when another layer made it."""
+        return _contribute(ctx, name, text, tools, self._w("step.more"))
 
     def _define_tools(self, agent: AgentBase) -> None:
         w = self._w
@@ -1639,13 +1643,14 @@ class Operations:
             change.money_moved(),
         )
         done = _made_text(lines, list(change.writes), made)
-        outcome = "made" if made == len(change.writes) else f"not made: {reply}"
+        outcome = "made" if made == len(change.writes) else "not made"
         history.append(
             {
                 "kind": op.kind,
                 "touches": list(change.touches),
                 "read_back": change.read_back,
                 "outcome": outcome,
+                **({"reason": reply} if outcome != "made" else {}),
                 "done": done,
                 "money": str(sum(moved[:made], Decimal(0))),
                 "currency": change.currency or self._currency or "",
@@ -1718,7 +1723,7 @@ class Operations:
         tool_of = {k: o.tool for k, o in self._operations.items()}
         if made < len(writes):
             part = self._w("applied.part", done=made_now) if made else ""
-            settled = _settle(data, f"not made: {reply}", made_now, made)
+            settled = _settle(data, "not made", made_now, made, reason=reply)
             settled["history"][-1]["writes_made"] = [w.to_dict() for w in writes[:made]]
             return self._finish(
                 call,
@@ -2027,7 +2032,7 @@ _OPERATIONS_ARGS = tuple(
 """The keyword arguments ``ServiceAgent`` passes on to its ``Operations``."""
 
 
-def _contribute(ctx: Any, name: str, text: str, tools: list[str]) -> Any:
+def _contribute(ctx: Any, name: str, text: str, tools: list[str], section: str) -> Any:
     """
     A step with its text and its tools, and no way to leave on its own:
     handlers move it. A step another layer made already keeps what it has:
@@ -2041,7 +2046,7 @@ def _contribute(ctx: Any, name: str, text: str, tools: list[str]) -> Any:
             .set_functions(list(tools))
             .set_valid_steps([])
         )
-    return step._extend(text, tools, section="What else you can do")
+    return step._extend(text, tools, section=section)
 
 
 def _medium_of_request(data: Mapping[str, Any] | None) -> str | None:
