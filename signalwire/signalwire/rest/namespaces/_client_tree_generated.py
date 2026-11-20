@@ -16,6 +16,11 @@ from .chat_resources_generated import (
 from .datasphere_resources_generated import (
     DatasphereDocuments,
 )
+from .fabric_addresses_resources_generated import (
+    AliasAddresses,
+    PhoneNumberAddresses,
+    SipAddresses,
+)
 from .fabric_resources_generated import (
     AiAgents,
     CallFlows,
@@ -99,14 +104,17 @@ class FabricNamespace:
     def __init__(self, http: Any) -> None:
         self.addresses = FabricAddresses(http)
         self.ai_agents = AiAgents(http)
+        self.alias_addresses = AliasAddresses(http)
         self.call_flows = CallFlows(http)
         self.conference_rooms = ConferenceRooms(http)
         self.cxml_applications = CxmlApplications(http)
         self.cxml_scripts = CxmlScripts(http)
         self.cxml_webhooks = CxmlWebhooks(http)
         self.freeswitch_connectors = FreeswitchConnectors(http)
+        self.phone_number_addresses = PhoneNumberAddresses(http)
         self.relay_applications = RelayApplications(http)
         self.resources = GenericResources(http)
+        self.sip_addresses = SipAddresses(http)
         self.sip_endpoints = SipEndpoints(http)
         self.sip_gateways = SipGateways(http)
         self.subscribers = Subscribers(http)
