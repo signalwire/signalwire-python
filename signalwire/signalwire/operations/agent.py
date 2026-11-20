@@ -1951,11 +1951,63 @@ class ServiceAgent(AgentBase):
         self._install_lock = threading.Lock()
         # The global data a request's call starts with, while its SWML renders on a per-request copy
         self._rendering = threading.local()
-        self.operation = self.ops.operation
-        self.lookup = self.ops.lookup
-        self.phase = self.ops.phase
-        self.offer = self.ops.offer
-        self.confirm_gates = self.ops.confirm_gates
+
+    def operation(
+        self,
+        cls: type[Operation] | None = None,
+        *,
+        tool: str | None = None,
+        kind: str | None = None,
+        guidance: str | None = None,
+    ) -> Any:
+        """See ``Operations.operation``; usable as ``@agent.operation`` or ``@agent.operation(tool=...)``."""
+        return self.ops.operation(cls, tool=tool, kind=kind, guidance=guidance)
+
+    def lookup(
+        self,
+        description: str,
+        *,
+        tool: str | None = None,
+        fields: Mapping[str, Field] | None = None,
+        before_identity: bool = False,
+        fillers: Any = (),
+        secure: bool = True,
+    ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+        """See ``Operations.lookup``."""
+        return self.ops.lookup(
+            description,
+            tool=tool,
+            fields=fields,
+            before_identity=before_identity,
+            fillers=fillers,
+            secure=secure,
+        )
+
+    def phase(
+        self,
+        name: str,
+        text: str,
+        tools: Sequence[str] | None = None,
+        *,
+        initial: bool = False,
+    ) -> ServiceAgent:
+        """See ``Operations.phase``."""
+        self.ops.phase(name, text, tools, initial=initial)
+        return self
+
+    def offer(
+        self,
+        *tools: str,
+        before_identity: bool = False,
+        steps: Sequence[str] | None = None,
+    ) -> ServiceAgent:
+        """See ``Operations.offer``."""
+        self.ops.offer(*tools, before_identity=before_identity, steps=steps)
+        return self
+
+    def confirm_gates(self) -> list[SemanticGate]:
+        """See ``Operations.confirm_gates``."""
+        return self.ops.confirm_gates()
 
     def identify(self, **kwargs: Any) -> ServiceAgent:
         """See ``Operations.identify``."""
