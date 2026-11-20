@@ -33,22 +33,36 @@ from signalwire.operations.model import (
     Write,
     WriteFailed,
 )
+from signalwire.operations.appointments import (
+    APPOINTMENTS_WORDING,
+    Appointment,
+    Appointments,
+    Slot,
+)
+from signalwire.operations.messages import MESSAGES_WORDING, Message, Messages
 from signalwire.operations.money import CURRENCIES, format_money
 from signalwire.operations.wording import DEFAULT_WORDING
 
 __all__ = [
+    "APPOINTMENTS_WORDING",
     "CURRENCIES",
     "DEFAULT_RULES",
     "DEFAULT_WORDING",
+    "MESSAGES_WORDING",
     "NOT_SAID",
+    "Appointment",
+    "Appointments",
     "CallContext",
     "Change",
     "Field",
+    "Message",
+    "Messages",
     "Need",
     "Operation",
     "Operations",
     "Refuse",
     "ServiceAgent",
+    "Slot",
     "Values",
     "Write",
     "WriteFailed",

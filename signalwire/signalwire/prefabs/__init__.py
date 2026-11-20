@@ -14,10 +14,14 @@ from signalwire.prefabs.faq_bot import FAQBotAgent
 from signalwire.prefabs.concierge import ConciergeAgent
 from signalwire.prefabs.survey import SurveyAgent
 from signalwire.prefabs.receptionist import ReceptionistAgent
+from signalwire.prefabs.front_desk import FRONT_DESK_WORDING, Department, FrontDeskAgent
 
 __all__ = [
+    "FRONT_DESK_WORDING",
     "ConciergeAgent",
+    "Department",
     "FAQBotAgent",
+    "FrontDeskAgent",
     "InfoGathererAgent",
     "ReceptionistAgent",
     "SurveyAgent",

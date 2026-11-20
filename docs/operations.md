@@ -11,6 +11,7 @@ An operations agent is written as what it can do for a caller. You write each op
 - [Identifying the Caller](#identifying-the-caller)
 - [Lookups](#lookups)
 - [Money](#money)
+- [Appointments and Messages](#appointments-and-messages)
 - [What the SDK Generates](#what-the-sdk-generates)
 - [The Call's Record](#the-calls-record)
 - [Words, Languages and the Medium](#words-languages-and-the-medium)
@@ -185,6 +186,28 @@ from signalwire.operations import ServiceAgent, format_money
 
 agent = ServiceAgent("boutique", role="You answer the phone for a boutique in Lyon.", currency="EUR")
 assert format_money(54.04, "EUR") == "€54.04"
+```
+
+## Appointments and Messages
+
+Two task packs add common operations to a service with `add_to`, against a backend of yours given as functions. Each has its own wording table, and `tools=` or `tool=` renames what it generates.
+
+`Appointments` finds open times and books, moves and cancels the caller's appointments. `openings(call, when, kind)` returns the `Slot`s open near when they'd like it, in their words ("Tuesday afternoon"); `book(call, slot, kind, note)` books one once they've said yes; `booked(call)`, `move` and `cancel` work on their own `Appointment`s. A slot or an appointment comes with its `label`, how it's said ("Tuesday the 3rd at 2 pm"), and the pack never reads or writes a date itself: the time zone, the calendar and the language are yours. Only a slot it found open can be booked. Moving and cancelling the same appointment can't both happen, so one takes the other's place. With `before_identity=True` a new customer can book before they're identified; their own appointments always need an account. The words are in `APPOINTMENTS_WORDING`.
+
+`Messages` takes a message for someone, read back before it's passed on. `save(call, message)` gets a `Message` with the text, who it's from, a number to reach them, who it's for (one of `recipients`) and the call and account ids. Without a number, it offers the one they're calling from, read back for them to agree to. A second message for the same person while the first waits takes its place, so a caller can change what it says. The words are in `MESSAGES_WORDING`.
+
+```python
+from signalwire.operations import Appointments, Messages, ServiceAgent, Slot
+
+OPEN = {"s1": "Tuesday at 2 pm", "s2": "Wednesday at 10 am"}
+agent = ServiceAgent("dentist", role="You answer the phone for a dental practice.")
+Appointments(
+    openings=lambda call, when, kind: [Slot(i, label) for i, label in OPEN.items()],
+    book=lambda call, slot, kind, note: OPEN.pop(slot.id),
+    kinds=["cleaning", "check-up"],
+    before_identity=True,
+).add_to(agent)
+Messages(save=lambda call, message: print(message), recipients={"Dr. Lee": "the dentist"}).add_to(agent)
 ```
 
 ## What the SDK Generates
