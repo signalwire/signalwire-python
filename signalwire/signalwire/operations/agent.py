@@ -133,7 +133,7 @@ class CallContext:
         self.raw_data: dict[str, Any] = (
             dict(raw_data) if isinstance(raw_data, Mapping) else {}
         )
-        self.data = _record_of(raw_data, service._names.record)
+        self.data: dict[str, Any] = _record_of(raw_data, service._names.record)
         self.account: Any = None
         self.write_key = ""
         """While a write runs: a key unique to it in this call, for idempotent backends."""

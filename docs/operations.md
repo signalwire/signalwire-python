@@ -262,6 +262,7 @@ assistant = PersonalAssistantAgent(
 
 `signalwire.operations.outbound.Dialer` places a call to an agent only once every check passes, and otherwise raises `NotPlaced` with the reason and makes no request. A `Callee` carries the number, the callee's own time zone (an IANA name) and what the call is about, which goes to the agent as query parameters of its URL. `consented(lookup)` stops a call with no consent on record or consent withdrawn; `calling_hours(start, end, days=...)` stops one outside the hours, read on the callee's own clock. A check of your own is `check(callee, now)` returning a reason or None; `now` is an aware UTC time. `why_not(callee)` says what would stop a call without placing it. Pacing, retries and outcomes are your scheduler's: call `place` from it, with `status_url` for the call's progress.
 
+<!-- snippet: no-run places a real outbound call: it needs a project, its credentials and a number to call -->
 ```python
 from datetime import time
 

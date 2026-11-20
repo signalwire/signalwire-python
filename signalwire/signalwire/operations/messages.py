@@ -14,7 +14,7 @@ caller before it's passed on, with a number to reach them. Add it to an
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any
@@ -80,7 +80,7 @@ class Messages:
         *,
         save: Callable[[Any, Message], Any],
         recipients: Mapping[str, str] | None = None,
-        ask_for: tuple[str, ...] = ("name", "number"),
+        ask_for: Sequence[str] = ("name", "number"),
         caller_id: bool = True,
         tool: str = "take_message",
         wording: Mapping[str, str] | None = None,
