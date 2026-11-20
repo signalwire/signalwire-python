@@ -53,6 +53,7 @@ from signalwire.operations.record import (
     _whole,
 )
 from signalwire.operations.record import _update as _record_update
+from signalwire.operations.wording import DEFAULT_WORDING, _Wording
 from signalwire.patterns.proposal import Proposal, current
 
 logger = logging.getLogger(__name__)
@@ -100,28 +101,10 @@ DEFAULT_RULES = (
 )
 """The rules every operations agent's prompt carries, unless replaced."""
 
-AS_WELL = {
-    "type": "boolean",
-    "description": "Only while a change waits for their answer: true if they want this as well as it, false if in "
-    "place of it. Leave it out if no change is waiting.",
-}
 
-_GOING_ON = "Tell them, and ask how they'd like to go on."
-# What the model is told with a read-back, in place of the Proposal pattern's own ("If they say no or want a change,
-# call decline_change"): the confirm step's words, and more asked for added to it. Told only to wait for a yes, a
-# model told the caller nothing more could be asked for until they answered. A question answered in between left
-# the change waiting, unasked, until the call ended.
-_READ_BACK_PROMPT = (
-    "Wait for the caller's answer. Call {confirm} only when they say yes to this read-back. If they want it "
-    "different, call its tool again with what they want. If they ask for something more as well, call the tool for "
-    "it (this change's own tool again with as_well: true, when it takes that). If they don't want it, call {decline}. "
-    "If they ask something else first, answer it, then ask again whether to go ahead."
-)
-# After a change is settled with none set aside: what else they asked for, so it isn't left for them to ask again
-_ANYTHING_ELSE = (
-    " If they've asked for anything else in this call that isn't done yet, call its tool now; if not, ask if "
-    "there's anything else."
-)
+class _Said(Refuse):
+    """A refusal the service makes in whole words: the operation handler's "Nothing is changed: " doesn't go
+    before it."""
 
 
 class CallContext:
@@ -230,8 +213,9 @@ class _Identity:
         ask: str | None,
         fillers: Any,
         check_keys: bool,
-        required: bool = True,
-        prefill: Callable[..., Any] | None = None,
+        required: bool,
+        prefill: Callable[..., Any] | None,
+        w: _Wording,
     ) -> None:
         self.required, self.prefill = required, prefill
         self.any_of = [list(s) for s in any_of]
@@ -239,13 +223,13 @@ class _Identity:
         keys = list(dict.fromkeys(k for s in self.any_of for k in s))
         self.fields = {
             k: fields.get(k)
-            or Field(str, f"Their {k.replace('_', ' ')}, as they said it.")
+            or Field(str, w("tool.identify.key", key=k.replace("_", " ")))
             for k in keys
         }
         self.fields.update({k: f for k, f in fields.items() if k not in self.fields})
         self.tool, self.fillers, self.check_keys = tool, fillers, check_keys
-        self.ask = ask or ", or ".join(
-            "their " + _spoken_list([k.replace("_", " ") for k in s])
+        self.ask = ask or w("identify.or").join(
+            w("identify.keys", keys=w.joined([k.replace("_", " ") for k in s]))
             for s in self.any_of
         )
 
@@ -258,19 +242,25 @@ class _Transfer:
         destinations: Mapping[str, str] | None,
         gated: bool,
         notice: str | None,
+        w: _Wording,
     ) -> None:
         self.fn, self.tool, self.gated, self.notice = fn, tool, gated, notice
         self.destinations = dict(destinations or {})
+        self._w = w
 
     def mention(self) -> str:
         if self.destinations:
-            return f" To reach {_spoken_list(list(self.destinations))}, call {self.tool} with where they want to go."
-        return f" If they ask for a person, call {self.tool}."
+            return self._w(
+                "step.transfer.destinations",
+                destinations=self._w.joined(list(self.destinations)),
+                tool=self.tool,
+            )
+        return self._w("step.transfer", tool=self.tool)
 
     def description(self) -> str:
         if self.destinations:
-            return "Transfer the caller where they ask to go."
-        return "Transfer the caller to a person, when they ask for one or say yes to being transferred."
+            return self._w("tool.transfer.destinations")
+        return self._w("tool.transfer")
 
 
 class Operations:
@@ -304,8 +294,7 @@ class Operations:
         *,
         role: str,
         rules: Sequence[str] | None = None,
-        transfer_notice: str = "One moment, I'm transferring you to a person who can help.",
-        step_text: Mapping[str, str] | None = None,
+        wording: Mapping[str, str] | None = None,
         confirm_gates: Sequence[SemanticGate] | None = None,
         tool_fillers: Mapping[str, Any] | None = None,
         gate_fillers: Mapping[str, Any] | None = None,
@@ -320,9 +309,13 @@ class Operations:
             rules: The prompt's Rules section; defaults to ``DEFAULT_RULES``
                 (without the rule about changes when there are no
                 operations).
-            transfer_notice: What the platform says as a transfer starts.
-            step_text: Text to use in place of a generated step's, by step
-                name (``identify``, ``main``, ``confirm``).
+            wording: Words to use in place of the generated ones, by key:
+                the steps' text (``step.main``), the tools' descriptions,
+                tool results and prompts, the gates, the transfer notice
+                (``transfer.notice``) and the record's ``now`` line. The keys
+                and their defaults are in ``DEFAULT_WORDING``; a ``{name}``
+                in one is filled in, and an override may leave those out but
+                not add others.
             confirm_gates: Gates for ``confirm_change`` in place of the one
                 ``confirm_gates()`` builds.
             tool_fillers: Fillers for the generated tools by name
@@ -346,8 +339,8 @@ class Operations:
             context: The context its steps go in.
         """
         self._names = _Names(namespace, context)
+        self._w = _Wording(DEFAULT_WORDING, wording, "Operations")
         self._role = role
-        self._step_text = dict(step_text or {})
         self._confirm_gates = list(confirm_gates) if confirm_gates is not None else None
         self._tool_fillers = dict(tool_fillers or {})
         self._gate_fillers = dict(gate_fillers) if gate_fillers else None
@@ -359,7 +352,6 @@ class Operations:
         self._identity: _Identity | None = None
         self._writer: Callable[..., Any] | None = None
         self._transfer: _Transfer | None = None
-        self._transfer_notice = transfer_notice
         self._offers: list[tuple[list[str], bool, list[str] | None]] = []
         self._phases: list[tuple[str, str, list[str] | None, bool]] = []
         self.proposal = Proposal(self._names.confirm, decline_tool=self._names.decline)
@@ -432,8 +424,8 @@ class Operations:
                 after ``call``, each a string.
             before_identity: True to offer it before the caller is identified.
                 Account data never should be.
-            fillers: Short phrases said while it runs: a list, or lists by
-                language code.
+            fillers: Short phrases said while it runs: a list, for every
+                language, or lists by language code.
             secure: Whether its tool takes the per-call security token.
         """
 
@@ -524,6 +516,7 @@ class Operations:
             check_keys,
             required,
             prefill,
+            self._w,
         )
         return self
 
@@ -562,10 +555,10 @@ class Operations:
             tool: The tool's name; defaults to ``transfer_to_human``
                 (namespaced with the service's ``namespace``).
             notice: What the platform says as the transfer starts; defaults to
-                the service's ``transfer_notice``.
+                the service's ``transfer.notice`` wording.
         """
         self._transfer = _Transfer(
-            transfer, tool or self._names.transfer, destinations, gated, notice
+            transfer, tool or self._names.transfer, destinations, gated, notice, self._w
         )
         return self
 
@@ -662,7 +655,7 @@ class Operations:
                 "(or the tools other names) so they can sit side by side"
             )
         if self._operations or self._identity is not None:
-            agent.update_global_data(_opening_data(self._names.record))
+            agent.update_global_data(_opening_data(self._names.record, self._w))
             line = f"${{global_data.{self._names.record}.now}}"
             had = str((getattr(agent, "_params", {}) or {}).get("conscience") or "")
             if line not in had:
@@ -675,7 +668,11 @@ class Operations:
 
     def _update(self, data: Mapping[str, Any], **changes: Any) -> dict[str, Any]:
         """The ``global_data`` update for these changes to the call's record."""
-        return _record_update(self._names.record, data, **changes)
+        return _record_update(self._names.record, self._w, data, **changes)
+
+    def _in_all(self, history: Sequence[Mapping[str, Any]]) -> str:
+        """What the changes made in the call come to, once more than one moved money."""
+        return _in_all(history, self._w)
 
     def _tool_names(self) -> list[str]:
         """Every tool this service defines on install."""
@@ -706,7 +703,9 @@ class Operations:
             keys = _resolve(idn.prefill(request_data or {}, request))
             if not keys:
                 return None
-            call = CallContext(self, {"global_data": {self._names.record: _opening()}})
+            call = CallContext(
+                self, {"global_data": {self._names.record: _opening(self._w)}}
+            )
             found = _resolve(idn.find(call, dict(keys)))
             if found is None or str(found).strip() == "":
                 return None
@@ -768,30 +767,25 @@ class Operations:
         names = self._names
         builder = agent.define_contexts()
         ctx = builder.get_context(names.context) or builder.add_context(names.context)
+        w = self._w
         transfer = self._transfer.mention() if self._transfer else ""
-        record = f"${{global_data.{names.record}.account}}"
-        where = f"Their account: {record}\n\n" if self._identity else ""
+        account = f"${{global_data.{names.record}.account}}"
+        where = w("step.account", account=account) if self._identity else ""
         idn = self._identity
-        lookups = " or ".join(lk.tool for lk in self._lookups)
+        lookups = w("list.or").join(lk.tool for lk in self._lookups)
         ops = "; ".join(
             f"{op.tool} ({type(op).describe().rstrip('.')})"
             for op in self._operations.values()
         )
         unfound = (
-            f" If their account isn't found yet and they want something that needs it, ask for {idn.ask} and call "
-            f"{idn.tool}."
+            w("step.unfound", ask=idn.ask, tool=idn.tool)
             if idn is not None and not self._gated()
             else ""
         )
         help_with = (
-            (f"To look something up, call {lookups}. " if lookups else "")
-            + (
-                f"To make a change, call its tool with everything the caller asked for: {ops}. The tool checks it "
-                "and reads it back to them. "
-                if ops
-                else ""
-            )
-            + "If they ask for something these tools can't do, tell them so and what can be done instead."
+            (w("step.lookups", lookups=lookups) if lookups else "")
+            + (w("step.operations", operations=ops) if ops else "")
+            + w("step.cannot")
             + unfound
             + transfer
         )
@@ -799,34 +793,39 @@ class Operations:
             assert idn is not None  # noqa: S101  # type narrowing: _gated() means an identity is set
             early_lookups = [lk.tool for lk in self._lookups if lk.before_identity]
             early = (
-                f" For {' or '.join(early_lookups)}, they needn't be identified."
+                w("step.identify.early", lookups=w("list.or").join(early_lookups))
                 if early_lookups
                 else ""
             )
             _contribute(
                 ctx,
                 names.step(IDENTIFY_STEP),
-                self._step_text.get(IDENTIFY_STEP)
-                or f"Ask for {idn.ask}, and call {idn.tool} with what they say. Nothing about an account can be shared "
-                f"or changed until it's found.{early}{transfer}",
+                w(
+                    "step.identify",
+                    ask=idn.ask,
+                    tool=idn.tool,
+                    early=early,
+                    transfer=transfer,
+                ),
                 self._tools_for(IDENTIFY_STEP),
             )
         _contribute(
             ctx,
             names.step(MAIN_STEP),
-            self._step_text.get(MAIN_STEP)
-            or f"{where}Help with what they ask, all of it. {help_with}",
+            w("step.main", account=where, help=help_with),
             self._tools_for(MAIN_STEP),
         )
         if any(op.confirm for op in self._operations.values()):
             _contribute(
                 ctx,
                 names.step(CONFIRM_STEP),
-                self._step_text.get(CONFIRM_STEP)
-                or f"{where}A change was just read to them and waits for their answer. When they say yes, call "
-                f"{names.confirm}. If they want it different, call its tool again with what they want. If they don't "
-                f"want it, call {names.decline}. If they ask for another change as well, call its tool: the tool says "
-                f"which comes first, and nothing asked for is lost.{transfer}",
+                w(
+                    "step.confirm",
+                    account=where,
+                    confirm=names.confirm,
+                    decline=names.decline,
+                    transfer=transfer,
+                ),
                 [names.confirm, names.decline, *self._tools_for(CONFIRM_STEP)],
             )
         for op in self._operations.values():
@@ -834,7 +833,13 @@ class Operations:
                 _contribute(
                     ctx,
                     names.step(op.kind),
-                    f"{where}{op.guidance} When you have what it needs, call {op.tool}. {help_with}",
+                    w(
+                        "step.guidance",
+                        account=where,
+                        guidance=op.guidance,
+                        tool=op.tool,
+                        help=help_with,
+                    ),
                     self._tools_for(op.kind),
                 ).set_history("spoken")
         known = {
@@ -872,27 +877,23 @@ class Operations:
             gone = builder.get_context(names.transferred) or builder.add_context(
                 names.transferred
             )
-            _contribute(
-                gone,
-                names.transferred,
-                "The caller is being transferred. Say nothing more.",
-                [],
-            )
+            _contribute(gone, names.transferred, w("step.transferred"), [])
             gone.set_initial_step(names.transferred)
         if self._customize is not None:
             self._customize(builder)
 
     def _define_tools(self, agent: AgentBase) -> None:
+        w = self._w
         idn = self._identity
         if idn is not None:
             params = {k: f.schema() for k, f in idn.fields.items()}
             params["asked_for"] = {
                 "type": "string",
-                "description": "Everything the caller has asked for so far in this call, in their words.",
+                "description": w("tool.identify.asked_for"),
             }
             agent.define_tool(
                 idn.tool,
-                f"Find the caller's account by {idn.ask}.",
+                w("tool.identify", ask=idn.ask),
                 params,
                 self._wrapped(idn.tool, self._identify),
                 required=["asked_for"],
@@ -903,7 +904,7 @@ class Operations:
         for lk in self._lookups:
             agent.define_tool(
                 lk.tool,
-                f"{lk.description} Changes nothing.",
+                w("tool.lookup", description=lk.description),
                 {k: f.schema() for k, f in lk.fields.items()},
                 self._wrapped(lk.tool, self._lookup_handler(lk)),
                 required=[k for k, f in lk.fields.items() if f.required and not f.ask],
@@ -917,10 +918,16 @@ class Operations:
             if op.confirm and (
                 op.combine is not None or _overrides(op, "conflicts_with")
             ):
-                params["as_well"] = dict(AS_WELL)
+                params["as_well"] = {
+                    "type": "boolean",
+                    "description": w("tool.as_well"),
+                }
             agent.define_tool(
                 op.tool,
-                f"{type(op).describe()}{' Reads it back first.' if op.confirm else ''}",
+                w(
+                    "tool.operation.read_back" if op.confirm else "tool.operation",
+                    description=type(op).describe(),
+                ),
                 params,
                 self._wrapped(op.tool, self._operation_handler(op)),
                 required=[k for k, f in fields.items() if f.required],
@@ -935,12 +942,12 @@ class Operations:
                 "change": {
                     "type": "string",
                     "enum": kinds,
-                    "description": "What the change read back is.",
+                    "description": w("tool.change"),
                 }
             }
             agent.define_tool(
                 self._names.confirm,
-                "Make the change just read back, once the caller has said yes to it.",
+                w("tool.confirm"),
                 which,
                 self._wrapped(self._names.confirm, self._confirm),
                 required=["change"],
@@ -952,7 +959,7 @@ class Operations:
             )
             agent.define_tool(
                 self._names.decline,
-                "Leave the change just read back unmade, when the caller says they don't want it.",
+                w("tool.decline"),
                 which,
                 self._wrapped(self._names.decline, self._decline),
                 required=["change"],
@@ -963,15 +970,19 @@ class Operations:
             params = {
                 "summary": {
                     "type": "string",
-                    "description": "What they need, in a sentence.",
+                    "description": w("tool.transfer.summary"),
                 }
             }
             if tr.destinations:
                 params["to"] = {
                     "type": "string",
                     "enum": list(tr.destinations),
-                    "description": "Where they want to go: "
-                    + "; ".join(f"{k}: {v}" for k, v in tr.destinations.items()),
+                    "description": w(
+                        "tool.transfer.to",
+                        destinations="; ".join(
+                            f"{k}: {v}" for k, v in tr.destinations.items()
+                        ),
+                    ),
                 }
             agent.define_tool(
                 tr.tool,
@@ -979,10 +990,25 @@ class Operations:
                 params,
                 self._wrapped(tr.tool, self._transfer_handler),
                 required=["to"] if tr.destinations else None,
-                gates=[_transfer_gate()] if tr.gated else None,
+                gates=[self._transfer_gate()] if tr.gated else None,
                 gate_fillers=self._gate_fillers if tr.gated else None,
                 fillers=self._tool_fillers.get(tr.tool),
             )
+
+    def _transfer_gate(self) -> SemanticGate:
+        """The transfer tool's gate: has the caller asked for a person."""
+        w = self._w
+        return SemanticGate(
+            w("gate.transfer"),
+            threshold=0.8,
+            id="wants_person",
+            true_means=w("gate.transfer.true"),
+            false_means=w("gate.transfer.false"),
+            on_fail=FunctionResult(
+                tool_result=w("gate.transfer.refused"),
+                tool_prompt=w("gate.transfer.refused.then"),
+            ).back_to_back_functions(False),
+        )
 
     def _wrapped(self, name: str, handler: Callable[..., Any]) -> Callable[..., Any]:
         handler = _chained(handler)
@@ -999,20 +1025,13 @@ class Operations:
         agreed = next(g for g in self.proposal.confirm_gates() if g.id == "agreed")
         return [
             SemanticGate(
-                "Has the caller said yes, in `conversation`, to the change described in `semantic_state`? A yes "
-                'counts however short it is ("okay", "sure", "that\'s right", "go ahead"), even if they said it '
-                "while the agent was still asking, before the whole change was read, even if it comes with a "
-                "request for something else as well, and whatever the agent has said since. It doesn't count if "
-                "they asked for this change itself to be different, or for only part of it.",
+                self._w("gate.confirm"),
                 threshold=agreed.threshold,
                 on_fail=agreed.on_fail,
                 id=agreed.id,
                 dialogue=agreed.dialogue,
-                true_means="They said yes to this change as it is, in any words, at any point while it was being "
-                "asked or after, even with a request for something else as well.",
-                false_means="They said no, hesitated, only made a listening sound, only asked a question, asked for "
-                "something else with no yes, asked for this change to be different, or haven't spoken since the "
-                "change was asked.",
+                true_means=self._w("gate.confirm.true"),
+                false_means=self._w("gate.confirm.false"),
             )
         ]
 
@@ -1041,7 +1060,9 @@ class Operations:
             except Need as e:
                 return self._finish(call, self._need_result(call, op, e), go=False)
             except Refuse as e:
-                return self._finish(call, _refused(e, "Nothing is changed: "), go=False)
+                return self._finish(
+                    call, self._refused(e, self._w("refused.prefix")), go=False
+                )
 
         handler.__name__ = f"{op.tool}_handler"
         return handler
@@ -1060,13 +1081,13 @@ class Operations:
                 }
                 answer = await _maybe(lk.fn(call, **kwargs))
             except Refuse as e:
-                return self._finish(call, _refused(e, ""), go=False)
+                return self._finish(call, self._refused(e), go=False)
             except Need as e:
                 return self._finish(
                     call,
                     FunctionResult(
-                        tool_result=f"Nothing was looked up yet: {e.ask}",
-                        tool_prompt=f"Ask them: {e.ask}",
+                        tool_result=self._w("lookup.need", ask=e.ask),
+                        tool_prompt=self._w("then.ask", ask=e.ask),
                     ),
                     go=False,
                 )
@@ -1095,8 +1116,8 @@ class Operations:
             return
         if not call.account_id:
             raise Refuse(
-                "Their account isn't found yet.",
-                f"Ask for {idn.ask}, and call {idn.tool}.",
+                self._w("account.unfound"),
+                self._w("account.unfound.then", ask=idn.ask, tool=idn.tool),
             )
         call.account = (
             await _maybe(idn.load(call, call.account_id))
@@ -1158,7 +1179,7 @@ class Operations:
             kept.append(action)
         if call.state != call._state_was:
             record = _whole(
-                record if record is not None else call.data, state=call.state
+                self._w, record if record is not None else call.data, state=call.state
             )
         front = FunctionResult()
         if record is not None:
@@ -1171,6 +1192,14 @@ class Operations:
         result.action = [*front.action, *kept, *call._acts]
         return result
 
+    def _refused(self, e: Refuse, prefix: str = "") -> FunctionResult:
+        """A refusal as the tool's result: why, after ``prefix`` unless the service said it whole, and what next."""
+        why = e.why if isinstance(e, _Said) else prefix + e.why
+        result = FunctionResult(
+            tool_result=why, tool_prompt=e.then or self._w("then.going_on")
+        )
+        return result.enable_extensive_data(False) if e.keep else result
+
     def _step_name(self, step: str) -> str:
         """A step as ``call.go`` names it, as generated: ``main`` and the other generated steps take the namespace."""
         generated = {IDENTIFY_STEP, MAIN_STEP, CONFIRM_STEP} | {
@@ -1180,8 +1209,8 @@ class Operations:
 
     def _need_result(self, call: CallContext, op: Operation, e: Need) -> FunctionResult:
         result = FunctionResult(
-            tool_result=f"Nothing is changed yet: {op.tool} needs more from the caller.",
-            tool_prompt=f"Ask them: {e.ask} Then call {op.tool} again with everything they asked for.",
+            tool_result=self._w("need", tool=op.tool),
+            tool_prompt=self._w("need.then", ask=e.ask, tool=op.tool),
         )
         if op.guidance and not (call.data.get("waiting") or {}).get("read_back"):
             result.swml_change_step(self._names.step(op.kind))
@@ -1206,6 +1235,7 @@ class Operations:
         * W first when N's kind is in W's ``goes_before``: N is set aside;
         * otherwise N is read back now and W is set aside for after it.
         """
+        w = self._w
         data = call.data
         waiting = data.get("waiting") or {}
         queued = list(data.get("queued") or [])
@@ -1228,10 +1258,9 @@ class Operations:
             within = set(change.touches) <= held_touches
             if same and op.combine is not None:
                 if as_well is None and overlap and not within:
-                    raise Refuse(
-                        f'Nothing is changed yet: a {op.kind} change already waits for their answer: "{waiting["read_back"]}"',
-                        f"Call {op.tool} again with as_well: true if they want this as well as it, false if in place "
-                        "of it; ask them if you can't tell.",
+                    raise _Said(
+                        w("stage.waits", kind=op.kind, read_back=waiting["read_back"]),
+                        w("stage.as_well.ask", tool=op.tool),
                     )
                 held = waiting.get("args") or {}
                 if as_well is True and all(
@@ -1239,32 +1268,31 @@ class Operations:
                 ):
                     args = op.merge(held, args)
                     change = await self._prepare(call, op, args)
-                    note = f"What they just asked for is added to the {op.kind} change read back before, as one change. "
+                    note = w("stage.merged", kind=op.kind)
                     replaced = True
             if waiting.get("read_back") == change.read_back and replaced:
                 # as_well with nothing new: the model meant to add something
                 # and left it out, so say what to pass, not "the same"
-                raise Refuse(
-                    f"Nothing is added: this call has nothing the {op.kind} change waiting for their answer "
-                    f'doesn\'t have already: "{change.read_back}"',
-                    f"Call {op.tool} again with as_well: true and what else they asked for, as they said it. If "
-                    "they asked for nothing more, get their yes or no.",
+                raise _Said(
+                    w("stage.nothing_added", kind=op.kind, read_back=change.read_back),
+                    w("stage.nothing_added.then", tool=op.tool),
                 )
             if waiting.get("read_back") == change.read_back:
                 raise Refuse(
-                    f'That\'s the change already read back, the same in every detail: "{change.read_back}"',
-                    "It's still waiting for their answer. If they didn't hear it, say it to them yourself; if they "
-                    "asked for something else, tell them how this is it, or what could be different. Then get their "
-                    "yes or no.",
+                    w("stage.same", read_back=change.read_back),
+                    w("stage.same.then"),
                 )
             if replaced:
                 pass
             elif overlap and (same or conflict):
                 if conflict and as_well is True:
-                    raise Refuse(
-                        f"Nothing is changed yet: they can't have both, since {conflict}. The change waiting for their "
-                        f'answer: "{waiting["read_back"]}"',
-                        "Tell them, and ask which one they want.",
+                    raise _Said(
+                        w(
+                            "stage.both",
+                            conflict=conflict,
+                            read_back=waiting["read_back"],
+                        ),
+                        w("stage.both.then"),
                     )
                 rest = wop.without(waiting.get("args") or {}, overlap) if wop else None
                 kept = None
@@ -1272,28 +1300,34 @@ class Operations:
                     try:
                         kept = await self._prepare(call, wop, rest)
                     except (Need, Refuse) as e:
-                        raise Refuse(
-                            f"Nothing is changed yet: this takes over part of the {wkind} change waiting for their "
-                            f"answer, and the rest of that one can't go through without it: {_why(e)}",
-                            _GOING_ON,
+                        raise _Said(
+                            w("stage.rest_fails", kind=wkind, why=_why(e)),
+                            w("then.going_on"),
                         ) from e
-                why = f", since {conflict}" if conflict else ""
+                since = w("stage.since", why=conflict) if conflict else ""
                 if kept is not None and rest is not None:
                     queued.append(_queued_entry(wkind, rest, kept))
-                    note = (
-                        f"This takes the place of the {wkind} change read back before for what both are for{why}; the "
-                        f'rest of that one isn\'t made yet, and is kept for after this one: "{kept.read_back}" '
+                    note = w(
+                        "stage.replaced.rest",
+                        kind=wkind,
+                        since=since,
+                        read_back=kept.read_back,
                     )
                 else:
-                    note = f'This takes the place of the change read back before, which was not made{why}: "{waiting["read_back"]}" '
+                    note = w(
+                        "stage.replaced", since=since, read_back=waiting["read_back"]
+                    )
                 replaced = True
             elif overlap and wop is not None and op.kind in wop.goes_before:
                 entry = _queued_entry(op.kind, args, change)
                 queued = [q for q in queued if not _same_request(q, entry)] + [entry]
                 return FunctionResult(
-                    tool_result=f'Kept for right after the change waiting: "{change.read_back}" The {wkind} change '
-                    "goes through first.",
-                    tool_prompt=f'Tell them you\'ll do that right after, and get their answer to the change waiting: "{waiting["read_back"]}"',
+                    tool_result=w(
+                        "stage.after_waiting", read_back=change.read_back, kind=wkind
+                    ),
+                    tool_prompt=w(
+                        "stage.after_waiting.then", read_back=waiting["read_back"]
+                    ),
                 ).update_global_data(self._update(data, queued=queued))
             else:
                 queued.append(
@@ -1302,7 +1336,7 @@ class Operations:
                         for k in ("kind", "read_back", "touches", "args")
                     }
                 )
-                note = f'The change read back before isn\'t made yet, and is kept for after this one: "{waiting["read_back"]}" '
+                note = w("stage.set_aside", read_back=waiting["read_back"])
         queued, also = await self._reconcile_queue(call, op, change, queued)
         note += also
         history = (
@@ -1311,7 +1345,9 @@ class Operations:
             else list(data.get("history") or [])
         )
         revision = int(data.get("proposals") or 0) + 1
-        entry = _waiting_entry(op.kind, args, change, revision)
+        entry = _waiting_entry(
+            op.kind, args, change, revision, self._w.template("done.default")
+        )
         result = (
             FunctionResult()
             .update_global_data(
@@ -1341,8 +1377,14 @@ class Operations:
         """The read-back, proposed, with what the model is to do next."""
         result = self.proposal.propose(read_back, raw_data=raw_data, result=result)
         if isinstance(result.response, dict):
-            result.response["tool_prompt"] = _READ_BACK_PROMPT.format(
-                confirm=self._names.confirm, decline=self._names.decline
+            # In place of the Proposal pattern's own ("If they say no or want a change, call decline_change"):
+            # the confirm step's words, and more asked for added to it. Told only to wait for a yes, a model told
+            # the caller nothing more could be asked for until they answered. A question answered in between left
+            # the change waiting, unasked, until the call ended.
+            result.response["tool_prompt"] = self._w(
+                "then.read_back",
+                confirm=self._names.confirm,
+                decline=self._names.decline,
             )
         return result
 
@@ -1363,6 +1405,7 @@ class Operations:
         well", one change, merged; in place of it, this one, with the rest of
         it kept; not said, the model is asked which.
         """
+        w = self._w
         as_well = args.get("as_well")
         for q in [q for q in queued if q.get("kind") == op.kind]:
             overlap = set(q.get("touches") or []) & set(change.touches)
@@ -1373,16 +1416,18 @@ class Operations:
             within = set(change.touches) <= set(q.get("touches") or [])
             if op.combine is not None and as_well is not False and not within:
                 if as_well is None:
-                    raise Refuse(
-                        f'Nothing is changed yet: a {op.kind} change is already set aside for after another: "{q.get("read_back")}"',
-                        f"Call {op.tool} again with as_well: true if they want this as well as it, false if in place "
-                        "of it; ask them if you can't tell.",
+                    raise _Said(
+                        w("held.set_aside", kind=op.kind, read_back=q.get("read_back")),
+                        w("stage.as_well.ask", tool=op.tool),
                     )
                 if not all(_same_value(held.get(k), args.get(k)) for k in op.combine):
-                    raise Refuse(
-                        f"Nothing is changed yet: this and the {op.kind} change set aside differ in "
-                        f"{_spoken_list(list(op.combine))}.",
-                        "Ask which they want for both.",
+                    raise _Said(
+                        w(
+                            "held.differ",
+                            kind=op.kind,
+                            fields=w.joined(list(op.combine)),
+                        ),
+                        w("held.differ.then"),
                     )
                 args = op.merge(held, args)
                 change = await self._prepare(call, op, args)
@@ -1397,17 +1442,16 @@ class Operations:
         entry = _queued_entry(op.kind, args, change)
         queued = [q for q in queued if not _same_request(q, entry)] + [entry]
         first = self._operations.get(str(change.after))
-        tool = first.tool if first else "its tool"
+        tool = first.tool if first else w("then.its_tool")
         waiting = call.data.get("waiting") or {}
-        why = f", since {change.after_why}" if change.after_why else ""
-        fact = (
-            f"Not read to them yet: the {change.after} change they asked for goes first{why}. Kept for right "
-            f'after it: "{change.read_back}"'
+        since = w("stage.since", why=change.after_why) if change.after_why else ""
+        fact = w(
+            "held.first", after=change.after, since=since, read_back=change.read_back
         )
         if waiting.get("kind") == change.after:
-            then = f'Tell them you\'ll do that right after, and get their answer to the change waiting: "{waiting.get("read_back")}"'
+            then = w("stage.after_waiting.then", read_back=waiting.get("read_back"))
         else:
-            then = f"Call {tool} now for it (ask them for anything it needs that they haven't said); this one comes right after it."
+            then = w("held.first.then", tool=tool)
         return FunctionResult(tool_result=fact, tool_prompt=then).update_global_data(
             self._update(call.data, queued=queued)
         )
@@ -1458,13 +1502,9 @@ class Operations:
                     rebuilt = None
             if rebuilt is not None and rest is not None:
                 kept.append(_queued_entry(qop.kind, rest, rebuilt))
-                notes.append(
-                    f'The change set aside for later is now only this: "{rebuilt.read_back}" '
-                )
+                notes.append(self._w("queue.narrowed", read_back=rebuilt.read_back))
             else:
-                notes.append(
-                    f'The change set aside for later no longer goes ahead, since this one takes its place: "{q.get("read_back")}" '
-                )
+                notes.append(self._w("queue.dropped", read_back=q.get("read_back")))
         return kept, "".join(notes)
 
     async def _run_writes(
@@ -1480,7 +1520,7 @@ class Operations:
                 break
             except Exception as e:  # an outcome nobody reported: not counted as made
                 logger.exception("operations: %s write %s raised", op.kind, write.name)
-                reply = f"its outcome isn't known ({type(e).__name__})"
+                reply = self._w("write.unknown", error=type(e).__name__)
                 break
             made += 1
         return made, reply
@@ -1507,7 +1547,10 @@ class Operations:
         history = list(data.get("history") or [])
         revision = int(data.get("proposals") or 0) + 1
         made, reply = await self._run_writes(call, op, change.writes, revision)
-        lines, moved = change.done_lines(), change.money_moved()
+        lines, moved = (
+            change.done_lines(self._w.template("done.default")),
+            change.money_moved(),
+        )
         done = _made_text(lines, list(change.writes), made)
         outcome = "made" if made == len(change.writes) else f"not made: {reply}"
         history.append(
@@ -1531,14 +1574,15 @@ class Operations:
             history=history,
             proposals=revision,
         )
+        w = self._w
         if outcome != "made":
-            part = f" What went through first: {done}" if made else ""
+            part = w("applied.part", done=done) if made else ""
             return FunctionResult(
-                tool_result=f"It didn't go through: {reply}.{part}",
-                tool_prompt=_GOING_ON,
+                tool_result=w("applied.failed", reason=reply, part=part),
+                tool_prompt=w("then.going_on"),
             ).update_global_data(update)
         return FunctionResult(
-            tool_result=f"Done. {done}", tool_prompt="Tell them."
+            tool_result=w("applied", done=done), tool_prompt=w("applied.then")
         ).update_global_data(update)
 
     def _waiting_named(
@@ -1546,15 +1590,15 @@ class Operations:
     ) -> dict[str, Any]:
         waiting = call.data.get("waiting") or {}
         if not waiting.get("read_back"):
-            raise Refuse(
-                "No change is waiting for an answer, so nothing was changed.",
-                "Ask what they'd like to do.",
-            )
+            raise Refuse(self._w("waiting.none"), self._w("waiting.none.then"))
         if args.get("change") != waiting.get("kind"):
             raise Refuse(
-                f"Nothing was changed: the change waiting for their answer is the {waiting.get('kind')} change, this "
-                f'one: "{waiting["read_back"]}"',
-                f'If their answer was to that one, call this again with change "{waiting.get("kind")}".',
+                self._w(
+                    "waiting.other",
+                    kind=waiting.get("kind"),
+                    read_back=waiting["read_back"],
+                ),
+                self._w("waiting.other.then", kind=waiting.get("kind")),
             )
         return waiting
 
@@ -1566,14 +1610,13 @@ class Operations:
             waiting = self._waiting_named(call, args)
             await self._require_account(call)
         except Refuse as e:
-            return _refused(e, "")
+            return self._refused(e)
         state = current(raw_data)
         if not state or state.get("proposal") != waiting["read_back"]:
             result = self._proposed(waiting["read_back"], raw_data)
             if isinstance(result.response, dict):
-                result.response["tool_result"] = (
-                    "Nothing was changed: their yes was to an earlier read-back, so this one is read to them again. "
-                    + str(result.response.get("tool_result") or "")
+                result.response["tool_result"] = self._w("confirm.stale") + str(
+                    result.response.get("tool_result") or ""
                 )
             return result
         op = self._operations[waiting["kind"]]
@@ -1586,28 +1629,31 @@ class Operations:
         made_now = _made_text(list(waiting.get("done") or []), writes, made)
         tool_of = {k: o.tool for k, o in self._operations.items()}
         if made < len(writes):
-            part = f" What went through first: {made_now}" if made else ""
+            part = self._w("applied.part", done=made_now) if made else ""
             settled = _settle(data, f"not made: {reply}", made_now, made)
             settled["history"][-1]["writes_made"] = [w.to_dict() for w in writes[:made]]
             return self._finish(
                 call,
                 FunctionResult(
-                    tool_result=f"The change didn't go through: {reply}.{part}",
-                    tool_prompt=_GOING_ON + _next_up(data, tool_of),
+                    tool_result=self._w("confirm.failed", reason=reply, part=part),
+                    tool_prompt=self._w("then.going_on")
+                    + _next_up(data, tool_of, self._w),
                 )
                 .update_global_data(self._update(data, **account, **settled))
                 .swml_change_step(self._names.step(MAIN_STEP)),
             )
         now = _settle(data, "made", made_now)
-        total = _in_all(now["history"])
+        total = self._in_all(now["history"])
         result = FunctionResult(
-            tool_result=f"Done. {made_now}{total}",
-            tool_prompt=f"Tell them it's done{', and what it all comes to' if total else ''}."
-            + (_next_up(data, tool_of) or _ANYTHING_ELSE),
+            tool_result=self._w("confirm.done", done=made_now, total=total),
+            tool_prompt=self._w(
+                "confirm.done.total.then" if total else "confirm.done.then"
+            )
+            + (_next_up(data, tool_of, self._w) or self._w("then.anything_else")),
         )
         return self._finish(
             call,
-            self.proposal.complete(made_now or "done", result)
+            self.proposal.complete(made_now or self._w("confirm.done.state"), result)
             .update_global_data(self._update(data, **account, **now))
             .swml_change_step(self._names.step(MAIN_STEP)),
         )
@@ -1619,13 +1665,16 @@ class Operations:
         try:
             waiting = self._waiting_named(call, args)
         except Refuse as e:
-            return _refused(e, "")
+            return self._refused(e)
         tool_of = {k: o.tool for k, o in self._operations.items()}
         return (
             FunctionResult(
-                tool_result=f'Nothing was changed: they don\'t want this change: "{waiting["read_back"]}"',
-                tool_prompt="Tell them it's left as it was."
-                + (_next_up(call.data, tool_of) or _ANYTHING_ELSE),
+                tool_result=self._w("decline", read_back=waiting["read_back"]),
+                tool_prompt=self._w("decline.then")
+                + (
+                    _next_up(call.data, tool_of, self._w)
+                    or self._w("then.anything_else")
+                ),
             )
             .set_semantic_state({"declined": waiting["read_back"]})
             .update_global_data(
@@ -1647,26 +1696,27 @@ class Operations:
             return self._finish(
                 call,
                 FunctionResult(
-                    tool_result=f"Nothing was looked up: it takes {idn.ask}.",
-                    tool_prompt=f"Ask them for {idn.ask}, then call {idn.tool} with what they say.",
+                    tool_result=self._w("identify.incomplete", ask=idn.ask),
+                    tool_prompt=self._w(
+                        "identify.incomplete.then", ask=idn.ask, tool=idn.tool
+                    ),
                 ).update_global_data(remember),
             )
         try:
             found = await _maybe(idn.find(call, keys))
             if found is None or str(found).strip() == "":
                 raise Refuse(
-                    "No account was found with that.",
-                    f"Ask them for {idn.ask} again, and check it with them.",
+                    self._w("identify.none"), self._w("identify.none.then", ask=idn.ask)
                 )
             account_id = str(found)
         except Refuse as e:  # call.go is honoured: a lockout moves the call on
-            return self._finish(call, _refused(e, "").update_global_data(remember))
+            return self._finish(call, self._refused(e).update_global_data(remember))
         except Need as e:
             return self._finish(
                 call,
                 FunctionResult(
-                    tool_result=f"Not found yet: {e.ask}",
-                    tool_prompt=f"Ask them: {e.ask}",
+                    tool_result=self._w("identify.need", ask=e.ask),
+                    tool_prompt=self._w("then.ask", ask=e.ask),
                 ).update_global_data(remember),
             )
         call.data["account_id"] = account_id
@@ -1680,11 +1730,11 @@ class Operations:
         ):  # a different account: nothing waits on the old one
             update.update(waiting={}, queued=[])
         found_it = FunctionResult(
-            tool_result=f"Found their account. {text}".strip(),
+            tool_result=self._w("identify.found", account=text).strip(),
             tool_prompt=(
-                f"Help with what they asked for: {asked}"
+                self._w("identify.found.then", asked=asked)
                 if asked
-                else "Ask how you can help."
+                else self._w("identify.found.ask")
             ),
         ).update_global_data(self._update(call.data, **update))
         return self._finish(
@@ -1700,14 +1750,19 @@ class Operations:
         call = CallContext(self, raw_data)
         tr = self._transfer
         assert tr is not None  # noqa: S101  # type narrowing: the tool exists only with a transfer
-        summary = str(args.get("summary") or "asked for a person")
+        summary = str(args.get("summary") or self._w("transfer.summary"))
         to = str(args.get("to") or "") if tr.destinations else ""
         if tr.destinations and to not in tr.destinations:
             return self._finish(
                 call,
                 FunctionResult(
-                    tool_result=f"Not transferred: {to or 'nowhere'} isn't one of the places it goes.",
-                    tool_prompt=f"Ask where they want to go: {_spoken_list(list(tr.destinations))}.",
+                    tool_result=self._w(
+                        "transfer.nowhere", to=to or self._w("transfer.unnamed")
+                    ),
+                    tool_prompt=self._w(
+                        "transfer.nowhere.then",
+                        destinations=self._w.joined(list(tr.destinations)),
+                    ),
                 ),
             )
         try:
@@ -1715,11 +1770,11 @@ class Operations:
                 tr.fn(call, summary, to) if tr.destinations else tr.fn(call, summary)
             )
         except Refuse as e:  # call.go is honoured: a closed desk can move the call to take a message
-            return self._finish(call, _refused(e, ""))
+            return self._finish(call, self._refused(e))
         result = FunctionResult(
-            tool_result=f"The call is being transferred to {to or 'a person'}.",
-            tool_prompt="Say nothing more; the transfer notice is playing.",
-        ).say(tr.notice or self._transfer_notice)
+            tool_result=self._w("transfer.going", to=to or self._w("transfer.person")),
+            tool_prompt=self._w("transfer.going.then"),
+        ).say(tr.notice or self._w("transfer.notice"))
         if isinstance(handed, FunctionResult):
             result.add_actions(handed.action)
         return self._finish(
@@ -1756,7 +1811,7 @@ class Operations:
     def record_text(self, global_data: Mapping[str, Any]) -> str:
         """The record's ``now`` line for a call's ``global_data``."""
         record = global_data.get(self._names.record)
-        return _now_line(record if isinstance(record, Mapping) else {})
+        return _now_line(record if isinstance(record, Mapping) else {}, self._w)
 
 
 class ServiceAgent(AgentBase):
@@ -1922,12 +1977,6 @@ def _chained(handler: Callable[..., Any]) -> Callable[..., Awaitable[FunctionRes
     return run
 
 
-def _refused(e: Refuse, prefix: str) -> FunctionResult:
-    why = e.why if (not prefix or e.why.startswith("Nothing")) else prefix + e.why
-    result = FunctionResult(tool_result=why, tool_prompt=e.then or _GOING_ON)
-    return result.enable_extensive_data(False) if e.keep else result
-
-
 def _made_text(done: Sequence[str], writes: Sequence[Write], made: int) -> str:
     """What went through, in the change's own words, or, where it has none for the writes made, the writes."""
     if not writes:
@@ -1992,34 +2041,12 @@ def _snake(name: str) -> str:
     return "".join(f"_{c.lower()}" if c.isupper() else c for c in name).lstrip("_")
 
 
-def _spoken_list(items: Sequence[str]) -> str:
-    items = list(items)
-    if len(items) <= 1:
-        return items[0] if items else ""
-    return ", ".join(items[:-1]) + " and " + items[-1]
-
-
 def _fillers(phrases: Any) -> dict[str, Any] | None:
-    """Fillers as ``define_tool`` takes them: a list is en-US; lists by language code pass through."""
+    """Fillers as ``define_tool`` takes them: a list is for every language (the platform's ``default``); lists by
+    language code pass through."""
     if not phrases:
         return None
-    return dict(phrases) if isinstance(phrases, Mapping) else {"en-US": list(phrases)}
-
-
-def _transfer_gate() -> SemanticGate:
-    return SemanticGate(
-        "In their latest turns in `conversation`, has the caller asked to speak with a person, or said yes when the "
-        "agent offered to transfer them to one?",
-        threshold=0.8,
-        id="wants_person",
-        true_means="They asked for a person, a human, a representative or a supervisor, or said yes to being "
-        "transferred to one.",
-        false_means="They haven't asked for a person or said yes to being transferred.",
-        on_fail=FunctionResult(
-            tool_result="Not transferred: the caller hasn't asked for a person.",
-            tool_prompt="Carry on helping them.",
-        ).back_to_back_functions(False),
-    )
+    return dict(phrases) if isinstance(phrases, Mapping) else {"default": list(phrases)}
 
 
 __all__ = ["DEFAULT_RULES", "CallContext", "Operations", "ServiceAgent"]

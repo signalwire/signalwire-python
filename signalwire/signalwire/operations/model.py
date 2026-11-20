@@ -179,15 +179,24 @@ class Change:
     """Why the other change goes first, in a clause: "an order's items change
     last, since after that nothing else in it can change"."""
 
-    def done_lines(self) -> list[str]:
-        """What to say for each write once it went through."""
+    def done_lines(self, default: str = "It's done: {statement}") -> list[str]:
+        """
+        What to say for each write once it went through.
+
+        Args:
+            default: The line for a change with no ``done`` of its own, with
+                ``{statement}`` for the read-back without its question (the
+                service's ``done.default`` wording).
+        """
         n = max(len(self.writes), 1)
         if isinstance(self.done, str):
             return [""] * (n - 1) + [self.done]
         if self.done:
             lines = [str(d) for d in self.done]
             return (lines + [""] * n)[:n]
-        return [""] * (n - 1) + [f"It's done: {_statement(self.read_back)}"]
+        return [""] * (n - 1) + [
+            default.replace("{statement}", _statement(self.read_back))
+        ]
 
     def money_moved(self) -> list[float]:
         """The money each write moves."""
@@ -281,8 +290,9 @@ class Operation:
     guidance: ClassVar[str | None] = None
     """Instructions for a step of its own, entered when its ``prepare``
     raises ``Need``. None: no step of its own."""
-    fillers: ClassVar[Sequence[str]] = ()
-    """Short phrases said while its tool runs."""
+    fillers: ClassVar[Sequence[str] | Mapping[str, Sequence[str]]] = ()
+    """Short phrases said while its tool runs: a list, for every language, or
+    lists by language code."""
     confirm: ClassVar[bool] = True
     """False for a change that goes through without a read-back and a yes,
     such as a move in a game. Its writes run when its tool is called."""

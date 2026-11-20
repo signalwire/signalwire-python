@@ -33,9 +33,11 @@ from signalwire.operations.model import (
     Write,
     WriteFailed,
 )
+from signalwire.operations.wording import DEFAULT_WORDING
 
 __all__ = [
     "DEFAULT_RULES",
+    "DEFAULT_WORDING",
     "NOT_SAID",
     "CallContext",
     "Change",

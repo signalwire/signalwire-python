@@ -19,6 +19,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from signalwire.operations.model import Change
+from signalwire.operations.wording import _Wording
 
 RECORD = "ops"
 """The ``global_data`` key the record lives under (``ops_<name>`` for an
@@ -43,9 +44,10 @@ RECORD_KEYS = (
 """The keys of the record."""
 
 
-def _opening() -> dict[str, Any]:
+def _opening(w: _Wording) -> dict[str, Any]:
     """The record as a call opens."""
     return _whole(
+        w,
         {},
         v=RECORD_VERSION,
         account_id="",
@@ -59,9 +61,9 @@ def _opening() -> dict[str, Any]:
     )
 
 
-def _opening_data(key: str = RECORD) -> dict[str, Any]:
+def _opening_data(key: str, w: _Wording) -> dict[str, Any]:
     """The ``global_data`` a call opens with: the record under its key."""
-    return {key: _opening()}
+    return {key: _opening(w)}
 
 
 def _record_of(raw_data: Mapping[str, Any] | None, key: str = RECORD) -> dict[str, Any]:
@@ -71,32 +73,39 @@ def _record_of(raw_data: Mapping[str, Any] | None, key: str = RECORD) -> dict[st
     return copy.deepcopy(dict(record)) if isinstance(record, Mapping) else {}
 
 
-def _whole(data: Mapping[str, Any], **changes: Any) -> dict[str, Any]:
+def _whole(w: _Wording, data: Mapping[str, Any], **changes: Any) -> dict[str, Any]:
     """The whole record after these changes, with ``now`` worked out after them."""
     record = {**data, **changes}
-    return {**record, "now": _now_line(record)}
+    return {**record, "now": _now_line(record, w)}
 
 
-def _update(key: str, data: Mapping[str, Any], **changes: Any) -> dict[str, Any]:
+def _update(
+    key: str, w: _Wording, data: Mapping[str, Any], **changes: Any
+) -> dict[str, Any]:
     """
     The ``global_data`` update for these changes: the whole record under its
     key, since the platform replaces a top-level key whole.
     """
-    return {key: _whole(data, **changes)}
+    return {key: _whole(w, data, **changes)}
 
 
-def _now_line(data: Mapping[str, Any]) -> str:
+def _now_line(data: Mapping[str, Any], w: _Wording) -> str:
     """Where the call stands, in words: what they asked for, what's done, what waits for their answer, and what's
     set aside for after it."""
     done = " ".join(h["done"] for h in data.get("history") or [] if h.get("done"))
     waiting, queued = data.get("waiting") or {}, data.get("queued") or []
     parts = [
-        f"What they asked for: {data['asked']}" if data.get("asked") else "",
-        f"Done in this call: {done}" if done else "",
-        f'Waiting for their answer: "{waiting["read_back"]}"'
+        w("now.asked", asked=data["asked"]) if data.get("asked") else "",
+        w("now.done", done=done) if done else "",
+        w("now.waiting", read_back=waiting["read_back"])
         if waiting.get("read_back")
         else "",
-        ("Set aside, to do next: " + " ".join(f'"{q["read_back"]}"' for q in queued))
+        w(
+            "now.queued",
+            read_backs=" ".join(
+                w("now.queued.item", read_back=q["read_back"]) for q in queued
+            ),
+        )
         if queued
         else "",
     ]
@@ -104,7 +113,7 @@ def _now_line(data: Mapping[str, Any]) -> str:
 
 
 def _waiting_entry(
-    kind: str, args: Mapping[str, Any], change: Change, revision: int
+    kind: str, args: Mapping[str, Any], change: Change, revision: int, done_default: str
 ) -> dict[str, Any]:
     """A change as it waits for the caller's yes: everything needed to carry it out, frozen."""
     return {
@@ -113,7 +122,7 @@ def _waiting_entry(
         "touches": list(change.touches),
         "writes": [w.to_dict() for w in change.writes],
         "money": change.money_moved(),
-        "done": change.done_lines(),
+        "done": change.done_lines(done_default),
         "args": dict(args),
         "revision": revision,
     }
@@ -154,18 +163,7 @@ def _money(amount: float) -> str:
     return f"${abs(amount):,.2f}"
 
 
-def _joined(parts: Sequence[str]) -> str:
-    parts = [p for p in parts if p]
-    return (
-        parts[0]
-        if len(parts) == 1
-        else ", ".join(parts[:-1]) + " and " + parts[-1]
-        if parts
-        else ""
-    )
-
-
-def _in_all(history: Sequence[Mapping[str, Any]]) -> str:
+def _in_all(history: Sequence[Mapping[str, Any]], w: _Wording) -> str:
     """What the changes made in the call come to, once more than one moved money."""
     moved = [
         float(h.get("money") or 0) for h in history if h.get("money")
@@ -173,23 +171,23 @@ def _in_all(history: Sequence[Mapping[str, Any]]) -> str:
     if len(moved) < 2:
         return ""
     back, charged = -sum(m for m in moved if m < 0), sum(m for m in moved if m > 0)
-    parts = ([f"{_money(back)} back to them"] if back > 0.005 else []) + (
-        [f"{_money(charged)} charged"] if charged > 0.005 else []
+    parts = ([w("money.back", amount=_money(back))] if back > 0.005 else []) + (
+        [w("money.charged", amount=_money(charged))] if charged > 0.005 else []
     )
-    return (
-        f" In all, the changes made in this call come to {_joined(parts)}."
-        if parts
-        else ""
-    )
+    return w("money.in_all", amounts=w.joined(parts)) if parts else ""
 
 
-def _next_up(data: Mapping[str, Any], tool_of: Mapping[str, str]) -> str:
+def _next_up(data: Mapping[str, Any], tool_of: Mapping[str, str], w: _Wording) -> str:
     """What to do once the change waiting is settled: take up the first one set aside."""
     queued = data.get("queued") or []
     if not queued:
         return ""
     first = queued[0]
-    return f' Then, as they asked, call {tool_of.get(first["kind"], "its tool")} again for the change set aside: "{first["read_back"]}"'
+    return w(
+        "then.next_up",
+        tool=tool_of.get(first["kind"], w("then.its_tool")),
+        read_back=first["read_back"],
+    )
 
 
 __all__ = ["RECORD", "RECORD_KEYS", "RECORD_VERSION"]
