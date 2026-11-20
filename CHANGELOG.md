@@ -38,6 +38,10 @@
   messages, answers from documents) and an assistant for one person, who
   screens callers and puts them through with a whisper the person accepts
   with a key, and otherwise takes a message or books time.
+- `signalwire.operations.outbound.Dialer` places an outbound call to an
+  agent only once every check passes (`consented`, `calling_hours` read on
+  the callee's own clock, or your own), and otherwise raises `NotPlaced`
+  with the reason and makes no request.
 - `CallSimulator(request_fields=...)` adds fields such as `caller_id_num` to
   every tool request, as the platform sends them for a call.
 

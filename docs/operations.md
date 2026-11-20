@@ -14,6 +14,7 @@ An operations agent is written as what it can do for a caller. You write each op
 - [Appointments and Messages](#appointments-and-messages)
 - [Payments](#payments)
 - [A Front Desk and a Personal Assistant](#a-front-desk-and-a-personal-assistant)
+- [Outbound Calls](#outbound-calls)
 - [What the SDK Generates](#what-the-sdk-generates)
 - [The Call's Record](#the-calls-record)
 - [Words, Languages and the Medium](#words-languages-and-the-medium)
@@ -255,6 +256,29 @@ assistant = PersonalAssistantAgent(
     reach="+15550100002",
     messages=Messages(save=lambda call, message: print(message)),
 )
+```
+
+## Outbound Calls
+
+`signalwire.operations.outbound.Dialer` places a call to an agent only once every check passes, and otherwise raises `NotPlaced` with the reason and makes no request. A `Callee` carries the number, the callee's own time zone (an IANA name) and what the call is about, which goes to the agent as query parameters of its URL. `consented(lookup)` stops a call with no consent on record or consent withdrawn; `calling_hours(start, end, days=...)` stops one outside the hours, read on the callee's own clock. A check of your own is `check(callee, now)` returning a reason or None; `now` is an aware UTC time. `why_not(callee)` says what would stop a call without placing it. Pacing, retries and outcomes are your scheduler's: call `place` from it, with `status_url` for the call's progress.
+
+```python
+from datetime import time
+
+from signalwire.operations.outbound import Callee, Dialer, NotPlaced, calling_hours, consented
+from signalwire.rest import RestClient
+
+CONSENT = {"+15557654321": True}
+dialer = Dialer(
+    RestClient(project="your-project", token="your-token", host="example.signalwire.com"),
+    from_number="+15550001111",
+    url="https://agents.example.com/reminders",
+    checks=[consented(lambda callee: CONSENT.get(callee.number)), calling_hours(time(9), time(20))],
+)
+try:
+    dialer.place(Callee("+15557654321", "America/Los_Angeles", {"appointment": "a1"}))
+except NotPlaced as e:
+    print(e.reason)
 ```
 
 ## What the SDK Generates

@@ -554,6 +554,8 @@ the writes, the record.
 - `namespace=` names everything it generates, for two services on one agent.
 - Task packs add common operations against your backend: `Appointments`,
   `Messages` and `Payments` (a card payment the model never hears).
+- `outbound.Dialer` places an outbound call only once consent, the callee's
+  own calling hours and your checks pass.
 - `signalwire.operations.infobot` answers from a corpus (`InfoBotKnowledge`)
   and carries a conversation between voice and chat (`Continuity`).
 """,
