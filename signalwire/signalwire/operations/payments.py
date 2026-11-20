@@ -10,6 +10,9 @@ Payments: a task pack that takes a card payment the caller agreed to, without
 the model ever hearing the card. Add it to an ``Operations`` or a
 ``ServiceAgent`` with ``add_to``.
 
+A payment is taken on a call: in a chat (``call.medium``), the tool says so
+and changes nothing.
+
 The amount comes from your ``charge`` function, never from the model: the
 caller names what they're paying (an invoice, an order), ``charge`` says how
 much, and that's read back for their yes. Then the platform's pay verb takes
@@ -94,6 +97,8 @@ PAYMENTS_WORDING: Mapping[str, str] = MappingProxyType(
         "check another way.",
         "none": "No payment was started.",
         "amount.bad": "{paying_for} has nothing to pay.",
+        "chat": "A card payment is taken on a call, not in a chat.",
+        "chat.then": "Tell them, and offer to take it when they call.",
     }
 )
 """Every key the ``Payments`` pack's words come from, with its default."""
@@ -204,6 +209,8 @@ class Payments:
         w, pack = self._w, self
 
         async def take_prepare(self: Operation, call: Any, f: Any) -> Change:
+            if call.medium == "chat":  # the pay verb takes the card on a call's keypad
+                raise _Said(w("chat"), w("chat.then"))
             found = pack._charge(call, f.paying_for)
             if inspect.isawaitable(found):
                 found = await found

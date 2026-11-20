@@ -695,7 +695,7 @@ class Operations:
         rules = self._rule_texts()
         if rules:
             _add_to_section(agent, "Rules", bullets=rules)
-        if self._operations or self._identity is not None:
+        if self._keeps_record():
             agent.update_global_data(_opening_data(self._names.record, self._w))
             line = f"${{global_data.{self._names.record}.now}}"
             had = str((getattr(agent, "_params", {}) or {}).get("conscience") or "")
@@ -751,7 +751,7 @@ class Operations:
         gave. ``ServiceAgent`` applies it on each SWML request; an agent
         configured per request applies it itself, as global data.
         """
-        if not (self._operations or self._identity is not None):
+        if not self._keeps_record():
             return None
         changes: dict[str, Any] = {}
         medium = None if self._medium else _medium_of_request(request_data)
@@ -790,6 +790,13 @@ class Operations:
             logger.exception("operations: prefill could not identify the caller")
             return None
         return {"account_id": call.data["account_id"], "account": text}
+
+    def _keeps_record(self) -> bool:
+        """Whether the call has a record: for its changes, its account, or the medium found on its first request.
+        A service with none of those (only lookups, and a ``medium`` of its own) keeps none."""
+        return (
+            bool(self._operations) or self._identity is not None or self._medium is None
+        )
 
     def _gated(self) -> bool:
         """Whether the call starts in a step of its own that asks who the caller is."""

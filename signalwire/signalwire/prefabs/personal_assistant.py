@@ -14,7 +14,8 @@ give it one.
 Putting a call through rings the person with a whisper: who is calling and
 why, and a key to press to take it. The caller hears ringing meanwhile. If
 the person doesn't answer or doesn't take it, the assistant carries on with
-the caller.
+the caller. In a chat (``call.medium``), nobody is put through: the
+assistant offers a message or a time instead.
 """
 
 from __future__ import annotations
@@ -49,6 +50,7 @@ ASSISTANT_WORDING: Mapping[str, str] = MappingProxyType(
         "trying": "Seeing whether {owner} can take it.",
         "trying.then": "Tell them you'll see if {owner} can take it, and say nothing more.",
         "unavailable": "{owner} isn't taking calls now.",
+        "chat": "{owner} can't be put through from a chat.",
         "not_taken": "{owner} didn't take the call (${connect_failed_reason}).",
         "then.message": "Tell them, and offer to take a message with {tool}.",
         "then.appointment": "Tell them, and offer to find a time with {tool}.",
@@ -190,6 +192,8 @@ class PersonalAssistantAgent(ServiceAgent):
         }
 
         async def prepare(self: Operation, call: Any, f: Any) -> Change:
+            if call.medium == "chat":  # connecting is a call's
+                raise _Said(w("chat", owner=assistant.owner), assistant._otherwise())
             if assistant._available is not None:
                 taking = assistant._available(call)
                 if inspect.isawaitable(taking):

@@ -41,6 +41,7 @@ class Department:
 FRONT_DESK_WORDING: Mapping[str, str] = MappingProxyType(
     {
         "closed": "{department} isn't taking calls now.",
+        "chat": "{department} can't be reached from a chat.",
         "closed.then": "Tell them, and offer to take a message with {tool}.",
         "closed.then.no_messages": "Tell them, and ask how else you can help.",
     }
@@ -129,12 +130,19 @@ class FrontDeskAgent(ServiceAgent):
 
     async def _put_through(self, call: Any, summary: str, to: str) -> FunctionResult:
         department = self._departments[to]
+        w = self._w_desk
+        if call.medium == "chat":  # putting through is a call's
+            raise Refuse(
+                w("chat", department=to),
+                w("closed.then", tool=self._messages.tool)
+                if self._messages is not None
+                else w("closed.then.no_messages"),
+            )
         if department.open is not None:
             taking = department.open(call)
             if inspect.isawaitable(taking):
                 taking = await taking
             if not taking:
-                w = self._w_desk
                 raise Refuse(
                     w("closed", department=to),
                     w("closed.then", tool=self._messages.tool)

@@ -173,17 +173,26 @@ def test_another_layer_installs_beside_it() -> None:
     assert agent._params["conscience"] == "${global_data.infobot.now}\n\n${global_data.ops.now}"
 
 
-def test_no_operations_means_no_change_rule_and_no_record() -> None:
-    agent = ServiceAgent("faq", role="You answer questions.")
+def test_no_operations_means_no_change_rule_and_a_record_only_for_the_medium() -> None:
+    def faq(**kwargs: Any) -> ServiceAgent:
+        agent = ServiceAgent("faq", role="You answer questions.", **kwargs)
 
-    @agent.lookup("Opening hours.", fields={})
-    def hours(call: Any) -> str:
-        return "9 to 5."
+        @agent.lookup("Opening hours.", fields={})
+        def hours(call: Any) -> str:
+            return "9 to 5."
 
-    sim = CallSimulator(agent)
-    prompt = json.dumps(json.loads(agent._render_swml()))
+        return agent
+
+    found = faq()
+    sim = CallSimulator(found)
+    prompt = json.dumps(json.loads(found._render_swml()))
     assert "Nothing changes until" not in prompt
-    assert "ops" not in sim.global_data and "conscience" not in sim.params
+    assert sim.global_data["ops"]["medium"] == "" and sim.params["conscience"] == "${global_data.ops.now}"
+    chat = found.ops.prefilled({"conversation_type": "chat"})
+    assert chat is not None and chat["ops"]["now"] == "This is a chat."
+    given = faq(medium="voice")
+    sim = CallSimulator(given)
+    assert "ops" not in sim.global_data and "conscience" not in sim.params, "nothing to keep"
 
 
 def test_fillers_by_language_pass_through() -> None:
