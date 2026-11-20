@@ -17,8 +17,9 @@ from __future__ import annotations
 import copy
 import functools
 import inspect
-import threading
 import logging
+import re
+import threading
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from typing import Any
 
@@ -48,10 +49,10 @@ from signalwire.operations.record import (
     _queued_entry,
     _record_of,
     _settle,
-    _update,
     _waiting_entry,
     _whole,
 )
+from signalwire.operations.record import _update as _record_update
 from signalwire.patterns.proposal import Proposal, current
 
 logger = logging.getLogger(__name__)
@@ -59,8 +60,38 @@ logger = logging.getLogger(__name__)
 CONFIRM_TOOL = "confirm_change"
 DECLINE_TOOL = "decline_change"
 TRANSFER_TOOL = "transfer_to_human"
+IDENTIFY_TOOL = "find_account"
 IDENTIFY_STEP, MAIN_STEP, CONFIRM_STEP = "identify", "main", "confirm"
 TRANSFERRED = "transferred"
+_NAMESPACE = re.compile(r"[a-z][a-z0-9_]*")
+
+
+class _Names:
+    """
+    The names an ``Operations`` generates: its tools, steps, the context a
+    transfer moves to, and its record's ``global_data`` key. With a
+    namespace, each carries it, so a second ``Operations`` (or the agent's
+    own tools and steps) can sit beside it on one agent.
+    """
+
+    def __init__(self, namespace: str | None, context: str) -> None:
+        if namespace is not None and not _NAMESPACE.fullmatch(namespace):
+            raise ValueError(
+                f"namespace {namespace!r} must be lower case letters, digits and underscores, starting with a letter"
+            )
+        p = f"{namespace}_" if namespace else ""
+        self.namespace, self.context, self._prefix = namespace, context, p
+        self.record = namespace or RECORD
+        self.confirm = f"confirm_{namespace}_change" if namespace else CONFIRM_TOOL
+        self.decline = f"decline_{namespace}_change" if namespace else DECLINE_TOOL
+        self.transfer = p + TRANSFER_TOOL
+        self.identify = p + IDENTIFY_TOOL
+        self.transferred = p + TRANSFERRED
+
+    def step(self, name: str) -> str:
+        """A generated step's name (``identify``, ``main``, ``confirm``, an operation's kind)."""
+        return self._prefix + name
+
 
 DEFAULT_RULES = (
     "This is a phone call. Keep each reply short, but give every fact the caller asks for.",
@@ -97,8 +128,8 @@ class CallContext:
     """
     One request of a call, as an operation, lookup or identify function sees it.
 
-    ``call.data`` is the call's record (``global_data.ops``) as it came with
-    the request;
+    ``call.data`` is the call's record (``global_data.ops``, or the
+    ``Operations``' namespace) as it came with the request;
     ``call.account_id`` is the account identified, and ``call.account`` what
     the agent's ``load`` function made of it. ``call.state`` is the
     developer's own state for the call (a game's hand, the results a caller
@@ -110,7 +141,7 @@ class CallContext:
         self.raw_data: dict[str, Any] = (
             dict(raw_data) if isinstance(raw_data, Mapping) else {}
         )
-        self.data = _record_of(raw_data)
+        self.data = _record_of(raw_data, service._names.record)
         self.account: Any = None
         self.write_key = ""
         """While a write runs: a key unique to it in this call, for idempotent backends."""
@@ -144,7 +175,8 @@ class CallContext:
     def go(self, step: str) -> CallContext:
         """
         Move to a step (a phase declared with ``Operations.phase``, or
-        ``main``) when this tool's result goes back. Honoured from lookups,
+        ``main``, which is the namespaced name when there's a namespace)
+        when this tool's result goes back. Honoured from lookups,
         changes with no read-back, ``apply`` and identify; a change read back
         always waits in the confirm step.
         """
@@ -279,6 +311,8 @@ class Operations:
         gate_fillers: Mapping[str, Any] | None = None,
         wrap: Callable[[str, Callable[..., Any]], Callable[..., Any]] | None = None,
         customize: Callable[[Any], None] | None = None,
+        namespace: str | None = None,
+        context: str = "default",
     ) -> None:
         """
         Args:
@@ -299,7 +333,19 @@ class Operations:
                 each generated tool, for middleware of the developer's own.
             customize: ``customize(contexts)`` gets the generated
                 ``ContextBuilder`` once the steps are made, to change them.
+            namespace: A name for this service, in lower case, such as
+                ``"billing"``, carried by everything it generates: the tools
+                (``confirm_billing_change``, ``decline_billing_change``,
+                ``billing_transfer_to_human``, ``billing_find_account``), the
+                steps (``billing_main``), the context a transfer moves to
+                (``billing_transferred``) and the record's ``global_data``
+                key (``billing``). None: the names have no prefix, and the
+                record is ``global_data.ops``. Give one to install beside
+                another ``Operations``, or beside tools and steps of the same
+                names.
+            context: The context its steps go in.
         """
+        self._names = _Names(namespace, context)
         self._role = role
         self._step_text = dict(step_text or {})
         self._confirm_gates = list(confirm_gates) if confirm_gates is not None else None
@@ -316,7 +362,7 @@ class Operations:
         self._transfer_notice = transfer_notice
         self._offers: list[tuple[list[str], bool, list[str] | None]] = []
         self._phases: list[tuple[str, str, list[str] | None, bool]] = []
-        self.proposal = Proposal(CONFIRM_TOOL, decline_tool=DECLINE_TOOL)
+        self.proposal = Proposal(self._names.confirm, decline_tool=self._names.decline)
 
     # ------------------------------------------------------------------ registration
 
@@ -424,7 +470,7 @@ class Operations:
         load: Callable[..., Any] | None = None,
         describe: Callable[..., Any] | None = None,
         fields: Mapping[str, Field] | None = None,
-        tool: str = "find_account",
+        tool: str | None = None,
         ask: str | None = None,
         fillers: Any = (),
         check_keys: bool = True,
@@ -447,7 +493,8 @@ class Operations:
             fields: Descriptions of the keys (each defaults to a string), and
                 any other arguments ``find`` takes, such as the letters a
                 caller spelled.
-            tool: The identify tool's name.
+            tool: The identify tool's name; defaults to ``find_account``
+                (namespaced with the service's ``namespace``).
             ask: How to ask for the keys, such as "their email address, or
                 their first name, last name and zip code".
             fillers: Short phrases said while it runs.
@@ -471,7 +518,7 @@ class Operations:
             load,
             describe,
             dict(fields or {}),
-            tool,
+            tool or self._names.identify,
             ask,
             fillers,
             check_keys,
@@ -495,7 +542,7 @@ class Operations:
         *,
         destinations: Mapping[str, str] | None = None,
         gated: bool = True,
-        tool: str = TRANSFER_TOOL,
+        tool: str | None = None,
         notice: str | None = None,
     ) -> Operations:
         """
@@ -512,11 +559,14 @@ class Operations:
             gated: Whether the tool runs only once the caller has asked for a
                 person or agreed to it. A router, whose callers say where to
                 go, sets it False.
-            tool: The tool's name.
+            tool: The tool's name; defaults to ``transfer_to_human``
+                (namespaced with the service's ``namespace``).
             notice: What the platform says as the transfer starts; defaults to
                 the service's ``transfer_notice``.
         """
-        self._transfer = _Transfer(transfer, tool, destinations, gated, notice)
+        self._transfer = _Transfer(
+            transfer, tool or self._names.transfer, destinations, gated, notice
+        )
         return self
 
     def offer(
@@ -585,11 +635,13 @@ class Operations:
         """
         Give ``agent`` this service's prompt sections, record, conscience,
         tools and steps. Call it once per agent (or per request, for an agent
-        configured per request). Other layers may install on the same agent,
-        before or after: steps that exist already are added to, never
-        replaced, and the conscience gets this service's line appended.
+        configured per request). The agent's own setup, and other layers',
+        before or after, are added to, never replaced: a Role or Rules
+        section it has already gets this service's text after its own, steps
+        that exist keep their text and tools, an initial step it chose
+        stands, and the conscience gets this service's line appended.
         """
-        agent.prompt_add_section("Role", body=self._role)
+        _add_to_section(agent, "Role", body=self._role)
         rules = (
             self._rules
             if self._rules is not None
@@ -600,10 +652,18 @@ class Operations:
             ]
         )
         if rules:
-            agent.prompt_add_section("Rules", bullets=list(rules))
+            _add_to_section(agent, "Rules", bullets=list(rules))
+        taken = [
+            n for n in self._tool_names() if n in agent._tool_registry._swaig_functions
+        ]
+        if taken:
+            raise ValueError(
+                f"the agent already has tools named {', '.join(taken)}: give this Operations a namespace= "
+                "(or the tools other names) so they can sit side by side"
+            )
         if self._operations or self._identity is not None:
-            agent.update_global_data(_opening_data())
-            line = f"${{global_data.{RECORD}.now}}"
+            agent.update_global_data(_opening_data(self._names.record))
+            line = f"${{global_data.{self._names.record}.now}}"
             had = str((getattr(agent, "_params", {}) or {}).get("conscience") or "")
             if line not in had:
                 agent.set_param(
@@ -612,6 +672,23 @@ class Operations:
         self._define_tools(agent)
         self._define_steps(agent)
         return agent
+
+    def _update(self, data: Mapping[str, Any], **changes: Any) -> dict[str, Any]:
+        """The ``global_data`` update for these changes to the call's record."""
+        return _record_update(self._names.record, data, **changes)
+
+    def _tool_names(self) -> list[str]:
+        """Every tool this service defines on install."""
+        names = [lk.tool for lk in self._lookups] + [
+            op.tool for op in self._operations.values()
+        ]
+        if self._identity is not None:
+            names.append(self._identity.tool)
+        if any(op.confirm for op in self._operations.values()):
+            names += [self._names.confirm, self._names.decline]
+        if self._transfer is not None:
+            names.append(self._transfer.tool)
+        return names
 
     def prefilled(
         self, request_data: Mapping[str, Any] | None, request: Any = None
@@ -629,7 +706,7 @@ class Operations:
             keys = _resolve(idn.prefill(request_data or {}, request))
             if not keys:
                 return None
-            call = CallContext(self, {"global_data": {RECORD: _opening()}})
+            call = CallContext(self, {"global_data": {self._names.record: _opening()}})
             found = _resolve(idn.find(call, dict(keys)))
             if found is None or str(found).strip() == "":
                 return None
@@ -643,7 +720,7 @@ class Operations:
         except Exception:  # unknown: the call starts unidentified, and identify asks
             logger.exception("operations: prefill could not identify the caller")
             return None
-        return _update(call.data, account_id=call.data["account_id"], account=text)
+        return self._update(call.data, account_id=call.data["account_id"], account=text)
 
     def _gated(self) -> bool:
         """Whether the call starts in a step of its own that asks who the caller is."""
@@ -688,10 +765,11 @@ class Operations:
         return list(dict.fromkeys(tools))
 
     def _define_steps(self, agent: AgentBase) -> None:
+        names = self._names
         builder = agent.define_contexts()
-        ctx = builder.get_context("default") or builder.add_context("default")
+        ctx = builder.get_context(names.context) or builder.add_context(names.context)
         transfer = self._transfer.mention() if self._transfer else ""
-        record = f"${{global_data.{RECORD}.account}}"
+        record = f"${{global_data.{names.record}.account}}"
         where = f"Their account: {record}\n\n" if self._identity else ""
         idn = self._identity
         lookups = " or ".join(lk.tool for lk in self._lookups)
@@ -727,7 +805,7 @@ class Operations:
             )
             _contribute(
                 ctx,
-                IDENTIFY_STEP,
+                names.step(IDENTIFY_STEP),
                 self._step_text.get(IDENTIFY_STEP)
                 or f"Ask for {idn.ask}, and call {idn.tool} with what they say. Nothing about an account can be shared "
                 f"or changed until it's found.{early}{transfer}",
@@ -735,7 +813,7 @@ class Operations:
             )
         _contribute(
             ctx,
-            MAIN_STEP,
+            names.step(MAIN_STEP),
             self._step_text.get(MAIN_STEP)
             or f"{where}Help with what they ask, all of it. {help_with}",
             self._tools_for(MAIN_STEP),
@@ -743,32 +821,39 @@ class Operations:
         if any(op.confirm for op in self._operations.values()):
             _contribute(
                 ctx,
-                CONFIRM_STEP,
+                names.step(CONFIRM_STEP),
                 self._step_text.get(CONFIRM_STEP)
                 or f"{where}A change was just read to them and waits for their answer. When they say yes, call "
-                f"{CONFIRM_TOOL}. If they want it different, call its tool again with what they want. If they don't "
-                f"want it, call {DECLINE_TOOL}. If they ask for another change as well, call its tool: the tool says "
+                f"{names.confirm}. If they want it different, call its tool again with what they want. If they don't "
+                f"want it, call {names.decline}. If they ask for another change as well, call its tool: the tool says "
                 f"which comes first, and nothing asked for is lost.{transfer}",
-                [CONFIRM_TOOL, DECLINE_TOOL, *self._tools_for(CONFIRM_STEP)],
+                [names.confirm, names.decline, *self._tools_for(CONFIRM_STEP)],
             )
         for op in self._operations.values():
             if op.guidance:
                 _contribute(
                     ctx,
-                    op.kind,
+                    names.step(op.kind),
                     f"{where}{op.guidance} When you have what it needs, call {op.tool}. {help_with}",
                     self._tools_for(op.kind),
                 ).set_history("spoken")
         known = {
             *self._tools_for(MAIN_STEP),
             *self._tools_for(IDENTIFY_STEP),
-            CONFIRM_TOOL,
-            DECLINE_TOOL,
+            names.confirm,
+            names.decline,
             *(n for names, _, _ in self._offers for n in names),
             *(op.tool for op in self._operations.values()),
         }
         first = None
+        guided = {
+            names.step(op.kind) for op in self._operations.values() if op.guidance
+        }
         for pname, ptext, ptools, initial in self._phases:
+            if pname in guided:
+                raise ValueError(
+                    f"phase {pname!r} has the name of an operation's own step; name the phase differently"
+                )
             tools = ptools if ptools is not None else self._tools_for(pname)
             unknown = [t for t in tools if t not in known]
             if unknown:
@@ -777,16 +862,23 @@ class Operations:
                 )
             _contribute(ctx, pname, f"{where}{ptext}", tools)
             first = first or (pname if initial else None)
-        ctx.set_initial_step(IDENTIFY_STEP if self._gated() else first or MAIN_STEP)
+        if ctx._initial_step is None:  # one the agent or another layer chose stands
+            ctx.set_initial_step(
+                names.step(IDENTIFY_STEP)
+                if self._gated()
+                else first or names.step(MAIN_STEP)
+            )
         if self._transfer:
-            gone = builder.get_context(TRANSFERRED) or builder.add_context(TRANSFERRED)
+            gone = builder.get_context(names.transferred) or builder.add_context(
+                names.transferred
+            )
             _contribute(
                 gone,
-                TRANSFERRED,
+                names.transferred,
                 "The caller is being transferred. Say nothing more.",
                 [],
             )
-            gone.set_initial_step(TRANSFERRED)
+            gone.set_initial_step(names.transferred)
         if self._customize is not None:
             self._customize(builder)
 
@@ -847,24 +939,24 @@ class Operations:
                 }
             }
             agent.define_tool(
-                CONFIRM_TOOL,
+                self._names.confirm,
                 "Make the change just read back, once the caller has said yes to it.",
                 which,
-                self._wrapped(CONFIRM_TOOL, self._confirm),
+                self._wrapped(self._names.confirm, self._confirm),
                 required=["change"],
                 gates=self._confirm_gates
                 if self._confirm_gates is not None
                 else self.confirm_gates(),
                 gate_fillers=self._gate_fillers,
-                fillers=self._tool_fillers.get(CONFIRM_TOOL),
+                fillers=self._tool_fillers.get(self._names.confirm),
             )
             agent.define_tool(
-                DECLINE_TOOL,
+                self._names.decline,
                 "Leave the change just read back unmade, when the caller says they don't want it.",
                 which,
-                self._wrapped(DECLINE_TOOL, self._decline),
+                self._wrapped(self._names.decline, self._decline),
                 required=["change"],
-                fillers=self._tool_fillers.get(DECLINE_TOOL),
+                fillers=self._tool_fillers.get(self._names.decline),
             )
         tr = self._transfer
         if tr is not None:
@@ -1036,9 +1128,8 @@ class Operations:
             )
         return change
 
-    @staticmethod
     def _finish(
-        call: CallContext, result: FunctionResult, *, go: bool = True
+        self, call: CallContext, result: FunctionResult, *, go: bool = True
     ) -> FunctionResult:
         """
         Put what the tool's own code asked for into its result. The record
@@ -1047,18 +1138,17 @@ class Operations:
         the caller talks over can't keep it from being recorded; then the step
         it goes to and its screen events; its platform actions go last.
         """
+        key = self._names.record
         record = None
         kept: list[Any] = []
         for action in result.action:
             if (
                 isinstance(action, dict)
                 and isinstance(action.get("set_global_data"), dict)
-                and RECORD in action["set_global_data"]
+                and key in action["set_global_data"]
             ):
-                record = action["set_global_data"][RECORD]
-                rest = {
-                    k: v for k, v in action["set_global_data"].items() if k != RECORD
-                }
+                record = action["set_global_data"][key]
+                rest = {k: v for k, v in action["set_global_data"].items() if k != key}
                 others = {k: v for k, v in action.items() if k != "set_global_data"}
                 if rest or others:
                     kept.append(
@@ -1072,14 +1162,21 @@ class Operations:
             )
         front = FunctionResult()
         if record is not None:
-            front.update_global_data({RECORD: record})
+            front.update_global_data({key: record})
         if go and call._next_step:
             kept = [a for a in kept if not (isinstance(a, dict) and "change_step" in a)]
-            front.swml_change_step(call._next_step)
+            front.swml_change_step(self._step_name(call._next_step))
         for event in call._events:
             front.swml_user_event(event)
         result.action = [*front.action, *kept, *call._acts]
         return result
+
+    def _step_name(self, step: str) -> str:
+        """A step as ``call.go`` names it, as generated: ``main`` and the other generated steps take the namespace."""
+        generated = {IDENTIFY_STEP, MAIN_STEP, CONFIRM_STEP} | {
+            op.kind for op in self._operations.values() if op.guidance
+        }
+        return self._names.step(step) if step in generated else step
 
     def _need_result(self, call: CallContext, op: Operation, e: Need) -> FunctionResult:
         result = FunctionResult(
@@ -1087,7 +1184,7 @@ class Operations:
             tool_prompt=f"Ask them: {e.ask} Then call {op.tool} again with everything they asked for.",
         )
         if op.guidance and not (call.data.get("waiting") or {}).get("read_back"):
-            result.swml_change_step(op.kind)
+            result.swml_change_step(self._names.step(op.kind))
         return result
 
     async def _stage(
@@ -1197,7 +1294,7 @@ class Operations:
                     tool_result=f'Kept for right after the change waiting: "{change.read_back}" The {wkind} change '
                     "goes through first.",
                     tool_prompt=f'Tell them you\'ll do that right after, and get their answer to the change waiting: "{waiting["read_back"]}"',
-                ).update_global_data(_update(data, queued=queued))
+                ).update_global_data(self._update(data, queued=queued))
             else:
                 queued.append(
                     {
@@ -1218,7 +1315,7 @@ class Operations:
         result = (
             FunctionResult()
             .update_global_data(
-                _update(
+                self._update(
                     data,
                     history=history,
                     queued=queued,
@@ -1226,7 +1323,7 @@ class Operations:
                     proposals=revision,
                 )
             )
-            .swml_change_step(CONFIRM_STEP)
+            .swml_change_step(self._names.step(CONFIRM_STEP))
         )
         result = self._proposed(change.read_back, call.raw_data, result)
         if note and isinstance(result.response, dict):
@@ -1245,7 +1342,7 @@ class Operations:
         result = self.proposal.propose(read_back, raw_data=raw_data, result=result)
         if isinstance(result.response, dict):
             result.response["tool_prompt"] = _READ_BACK_PROMPT.format(
-                confirm=CONFIRM_TOOL, decline=DECLINE_TOOL
+                confirm=self._names.confirm, decline=self._names.decline
             )
         return result
 
@@ -1312,7 +1409,7 @@ class Operations:
         else:
             then = f"Call {tool} now for it (ask them for anything it needs that they haven't said); this one comes right after it."
         return FunctionResult(tool_result=fact, tool_prompt=then).update_global_data(
-            _update(call.data, queued=queued)
+            self._update(call.data, queued=queued)
         )
 
     async def _reconcile_queue(
@@ -1428,7 +1525,7 @@ class Operations:
                 ),
             }
         )
-        update = _update(
+        update = self._update(
             data,
             **(await self._account_text(call)),
             history=history,
@@ -1498,8 +1595,8 @@ class Operations:
                     tool_result=f"The change didn't go through: {reply}.{part}",
                     tool_prompt=_GOING_ON + _next_up(data, tool_of),
                 )
-                .update_global_data(_update(data, **account, **settled))
-                .swml_change_step(MAIN_STEP),
+                .update_global_data(self._update(data, **account, **settled))
+                .swml_change_step(self._names.step(MAIN_STEP)),
             )
         now = _settle(data, "made", made_now)
         total = _in_all(now["history"])
@@ -1511,8 +1608,8 @@ class Operations:
         return self._finish(
             call,
             self.proposal.complete(made_now or "done", result)
-            .update_global_data(_update(data, **account, **now))
-            .swml_change_step(MAIN_STEP),
+            .update_global_data(self._update(data, **account, **now))
+            .swml_change_step(self._names.step(MAIN_STEP)),
         )
 
     async def _decline(
@@ -1531,8 +1628,10 @@ class Operations:
                 + (_next_up(call.data, tool_of) or _ANYTHING_ELSE),
             )
             .set_semantic_state({"declined": waiting["read_back"]})
-            .update_global_data(_update(call.data, **_settle(call.data, "declined")))
-            .swml_change_step(MAIN_STEP)
+            .update_global_data(
+                self._update(call.data, **_settle(call.data, "declined"))
+            )
+            .swml_change_step(self._names.step(MAIN_STEP))
         )
 
     async def _identify(
@@ -1543,7 +1642,7 @@ class Operations:
         assert idn is not None  # noqa: S101  # type narrowing: the tool exists only with an identity
         asked = str(args.get("asked_for") or call.data.get("asked") or "")
         keys = {k: args[k] for k in idn.fields if not _missing(args.get(k))}
-        remember = _update(call.data, asked=asked)
+        remember = self._update(call.data, asked=asked)
         if idn.check_keys and not any(all(k in keys for k in s) for s in idn.any_of):
             return self._finish(
                 call,
@@ -1572,9 +1671,11 @@ class Operations:
             )
         call.data["account_id"] = account_id
         text = (await self._account_text(call)).get("account", "")
-        fresh = call.data.get("account_id") != _record_of(raw_data).get("account_id")
+        fresh = call.data.get("account_id") != _record_of(
+            raw_data, self._names.record
+        ).get("account_id")
         update = {"account_id": account_id, "account": text, "asked": asked}
-        if fresh and _record_of(raw_data).get(
+        if fresh and _record_of(raw_data, self._names.record).get(
             "account_id"
         ):  # a different account: nothing waits on the old one
             update.update(waiting={}, queued=[])
@@ -1585,9 +1686,12 @@ class Operations:
                 if asked
                 else "Ask how you can help."
             ),
-        ).update_global_data(_update(call.data, **update))
+        ).update_global_data(self._update(call.data, **update))
         return self._finish(
-            call, found_it.swml_change_step(MAIN_STEP) if self._gated() else found_it
+            call,
+            found_it.swml_change_step(self._names.step(MAIN_STEP))
+            if self._gated()
+            else found_it,
         )
 
     async def _transfer_handler(
@@ -1618,7 +1722,9 @@ class Operations:
         ).say(tr.notice or self._transfer_notice)
         if isinstance(handed, FunctionResult):
             result.add_actions(handed.action)
-        return self._finish(call, result.swml_change_context(TRANSFERRED), go=False)
+        return self._finish(
+            call, result.swml_change_context(self._names.transferred), go=False
+        )
 
     # ------------------------------------------------------------------ inspection
 
@@ -1649,7 +1755,8 @@ class Operations:
 
     def record_text(self, global_data: Mapping[str, Any]) -> str:
         """The record's ``now`` line for a call's ``global_data``."""
-        return _now_line(global_data)
+        record = global_data.get(self._names.record)
+        return _now_line(record if isinstance(record, Mapping) else {})
 
 
 class ServiceAgent(AgentBase):
@@ -1667,25 +1774,17 @@ class ServiceAgent(AgentBase):
             ...
     """
 
-    def __init__(
-        self,
-        name: str,
-        *,
-        role: str,
-        rules: Sequence[str] | None = None,
-        transfer_notice: str = "One moment, I'm transferring you to a person who can help.",
-        **kwargs: Any,
-    ) -> None:
+    def __init__(self, name: str, *, role: str, **kwargs: Any) -> None:
         """
         Args:
             name: The agent's name.
             role: Who the agent is and how it sounds, the prompt's Role section.
-            rules: The prompt's Rules section; defaults to ``DEFAULT_RULES``.
-            transfer_notice: What the platform says as a transfer starts.
-            **kwargs: Passed to ``AgentBase``.
+            **kwargs: ``Operations``' keyword arguments (``rules``,
+                ``namespace`` and the rest), and ``AgentBase``'s.
         """
+        ops_kwargs = {k: kwargs.pop(k) for k in _OPERATIONS_ARGS if k in kwargs}
         super().__init__(name=name, **kwargs)
-        self.ops = Operations(role=role, rules=rules, transfer_notice=transfer_notice)
+        self.ops = Operations(role=role, **ops_kwargs)
         self._installed = False
         self._install_lock = threading.Lock()
         self.operation = self.ops.operation
@@ -1757,6 +1856,14 @@ class ServiceAgent(AgentBase):
         return super().on_function_call(name, args, raw_data)
 
 
+_OPERATIONS_ARGS = tuple(
+    p
+    for p in inspect.signature(Operations.__init__).parameters
+    if p not in ("self", "role")
+)
+"""The keyword arguments ``ServiceAgent`` passes on to its ``Operations``."""
+
+
 def _contribute(ctx: Any, name: str, text: str, tools: list[str]) -> Any:
     """
     A step with its text and its tools, and no way to leave on its own:
@@ -1772,6 +1879,20 @@ def _contribute(ctx: Any, name: str, text: str, tools: list[str]) -> Any:
             .set_valid_steps([])
         )
     return step._extend(text, tools, section="What else you can do")
+
+
+def _add_to_section(
+    agent: AgentBase, title: str, *, body: str = "", bullets: Sequence[str] = ()
+) -> None:
+    """Add to the prompt section of this title, made if the agent hasn't one, without repeating a bullet it has."""
+    if not agent.prompt_has_section(title):
+        agent.prompt_add_section(title, body=body, bullets=list(bullets) or None)
+        return
+    section = agent.pom.find_section(title) if agent.pom else None
+    had = set(getattr(section, "bullets", None) or [])
+    agent.prompt_add_to_section(
+        title, body=body or None, bullets=[b for b in bullets if b not in had] or None
+    )
 
 
 def _offered(op: Operation, step: str) -> bool:

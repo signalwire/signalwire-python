@@ -21,9 +21,15 @@ from typing import Any
 from signalwire.operations.model import Change
 
 RECORD = "ops"
-"""The ``global_data`` key the record lives under, so other layers' state sits beside it."""
+"""The ``global_data`` key the record lives under (``ops_<name>`` for an
+``Operations`` given a ``name``), so other layers' state sits beside it."""
+
+RECORD_VERSION = 1
+"""The record's ``v``. It goes up when a key is renamed or changes meaning,
+never when one is added, so a reader can tell a record it understands."""
 
 RECORD_KEYS = (
+    "v",
     "account_id",
     "account",
     "asked",
@@ -41,6 +47,7 @@ def _opening() -> dict[str, Any]:
     """The record as a call opens."""
     return _whole(
         {},
+        v=RECORD_VERSION,
         account_id="",
         account="",
         asked="",
@@ -52,15 +59,15 @@ def _opening() -> dict[str, Any]:
     )
 
 
-def _opening_data() -> dict[str, Any]:
+def _opening_data(key: str = RECORD) -> dict[str, Any]:
     """The ``global_data`` a call opens with: the record under its key."""
-    return {RECORD: _opening()}
+    return {key: _opening()}
 
 
-def _record_of(raw_data: Mapping[str, Any] | None) -> dict[str, Any]:
+def _record_of(raw_data: Mapping[str, Any] | None, key: str = RECORD) -> dict[str, Any]:
     """The call's record, as the platform sent it with a request."""
     data = raw_data.get("global_data") if isinstance(raw_data, Mapping) else None
-    record = data.get(RECORD) if isinstance(data, Mapping) else None
+    record = data.get(key) if isinstance(data, Mapping) else None
     return copy.deepcopy(dict(record)) if isinstance(record, Mapping) else {}
 
 
@@ -70,12 +77,12 @@ def _whole(data: Mapping[str, Any], **changes: Any) -> dict[str, Any]:
     return {**record, "now": _now_line(record)}
 
 
-def _update(data: Mapping[str, Any], **changes: Any) -> dict[str, Any]:
+def _update(key: str, data: Mapping[str, Any], **changes: Any) -> dict[str, Any]:
     """
-    The ``global_data`` update for these changes: the whole record, since the
-    platform replaces a top-level key whole.
+    The ``global_data`` update for these changes: the whole record under its
+    key, since the platform replaces a top-level key whole.
     """
-    return {RECORD: _whole(data, **changes)}
+    return {key: _whole(data, **changes)}
 
 
 def _now_line(data: Mapping[str, Any]) -> str:
@@ -185,4 +192,4 @@ def _next_up(data: Mapping[str, Any], tool_of: Mapping[str, str]) -> str:
     return f' Then, as they asked, call {tool_of.get(first["kind"], "its tool")} again for the change set aside: "{first["read_back"]}"'
 
 
-__all__ = ["RECORD", "RECORD_KEYS"]
+__all__ = ["RECORD", "RECORD_KEYS", "RECORD_VERSION"]
