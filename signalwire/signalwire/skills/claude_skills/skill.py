@@ -66,8 +66,10 @@ class ClaudeSkillsSkill(SkillBase):
         Discovers and parses all SKILL.md files in the configured directory.
 
         Returns:
-            True if the skills directory is set and at least one skill loaded;
-            False if a required package is missing or `skills_path` is not set.
+            True once `skills_path` names an existing directory, even when
+            it holds no skills (that case logs a warning). False if a
+            required package is missing, or `skills_path` is not set, does
+            not exist or is not a directory.
         """
         if not self.validate_packages():
             return False

@@ -153,7 +153,7 @@ class PlayBackgroundFileSkill(SkillBase):
         Setup the skill - no external dependencies needed.
 
         Returns:
-            True if setup successful
+            Always True.
         """
         return True
 

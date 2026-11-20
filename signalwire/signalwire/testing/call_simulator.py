@@ -69,6 +69,16 @@ class SimulatedCall:
         ran: bool,
         blocked_by: str | None = None,
     ) -> None:
+        """
+        Record the outcome of one tool call.
+
+        Args:
+            name: The tool's name.
+            args: The arguments the model sent.
+            result: The result, as the platform gets it.
+            ran: Whether the tool's handler (or stub) ran.
+            blocked_by: Why it didn't run: "step" or the id of the gate that blocked it.
+        """
         #: The tool's name
         self.name = name
         #: The arguments the model sent
@@ -102,6 +112,12 @@ class SimulatedCall:
         return action if isinstance(action, list) else [action]
 
     def __repr__(self) -> str:
+        """
+        A short description of the call and its response.
+
+        Returns:
+            The description.
+        """
         state = "ran" if self.ran else f"blocked by {self.blocked_by}"
         return f"<SimulatedCall {self.name} {state}: {self.response!r}>"
 
@@ -223,7 +239,15 @@ class CallSimulator:
     # -- the conversation ------------------------------------------------
 
     def caller(self, text: str) -> CallSimulator:
-        """The caller says ``text``."""
+        """
+        The caller says ``text``.
+
+        Args:
+            text: What the caller says.
+
+        Returns:
+            This simulator, so calls can be chained.
+        """
         # Stored before the next request, which is when a pending step is
         # injected
         self._log({"role": "user", "content": text}, "spoken")
@@ -231,8 +255,17 @@ class CallSimulator:
         return self
 
     def agent_says(self, text: str) -> CallSimulator:
-        """The agent says ``text``, as the model's reply. The actions of a
-        ``post_process`` result waiting for it run after it."""
+        """
+        The agent says ``text``, as the model's reply.
+
+        The actions of a ``post_process`` result waiting for it run after it.
+
+        Args:
+            text: What the agent says.
+
+        Returns:
+            This simulator, so calls can be chained.
+        """
         self._inject()
         self._log({"role": "assistant", "content": text}, "spoken")
         if self._deferred is not None:
@@ -244,12 +277,20 @@ class CallSimulator:
 
     @property
     def semantic_state(self) -> Any:
-        """``global_data.semantic_state``, or None."""
+        """``global_data.semantic_state``, or None.
+
+        Returns:
+            The state, or None when none is set.
+        """
         return self.global_data.get("semantic_state")
 
     def offered(self) -> list[str]:
         """The tools the model is offered now, as the current step allows,
-        in the agent's order, with the navigation tools after them."""
+        in the agent's order, with the navigation tools after them.
+
+        Returns:
+            The tool names.
+        """
         offered = [
             name
             for name in self.functions
@@ -277,6 +318,10 @@ class CallSimulator:
         actions after the model's reply to it, as the platform does: give the
         reply with ``agent_says``. A newer such result replaces actions still
         waiting.
+
+        Args:
+            name: The tool's name.
+            args: The arguments the model sends. None sends none.
 
         Returns:
             What the call came to.
@@ -326,6 +371,15 @@ class CallSimulator:
         return outcome
 
     def _check_mentions(self, outcome: SimulatedCall) -> None:
+        """
+        Raise if the result names a tool the current step doesn't offer.
+
+        Args:
+            outcome: The call whose response and tool prompt are checked.
+
+        Raises:
+            ToolMentionError: When a named tool isn't offered.
+        """
         text = f"{outcome.response} {outcome.tool_prompt or ''}"
         named = named_tools(text, self._tools()) - set(self.offered())
         if named:
@@ -343,6 +397,9 @@ class CallSimulator:
         records it, with its own call data; the simulated call's state isn't
         used or changed. Use it to check that changed code still gives the
         results it gave on real calls.
+
+        Args:
+            requests: The recorded SWAIG request bodies, in order.
 
         Returns:
             What each request came to, in order.
@@ -362,6 +419,19 @@ class CallSimulator:
     # -- internals ---------------------------------------------------------
 
     def _dispatch(self, name: str, args: dict[str, Any]) -> SimulatedCall:
+        """
+        Run a tool: check its gates, then its stub or handler, then apply its result.
+
+        Args:
+            name: The tool's name.
+            args: The arguments the model sent.
+
+        Returns:
+            What the call came to.
+
+        Raises:
+            ValueError: For a DataMap tool without a stub.
+        """
         definition = self.functions[name]
         blocked = self._check_gates(name, definition, args)
         if blocked is not None:
@@ -385,6 +455,18 @@ class CallSimulator:
     def _check_gates(
         self, name: str, definition: dict[str, Any], args: dict[str, Any]
     ) -> SimulatedCall | None:
+        """
+        Ask the gates callback about each of the tool's gates.
+
+        Args:
+            name: The tool's name.
+            definition: The tool's function definition, with its gates.
+            args: The arguments the model sent.
+
+        Returns:
+            The blocked call for the first gate that fails or is unclear, or None
+            when every gate passes.
+        """
         gates = definition.get("gates") or []
         unclear: dict[str, Any] | None = None
         for index, gate in enumerate(gates):
@@ -410,6 +492,18 @@ class CallSimulator:
     def _blocked(
         self, name: str, args: dict[str, Any], output: dict[str, Any], gate_id: str
     ) -> SimulatedCall:
+        """
+        Build the outcome of a call a gate stopped, and apply the gate's output.
+
+        Args:
+            name: The tool's name.
+            args: The arguments the model sent.
+            output: The gate's on_fail or on_unclear output.
+            gate_id: The id of the gate that blocked the call.
+
+        Returns:
+            The call, not run, with the gate's output as its result.
+        """
         result = _expand(
             copy.deepcopy(output), {"global_data": self.global_data, "args": args}
         )
@@ -417,6 +511,16 @@ class CallSimulator:
         return SimulatedCall(name, args, result, ran=False, blocked_by=gate_id)
 
     def _navigate(self, name: str, args: dict[str, Any]) -> SimulatedCall:
+        """
+        Run next_step or change_context, if the current step allows the target.
+
+        Args:
+            name: Either "next_step" or "change_context".
+            args: The arguments the model sent: ``step`` or ``context``.
+
+        Returns:
+            What the call came to.
+        """
         if name == "next_step":
             requested = str(args.get("step", ""))
             valid = (self._step() or {}).get("valid_steps") or []
@@ -449,6 +553,16 @@ class CallSimulator:
         )
 
     def _request(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
+        """
+        Build a SWAIG request body for a tool call, from the simulated call's state.
+
+        Args:
+            name: The tool's name.
+            args: The arguments the model sent.
+
+        Returns:
+            The request body.
+        """
         self._tool_calls += 1
         request: dict[str, Any] = {
             "function": name,
@@ -465,6 +579,12 @@ class CallSimulator:
         return request
 
     def _apply(self, result: dict[str, Any]) -> None:
+        """
+        Run a result's actions, or hold them for the reply if it is post_process.
+
+        Args:
+            result: The tool result.
+        """
         actions = result.get("action", [])
         actions = actions if isinstance(actions, list) else [actions]
         if result.get("post_process") and actions:
@@ -473,6 +593,12 @@ class CallSimulator:
         self._run(actions)
 
     def _run(self, actions: list[Any]) -> None:
+        """
+        Run each action in the list.
+
+        Args:
+            actions: The actions of a result.
+        """
         # A proposal or mark is set as of the start of the result's action
         # list, so a say anywhere in the list is after it
         self._action_start = len(self.call_log)
@@ -483,6 +609,13 @@ class CallSimulator:
                 self._apply_one(key, value)
 
     def _apply_one(self, key: str, value: Any) -> None:
+        """
+        Change the simulated call as one action says.
+
+        Args:
+            key: The action's name, such as ``say`` or ``change_step``.
+            value: The action's value.
+        """
         if key == "say":
             self._says.add(len(self.call_log))
             self._log({"role": "assistant", "content": str(value)}, "spoken")
@@ -519,6 +652,12 @@ class CallSimulator:
             self.ended = True
 
     def _note_state(self, state: Any) -> None:
+        """
+        Note a new ``semantic_state`` value and whether it starts a proposal.
+
+        Args:
+            state: The value being set.
+        """
         # The platform compares the states as printed JSON, so a change of key
         # order or of true to 1 is a new proposal; {} leaves none
         if isinstance(state, dict) and not state:
@@ -529,6 +668,15 @@ class CallSimulator:
             self._proposal_at = self._action_start
 
     def _enter_context(self, name: str) -> None:
+        """
+        Make a context current and enter its first step.
+
+        Args:
+            name: The context's name.
+
+        Raises:
+            ValueError: When the agent has no such context.
+        """
         if name not in self._contexts:
             raise ValueError(f"the agent has no context {name!r}")
         context = self._contexts[name]
@@ -540,6 +688,15 @@ class CallSimulator:
             self._enter_step(str(initial))
 
     def _enter_step(self, name: str) -> None:
+        """
+        Make a step of the current context current and queue its instructions.
+
+        Args:
+            name: The step's name.
+
+        Raises:
+            ValueError: When the context has no such step.
+        """
         if self.context is None:
             return
         step = self._find_step(name)
@@ -564,9 +721,24 @@ class CallSimulator:
         # A step without a function list keeps the set before it
 
     def _step(self) -> dict[str, Any] | None:
+        """
+        The current step's definition.
+
+        Returns:
+            The step, or None without a current step.
+        """
         return self._find_step(self.step) if self.step else None
 
     def _find_step(self, name: str | None) -> dict[str, Any] | None:
+        """
+        Find a step in the current context.
+
+        Args:
+            name: The step's name.
+
+        Returns:
+            A copy of the step's definition, or None.
+        """
         if self.context is None:
             return None
         for step in self._contexts[self.context].get("steps", []):
@@ -575,6 +747,12 @@ class CallSimulator:
         return None
 
     def _following_step(self) -> str | None:
+        """
+        The name of the step after the current one in its context.
+
+        Returns:
+            The name, or None when the current step is the last.
+        """
         if self.context is None:
             return None
         names = [s.get("name") for s in self._contexts[self.context].get("steps", [])]
@@ -583,6 +761,12 @@ class CallSimulator:
         return None
 
     def _valid_contexts(self) -> list[str]:
+        """
+        The contexts the call may change to: the step's list, else the context's.
+
+        Returns:
+            The context names.
+        """
         step = self._step() or {}
         if step.get("valid_contexts") is not None:
             return list(step["valid_contexts"])
@@ -591,11 +775,24 @@ class CallSimulator:
         return []
 
     def _tools(self) -> list[str]:
+        """
+        The names of the agent's functions, without the reserved ones.
+
+        Returns:
+            The function names.
+        """
         return [name for name in self.functions if name not in RESERVED_FUNCTION_NAMES]
 
     def _steps_offering(self, name: str) -> list[str]:
         """The current context's other steps whose functions include
-        ``name``, in step order."""
+        ``name``, in step order.
+
+        Args:
+            name: The tool's name.
+
+        Returns:
+            The step names.
+        """
         if self.context is None:
             return []
         return [
@@ -607,7 +804,14 @@ class CallSimulator:
         ]
 
     def _unavailable(self, name: str) -> str:
-        """The platform's reply to a call of a tool it won't run now."""
+        """The platform's reply to a call of a tool it won't run now.
+
+        Args:
+            name: The tool's name.
+
+        Returns:
+            The reply text.
+        """
         offered = self.offered()
         tools = ", ".join(offered)
         steps = ", ".join(self._steps_offering(name)) if name in self.functions else ""
@@ -629,6 +833,13 @@ class CallSimulator:
         return f"{text} No tools are available now.\n"
 
     def _log(self, entry: dict[str, Any], kind: str = "spoken") -> None:
+        """
+        Append a timestamped entry to the call log.
+
+        Args:
+            entry: The call log entry.
+            kind: How the model sees the entry, such as "spoken" or "tool_call".
+        """
         self._kinds[len(self.call_log)] = kind
         self.call_log.append({**entry, "timestamp": int(time.time() * 1_000_000)})
 
@@ -636,7 +847,11 @@ class CallSimulator:
 
     def history_mode(self) -> str:
         """The current step's history mode: its own, its context's, or
-        "default"."""
+        "default".
+
+        Returns:
+            The mode name.
+        """
         step = self._step() or {}
         context = self._contexts.get(self.context or "", {})
         return str(step.get("history") or context.get("history") or "default")
@@ -679,6 +894,9 @@ class CallSimulator:
         as the platform expands it again when a value it reads changes;
         ``call_log`` keeps the text as it went in. An end step keeps the text
         it went in with. The base prompt isn't included.
+
+        Returns:
+            The call log entries the model sees, as they are shown to it.
 
         Raises:
             NotImplementedError: Once the call has entered a step with a
@@ -723,6 +941,13 @@ class CallSimulator:
 
         Give it to a gate callback: ``gates=lambda gate, sim, args:
         judge(gate["question"], sim.gate_conversation(gate))``.
+
+        Args:
+            gate: The gate's definition, for its ``since``, ``dialogue`` and
+                ``history`` settings. None uses the agent's settings only.
+
+        Returns:
+            The ``"role: text"`` lines.
 
         Raises:
             NotImplementedError: Once the call has entered a step with a
@@ -818,6 +1043,12 @@ class CallSimulator:
         )
 
     def _check_reset(self) -> None:
+        """
+        Raise if the call entered a step with a reset.
+
+        Raises:
+            NotImplementedError: When a reset step was entered.
+        """
         if self._reset_step is not None:
             raise NotImplementedError(
                 f"step {self._reset_step!r} has a reset, which starts a new context "
@@ -826,6 +1057,8 @@ class CallSimulator:
             )
 
     def _refresh(self) -> None:
+        """
+        Expand the current step's instruction text again, and note if it changed."""
         # The platform rewrites the step's instruction entry in place when its
         # expansion changes; the call log keeps the text as it went in
         if self._instruction is None:
@@ -871,6 +1104,18 @@ class RequestRecorder:
         raw_data: dict[str, Any],
         call_next: CallNext,
     ) -> Any:
+        """
+        Record the request, then pass it on.
+
+        Args:
+            name: The tool's name.
+            args: The arguments the model sent.
+            raw_data: The raw request body.
+            call_next: The next handler in the middleware chain.
+
+        Returns:
+            What the next handler returns.
+        """
         request = copy.deepcopy(raw_data)
         request.setdefault("function", name)
         request.setdefault("argument", {"parsed": [args], "raw": json.dumps(args)})
@@ -883,12 +1128,32 @@ class RequestRecorder:
 
     @staticmethod
     def load(path: str | Path) -> list[dict[str, Any]]:
-        """The requests a recorder wrote to ``path``."""
+        """
+        The requests a recorder wrote to ``path``.
+
+        Args:
+            path: The file the recorder appended to.
+
+        Returns:
+            The requests, in the order written.
+        """
         lines = Path(path).read_text(encoding="utf-8").splitlines()
         return [json.loads(line) for line in lines if line.strip()]
 
 
 def _ai_verb(swml: dict[str, Any]) -> dict[str, Any]:
+    """
+    Find the ai verb in the main section of a SWML document.
+
+    Args:
+        swml: The rendered SWML document.
+
+    Returns:
+        The ai verb's body.
+
+    Raises:
+        ValueError: When the document has no ai verb.
+    """
     for verb in swml.get("sections", {}).get("main", []):
         if isinstance(verb, dict) and "ai" in verb:
             ai: dict[str, Any] = verb["ai"]
@@ -897,6 +1162,15 @@ def _ai_verb(swml: dict[str, Any]) -> dict[str, Any]:
 
 
 def _arguments(body: Mapping[str, Any]) -> dict[str, Any]:
+    """
+    Read a tool's arguments from a SWAIG request body.
+
+    Args:
+        body: The request body.
+
+    Returns:
+        The parsed arguments, or an empty dict when there are none.
+    """
     argument = body.get("argument")
     if isinstance(argument, dict):
         parsed = argument.get("parsed")
@@ -913,6 +1187,15 @@ def _arguments(body: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _as_dict(result: Any) -> dict[str, Any]:
+    """
+    Turn a tool's return value into a result dict.
+
+    Args:
+        result: A FunctionResult, a dict or text.
+
+    Returns:
+        The result as a dict.
+    """
     if isinstance(result, FunctionResult):
         return result.to_dict()
     if isinstance(result, dict):
@@ -922,9 +1205,17 @@ def _as_dict(result: Any) -> dict[str, Any]:
 
 def _printed(value: Any) -> str:
     """``value`` as the platform prints JSON to compare states: compact, in
-    key order, with a whole float printed as an integer."""
+    key order, with a whole float printed as an integer.
+
+    Args:
+        value: The value to print.
+
+    Returns:
+        The JSON text.
+    """
 
     def whole(item: Any) -> Any:
+        """Print whole floats in the item as integers."""
         if isinstance(item, float) and item.is_integer():
             return int(item)
         if isinstance(item, dict):
@@ -939,10 +1230,20 @@ def _printed(value: Any) -> str:
 def _expand(value: Any, data: dict[str, Any], missing: str | None = None) -> Any:
     """``${...}`` variables from the call's data, as the platform expands
     them once. A variable it can't find becomes ``missing``, or is left as it
-    is when that's None."""
+    is when that's None.
+
+    Args:
+        value: A string, or a dict or list to expand throughout.
+        data: The call's data, such as ``{"global_data": ...}``.
+        missing: What a variable not found becomes, or None to keep it.
+
+    Returns:
+        The value with its variables expanded.
+    """
     if isinstance(value, str):
 
         def lookup(match: re.Match[str]) -> str:
+            """Replace one variable with its value from the data."""
             found: Any = data
             for part in match.group(1).split("."):
                 if not isinstance(found, dict) or part not in found:

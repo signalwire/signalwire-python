@@ -130,7 +130,17 @@ class _NoopTracker:
         self._logged: dict[str, bool] = {}
 
     def once(self, key: str, message: str) -> bool:
-        """Log *message* once for *key*.  Returns True if it was logged."""
+        """Log a message the first time its key is seen.
+
+        Args:
+            key: Identifies the message. Later calls with the same key log
+                nothing.
+            message: Text logged at info level with a ``[LiveWire]`` prefix.
+
+        Returns:
+            True if the message was logged now, False if the key was seen
+            before.
+        """
         with self._lock:
             if self._logged.get(key):
                 return False

@@ -81,7 +81,7 @@ class WikipediaSearchSkill(SkillBase):
         Setup the Wikipedia search skill.
 
         Returns:
-            True if setup successful, False otherwise
+            True if the required packages are available, False otherwise.
         """
         # Extract configuration from params
         self.num_results = max(

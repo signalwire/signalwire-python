@@ -136,10 +136,9 @@ class Action:
     async def wait(self, timeout: float | None = None) -> RelayEvent:
         """Wait for the action to complete.
 
-        A timed-out wait does NOT poison the action: ``self._done`` is shielded so
-        the ``wait_for`` cancellation stops the wait, not the underlying completion
-        future. The still-pending terminal event resolves the action normally and a
-        later ``wait()`` returns it.
+        A timed-out wait stops only the wait, not the action. The action still
+        completes when its terminal event arrives, and a later ``wait()``
+        returns that event.
 
         Args:
             timeout: Maximum seconds to wait. Waits without a limit if None.

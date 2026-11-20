@@ -36,6 +36,15 @@ class PaginatedIterator:
         data_key: str = "data",
         request_options: RequestOptions | None = None,
     ) -> None:
+        """Set up the iterator. No request is sent until the first item is read.
+
+        Args:
+            http: Client used to fetch each page.
+            path: Request path of the list endpoint.
+            params: Query parameters for the first page.
+            data_key: Key of the response field that holds a page's items.
+            request_options: Per-call overrides applied to every page fetch.
+        """
         self._http = http
         self._path = path
         self._params: dict[str, Any] = dict(params or {})
@@ -54,9 +63,22 @@ class PaginatedIterator:
         self._seen_next: set[str] = set()
 
     def __iter__(self) -> "PaginatedIterator":
+        """Return the iterator itself.
+
+        Returns:
+            This iterator.
+        """
         return self
 
     def __next__(self) -> Any:
+        """Return the next item, fetching the next page when needed.
+
+        Returns:
+            The next item.
+
+        Raises:
+            StopIteration: When there are no more items.
+        """
         while self._index >= len(self._items):
             if self._done:
                 raise StopIteration
@@ -67,6 +89,12 @@ class PaginatedIterator:
         return item
 
     def _fetch_next(self) -> None:
+        """Fetch one page and queue its items.
+
+        Reads the items from the response under the data key. If the response
+        has a ``links.next`` URL not seen before, its query string becomes the
+        params for the next fetch. Otherwise iteration is marked done.
+        """
         resp = self._http.get(
             self._path,
             params=self._params or None,

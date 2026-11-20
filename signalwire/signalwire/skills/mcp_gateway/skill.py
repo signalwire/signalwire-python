@@ -122,8 +122,12 @@ class MCPGatewaySkill(SkillBase):
         """Setup and validate skill configuration
 
         Returns:
-            True if the gateway URL and credentials are configured, False
-            otherwise.
+            True if all of these hold, False otherwise: `gateway_url` is set
+            with either `auth_token` or both `auth_user` and
+            `auth_password`; the URL passes the SSRF check of
+            `validate_url()`; and a GET to the gateway's `/health` endpoint,
+            sent with those credentials, succeeds. A configured gateway that
+            can't be reached returns False.
         """
         # Check for auth method - either token or basic auth
         self.auth_token = self.params.get("auth_token")

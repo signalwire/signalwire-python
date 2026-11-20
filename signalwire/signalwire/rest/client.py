@@ -49,6 +49,21 @@ class RestClient(_GeneratedResourceTree):
         host: str | None = None,
         request_options: RequestOptions | None = None,
     ) -> None:
+        """Create the client and its generated resource tree.
+
+        Any of project, token and host that is not passed is read from the
+        environment variable named in its entry below.
+
+        Args:
+            project: Project ID. Falls back to ``SIGNALWIRE_PROJECT_ID``.
+            token: API token. Falls back to ``SIGNALWIRE_API_TOKEN``.
+            host: Space host name. Falls back to ``SIGNALWIRE_SPACE``.
+            request_options: Default timeout, retry and cancellation settings
+                for every request.
+
+        Raises:
+            ValueError: If project, token or host is still empty.
+        """
         project = project or os.environ.get("SIGNALWIRE_PROJECT_ID", "")
         token = token or os.environ.get("SIGNALWIRE_API_TOKEN", "")
         host = host or os.environ.get("SIGNALWIRE_SPACE", "")

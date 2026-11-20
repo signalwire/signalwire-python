@@ -25,6 +25,12 @@ _logged: dict[str, bool] = {}
 
 
 def _log_once(key: str, message: str) -> None:
+    """Log an info message the first time a key is seen.
+
+    Args:
+        key: The identifier that marks the message as already logged.
+        message: The text to log.
+    """
     global _logged
     with _lock:
         if _logged.get(key):
@@ -49,6 +55,11 @@ class DeepgramSTT:
     """Stub for livekit Deepgram STT plugin."""
 
     def __init__(self, **kwargs: Any):
+        """Create the stub and note that it does nothing.
+
+        Args:
+            **kwargs: Stored on the instance as ``_kwargs``. Not otherwise used.
+        """
         self._kwargs = kwargs
         _log_once(
             "deepgram_stt",
@@ -66,6 +77,12 @@ class OpenAILLM:
     """Stub for livekit OpenAI LLM plugin."""
 
     def __init__(self, **kwargs: Any):
+        """Create the stub and note that it does nothing else.
+
+        Args:
+            **kwargs: Stored on the instance as ``_kwargs``. The ``model`` value
+                is also kept as ``model`` (empty string when absent).
+        """
         self._kwargs = kwargs
         self.model = kwargs.get("model", "")
         _log_once(
@@ -84,6 +101,11 @@ class CartesiaTTS:
     """Stub for livekit Cartesia TTS plugin."""
 
     def __init__(self, **kwargs: Any):
+        """Create the stub and note that it does nothing.
+
+        Args:
+            **kwargs: Stored on the instance as ``_kwargs``. Not otherwise used.
+        """
         self._kwargs = kwargs
         _log_once(
             "cartesia_tts",
@@ -96,6 +118,11 @@ class ElevenLabsTTS:
     """Stub for livekit ElevenLabs TTS plugin."""
 
     def __init__(self, **kwargs: Any):
+        """Create the stub and note that it does nothing.
+
+        Args:
+            **kwargs: Stored on the instance as ``_kwargs``. Not otherwise used.
+        """
         self._kwargs = kwargs
         _log_once(
             "elevenlabs_tts",
@@ -113,6 +140,11 @@ class SileroVAD:
     """Stub for livekit Silero VAD plugin."""
 
     def __init__(self, **kwargs: Any):
+        """Create the stub and note that it does nothing.
+
+        Args:
+            **kwargs: Stored on the instance as ``_kwargs``. Not otherwise used.
+        """
         self._kwargs = kwargs
         _log_once(
             "silero_vad",

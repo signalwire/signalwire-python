@@ -99,6 +99,14 @@ def number_words(n: int) -> str:
 
 
 def _below_thousand(n: int) -> str:
+    """Spell out a number from 0 to 999.
+
+    Args:
+        n: The number to spell out.
+
+    Returns:
+        The words, or an empty string for 0.
+    """
     words: list[str] = []
     if n >= 100:
         words += [_DIGITS[n // 100], "hundred"]

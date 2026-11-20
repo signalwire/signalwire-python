@@ -158,6 +158,15 @@ def _spelling_tokens(text: str) -> list[str]:
 
 
 def _letters(word: str) -> list[str]:
+    """Split a word into its characters for spelling.
+
+    Args:
+        word: The word to split.
+
+    Returns:
+        The letters (upper case), digits and the symbols ``@._+/-``. Other
+        characters are dropped.
+    """
     return [
         c.upper() if c.isalpha() else c for c in word if c.isalnum() or c in "@._+/-"
     ]
