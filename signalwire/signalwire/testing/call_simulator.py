@@ -129,6 +129,7 @@ class CallSimulator:
         stubs: Mapping[str, Callable[[dict[str, Any]], Any]] | None = None,
         global_data: Mapping[str, Any] | None = None,
         check_tool_mentions: bool = False,
+        request_fields: Mapping[str, Any] | None = None,
     ) -> None:
         """
         Args:
@@ -147,12 +148,16 @@ class CallSimulator:
                 doesn't have. Raises ``ToolMentionError``. Names are found
                 as ``ContextBuilder`` finds them in step text
                 (``signalwire.core.contexts.named_tools``).
+            request_fields: More fields for every tool request, as the
+                platform sends them for a call, such as
+                ``{"caller_id_num": "+15551234567"}``.
         """
         self.agent = agent
         self.call_id = call_id
         self._gates = gates
         self._stubs = dict(stubs or {})
         self._check_tool_mentions = check_tool_mentions
+        self._request_fields = copy.deepcopy(dict(request_fields or {}))
         ai = _ai_verb(json.loads(agent._render_swml(call_id)))
         self.params: dict[str, Any] = copy.deepcopy(ai.get("params", {}))
         #: The call's global data
@@ -451,6 +456,7 @@ class CallSimulator:
     def _request(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
         self._tool_calls += 1
         request: dict[str, Any] = {
+            **copy.deepcopy(self._request_fields),
             "function": name,
             "argument": {"parsed": [args], "raw": json.dumps(args)},
             "call_id": self.call_id,

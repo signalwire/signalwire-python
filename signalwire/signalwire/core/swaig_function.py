@@ -25,14 +25,15 @@ from signalwire.core.function_result import (
 )
 from signalwire.core.semantic_gate import apply_gate_fields
 
-#: The argument a vouched tool adds, which the model sets to say every other
-#: argument came from the user
+#: The argument a vouched tool adds, which the model sets to say the user
+#: gave the details the call needs
 VOUCHED_PARAMETER = "data_supplied_by_user"
-#: Its description, as the model reads it
+#: Its description, as the model reads it. Not "every other argument": a
+#: tool's arguments often hold ids the model looked up (an order's, a payment
+#: method's), and a model asked to vouch for those answers false, honestly,
+#: and is refused until it stops trying.
 VOUCHED_DESCRIPTION = (
-    "True only when every other argument is what the user said in this call, "
-    "not a guess, an example or something assumed. False when any value did "
-    "not come from the user."
+    "True only if the user gave these details themselves in this call."
 )
 #: The tool prompt the model gets when it calls a vouched tool without
 #: vouching for its arguments
@@ -162,7 +163,7 @@ class SWAIGFunction:
                 (auto-wrapped).
             vouched: True to add a required boolean argument,
                 ``data_supplied_by_user`` (VOUCHED_PARAMETER), in which the
-                model says every other argument came from the user. Unless
+                model says the user gave the details the call needs. Unless
                 it's true, the handler doesn't run and the model is told to
                 get the answer from the user (VOUCHED_PROMPT). The handler
                 never sees the argument.

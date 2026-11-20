@@ -9,6 +9,7 @@ See LICENSE file in the project root for full license information.
 ConciergeAgent - Prefab agent for providing virtual concierge services
 """
 
+import warnings
 import json
 from typing import Any
 
@@ -22,6 +23,8 @@ if TYPE_CHECKING:
 
 class ConciergeAgent(AgentBase):
     """
+    Deprecated: its availability check answers yes for any listed service, with no calendar behind it. Use FrontDeskAgent, with Appointments for bookings and InfoBotKnowledge for amenities and hours. It still works, and warns when made.
+
     A prefab agent designed to act as a virtual concierge, providing information
     and services to users.
 
@@ -68,6 +71,11 @@ class ConciergeAgent(AgentBase):
             route: HTTP route for this agent
             **kwargs: Additional arguments for AgentBase
         """
+        warnings.warn(
+            "ConciergeAgent is deprecated: its availability check answers yes for any listed service, with no calendar behind it. Use FrontDeskAgent, with Appointments for bookings and InfoBotKnowledge for amenities and hours.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         # Initialize the base agent
         super().__init__(name=name, route=route, use_pom=True, **kwargs)
 

@@ -282,8 +282,8 @@ Or give the schema yourself, with a handler that takes `(args, raw_data)`:
 - `gates=[SemanticGate(...)]` adds semantic gates: yes/no questions a
   decision model answers about the call before the platform runs the tool.
   A platform release without semantic gates runs the tool ungated.
-- `vouched=True` runs the handler only when the model says every argument
-  came from the caller (a required `data_supplied_by_user`); otherwise the
+- `vouched=True` runs the handler only when the model says the caller gave
+  the details the call needs (a required `data_supplied_by_user`); otherwise the
   model is told to get the answer from the caller first.
 - Raise `ToolRefusal(tool_result, tool_prompt)` to decline with an outcome you
   know. Any other exception tells the model the outcome is unknown, so it
@@ -496,12 +496,28 @@ self.add_skill("web_search", {"api_key": "...", "search_engine_id": "..."})
 _PREFABS = Topic(
     name="prefabs",
     title="Prefab agents",
-    summary="Ready-made agents for surveys, intake, reception, FAQs and concierge",
+    summary="Ready-made agents: a front desk, a personal assistant, surveys, intake, reception, FAQs and concierge",
     body="""\
 Prefabs are `AgentBase` subclasses for common jobs. Configure one with
 constructor arguments, or subclass it to change its prompt and tools.
+
+`FrontDeskAgent` and `PersonalAssistantAgent` are built on
+`signalwire.operations`, against your own backend given as functions: a
+front desk puts callers through to departments while they're taking calls,
+books appointments, takes messages and answers from documents; a personal
+assistant screens callers, puts them through with a whisper when the person
+takes the call, and otherwise takes a message or books time.
+
+`ReceptionistAgent`, `ConciergeAgent` and `FAQBotAgent` are deprecated: use
+`FrontDeskAgent`, and `InfoBotKnowledge` for answers.
 """,
-    docs=(("docs/agent_guide.md", "Prefab agents and their options"),),
+    docs=(
+        ("docs/agent_guide.md", "Prefab agents and their options"),
+        (
+            "docs/operations.md",
+            "The front desk, the personal assistant and the task packs they're built from",
+        ),
+    ),
     examples=(
         "examples/info_gatherer_example.py",
         "examples/dynamic_info_gatherer_example.py",
@@ -513,6 +529,52 @@ constructor arguments, or subclass it to change its prompt and tools.
     api=("signalwire.prefabs",),
     related=("agents",),
     live="prefabs",
+)
+
+_OPERATIONS = Topic(
+    name="operations",
+    title="Operations: an agent written as what it can do",
+    summary="Write the changes and lookups an agent offers; the SDK runs the read-back, yes, writes and record",
+    body="""\
+`signalwire.operations` builds an agent from the operations it can do for a
+caller (cancel an order, move a booking), its lookups, and how it identifies
+the caller. Each operation is a class with `Field`s, a docstring the model
+reads, and `prepare(call, fields)`, which returns a `Change` or raises `Need`
+or `Refuse`. The SDK generates the tools, steps, gates and the call's record
+in `global_data`, and runs every change the same way: read back, one yes,
+the writes, the record.
+
+- `ServiceAgent` is the prefab; `Operations(...).install(agent)` puts the
+  same on any `AgentBase`.
+- `identify(any_of=..., find=...)` finds the caller's account before
+  account data is shared or changed.
+- `offer(*tools)` adds tools the service didn't make, such as skills, to its
+  steps; `phase()` declares steps of your own.
+- `CallSimulator` tests one offline, record and steps included.
+- Nothing is assumed about the call: `currency=` and `Change.currency` for
+  money (`format_money`), `medium=` or the request's own for voice or chat,
+  and `wording=` for every string it generates (`DEFAULT_WORDING`).
+- `namespace=` names everything it generates, for two services on one agent.
+- Task packs add common operations against your backend: `Appointments`,
+  `Messages` and `Payments` (a card payment the model never hears).
+- `outbound.Dialer` places an outbound call only once consent, the callee's
+  own calling hours and your checks pass.
+- `signalwire.operations.infobot` answers from a corpus (`InfoBotKnowledge`)
+  and carries a conversation between voice and chat (`Continuity`).
+""",
+    docs=(
+        (
+            "docs/operations.md",
+            "Operations, the change lifecycle, identity, lookups, money, wording, namespaces, InfoBot and testing",
+        ),
+    ),
+    api=(
+        "signalwire.operations.ServiceAgent",
+        "signalwire.operations.Operations",
+        "signalwire.operations.Operation",
+        "signalwire.operations.Change",
+    ),
+    related=("contexts", "pgi", "testing"),
 )
 
 _SWML = Topic(
@@ -1038,6 +1100,7 @@ TOPICS: tuple[Topic, ...] = (
     _CONTEXTS,
     _SKILLS,
     _PREFABS,
+    _OPERATIONS,
     _PGI,
     _SWML,
     _RELAY,
@@ -1070,6 +1133,7 @@ TOPIC_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "contexts",
             "skills",
             "prefabs",
+            "operations",
             "pgi",
         ),
     ),

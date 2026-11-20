@@ -1,5 +1,64 @@
 # Changelog
 
+## [3.13.0] - 2026-11-20
+
+### Added
+- `signalwire.operations`: an agent written as what it can do for a caller.
+  Each operation is a class with `Field`s, a docstring the model reads, and
+  `prepare(call, fields)`, which returns a `Change` or raises `Need` or
+  `Refuse`. The SDK generates the tools, steps, gates and the call's record
+  in `global_data`, and runs every change the same way: read back, one yes,
+  the writes, the record. A request made while another change waits is
+  combined with it, set aside, or refused by per-operation hooks.
+  `ServiceAgent` is the prefab; `Operations(...).install(agent)` puts it on
+  any `AgentBase`, adding to the agent's own prompt sections, steps and
+  initial step rather than replacing them. Nothing about the call is
+  assumed: money is exact, in the currency each change or the service gives
+  (`currency=`, `format_money`, `CURRENCIES`, `money_format=`); the medium is
+  given (`medium=`) or found on each call's first request; every generated
+  string has a key in `DEFAULT_WORDING` that `wording=` replaces; the rules
+  change by key; and `namespace=` names everything a service generates, so
+  two can share an agent. The record carries a version (`v`). See
+  docs/operations.md.
+- `signalwire.operations.infobot`: `InfoBotKnowledge` answers from a corpus
+  with a search you supply (sync or async) and your own ranking and
+  grounding rules, and can take a caller's details for a follow-up;
+  `Continuity` carries a conversation between voice and chat; and
+  `say_into_call` speaks on a live call through the REST API.
+- Task packs for `signalwire.operations`, against your own backend given as
+  functions: `Appointments` (find open times, book, move and cancel, with
+  every date said by your calendar), `Messages` (take a message, read back,
+  with the caller's number offered for them to agree to) and `Payments` (a
+  card payment the model never hears: the amount comes from your `charge`
+  function, the platform's pay verb takes the card, and the outcome is read
+  from what the platform recorded). `Change.then` tells the model what to do
+  once a change is made, for one whose effect comes after the tool's result.
+- `FrontDeskAgent` and `PersonalAssistantAgent` in `signalwire.prefabs`: a
+  business's front desk (departments with opening hours, appointments,
+  messages, answers from documents) and an assistant for one person, who
+  screens callers and puts them through with a whisper the person accepts
+  with a key, and otherwise takes a message or books time.
+- `signalwire.operations.outbound.Dialer` places an outbound call to an
+  agent only once every check passes (`consented`, `calling_hours` read on
+  the callee's own clock, or your own), and otherwise raises `NotPlaced`
+  with the reason and makes no request.
+- `CallSimulator(request_fields=...)` adds fields such as `caller_id_num` to
+  every tool request, as the platform sends them for a call.
+
+### Deprecated
+- `ConciergeAgent`, whose availability check answers yes for any listed
+  service with no calendar behind it; use `FrontDeskAgent` with
+  `Appointments` and `InfoBotKnowledge`. `ReceptionistAgent`; use
+  `FrontDeskAgent`. `FAQBotAgent`; use `InfoBotKnowledge`. Each still works,
+  and warns when it's made.
+
+### Changed
+- A vouched tool's `data_supplied_by_user` argument now asks the model
+  whether the user gave the details the call needs themselves. It asked
+  whether every other argument was what the user said, and a model answered
+  that honestly with false for a tool whose arguments include an id it had
+  looked up, such as an order's, so the tool was refused again and again.
+
 ## [3.12.2] - 2026-11-18
 
 ### Fixed
@@ -12,6 +71,7 @@
   call's default). An agent that sets `back_to_back_functions` itself should
   know they do. The `back_to_back_functions()` docs say an `on_fail` setting
   lasts for the call. Found by the benchmark runs.
+
 
 ## [3.12.1] - 2026-11-18
 

@@ -327,6 +327,24 @@ class Step:
         self._step_criteria = criteria
         return self
 
+    def _extend(
+        self, text: str, functions: list[str], *, section: str = "More"
+    ) -> "Step":
+        """
+        Add to a step another layer made, keeping what it has: ``text`` goes
+        after its own (as a section titled ``section`` when it's written in
+        sections), and ``functions`` join its own, in order, once each. For
+        layers that build on each other's steps, such as
+        ``signalwire.operations``; not public until that is.
+        """
+        if self._sections:
+            if text:
+                self.add_section(section, text)
+        elif text:
+            self.set_text(f"{self._text}\n\n{text}" if self._text else text)
+        had = self._functions if isinstance(self._functions, list) else []
+        return self.set_functions(list(dict.fromkeys([*had, *functions])))
+
     def set_functions(self, functions: str | list[str]) -> "Step":
         """
         Set which non-internal functions are callable while this step is active.
