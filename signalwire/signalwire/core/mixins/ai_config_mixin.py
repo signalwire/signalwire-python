@@ -8,12 +8,14 @@ See LICENSE file in the project root for full license information.
 """
 
 import threading
+from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from signalwire.core.agent_base import AgentBase  # type: ignore[attr-defined]  # cycle: agent_base imports the mixins; the name resolves at type-check time but mypy flags the back-reference
 
 
+from signalwire.core._voices import voice_chain, voices_by_language
 from signalwire.core.mixins._mixin_host import _HostTyped
 
 
@@ -27,6 +29,8 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
     # type is dict|None (mypy would otherwise infer a non-optional dict from the
     # setter and reject AgentBase's None initializer).
     _multilingual: dict[str, Any] | None = None
+    # The SWML variable default_voice, set before the ai verb; None when unset
+    _default_voice: str | list[str] | dict[str, Any] | None = None
 
     def add_hint(self, hint: str) -> "AgentBase":
         """
@@ -88,7 +92,7 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
         self,
         name: str,
         code: str,
-        voice: str,
+        voice: str | Sequence[str],
         speech_fillers: list[str] | None = None,
         function_fillers: list[str] | None = None,
         engine: str | None = None,
@@ -102,7 +106,12 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
             name: Name of the language (e.g., "English", "French")
             code: Language code (e.g., "en-US", "fr-FR")
             voice: TTS voice to use. Can be a simple name (e.g., "en-US-Neural2-F")
-                  or a combined format "engine.voice:model" (e.g., "elevenlabs.josh:eleven_turbo_v2_5")
+                  or a combined format "engine.voice:model" (e.g., "elevenlabs.josh:eleven_turbo_v2_5").
+                  Or a list of up to 8 voices in the combined format: the first
+                  speaks, and the rest are its fallbacks, tried in order when it
+                  fails (after them come the fallback voice's, then the
+                  platform's own). A list is sent as it is, so it takes no
+                  engine or model.
             speech_fillers: Optional list of filler phrases for natural speech
             function_fillers: Optional list of filler phrases during function calls
             engine: Optional explicit engine name (e.g., "elevenlabs", "rime")
@@ -130,19 +139,26 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
                                params={"stability": 0.5, "similarity_boost": 0.75})
         """
         language: dict[str, Any] = {"name": name, "code": code}
+        checked = voice_chain(voice)
 
-        # Handle voice formatting (either explicit params or combined string)
-        if engine or model:
+        # Handle voice formatting (a list of voices, explicit params, or a combined string)
+        if isinstance(checked, list):
+            if engine or model:
+                raise ValueError(
+                    "a list of voices names each as engine.voice:model; engine= and model= are for one voice"
+                )
+            language["voice"] = checked
+        elif engine or model:
             # Use explicit parameters if provided
             language["voice"] = voice
             if engine:
                 language["engine"] = engine
             if model:
                 language["model"] = model
-        elif "." in voice and ":" in voice:
+        elif "." in checked and ":" in checked:
             # Parse combined string format: "engine.voice:model"
             try:
-                engine_voice, model_part = voice.split(":", 1)
+                engine_voice, model_part = checked.split(":", 1)
                 engine_part, voice_part = engine_voice.split(".", 1)
 
                 language["voice"] = voice_part
@@ -223,6 +239,35 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
         """
         if languages and isinstance(languages, list):
             self._languages = languages
+        return self
+
+    def set_default_voice(
+        self, voice: str | Sequence[str] | Mapping[str, str | Sequence[str]] | None
+    ) -> "AgentBase":
+        """
+        Set the voice for every voice the agent leaves out: its own, a
+        language's with no voice, a multilingual language's with no voice.
+        The SWML variable ``default_voice`` is set before the ai verb; a
+        voice the agent sets itself wins.
+
+        Args:
+            voice: One voice (``"engine.voice:model"``), a list of up to 8
+                (the first speaks, the rest are its fallbacks), or a mapping
+                of language codes to either, with a ``"default"`` entry for
+                the rest: ``{"es": "elevenlabs.lucia", "default":
+                "rime.spore"}``. A language matches by its exact code, then
+                its base language (``es`` for ``es-MX``), then ``default``.
+                With no multilingual languages of its own, the mapping's
+                languages become them. None clears it.
+
+        Returns:
+            Self for method chaining
+
+        Raises:
+            ValueError: For an empty voice, more than 8, or a language that
+                isn't a code
+        """
+        self._default_voice = None if voice is None else voices_by_language(voice)
         return self
 
     def set_multilingual(self, config: dict[str, Any]) -> "AgentBase":

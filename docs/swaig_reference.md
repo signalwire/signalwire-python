@@ -563,7 +563,7 @@ result.stop_background_file()
 ```
 
 #### `change_voice(voice)`
-Change the AI's voice for the rest of the call. The voice takes the `engine.voice:model` form a language's voice takes, and may be on another engine. It replaces the current language's voice from the next batch of speech on, never mid-utterance.
+Change the AI's voice for the rest of the call. The voice takes the `engine.voice:model` form a language's voice takes, and may be on another engine; or it's a list of up to 8, the first speaking and the rest its fallbacks. It replaces the current language's voice from the next batch of speech on, never mid-utterance.
 
 ```python
 result.change_voice("elevenlabs.rachel")
@@ -586,6 +586,8 @@ Set timeout since last speech event - better for noisy environments.
 ```python
 result.set_speech_event_timeout(3000)  # 3 seconds since last speech event
 ```
+
+Both take a duration as well as a number of milliseconds, such as `"1.5s"`, `"500ms"` or `"2m"`. So does every AI param counted in milliseconds (`attention_timeout`, `inactivity_timeout`, `end_of_speech_timeout` and the rest), while `hard_stop_time` and `hold`'s timeout, counted in seconds, take `"20m"`, `"1h30m"`, `"1.5m"` or `"1:30"`. A bare number keeps its old meaning.
 
 ---
 

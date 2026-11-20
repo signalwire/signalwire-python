@@ -508,15 +508,59 @@ class ConferenceEvent(RelayEvent):
 
 @dataclass
 class CallingErrorEvent(RelayEvent):
-    """Event for calling.error."""
+    """
+    Event for calling.error.
+
+    For an AI agent's voice, it says which voice failed (``engine``,
+    ``language_code``, ``voice``, ``model``), why (``error_reason``:
+    ``voice_config_error``, ``voice_runtime_error`` or ``tts_stream_stall``),
+    and the voice that took over (the ``fallback_*`` fields):
+    ``fallback_index`` is its place in the chain, 0 the voice that was
+    speaking and the chain's length the platform's last resort, and
+    ``fallback_source`` where it came from (``voice``, ``fallback_voice`` or
+    ``platform``). When no voice is left, ``fatal`` is true. A stall adds
+    ``stall_ms``, ``expected_ms``, ``transport`` and ``recovery``. Every field
+    is also in ``params``, as sent.
+    """
 
     code: str = ""
     message: str = ""
+    error: str = ""
+    error_reason: str = ""
+    fatal: bool = False
+    engine: str = ""
+    language_code: str = ""
+    voice: str = ""
+    model: str = ""
+    fallback_engine: str = ""
+    fallback_language_code: str = ""
+    fallback_voice: str = ""
+    fallback_model: str = ""
+    fallback_index: int | None = None
+    fallback_source: str = ""
+    stall_ms: int | None = None
+    expected_ms: int | None = None
+    transport: str = ""
+    recovery: str = ""
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> CallingErrorEvent:
         base = RelayEvent.from_payload(payload)
         p = base.params
+
+        def text(key: str) -> str:
+            value = p.get(key)
+            return "" if value is None else str(value)
+
+        def number(key: str) -> int | None:
+            value = p.get(key)
+            if isinstance(value, bool) or value is None:
+                return None
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return None
+
         return cls(
             event_type=base.event_type,
             params=base.params,
@@ -524,6 +568,23 @@ class CallingErrorEvent(RelayEvent):
             timestamp=base.timestamp,
             code=p.get("code", ""),
             message=p.get("message", ""),
+            error=text("error"),
+            error_reason=text("error_reason"),
+            fatal=p.get("fatal") is True,
+            engine=text("engine"),
+            language_code=text("language_code"),
+            voice=text("voice"),
+            model=text("model"),
+            fallback_engine=text("fallback_engine"),
+            fallback_language_code=text("fallback_language_code"),
+            fallback_voice=text("fallback_voice"),
+            fallback_model=text("fallback_model"),
+            fallback_index=number("fallback_index"),
+            fallback_source=text("fallback_source"),
+            stall_ms=number("stall_ms"),
+            expected_ms=number("expected_ms"),
+            transport=text("transport"),
+            recovery=text("recovery"),
         )
 
 

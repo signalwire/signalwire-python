@@ -13,7 +13,10 @@ The SDK's installed documentation covers this module: run ``sw-pydocs tools``, o
 
 import json
 import re
+from collections.abc import Sequence
 from typing import Any, Literal
+
+from signalwire.core._voices import voice_chain
 
 # A SWML variable reference, such as ${timeout}, which the schema accepts
 # wherever it accepts an integer or a boolean
@@ -625,7 +628,7 @@ class FunctionResult:
     def hold(
         self,
         prompt: str | int | None = None,
-        timeout: int = 300,
+        timeout: int | str = 300,
         step: str | None = None,
         timeout_step: str | None = None,
     ) -> "FunctionResult":
@@ -665,7 +668,9 @@ class FunctionResult:
             prompt: Instruction for the model to deliver before the hold takes
                 effect. Sets `response` and `post_process=True`. Passing an int
                 here is treated as `timeout`, so hold(120) keeps working.
-            timeout: Timeout in seconds (max 900, default 300)
+            timeout: Timeout in seconds (max 900, default 300), or a duration
+                such as ``"2m"``, ``"1m30s"`` or ``"1:30"``, which the
+                platform reads (and limits) itself
             step: Step to move to when the call is taken off hold.
             timeout_step: Step to move to when the hold times out. Defaults to
                 the platform's behaviour (resume in place) when omitted.
@@ -685,8 +690,14 @@ class FunctionResult:
             self.set_tool_response(tool_result="status: on hold", tool_prompt=prompt)
             self.post_process = True
 
-        # Clamp timeout to valid range
-        timeout = max(0, min(timeout, 900))
+        # Clamp a number of seconds to the valid range; a duration string is the platform's to read
+        if isinstance(timeout, str):
+            if not timeout.strip():
+                raise ValueError(
+                    "timeout must be a number of seconds or a duration such as '2m'"
+                )
+        else:
+            timeout = max(0, min(timeout, 900))
 
         # Bare integer unless routing is requested, so existing output is unchanged
         if step is None and timeout_step is None:
@@ -816,26 +827,28 @@ class FunctionResult:
         self.action.append({"clear_dynamic_hints": {}})
         return self
 
-    def set_end_of_speech_timeout(self, milliseconds: int) -> "FunctionResult":
+    def set_end_of_speech_timeout(self, milliseconds: int | str) -> "FunctionResult":
         """
         Adjust end of speech timeout - milliseconds of silence after speaking
         has been detected to finalize speech recognition.
 
         Args:
-            milliseconds: Timeout in milliseconds
+            milliseconds: Timeout in milliseconds, or a duration such as
+                ``"1.5s"``, ``"500ms"`` or ``"2m"``
 
         Returns:
             self for method chaining
         """
         return self.add_action("end_of_speech_timeout", milliseconds)
 
-    def set_speech_event_timeout(self, milliseconds: int) -> "FunctionResult":
+    def set_speech_event_timeout(self, milliseconds: int | str) -> "FunctionResult":
         """
         Adjust speech event timeout - milliseconds since last speech detection
         event to finalize recognition. Works better in noisy environments.
 
         Args:
-            milliseconds: Timeout in milliseconds
+            milliseconds: Timeout in milliseconds, or a duration such as
+                ``"1.5s"``, ``"500ms"`` or ``"2m"``
 
         Returns:
             self for method chaining
@@ -908,7 +921,7 @@ class FunctionResult:
         """
         return self.add_action("unset_meta_data", keys)
 
-    def change_voice(self, voice: str) -> "FunctionResult":
+    def change_voice(self, voice: str | Sequence[str]) -> "FunctionResult":
         """
         Change the AI's voice for the rest of the call.
 
@@ -920,17 +933,17 @@ class FunctionResult:
 
         Args:
             voice: The voice as ``engine.voice:model``, the form a language's
-                voice takes, such as ``"elevenlabs.rachel"``
+                voice takes, such as ``"elevenlabs.rachel"``; or a list of up
+                to 8, the first speaking and the rest its fallbacks, tried in
+                order when it fails
 
         Returns:
             self for method chaining
 
         Raises:
-            ValueError: If voice is empty
+            ValueError: If voice is empty, or names more than 8
         """
-        if not isinstance(voice, str) or not voice.strip():
-            raise ValueError("voice must be a non-empty string")
-        return self.add_action("change_voice", voice)
+        return self.add_action("change_voice", voice_chain(voice))
 
     def toggle_functions(
         self, function_toggles: list[dict[str, Any]]

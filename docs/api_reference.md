@@ -324,7 +324,7 @@ Configure voice and language settings for the agent.
 def add_language(
     name: str, 
     code: str, 
-    voice: str, 
+    voice: str | List[str], 
     speech_fillers: Optional[List[str]] = None, 
     function_fillers: Optional[List[str]] = None, 
     engine: Optional[str] = None, 
@@ -335,7 +335,7 @@ def add_language(
 **Parameters:**
 - `name` (str): Human-readable language name
 - `code` (str): Language code (e.g., "en-US", "es-ES")
-- `voice` (str): Voice identifier (e.g., "rime.spore", "nova.luna")
+- `voice` (str | List[str]): Voice identifier (e.g., "rime.spore", "nova.luna"), or a list of up to 8 in the `engine.voice:model` form: the first speaks, and the rest are its fallbacks, tried in order when it fails. A list takes no `engine` or `model`
 - `speech_fillers` (Optional[List[str]]): Filler phrases during speech processing
 - `function_fillers` (Optional[List[str]]): Filler phrases during function execution
 - `engine` (Optional[str]): TTS engine to use
@@ -354,6 +354,17 @@ agent.add_language(
     speech_fillers=["Let me think...", "One moment..."],
     function_fillers=["Processing...", "Looking that up..."]
 )
+```
+
+##### `set_default_voice(voice: str | List[str] | Dict[str, str | List[str]] | None) -> AgentBase`
+Set the voice for every voice the agent leaves out: its own, a language's with no voice, a multilingual language's with no voice. The SWML variable `default_voice` is set just before the AI verb, and a voice the agent sets itself wins.
+
+**Parameters:**
+- `voice`: One voice, a list of up to 8 (the first speaks, the rest are its fallbacks), or a mapping of language codes to either with a `"default"` entry for the rest. A language matches by its exact code, then its base language, then `default`. None clears it
+
+**Usage:**
+```python
+agent.set_default_voice({"es": "elevenlabs.lucia", "default": "rime.spore"})
 ```
 
 ##### `set_languages(languages: List[Dict[str, Any]]) -> AgentBase`
@@ -2019,24 +2030,24 @@ result.remove_metadata(["temporary_flag", "debug_info"])
 
 ### AI Behavior Control
 
-##### `change_voice(voice: str) -> FunctionResult`
+##### `change_voice(voice: str | List[str]) -> FunctionResult`
 Change the AI's voice for the rest of the call. The new voice replaces the current language's voice from the next batch of speech on, never mid-utterance, and stays for that language for the rest of the call. It may be on another engine than the current one. A voice that won't open falls back to the fallback voice.
 
 **Parameters:**
-- `voice` (str): The voice as `engine.voice:model`, the form a language's voice takes
+- `voice` (str | List[str]): The voice as `engine.voice:model`, the form a language's voice takes, or a list of up to 8, the first speaking and the rest its fallbacks
 
-**Raises:** `ValueError` if `voice` is empty.
+**Raises:** `ValueError` if `voice` is empty or names more than 8.
 
 **Usage:**
 ```python
 result.change_voice("elevenlabs.rachel")
 ```
 
-##### `set_end_of_speech_timeout(milliseconds: int) -> FunctionResult`
+##### `set_end_of_speech_timeout(milliseconds: int | str) -> FunctionResult`
 Adjust how long to wait for speech to end.
 
 **Parameters:**
-- `milliseconds` (int): Timeout in milliseconds
+- `milliseconds` (int | str): Timeout in milliseconds, or a duration such as `"1.5s"`, `"500ms"` or `"2m"`
 
 **Usage:**
 ```python
@@ -2047,7 +2058,7 @@ result.set_end_of_speech_timeout(300)
 result.set_end_of_speech_timeout(2000)
 ```
 
-##### `set_speech_event_timeout(milliseconds: int) -> FunctionResult`
+##### `set_speech_event_timeout(milliseconds: int | str) -> FunctionResult`
 Set timeout for speech events.
 
 **Parameters:**

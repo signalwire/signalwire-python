@@ -42,6 +42,17 @@
   agent only once every check passes (`consented`, `calling_hours` read on
   the callee's own clock, or your own), and otherwise raises `NotPlaced`
   with the reason and makes no request.
+- Fallback voices: a voice can be a list of up to 8 in the
+  `engine.voice:model` form, the first speaking and the rest tried in order
+  when it fails, in `add_language()`, `FunctionResult.change_voice()` and
+  `set_multilingual()`'s languages. `set_default_voice()` sets the SWML
+  variable `default_voice` before the AI verb, for every voice the agent
+  leaves out, by language. `CallingErrorEvent` types a voice failure's
+  fields: the voice that failed and why, the one that took over
+  (`fallback_index`, `fallback_source`), and `fatal`.
+- Durations: `set_end_of_speech_timeout()`, `set_speech_event_timeout()` and
+  `hold()`'s timeout take strings such as `"1.5s"`, `"500ms"` or `"2m"`, as
+  the AI params counted in milliseconds and `hard_stop_time` do.
 - `CallSimulator(request_fields=...)` adds fields such as `caller_id_num` to
   every tool request, as the platform sends them for a call.
 

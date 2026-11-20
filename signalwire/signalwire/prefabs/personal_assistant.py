@@ -148,7 +148,7 @@ class PersonalAssistantAgent(ServiceAgent):
         self.owner, self._reach, self._available = owner, reach, available
         self._caller_id = caller_id
         self._ring, self._answer = ring_seconds, answer_seconds
-        self._voice, self._language = whisper_voice, whisper_language
+        self._whisper_voice, self._whisper_language = whisper_voice, whisper_language
         if not (len(accept_key) == 1 and accept_key in "0123456789*#"):
             raise ValueError(
                 f"accept_key must be one key of the keypad, not {accept_key!r}"
@@ -240,10 +240,10 @@ class PersonalAssistantAgent(ServiceAgent):
             "max_digits": 1,
             "initial_timeout": self._answer,
         }
-        if self._voice:
-            prompt["say_voice"] = self._voice
-        if self._language:
-            prompt["say_language"] = self._language
+        if self._whisper_voice:
+            prompt["say_voice"] = self._whisper_voice
+        if self._whisper_language:
+            prompt["say_language"] = self._whisper_language
         connect: dict[str, Any] = {
             "to": self._reach,
             "timeout": self._ring,
