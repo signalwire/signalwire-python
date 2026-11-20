@@ -209,10 +209,12 @@ class ApiNinjasTriviaSkill(SkillBase):
 
     @classmethod
     def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
-        """
-        Get the parameter schema for the API Ninjas Trivia skill.
+        """Get the parameter schema for the API Ninjas Trivia skill.
 
         Returns parameter definitions for GUI configuration.
+
+        Returns:
+            The base skill parameter schema plus the trivia parameters.
         """
         schema = super().get_parameter_schema()
 

@@ -25,7 +25,11 @@ class DateTimeSkill(SkillBase):
     REQUIRED_ENV_VARS: ClassVar[list[str]] = []
 
     def setup(self) -> bool:
-        """Setup the datetime skill"""
+        """Setup the datetime skill
+
+        Returns:
+            True if the required packages are available, False otherwise.
+        """
         return self.validate_packages()
 
     def register_tools(self) -> None:
@@ -96,13 +100,21 @@ class DateTimeSkill(SkillBase):
             return FunctionResult(f"Error getting date: {e!s}")
 
     def get_hints(self) -> list[str]:
-        """Return speech recognition hints"""
+        """Return speech recognition hints
+
+        Returns:
+            An empty list.
+        """
         # Currently no hints provided, but you could add them like:
         # return ["time", "date", "today", "now", "current", "timezone"]
         return []
 
     def get_prompt_sections(self) -> list[dict[str, Any]]:
-        """Return prompt sections to add to agent"""
+        """Return prompt sections to add to agent
+
+        Returns:
+            A list with one prompt section describing the time and date tools.
+        """
         return [
             {
                 "title": "Date and Time Information",
@@ -117,11 +129,13 @@ class DateTimeSkill(SkillBase):
 
     @classmethod
     def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
-        """
-        Get the parameter schema for the datetime skill
+        """Get the parameter schema for the datetime skill
 
         The datetime skill has no custom parameters - it inherits only
         the base parameters from SkillBase.
+
+        Returns:
+            The base skill parameter schema, unchanged.
         """
         # Get base schema from parent
         return super().get_parameter_schema()

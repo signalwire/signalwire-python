@@ -269,6 +269,14 @@ class SurveyAgent(AgentBase):
 
         This function checks if a user's response is valid for the specified question
         based on the question type and constraints.
+
+        Args:
+            args: The tool arguments: ``question_id`` and ``response``.
+            raw_data: The raw SWAIG request data. Unused.
+
+        Returns:
+            A FunctionResult with a message that says the response is valid
+            or says what is wrong with it.
         """
         question_id = args.get("question_id", "")
         response = args.get("response", "")
@@ -333,6 +341,13 @@ class SurveyAgent(AgentBase):
 
         This function would typically connect to a database or API to store the response.
         In this example, it just acknowledges that the response was received.
+
+        Args:
+            args: The tool arguments: ``question_id`` and ``response``.
+            raw_data: The raw SWAIG request data. Unused.
+
+        Returns:
+            A FunctionResult that acknowledges the response was recorded.
         """
         question_id = args.get("question_id", "")
 

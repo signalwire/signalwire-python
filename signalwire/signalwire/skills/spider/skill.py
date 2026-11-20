@@ -70,7 +70,11 @@ class SpiderSkill(SkillBase):
 
     @classmethod
     def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
-        """Get parameter schema for Spider skill"""
+        """Get parameter schema for Spider skill
+
+        Returns:
+            The base skill parameter schema plus the crawl parameters.
+        """
         schema = super().get_parameter_schema()
         schema.update(
             {
@@ -185,7 +189,12 @@ class SpiderSkill(SkillBase):
         return schema
 
     def __init__(self, agent: "AgentBase", params: dict[str, Any]):
-        """Initialize the spider skill with configuration parameters."""
+        """Initialize the spider skill with configuration parameters.
+
+        Args:
+            agent: The agent the skill is added to.
+            params: Configuration for the skill.
+        """
         super().__init__(agent, params)
 
         defaults = self._DEFAULTS
@@ -249,12 +258,20 @@ class SpiderSkill(SkillBase):
         ]
 
     def get_instance_key(self) -> str:
-        """Return unique key for this skill instance."""
+        """Return unique key for this skill instance.
+
+        Returns:
+            The skill name plus the configured tool name.
+        """
         tool_name = self.params.get("tool_name", self.SKILL_NAME)
         return f"{self.SKILL_NAME}_{tool_name}"
 
     def setup(self) -> bool:
-        """Validate configuration and setup the skill."""
+        """Validate configuration and setup the skill.
+
+        Returns:
+            True if the configuration is valid, False otherwise.
+        """
         # Validate delay is reasonable
         if self.delay < 0:
             self.logger.error("Delay cannot be negative")
@@ -803,7 +820,11 @@ class SpiderSkill(SkillBase):
         return FunctionResult(output)
 
     def get_hints(self) -> list[str]:
-        """Return speech recognition hints for this skill."""
+        """Return speech recognition hints for this skill.
+
+        Returns:
+            A list of words about scraping and crawling.
+        """
         return [
             "scrape",
             "crawl",

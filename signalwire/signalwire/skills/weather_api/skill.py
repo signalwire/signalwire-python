@@ -47,7 +47,11 @@ class WeatherApiSkill(SkillBase):
 
     @classmethod
     def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
-        """Get parameter schema for weather API skill"""
+        """Get parameter schema for weather API skill
+
+        Returns:
+            The base skill parameter schema plus the weather parameters.
+        """
         schema = super().get_parameter_schema()
         schema.update(
             {

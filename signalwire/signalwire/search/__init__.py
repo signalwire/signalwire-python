@@ -96,25 +96,69 @@ else:
     # These conditional fallbacks intentionally shadow the real imports above
     # when optional deps are absent; mypy can't model that mutual exclusion.
     def preprocess_query(*args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
+        """Raise an error that names the missing search dependencies.
+
+        Args:
+            *args: Ignored.
+            **kwargs: Ignored.
+        """
         _check_search_dependencies()
 
     def preprocess_document_content(*args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
+        """Raise an error that names the missing search dependencies.
+
+        Args:
+            *args: Ignored.
+            **kwargs: Ignored.
+        """
         _check_search_dependencies()
 
     class DocumentProcessor:  # type: ignore[no-redef]
+        """Stand-in that raises when the search dependencies are missing."""
+
         def __init__(self, *args: Any, **kwargs: Any) -> None:
+            """Raise an error that names the missing search dependencies.
+
+            Args:
+                *args: Ignored.
+                **kwargs: Ignored.
+            """
             _check_search_dependencies()
 
     class IndexBuilder:  # type: ignore[no-redef]
+        """Stand-in that raises when the search dependencies are missing."""
+
         def __init__(self, *args: Any, **kwargs: Any) -> None:
+            """Raise an error that names the missing search dependencies.
+
+            Args:
+                *args: Ignored.
+                **kwargs: Ignored.
+            """
             _check_search_dependencies()
 
     class SearchEngine:  # type: ignore[no-redef]
+        """Stand-in that raises when the search dependencies are missing."""
+
         def __init__(self, *args: Any, **kwargs: Any) -> None:
+            """Raise an error that names the missing search dependencies.
+
+            Args:
+                *args: Ignored.
+                **kwargs: Ignored.
+            """
             _check_search_dependencies()
 
     class SearchService:  # type: ignore[no-redef]
+        """Stand-in that raises when the search dependencies are missing."""
+
         def __init__(self, *args: Any, **kwargs: Any) -> None:
+            """Raise an error that names the missing search dependencies.
+
+            Args:
+                *args: Ignored.
+                **kwargs: Ignored.
+            """
             _check_search_dependencies()
 
     __all__ = [

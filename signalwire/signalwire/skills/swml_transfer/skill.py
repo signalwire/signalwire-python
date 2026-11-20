@@ -40,7 +40,11 @@ class SWMLTransferSkill(SkillBase):
 
     @classmethod
     def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
-        """Get parameter schema for SWML Transfer skill"""
+        """Get parameter schema for SWML Transfer skill
+
+        Returns:
+            The base skill parameter schema plus the transfer parameters.
+        """
         schema = super().get_parameter_schema()
         schema.update(
             {
@@ -139,16 +143,22 @@ class SWMLTransferSkill(SkillBase):
         return schema
 
     def get_instance_key(self) -> str:
-        """
-        Get the key used to track this skill instance
+        """Get the key used to track this skill instance
 
         For SWML transfer, we use the tool name to differentiate instances
+
+        Returns:
+            The skill name plus the configured tool name (default `transfer_call`).
         """
         tool_name = self.params.get("tool_name", "transfer_call")
         return f"{self.SKILL_NAME}_{tool_name}"
 
     def setup(self) -> bool:
-        """Setup and validate skill configuration"""
+        """Setup and validate skill configuration
+
+        Returns:
+            True if the `transfers` configuration is valid, False otherwise.
+        """
         # Validate required parameters
         required_params = ["transfers"]
         missing_params = [
@@ -291,7 +301,11 @@ class SWMLTransferSkill(SkillBase):
             self.logger.error("Agent does not have register_swaig_function method")
 
     def get_hints(self) -> list[str]:
-        """Return speech recognition hints"""
+        """Return speech recognition hints
+
+        Returns:
+            Words taken from the transfer patterns.
+        """
         hints: list[str] = []
 
         # Extract common words from patterns for hints
@@ -323,7 +337,11 @@ class SWMLTransferSkill(SkillBase):
         return hints
 
     def get_prompt_sections(self) -> list[dict[str, Any]]:
-        """Return prompt sections to add to agent"""
+        """Return prompt sections to add to agent
+
+        Returns:
+            A list of prompt sections describing the transfer destinations.
+        """
         sections = []
 
         # Build a list of transfer destinations with their patterns

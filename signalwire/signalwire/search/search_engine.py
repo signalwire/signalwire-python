@@ -1791,7 +1791,13 @@ class SearchEngine:
         return diversified
 
     def get_stats(self) -> dict[str, Any]:
-        """Get statistics about the search index"""
+        """Get statistics about the search index.
+
+        Returns:
+            For the pgvector backend, the backend's stats dict. For SQLite, a
+            dict with ``total_chunks``, ``total_files``, ``avg_chunk_size``,
+            ``file_types``, ``languages`` and ``config``.
+        """
         # Use pgvector backend if available
         if self.backend == "pgvector":
             assert self._backend is not None  # noqa: S101  # type-narrowing invariant: set whenever backend == "pgvector"

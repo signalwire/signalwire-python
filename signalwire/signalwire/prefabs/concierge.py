@@ -207,6 +207,15 @@ class ConciergeAgent(AgentBase):
 
         This is a simulated function that would typically connect to a real booking system.
         In this example, it returns a mock availability response.
+
+        Args:
+            args: The tool arguments: ``service``, ``date`` and ``time``.
+            raw_data: The raw SWAIG request data. Unused.
+
+        Returns:
+            A FunctionResult saying whether the service is offered at the
+            venue. Only the service name is checked; the date and time are
+            echoed back.
         """
         service = args.get("service", "").lower()
         date = args.get("date", "")
@@ -237,7 +246,16 @@ class ConciergeAgent(AgentBase):
     def get_directions(
         self, args: dict[str, Any], raw_data: dict[str, Any]
     ) -> FunctionResult:
-        """Provide directions to a specific location or amenity"""
+        """Provide directions to a specific location or amenity.
+
+        Args:
+            args: The tool arguments: ``location``.
+            raw_data: The raw SWAIG request data. Unused.
+
+        Returns:
+            A FunctionResult with the amenity's location when it is known,
+            otherwise a message that points the caller to the front desk.
+        """
         location = args.get("location", "").lower()
 
         # Check if the location is an amenity

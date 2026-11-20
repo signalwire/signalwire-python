@@ -27,6 +27,13 @@ def detect_language(text: str) -> str:
     """
     Detect language of input text
     Simple implementation - can be enhanced with langdetect library
+
+    Args:
+        text: The text to classify.
+
+    Returns:
+        A language code: "es" when the text has clearly more Spanish common
+        words than English ones, otherwise "en".
     """
     # Simple heuristic-based detection
     # In a full implementation, you'd use langdetect or similar
@@ -205,6 +212,13 @@ def load_spacy_model(language: str) -> Any:
     """
     Load spaCy model for the given language
     Returns None if spaCy is not available or model not found
+
+    Args:
+        language: A language code such as "en". Codes without a mapped model
+            use the English model.
+
+    Returns:
+        The loaded spaCy pipeline, or None.
     """
     global _spacy_warning_shown
 
@@ -248,7 +262,13 @@ _model_lock = threading.Lock()
 
 
 def set_global_model(model: Any) -> None:
-    """Legacy function - adds model to cache instead of setting globally"""
+    """Legacy function - adds model to cache instead of setting globally.
+
+    Args:
+        model: A loaded model. It is cached under its ``model_name`` or
+            ``_model_name`` attribute; a model with neither, or None, is
+            ignored. The oldest cached model is evicted when the cache is full.
+    """
     if model:
         # Try to get model name from various attributes
         model_name = getattr(model, "model_name", None) or getattr(
@@ -330,6 +350,10 @@ def vectorize_query(
         query: Query string to vectorize
         model: Optional pre-loaded model instance. If not provided, uses cached model.
         model_name: Optional model name to use if loading a new model
+
+    Returns:
+        The embedding as an array, or None if the model cannot be loaded or
+        encoding fails.
     """
     try:
         import numpy as np  # noqa: F401  availability probe; ImportError handled below
@@ -438,6 +462,16 @@ def drop_corpus_terms(
 
     Matching is case-insensitive, on word boundaries, and takes a possessive
     with it. Terms may be phrases.
+
+    Args:
+        query: The query text.
+        terms: Terms to remove. Ignored if not a list or tuple.
+        language: Language code that selects the stopword list for the
+            content-word check.
+
+    Returns:
+        The query with the terms removed, or the original query when nothing
+        matches or when removal would leave fewer than two content words.
     """
     if not isinstance(terms, (list, tuple)):
         return query
@@ -509,12 +543,29 @@ pos_mapping = {
 
 
 def get_wordnet_pos(spacy_pos: Any) -> Any:
-    """Map spaCy POS tags to WordNet POS tags."""
+    """Map spaCy POS tags to WordNet POS tags.
+
+    Args:
+        spacy_pos: A spaCy part-of-speech tag, such as "VERB".
+
+    Returns:
+        The matching WordNet tag. Unknown tags map to noun.
+    """
     return pos_mapping.get(spacy_pos, wn.NOUN)
 
 
 def get_synonyms(word: str, pos_tag: str, max_synonyms: int = 5) -> list[str]:
-    """Get synonyms for a word using WordNet"""
+    """Get synonyms for a word using WordNet.
+
+    Args:
+        word: The word to look up.
+        pos_tag: A spaCy part-of-speech tag for the word.
+        max_synonyms: The most synonyms to return.
+
+    Returns:
+        Lowercase synonyms, up to ``max_synonyms``, in no fixed order. An
+        empty list if the lookup fails.
+    """
     try:
         wn_pos = get_wordnet_pos(pos_tag)
         synsets = wn.synsets(word, pos=wn_pos)
@@ -534,7 +585,14 @@ def get_synonyms(word: str, pos_tag: str, max_synonyms: int = 5) -> list[str]:
 
 
 def remove_duplicate_words(input_string: str) -> str:
-    """Remove duplicate words from the input string while preserving the order and punctuation."""
+    """Remove repeated words, keeping word order and punctuation.
+
+    Args:
+        input_string: The text to de-duplicate. Words compare case-insensitively.
+
+    Returns:
+        The text with only the first occurrence of each word kept.
+    """
     words = re.findall(r"\b\w+\b", input_string)
     seen = set()
     result = []

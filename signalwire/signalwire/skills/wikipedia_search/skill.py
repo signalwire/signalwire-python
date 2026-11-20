@@ -50,7 +50,11 @@ class WikipediaSearchSkill(SkillBase):
 
     @classmethod
     def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
-        """Get parameter schema for Wikipedia search skill"""
+        """Get parameter schema for Wikipedia search skill
+
+        Returns:
+            The base skill parameter schema plus the search parameters.
+        """
         schema = super().get_parameter_schema()
         schema.update(
             {

@@ -148,24 +148,42 @@ def _refuse_blocked_peer(sock: socket.socket, host: str) -> None:
 
 
 class _PublicHTTPConnection(HTTPConnection):
+    """An HTTP connection that refuses private or internal peer addresses."""
+
     def _new_conn(self) -> socket.socket:
+        """Open the socket, then close it and raise if the peer is blocked.
+
+        Returns:
+            The connected socket.
+        """
         sock = super()._new_conn()
         _refuse_blocked_peer(sock, self.host)
         return sock
 
 
 class _PublicHTTPSConnection(HTTPSConnection):
+    """An HTTPS connection that refuses private or internal peer addresses."""
+
     def _new_conn(self) -> socket.socket:
+        """Open the socket, then close it and raise if the peer is blocked.
+
+        Returns:
+            The connected socket.
+        """
         sock = super()._new_conn()
         _refuse_blocked_peer(sock, self.host)
         return sock
 
 
 class _PublicHTTPConnectionPool(HTTPConnectionPool):
+    """A connection pool that uses the address-checking HTTP connection."""
+
     ConnectionCls = _PublicHTTPConnection
 
 
 class _PublicHTTPSConnectionPool(HTTPSConnectionPool):
+    """A connection pool that uses the address-checking HTTPS connection."""
+
     ConnectionCls = _PublicHTTPSConnection
 
 
@@ -178,6 +196,12 @@ class _PublicAdapter(HTTPAdapter):
     """
 
     def init_poolmanager(self, *args: Any, **kwargs: Any) -> None:
+        """Create the pool manager and swap in the address-checking pools.
+
+        Args:
+            *args: Passed to the parent method.
+            **kwargs: Passed to the parent method.
+        """
         super().init_poolmanager(*args, **kwargs)
         self.poolmanager.pool_classes_by_scheme = {
             "http": _PublicHTTPConnectionPool,
@@ -201,6 +225,12 @@ class _PublicSession(requests.Session):
     """
 
     def __init__(self, allow_private: bool = False) -> None:
+        """Create the session and mount the checking adapter.
+
+        Args:
+            allow_private: When true, private addresses are allowed and no
+                adapter is mounted.
+        """
         super().__init__()
         self._allow_private = allow_private
         if not allow_private:
@@ -211,6 +241,19 @@ class _PublicSession(requests.Session):
     def send(
         self, request: requests.PreparedRequest, **kwargs: Any
     ) -> requests.Response:
+        """Send a request after checking its URL.
+
+        Args:
+            request: The prepared request to send.
+            **kwargs: Passed to the parent method. ``proxies`` is cleared
+                unless proxy use is enabled.
+
+        Returns:
+            The response.
+
+        Raises:
+            _BlockedURLError: If the URL is private, internal or invalid.
+        """
         # resolve_redirects() sends each redirect through this method, so
         # every hop is checked before it's requested.
         url = request.url or ""
@@ -230,6 +273,16 @@ class _PublicSession(requests.Session):
         prepared_request: requests.PreparedRequest,
         proxies: dict[str, str] | None,
     ) -> dict[str, str]:
+        """Choose the proxies for a redirected request.
+
+        Args:
+            prepared_request: The request being redirected.
+            proxies: The proxies Requests would use.
+
+        Returns:
+            An empty dict when requests go direct, otherwise the parent's
+            result.
+        """
         # Requests calls this for each redirect. For a plain-HTTP target it
         # would add the environment proxy's credentials as a header, which a
         # direct request would then send to the target itself.

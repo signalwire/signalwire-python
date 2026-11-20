@@ -28,7 +28,15 @@ from signalwire.pom import PromptObjectModel
 
 
 def detect_file_format(file_path: str) -> str:
-    """Detect if the file is JSON or YAML based on extension and content."""
+    """Detect if the file is JSON or YAML based on extension and content.
+
+    Args:
+        file_path: Path to the file.
+
+    Returns:
+        "json" or "yaml". Defaults to "json" when the content parses as
+        neither.
+    """
     ext = Path(file_path).suffix.lower()
 
     # First try to determine by extension
@@ -61,7 +69,14 @@ def detect_file_format(file_path: str) -> str:
 
 
 def load_pom(file_path: str) -> "PromptObjectModel":
-    """Load a POM from a file, auto-detecting the format."""
+    """Load a POM from a file, auto-detecting the format.
+
+    Args:
+        file_path: Path to a JSON or YAML POM file.
+
+    Returns:
+        The loaded PromptObjectModel.
+    """
     format_type = detect_file_format(file_path)
 
     with Path(file_path).open("r", encoding="utf-8") as file:
@@ -74,7 +89,18 @@ def load_pom(file_path: str) -> "PromptObjectModel":
 
 
 def render_pom(pom: "PromptObjectModel", output_format: str) -> str:
-    """Render the POM in the specified format."""
+    """Render the POM in the specified format.
+
+    Args:
+        pom: The model to render.
+        output_format: One of "md", "xml", "json" or "yaml".
+
+    Returns:
+        The rendered text.
+
+    Raises:
+        ValueError: If ``output_format`` is not supported.
+    """
     if output_format == "md":
         return pom.render_markdown()
     if output_format == "xml":

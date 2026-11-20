@@ -61,10 +61,13 @@ class ClaudeSkillsSkill(SkillBase):
     SUPPORTS_MULTIPLE_INSTANCES = True
 
     def setup(self) -> bool:
-        """
-        Setup the Claude skills loader.
+        """Setup the Claude skills loader.
 
         Discovers and parses all SKILL.md files in the configured directory.
+
+        Returns:
+            True if the skills directory is set and at least one skill loaded;
+            False if a required package is missing or `skills_path` is not set.
         """
         if not self.validate_packages():
             return False
@@ -443,6 +446,15 @@ class ClaudeSkillsSkill(SkillBase):
         """
 
         def replace_command(match: re.Match[str]) -> str:
+            """Run one matched shell command and return its output.
+
+            Args:
+                match: The regex match whose first group is the command.
+
+            Returns:
+                The command's standard output with trailing newlines removed, or a
+                bracketed message if the command timed out or failed.
+            """
             command = match.group(1)
             try:
                 result = subprocess.run(  # noqa: S602  # intentional feature: runs shell snippets authored in skill body files (developer-controlled, like Claude Skills), gated behind opt-in allow_shell_injection (default False) which logs a warning; shell=True is required to support pipes/redirection in authored commands; not reachable from end-user runtime input
@@ -505,6 +517,14 @@ class ClaudeSkillsSkill(SkillBase):
 
         # Replace $ARGUMENTS[N] with positional args
         def replace_indexed(match: re.Match[str]) -> str:
+            """Return the positional argument for an `$ARGUMENTS[N]` match.
+
+            Args:
+                match: The regex match whose first group is the index.
+
+            Returns:
+                The argument at that index, or an empty string if there is none.
+            """
             index = int(match.group(1))
             if index < len(positional):
                 return positional[index]
@@ -514,6 +534,14 @@ class ClaudeSkillsSkill(SkillBase):
 
         # Replace $N shorthand (must do after $ARGUMENTS to avoid conflicts)
         def replace_shorthand(match: re.Match[str]) -> str:
+            """Return the positional argument for a `$N` match.
+
+            Args:
+                match: The regex match whose first group is the index.
+
+            Returns:
+                The argument at that index, or an empty string if there is none.
+            """
             index = int(match.group(1))
             if index < len(positional):
                 return positional[index]
@@ -577,9 +605,30 @@ class ClaudeSkillsSkill(SkillBase):
             def make_handler(
                 s: dict[str, Any], rprefix: str, rpostfix: str
             ) -> Callable[[dict[str, Any], dict[str, Any]], FunctionResult]:
+                """Build the tool handler for one skill.
+
+                Args:
+                    s: The parsed skill, with its body, sections and directory.
+                    rprefix: Text to put before the returned content.
+                    rpostfix: Text to put after the returned content.
+
+                Returns:
+                    A handler that takes the tool arguments and the raw payload.
+                """
+
                 def handler(
                     args: dict[str, Any], raw_data: dict[str, Any]
                 ) -> FunctionResult:
+                    """Return the skill content or one section, with substitutions.
+
+                    Args:
+                        args: The tool arguments the AI sent. Reads `section` (a section
+                            name) and `arguments` (a string for argument substitution).
+                        raw_data: The full SWAIG request payload.
+
+                    Returns:
+                        A FunctionResult with the skill body or the requested section.
+                    """
                     section = args.get("section")
                     arguments = args.get("arguments", "")
 
@@ -635,7 +684,11 @@ class ClaudeSkillsSkill(SkillBase):
             logger.debug(f"claude_skills: registered tool '{tool_name}'{section_info}")
 
     def get_hints(self) -> list[str]:
-        """Return speech recognition hints based on loaded skills."""
+        """Return speech recognition hints based on loaded skills.
+
+        Returns:
+            The words from the loaded skill names, without duplicates.
+        """
         hints = []
         for skill in self._skills:
             # Add skill name words as hints
@@ -693,14 +746,22 @@ class ClaudeSkillsSkill(SkillBase):
         return sections
 
     def get_instance_key(self) -> str:
-        """Return unique key for this skill instance."""
+        """Return unique key for this skill instance.
+
+        Returns:
+            The skill name plus a number derived from `skills_path`.
+        """
         # Use skills_path to differentiate instances
         skills_path = self.params.get("skills_path", "default")
         return f"{self.SKILL_NAME}_{hash(skills_path) % 10000}"
 
     @classmethod
     def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
-        """Get the parameter schema for the Claude skills loader."""
+        """Get the parameter schema for the Claude skills loader.
+
+        Returns:
+            The base skill parameter schema plus the Claude skills parameters.
+        """
         schema = super().get_parameter_schema()
 
         schema.update(

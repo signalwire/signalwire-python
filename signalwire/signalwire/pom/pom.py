@@ -1,3 +1,9 @@
+"""Prompt Object Model (POM): structured prompts built from sections.
+
+A POM is a list of sections. Each has a title, optional body text and bullet
+points, and nested subsections. A model renders to Markdown, XML, JSON or YAML.
+"""
+
 from typing import Any, cast
 import json
 import yaml
@@ -28,6 +34,20 @@ class Section:
         numbered: bool | None = None,
         numberedBullets: bool = False,
     ):
+        """Create a section.
+
+        Args:
+            title: The section title. Only the first top-level section may
+                have none.
+            body: Body text for the section.
+            bullets: Bullet-point strings.
+            numbered: Whether the section is numbered. None leaves it unset.
+            numberedBullets: Whether bullets are numbered instead of dotted.
+
+        Raises:
+            TypeError: If ``body`` is not a string or ``bullets`` is not a
+                list or None.
+        """
         self.title = title
 
         # Validate body is a string
@@ -50,13 +70,27 @@ class Section:
         self.numberedBullets = numberedBullets
 
     def add_body(self, body: str) -> None:
-        """Add or replace the body text for this section."""
+        """Add or replace the body text for this section.
+
+        Args:
+            body: The new body text.
+
+        Raises:
+            TypeError: If ``body`` is not a string.
+        """
         if not isinstance(body, str):
             raise TypeError(f"body must be a string, not {type(body).__name__}")
         self.body = body
 
     def add_bullets(self, bullets: list[str]) -> None:
-        """Add bullet points to this section."""
+        """Add bullet points to this section.
+
+        Args:
+            bullets: Bullet strings to append to the existing bullets.
+
+        Raises:
+            TypeError: If ``bullets`` is not a list.
+        """
         if not isinstance(bullets, list):
             raise TypeError(f"bullets must be a list, not {type(bullets).__name__}")
         self.bullets.extend(bullets)
@@ -102,7 +136,15 @@ class Section:
         return subsection
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert the section to a dictionary representation."""
+        """Convert the section to a dictionary representation.
+
+        Empty fields are left out, and ``numbered`` and ``numberedBullets``
+        appear only when true.
+
+        Returns:
+            A dict with the title, body, bullets, subsections and flags that
+            are set.
+        """
         data: dict[str, Any] = {}
 
         # Add keys in specific order: title, body, bullets, subsections
@@ -332,6 +374,7 @@ class PromptObjectModel:
         """
 
         def build_section(d: dict[str, Any], is_subsection: bool = False) -> Section:
+            """Validate a section dict and build a Section from it."""
             if not isinstance(d, dict):
                 raise ValueError("Each section must be a dictionary.")
             if "title" in d and not isinstance(d["title"], str):
@@ -389,6 +432,11 @@ class PromptObjectModel:
         return pom
 
     def __init__(self, debug: bool = False):
+        """Create an empty model.
+
+        Args:
+            debug: Stored as ``debug`` on the model.
+        """
         self.sections: list[Section] = []
         self.debug = debug
 
@@ -449,6 +497,7 @@ class PromptObjectModel:
         """
 
         def recurse(sections: list[Section]) -> Section | None:
+            """Search ``sections`` and their subsections for the title."""
             for section in sections:
                 if section.title == title:
                     return section

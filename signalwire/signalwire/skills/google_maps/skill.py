@@ -135,7 +135,14 @@ def _debug_json(label: str, data: Any) -> None:
 
 
 class GoogleMapsClient:
+    """Client for the Google Maps address and route lookups."""
+
     def __init__(self, api_key: str):
+        """Store the API key.
+
+        Args:
+            api_key: The Google Maps API key.
+        """
         self.api_key = api_key
 
     def validate_address(
@@ -153,6 +160,11 @@ class GoogleMapsClient:
            street addresses or if Nearby Search finds nothing.
 
         Without bias coords (pickup search): uses plain Autocomplete.
+
+        Args:
+            input_text: The address or business name to look up.
+            bias_lat: Latitude to bias results toward, or None.
+            bias_lng: Longitude to bias results toward, or None.
 
         Returns: {"address": str, "lat": float, "lng": float} or None
         """
@@ -395,6 +407,12 @@ class GoogleMapsClient:
     ) -> dict[str, Any] | None:
         """Compute route using Google Routes API.
 
+        Args:
+            origin_lat: Latitude of the starting point.
+            origin_lng: Longitude of the starting point.
+            dest_lat: Latitude of the destination.
+            dest_lng: Longitude of the destination.
+
         Returns: {"distance_meters": int, "duration_seconds": int} or None
         """
         if not self.api_key:
@@ -472,7 +490,11 @@ class GoogleMapsSkill(SkillBase):
 
     @classmethod
     def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
-        """Get parameter schema for google_maps skill"""
+        """Get parameter schema for google_maps skill
+
+        Returns:
+            The base skill parameter schema plus the Google Maps parameters.
+        """
         schema = super().get_parameter_schema()
         schema.update(
             {
@@ -500,7 +522,12 @@ class GoogleMapsSkill(SkillBase):
         return schema
 
     def setup(self) -> bool:
-        """Setup the Google Maps skill"""
+        """Setup the Google Maps skill
+
+        Returns:
+            True if an API key is set and the required packages are available;
+            False otherwise.
+        """
         if not self.params.get("api_key"):
             self.logger.error("Missing required parameter: api_key")
             return False
@@ -622,11 +649,19 @@ class GoogleMapsSkill(SkillBase):
         )
 
     def get_hints(self) -> list[str]:
-        """Return speech recognition hints"""
+        """Return speech recognition hints
+
+        Returns:
+            A list of address and direction words.
+        """
         return ["address", "location", "route", "directions", "miles", "distance"]
 
     def get_prompt_sections(self) -> list[dict[str, Any]]:
-        """Return prompt sections to add to agent"""
+        """Return prompt sections to add to agent
+
+        Returns:
+            A list with one prompt section describing address lookup and routing.
+        """
         return [
             {
                 "title": "Google Maps",

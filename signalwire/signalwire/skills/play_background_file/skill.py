@@ -51,7 +51,11 @@ class PlayBackgroundFileSkill(SkillBase):
 
     @classmethod
     def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
-        """Get parameter schema for Play Background File skill"""
+        """Get parameter schema for Play Background File skill
+
+        Returns:
+            The base skill parameter schema plus the file parameters.
+        """
         schema = super().get_parameter_schema()
         schema.update(
             {

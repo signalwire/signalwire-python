@@ -105,6 +105,7 @@ class InfoGathererAgent(AgentBase):
 
         Example:
             def my_question_callback(query_params, body_params, headers):
+                '''Pick the question list from the request.'''
                 question_set = query_params.get('set', 'default')
                 if question_set == 'support':
                     return [
@@ -170,6 +171,17 @@ class InfoGathererAgent(AgentBase):
 
         This method is called when SWML is requested and allows us to configure
         the agent just-in-time using the provided callback.
+
+        Args:
+            request_data: The request's body parameters.
+            callback_path: Unused.
+            request: The incoming request, used to read query parameters and
+                headers for the callback.
+
+        Returns:
+            None when the agent was built with static questions. Otherwise a
+            dict with ``global_data`` holding the questions, the starting
+            question index and an empty answers list.
         """
         # Only process if we're in dynamic mode (no static questions)
         if self._static_questions is not None:
@@ -284,6 +296,14 @@ class InfoGathererAgent(AgentBase):
 
         This function gets the current question index from global_data
         and returns the corresponding question.
+
+        Args:
+            args: The tool arguments. None are used.
+            raw_data: The raw SWAIG request data, read for ``global_data``.
+
+        Returns:
+            A FunctionResult with the instruction to ask the current question,
+            or a message that there are no questions.
         """
         # Get global data
         global_data = raw_data.get("global_data", {})
@@ -331,6 +351,15 @@ class InfoGathererAgent(AgentBase):
         1. Stores the answer in global_data
         2. Increments the question index
         3. Returns the next question or completion message
+
+        Args:
+            args: The tool arguments: ``answer``.
+            raw_data: The raw SWAIG request data, read for ``global_data``.
+
+        Returns:
+            A FunctionResult that carries the next question, or a completion
+            message after the last one, and updates ``answers`` and
+            ``question_index`` in global data.
         """
         # Get the answer
         answer = args.get("answer", "")

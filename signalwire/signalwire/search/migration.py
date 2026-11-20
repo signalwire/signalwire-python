@@ -303,6 +303,9 @@ class SearchIndexMigrator:
             output_path: Output .swsearch file path
             batch_size: Number of chunks to fetch at once
 
+        Returns:
+            Never returns normally; the method always raises.
+
         Raises:
             NotImplementedError: always
         """
