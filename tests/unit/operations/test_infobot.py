@@ -19,6 +19,7 @@ from typing import Any
 import pytest
 
 from signalwire import AgentBase
+from signalwire.core.swaig_function import SWAIGFunction
 from signalwire.operations import Change, Field, Operation, Operations
 from signalwire.operations.infobot import InfoBotKnowledge
 
@@ -324,7 +325,9 @@ def test_contact_takes_any_one_of_its_field_sets() -> None:
     )
     agent = AgentBase(name="cb", route="/cb", suppress_logs=True)
     kb.install(agent)
-    fn = agent._tool_registry._swaig_functions["collect_contact"].to_swaig(base_url="http://x")
+    tool = agent._tool_registry._swaig_functions["collect_contact"]
+    assert isinstance(tool, SWAIGFunction)
+    fn = tool.to_swaig(base_url="http://x")
     assert "required" not in fn["parameters"] or not fn["parameters"]["required"]
     asked = kb._handle_contact({"name": "Ann"}, None).to_dict()["response"]
     assert asked == "Ask them for email or phone."

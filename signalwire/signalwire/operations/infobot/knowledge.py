@@ -12,9 +12,9 @@ A knowledge-search layer an agent installs to answer callers from a corpus.
 from __future__ import annotations
 
 import inspect
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from types import MappingProxyType
-from typing import Any
+from typing import Any, cast
 
 from signalwire import AgentBase, FunctionResult
 from signalwire.operations.model import Field
@@ -89,7 +89,7 @@ class InfoBotKnowledge:
 
     def __init__(
         self,
-        search: Callable[[str], list[Result]] | None = None,
+        search: Callable[[str], list[Result] | Awaitable[list[Result]]] | None = None,
         *,
         tool: str = "search_knowledge",
         description: str = "Search the documentation and answer only from the results.",
@@ -166,6 +166,14 @@ class InfoBotKnowledge:
         self._query_transform: Callable[[str], str] | None = None
         self._fallback: Callable[[str], str | None] | None = None
         self._expander: Callable[[list[Result]], list[Result]] | None = None
+
+    @property
+    def tools(self) -> list[str]:
+        """The tools it adds: the search tool, and the contact tool when there's ``contact``."""
+        return [
+            self._tool,
+            *([self._contact_tool] if self._contact is not None else []),
+        ]
 
     # -- governance hooks --------------------------------------------------
 
@@ -335,7 +343,9 @@ class InfoBotKnowledge:
         search = self._search
         if search is None:
             return FunctionResult(self._w("search.unconfigured"))
-        blob = self._format(query, list(search(effective) or []))
+        # Registered for a sync search: the async one has a handler of its own
+        found = cast("list[Result]", search(effective))
+        blob = self._format(query, list(found or []))
         return FunctionResult(blob).back_to_back_functions("forever")
 
     async def _handle_search_async(

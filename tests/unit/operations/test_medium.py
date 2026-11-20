@@ -36,7 +36,8 @@ def with_cancel(ops: Any) -> Any:
 
 
 def rules_of(agent: AgentBase) -> list[str]:
-    return next(s for s in agent.pom.to_dict() if s["title"] == "Rules")["bullets"]
+    assert agent.pom is not None
+    return list(next(s for s in agent.pom.to_dict() if s["title"] == "Rules")["bullets"])
 
 
 def ai_of(swml: str) -> dict[str, Any]:

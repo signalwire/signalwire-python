@@ -125,6 +125,7 @@ def test_install_adds_to_the_agents_own_sections_and_keeps_its_initial_step() ->
     ctx.add_step("welcome").set_text("Greet them.")
     ctx.set_initial_step("welcome")
     service(None, "plan", rules=["Never guess.", "Read changes back."]).install(agent)
+    assert agent.pom is not None
     sections = agent.pom.to_dict()
     assert [s["title"] for s in sections] == ["Role", "Rules"]
     assert sections[0]["body"] == "You work for Acme.\n\nYou handle plan."

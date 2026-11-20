@@ -161,9 +161,14 @@ def test_install_runs_the_agents_own_callback_first(tmp_path: Path) -> None:
     ran: list[str] = []
     agent = AgentBase(name="ch", route="/ch", suppress_logs=True)
     agent.set_dynamic_config_callback(lambda q, b, h, a: ran.append("own"))
-    c = Continuity(store=LegStore(cache_dir=str(tmp_path)), visitor_context=lambda body: ran.append("seed") or None)
+    def visitor(body: dict[str, Any]) -> None:
+        ran.append("seed")
+
+    c = Continuity(store=LegStore(cache_dir=str(tmp_path)), visitor_context=visitor)
     c.install(agent)
-    agent._dynamic_config_callback({}, {"conversation_id": "x"}, {}, agent)
+    seed = agent._dynamic_config_callback
+    assert seed is not None
+    seed({}, {"conversation_id": "x"}, {}, agent)
     assert ran == ["own", "seed"]
 
 
