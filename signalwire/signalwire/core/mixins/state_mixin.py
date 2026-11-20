@@ -13,9 +13,7 @@ from signalwire.core.mixins._mixin_host import _HostTyped
 
 
 class StateMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at runtime; AgentBase under TYPE_CHECKING — intentional split
-    """
-    Mixin class containing all state and session management methods for AgentBase
-    """
+    """Mixin that creates and validates per-call security tokens for SWAIG tools."""
 
     def _create_tool_token(self, tool_name: str, call_id: str) -> str:
         """
@@ -47,16 +45,22 @@ class StateMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at r
             return ""
 
     def validate_tool_token(self, function_name: str, token: str, call_id: str) -> bool:
-        """
-        Validate a tool token
+        """Validate the per-call security token for a SWAIG function.
+
+        Functions that are not marked secure always pass. For a secure function
+        (DataMap functions are always secure), the token must have been created
+        for that function and call. If `call_id` is empty, the call ID encoded in
+        the token is used. An unknown function name, a missing token, or any
+        validation error returns False.
 
         Args:
-            function_name: Name of the function/tool
-            token: Token to validate
-            call_id: Call ID for the session
+            function_name: Name of the function or tool the token is for.
+            token: Token to validate.
+            call_id: Call ID for the session.
 
         Returns:
-            True if token is valid, False otherwise
+            True if the token is valid or the function is not secure, False
+            otherwise.
         """
         try:
             # Skip validation for non-secure tools

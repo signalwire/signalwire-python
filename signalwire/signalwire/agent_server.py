@@ -59,17 +59,34 @@ def _service_url(service: SWMLService, route: str) -> str:
 
 
 class AgentServer:
-    """
-    Server for hosting multiple SignalWire AI Agents under a single FastAPI application.
+    """Host multiple SignalWire AI agents under a single FastAPI application.
 
-    This allows you to run multiple agents on different routes of the same server,
-    which is useful for deployment and resource management.
+    Each agent registers at its own URL route on one FastAPI process. The server
+    adds health monitoring, SIP-based routing and static file serving. Use it
+    when several related agents (sales, support, billing) share one deployment
+    environment. For a single agent, use `AgentBase.serve()` or
+    `AgentBase.run()` instead.
+
+    The server answers ``/health`` and ``/ready`` itself. With agents at
+    ``/sales`` and ``/support`` on port 3000, the endpoints are
+    ``http://localhost:3000/sales``, ``/support``, ``/health`` and ``/ready``.
+
+    Attributes:
+        app: The underlying FastAPI application. Use it to add custom routes
+            or middleware, or to run the server with an external ASGI server
+            such as gunicorn.
+        agents: Dict mapping route strings to the registered agents.
+        host: The host address the server binds to.
+        port: The port the server listens on.
+        log_level: The logging level for the server, in lowercase.
 
     Example:
-        server = AgentServer()
-        server.register(SupportAgent(), "/support")
+        ```python
+        server = AgentServer(host="0.0.0.0", port=3000)
         server.register(SalesAgent(), "/sales")
+        server.register(SupportAgent(), "/support")
         server.run()
+        ```
     """
 
     def __init__(
@@ -78,13 +95,13 @@ class AgentServer:
         port: int = 3000,
         log_level: str = "info",
     ):
-        """
-        Initialize a new agent server
+        """Initialize a new agent server.
 
         Args:
-            host: Host to bind the server to
-            port: Port to bind the server to
-            log_level: Logging level (debug, info, warning, error, critical)
+            host: Host to bind the server to. Defaults to "0.0.0.0".
+            port: Port to bind the server to. Defaults to 3000.
+            log_level: Logging level: "debug", "info", "warning", "error" or
+                "critical". Defaults to "info".
         """
         self.host = host
         self.port = port
@@ -139,18 +156,30 @@ class AgentServer:
             self._register_catch_all_handler()
 
     def register(self, agent: AgentBase, route: str | None = None) -> None:
-        """
-        Register an agent with the server
+        """Register an agent at a URL route on the server.
+
+        The agent's FastAPI router is mounted at the route prefix, so all of
+        its endpoints (SWML, SWAIG, debug, post-prompt) are available under
+        that path. Each route can host only one agent.
 
         Args:
-            agent: The agent to register. A plain SWMLService works too on the
+            agent: The agent to register. A plain `SWMLService` works too on the
                 web server: it serves its SWML document, its /swaig endpoint
                 and its routing callbacks. The CGI and Lambda modes need an
-                AgentBase.
-            route: Optional route to override the agent's default route
+                `AgentBase`.
+            route: Optional URL path prefix for the agent, such as "/sales".
+                Defaults to the agent's own ``route``. A leading slash is
+                added and trailing slashes are stripped.
 
         Raises:
-            ValueError: If the route is already in use
+            ValueError: If the route is already in use.
+
+        Example:
+            ```python
+            server = AgentServer(port=3000)
+            server.register(AgentBase(name="sales", route="/sales"))
+            server.register(AgentBase(name="support"), "/support")
+            ```
         """
         # Use agent's route if none provided
         if route is None:
@@ -190,16 +219,41 @@ class AgentServer:
                 agent.register_routing_callback(sip_cb, path=self._sip_route)
 
     def setup_sip_routing(self, route: str = "/sip", auto_map: bool = True) -> None:
-        """
-        Set up central SIP-based routing for the server
+        """Set up central SIP-based routing for the server.
 
-        This configures all agents to handle SIP requests at the specified path,
-        using a coordinated routing system where each agent checks if it can
-        handle SIP requests for specific usernames.
+        When a SIP call arrives, the server extracts the username from the SIP
+        address and routes the request to the matching agent. Every registered
+        agent gets a routing callback at the route, and each callback checks
+        whether it can handle the SIP username. Agents registered after this
+        call also get the callback.
+
+        With ``auto_map`` on, the server creates username-to-route mappings
+        from each agent's name and route path. For example, an agent named
+        "sales-agent" at route "/sales" gets two mappings: "salesagent" (the
+        agent name, lowercased, with only letters, digits and underscores) and
+        "sales" (the last part of the route path). Add explicit mappings with
+        `register_sip_username()`.
+
+        Calling this more than once logs a warning and returns early: SIP
+        routing is set up once per server.
 
         Args:
-            route: The path for SIP routing (default: "/sip")
-            auto_map: Whether to automatically map SIP usernames to agent routes
+            route: The URL path where SIP routing requests are handled. Each
+                registered agent receives a routing callback at this path.
+                Defaults to "/sip".
+            auto_map: Whether to generate SIP username mappings from agent
+                names and route paths. Defaults to True.
+
+        Example:
+            ```python
+            server = AgentServer(port=3000)
+            server.register(AgentBase(name="sales", route="/sales"))
+            server.register(AgentBase(name="support", route="/support"))
+            server.setup_sip_routing("/sip", auto_map=True)
+            server.register_sip_username("help-desk", "/support")
+            # sip:sales@..., sip:salesagent@... -> /sales
+            # sip:help-desk@... -> /support
+            ```
         """
         if self._sip_routing_enabled:
             self.logger.warning("SIP routing is already enabled")
@@ -255,12 +309,23 @@ class AgentServer:
         self.logger.info(f"SIP routing enabled at {route} on all agents")
 
     def register_sip_username(self, username: str, route: str) -> None:
-        """
-        Register a mapping from SIP username to agent route
+        """Register a mapping from a SIP username to an agent route.
+
+        The username is stored in lowercase, so matching ignores case. SIP
+        routing must be enabled with `setup_sip_routing()` first. Otherwise a
+        warning is logged and the call does nothing.
 
         Args:
-            username: The SIP username
-            route: The route to the agent
+            username: The SIP username to map, such as "sales-team".
+            route: The target agent route, such as "/sales". A warning is
+                logged if no registered agent has this route.
+
+        Example:
+            ```python
+            server.setup_sip_routing("/sip")
+            server.register_sip_username("sales-team", "/sales")
+            server.register_sip_username("accounts", "/billing")
+            ```
         """
         if not self._sip_routing_enabled:
             self.logger.warning(
@@ -323,14 +388,27 @@ class AgentServer:
                 self.register_sip_username(clean_route, route)
 
     def unregister(self, route: str) -> bool:
-        """
-        Unregister an agent from the server
+        """Unregister an agent from the server.
+
+        This removes the agent from the server's registry, which
+        `get_agents()`, SIP routing and the health endpoint use.
+
+        Note:
+            FastAPI can't unmount a router at runtime, so the agent's HTTP
+            routes may keep responding until the server restarts.
 
         Args:
-            route: The route of the agent to unregister
+            route: The route of the agent to remove, such as "/sales".
 
         Returns:
-            True if the agent was unregistered, False if not found
+            True if the agent was found and removed, False if no agent exists
+            at that route.
+
+        Example:
+            ```python
+            server.register(AgentBase(name="sales", route="/sales"))
+            removed = server.unregister("/sales")  # True
+            ```
         """
         # Normalize route format
         if not route.startswith("/"):
@@ -350,23 +428,38 @@ class AgentServer:
         return True
 
     def get_agents(self) -> list[tuple[str, AgentBase]]:
-        """
-        Get all registered agents
+        """Get all registered agents.
+
+        It suits introspection, logging and admin interfaces.
 
         Returns:
-            List of (route, agent) tuples
+            A list of ``(route, agent)`` tuples, where the route is a string
+            such as "/sales".
+
+        Example:
+            ```python
+            for route, agent in server.get_agents():
+                print(f"{route}: {agent.name}")
+            ```
         """
         return [(route, agent) for route, agent in self.agents.items()]
 
     def get_agent(self, route: str) -> AgentBase | None:
-        """
-        Get an agent by route
+        """Get an agent by route.
 
         Args:
-            route: The route of the agent
+            route: The route to look up, such as "/sales". A leading slash is
+                added and trailing slashes are stripped before matching.
 
         Returns:
-            The agent or None if not found
+            The agent registered at the route, or None if there is none.
+
+        Example:
+            ```python
+            agent = server.get_agent("/sales")
+            if agent:
+                print(f"Found: {agent.name}")
+            ```
         """
         # Normalize route format
         if not route.startswith("/"):
@@ -383,22 +476,55 @@ class AgentServer:
         host: str | None = None,
         port: int | None = None,
     ) -> Any:
-        """
-        Universal run method that automatically detects environment and handles accordingly
+        """Run the server, detecting the execution environment automatically.
 
-        Detects execution mode and routes appropriately:
-        - Server mode: Starts uvicorn server with FastAPI
-        - CGI mode: Uses same routing logic but outputs CGI headers
-        - Lambda mode: Uses same routing logic but returns Lambda response
+        This is the universal entry point. It detects the execution mode and
+        handles the request accordingly:
+
+        - Server mode: starts uvicorn with the FastAPI app. It blocks until
+          shutdown.
+        - CGI mode: uses the same routing logic but outputs CGI headers.
+        - Lambda mode: uses the same routing logic but returns a Lambda
+          response.
+
+        If ``SWML_SSL_ENABLED`` is "true" in the environment, with
+        ``SWML_SSL_CERT_PATH`` and ``SWML_SSL_KEY_PATH`` pointing to existing
+        files, the server starts with HTTPS.
+
+        Note:
+            For production behind gunicorn or another ASGI server, use
+            ``server.app`` directly instead of calling `run()`.
 
         Args:
-            event: Serverless event object (Lambda, Cloud Functions)
-            context: Serverless context object (Lambda, Cloud Functions)
-            host: Optional host to override the default (server mode only)
-            port: Optional port to override the default (server mode only)
+            event: Serverless event object (Lambda, Cloud Functions). Pass the
+                Lambda handler's ``event`` here. Ignored in server mode.
+            context: Serverless context object (Lambda, Cloud Functions). Pass
+                the Lambda handler's ``context`` here. Ignored in server mode.
+            host: Optional host to override the constructor's (server mode
+                only).
+            port: Optional port to override the constructor's (server mode
+                only).
 
         Returns:
-            Response for serverless modes, None for server mode
+            None in server mode. In Lambda mode, a response dict with
+            ``statusCode``, ``headers`` and ``body``. In CGI mode, the
+            formatted response string.
+
+        Example:
+            ```python
+            server = AgentServer(host="0.0.0.0", port=3000)
+            server.register(AgentBase(name="my-agent", route="/agent"))
+
+            # Server mode
+            server.run()
+
+            # AWS Lambda
+            def lambda_handler(event, context):
+                return server.run(event, context)
+
+            # gunicorn: expose the FastAPI app
+            app = server.app
+            ```
         """
 
         # Imported lazily here so tests can patch
@@ -640,15 +766,37 @@ class AgentServer:
         callback_fn: Callable[[dict[str, Any], dict[str, Any]], str | None],
         path: str,
     ) -> None:
-        """
-        Register a routing callback across all agents
+        """Register a routing callback across all agents.
 
-        This allows you to add unified routing logic to all agents at the same path.
-        The callback receives ``(body, headers)`` — the framework-free shape.
+        It adds one routing callback, at the same path, to every registered
+        agent. When a request arrives at that path on any agent, the callback
+        decides whether to redirect the request to a different agent route.
+        This is the low-level mechanism behind `setup_sip_routing()`. Use it
+        directly for routing logic beyond SIP username matching, such as
+        routing on HTTP headers or request body content.
+
+        Only agents registered when you call it get the callback.
 
         Args:
-            callback_fn: The callback function to register, ``(body, headers)``.
-            path: The path to register the callback at
+            callback_fn: A function that receives the parsed request body and
+                the request headers, both as dicts: ``callback_fn(body,
+                headers)``. Return a route string such as "/sales" to
+                redirect, or None to let the current agent handle the
+                request.
+            path: The URL path where the callback is triggered, such as
+                "/route". A leading slash is added and trailing slashes are
+                stripped.
+
+        Example:
+            ```python
+            def route_by_language(body, headers):
+                lang = headers.get("Accept-Language", "en")
+                if lang.startswith("es"):
+                    return "/spanish-agent"
+                return None
+
+            server.register_global_routing_callback(route_by_language, "/route")
+            ```
         """
         # Normalize the path
         if not path.startswith("/"):
@@ -663,26 +811,37 @@ class AgentServer:
         self.logger.info(f"Registered global routing callback at {path} on all agents")
 
     def serve_static_files(self, directory: str, route: str = "/") -> None:
-        """
-        Serve static files from a directory.
+        """Serve static files from a directory.
 
-        This method properly integrates static file serving with agent routes,
-        ensuring that agent routes take priority over static files.
+        It serves HTML, CSS, JS and images next to the agents, for example a
+        web frontend such as an admin dashboard. Agent routes take priority:
+        a request that matches a registered agent route goes to the agent,
+        and unmatched paths fall through to static file serving.
 
-        Unlike using StaticFiles.mount("/", ...) directly on self.app, this method
-        uses explicit route handlers that work correctly with agent routes.
+        Unlike using ``StaticFiles.mount("/", ...)`` directly on ``self.app``,
+        this method uses explicit route handlers that work correctly with agent
+        routes. The files are served by the catch-all handler that is
+        registered at startup. A request for a directory resolves to its
+        ``index.html`` if it has one. A path that resolves outside the
+        directory, such as ``/../etc/passwd``, isn't served.
 
         Args:
-            directory: Path to the directory containing static files
-            route: URL path prefix for static files (default: "/" for root)
+            directory: Path to the directory containing static files.
+            route: URL path prefix for the static files. Use "/" to serve from
+                the root. Defaults to "/".
+
+        Raises:
+            ValueError: If the directory doesn't exist or isn't a directory.
 
         Example:
+            ```python
             server = AgentServer()
             server.register(SupportAgent(), "/support")
             server.serve_static_files("./web")  # Serves at /
             # /support -> SupportAgent
             # /index.html -> ./web/index.html
             # / -> ./web/index.html
+            ```
         """
         from pathlib import Path
 

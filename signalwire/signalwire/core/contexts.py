@@ -12,7 +12,8 @@ This module provides an alternative to traditional POM-based prompts by allowing
 agents to be defined as structured contexts with sequential steps. Each step
 contains its own prompt, completion criteria, and function restrictions.
 
-The SDK's installed documentation covers this module: run ``sw-pydocs contexts``, or ``sw-pydocs`` for the index.
+The SDK's installed documentation covers this module: run
+``sw-pydocs contexts``, or ``sw-pydocs`` for the index.
 """
 
 import re
@@ -57,13 +58,36 @@ def expected_answer(
     min_digits: int | None = None,
     max_digits: int | None = None,
 ) -> dict[str, int]:
-    """
-    An ``expected_answer`` as the platform reads it: ``{"digits": N}``, or
-    ``{"min_digits": a, "max_digits": b}`` with a at most b, each count from 1
-    to 64. The platform logs and ignores any other shape.
+    """Build and check an ``expected_answer`` value.
+
+    Returns ``{"digits": N}`` for an exact count, or
+    ``{"min_digits": a, "max_digits": b}`` for a range, with a at most b and each
+    count from 1 to 64. The platform logs and ignores any other shape, so this
+    function rejects one with ``ValueError`` instead. Pass the result to
+    ``Step.set_expected_answer`` or to the ``expected_answer`` argument of
+    ``Step.add_gather_question``.
+
+    Args:
+        digits: The exact number of digits. Do not combine with ``min_digits`` or
+            ``max_digits``.
+        min_digits: The fewest digits. Needs ``max_digits`` as well.
+        max_digits: The most digits. Needs ``min_digits`` as well.
+
+    Returns:
+        A dict with the key ``digits``, or with the keys ``min_digits`` and
+        ``max_digits``.
 
     Raises:
-        ValueError: For a shape or count the platform would ignore.
+        ValueError: If a count is not a whole number from 1 to 64, if ``digits``
+            is combined with ``min_digits`` or ``max_digits``, if only one of
+            ``min_digits`` and ``max_digits`` is given, or if ``min_digits`` is
+            greater than ``max_digits``.
+
+    Example:
+        ```python
+        expected_answer(5)                         # {"digits": 5}
+        expected_answer(min_digits=4, max_digits=6)
+        ```
     """
 
     def count(name: str, value: Any) -> int:
@@ -111,7 +135,13 @@ def _validate_history(mode: str) -> str:
 
 
 class GatherQuestion:
-    """Represents a single question in a gather_info configuration"""
+    """Represent a single question in a ``gather_info`` configuration.
+
+    Each question defines a key for storing the answer, the question text, and
+    optional type, confirmation and per-question settings. You rarely create one
+    directly: ``Step.add_gather_question()`` and ``GatherInfo.add_question()``
+    build it for you.
+    """
 
     def __init__(
         self,
@@ -124,6 +154,32 @@ class GatherQuestion:
         isolated: bool | None = None,
         expected_answer: dict[str, int] | None = None,
     ):
+        """Create a gather question.
+
+        Args:
+            key: Key name for storing the answer in ``global_data``. Must be unique
+                within a single ``GatherInfo`` configuration.
+            question: The question text to present to the user.
+            type: JSON schema type for the answer: ``"string"`` (free-form text),
+                ``"integer"`` (whole number), ``"number"`` (numeric value) or
+                ``"boolean"`` (yes or no). Defaults to ``"string"``.
+            confirm: When True, the model must read the answer back and get the
+                user's confirmation before submitting it. Defaults to False.
+            prompt: Extra instruction text for this question, such as additional
+                context for asking or validating it.
+            functions: Names of SWAIG functions to make available while this question
+                is active, such as a lookup function that validates an account
+                number.
+            isolated: Overrides the ``isolated`` default of the gather for this one
+                question. None (the default) inherits the gather's setting.
+            expected_answer: The number of digits the answer has, as a dict:
+                ``{"digits": 5}`` or ``{"min_digits": 4, "max_digits": 6}``. While
+                this question is asked, it replaces the step's expected answer.
+
+        Raises:
+            ValueError: If ``expected_answer`` is not a valid expected answer. See
+                the module function ``expected_answer``.
+        """
         self.key = key
         self.question = question
         self.type = type
@@ -138,7 +194,17 @@ class GatherQuestion:
         )
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert question to dictionary for SWML generation"""
+        """Convert the question to a dictionary for SWML generation.
+
+        Fields that hold their default value are omitted from the output.
+        ``isolated`` is emitted whenever it is set, even when False, so that it can
+        override an isolated gather.
+
+        Returns:
+            A dict with ``key`` and ``question``, plus ``type``, ``confirm``,
+            ``prompt``, ``functions``, ``isolated`` and ``expected_answer`` when they
+            are set.
+        """
         d: dict[str, Any] = {"key": self.key, "question": self.question}
         if self.type != "string":
             d["type"] = self.type
@@ -157,11 +223,22 @@ class GatherQuestion:
 
 
 class GatherInfo:
-    """Configuration for gathering information in a step via the C-side gather_info system.
+    """Collect several pieces of information in one step with ``gather_info``.
 
-    This produces zero tool_call/tool_result entries in LLM-visible history,
-    instead using dynamic step instruction re-injection to present one question
-    at a time.
+    The gather system presents its questions one at a time by re-injecting the
+    step's instructions for each question, so it produces zero ``tool_call`` and
+    ``tool_result`` entries in the history the model sees. Answers are stored in
+    ``global_data`` and later steps or tools can read them.
+
+    You normally configure it through ``Step.set_gather_info()`` and
+    ``Step.add_gather_question()`` rather than creating it directly.
+
+    Example:
+        ```python
+        gather = GatherInfo(output_key="patient_info", completion_action="next_step")
+        gather.add_question("dob", "What is your date of birth?", confirm=True)
+        gather.add_question("allergies", "Do you have any allergies?")
+        ```
     """
 
     def __init__(
@@ -171,6 +248,21 @@ class GatherInfo:
         prompt: str | None = None,
         isolated: bool = False,
     ):
+        """Create a gather configuration.
+
+        Args:
+            output_key: Key in ``global_data`` under which to nest all answers. When
+                None, answers are stored at the top level of ``global_data`` under
+                each question's ``key``.
+            completion_action: Where to go after all questions are answered. None
+                returns to normal step mode, ``"next_step"`` advances to the next
+                sequential step, and a step name jumps to that step.
+            prompt: Preamble text injected once when entering the gather step, giving
+                the model personality and context for asking the questions.
+            isolated: Default for every question. When True, a question is asked with
+                the sibling questions and answers hidden from the model. A question's
+                own ``isolated`` overrides it. Defaults to False.
+        """
         self._questions: list[GatherQuestion] = []
         self._output_key = output_key
         self._completion_action = completion_action
@@ -178,17 +270,23 @@ class GatherInfo:
         self._isolated = isolated
 
     def add_question(self, key: str, question: str, **kwargs: Any) -> "GatherInfo":
-        """
-        Add a question to gather.
+        """Add a question to gather.
 
         Args:
-            key: Key name for storing the answer in global_data
-            question: The question text to ask
-            **kwargs: Optional fields - type, confirm, prompt, functions,
-                isolated, expected_answer
+            key: Key name for storing the answer in ``global_data``.
+            question: The question text to ask.
+            **kwargs: Optional fields passed to ``GatherQuestion``: ``type``,
+                ``confirm``, ``prompt``, ``functions``, ``isolated`` and
+                ``expected_answer``.
 
         Returns:
-            Self for method chaining
+            This GatherInfo, for chaining.
+
+        Example:
+            ```python
+            gather = GatherInfo()
+            gather.add_question("zip", "What is your ZIP code?", type="string")
+            ```
         """
         q = GatherQuestion(
             key=key,
@@ -204,7 +302,15 @@ class GatherInfo:
         return self
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for SWML generation"""
+        """Convert the gather configuration to a dictionary for SWML generation.
+
+        Returns:
+            A dict with ``questions`` (a list of question dicts), plus ``prompt``,
+            ``output_key``, ``completion_action`` and ``isolated`` when they are set.
+
+        Raises:
+            ValueError: If no questions have been added.
+        """
         if not self._questions:
             raise ValueError("gather_info must have at least one question")
         d: dict[str, Any] = {"questions": [q.to_dict() for q in self._questions]}
@@ -220,9 +326,35 @@ class GatherInfo:
 
 
 class Step:
-    """Represents a single step within a context"""
+    """A single phase within a context.
+
+    A step has its own prompt text, completion criteria, available functions and
+    navigation rules. The AI advances through steps as their criteria are met.
+    You create steps by calling ``Context.add_step()``. Every setter returns the
+    step itself, so calls chain.
+
+    Example:
+        ```python
+        ctx = agent.define_contexts().add_context("default")
+        step = ctx.add_step("collect_info")
+        step.add_section("Task", "Collect the caller's account information.")
+        step.add_bullets("Required Information", [
+            "Full legal name",
+            "Account number (10 digits)",
+            "Reason for calling",
+        ])
+        step.set_step_criteria("All three items collected and confirmed.")
+        step.set_valid_steps(["next"])
+        ctx.add_step("done").set_text("Thank the caller.")
+        ```
+    """
 
     def __init__(self, name: str):
+        """Create a step.
+
+        Args:
+            name: Step name. Must be unique within the parent context.
+        """
         self.name = name
         self._text: str | None = None
         self._step_criteria: str | None = None
@@ -254,8 +386,10 @@ class Step:
         self._reset_full_reset: bool = False
 
     def set_text(self, text: str) -> "Step":
-        """
-        Set the step's prompt text directly
+        """Set the step's prompt text directly.
+
+        Cannot be combined with ``add_section()`` or ``add_bullets()``: use one
+        approach or the other.
 
         The platform expands the text's variables, such as
         ``${global_data.order_total}``, when the step is entered, and
@@ -266,10 +400,20 @@ class Step:
         ``update_global_data`` to enter the step again with the new values.
 
         Args:
-            text: The prompt text for this step
+            text: Plain-text prompt instructions for this step.
 
         Returns:
-            Self for method chaining
+            This Step, for chaining.
+
+        Raises:
+            ValueError: If POM sections were already added with ``add_section()`` or
+                ``add_bullets()``.
+
+        Example:
+            ```python
+            step = ctx.add_step("greeting")
+            step.set_text("Welcome the caller and ask how you can help.")
+            ```
         """
         if self._sections:
             raise ValueError(
@@ -279,15 +423,27 @@ class Step:
         return self
 
     def add_section(self, title: str, body: str) -> "Step":
-        """
-        Add a POM section to the step
+        """Add a POM section to the step.
+
+        Cannot be combined with ``set_text()``. The section is rendered as a
+        Markdown ``##`` heading followed by the body.
 
         Args:
-            title: Section title
-            body: Section body text
+            title: Section heading.
+            body: Section body text.
 
         Returns:
-            Self for method chaining
+            This Step, for chaining.
+
+        Raises:
+            ValueError: If ``set_text()`` was already used on this step.
+
+        Example:
+            ```python
+            step = ctx.add_step("collect_info")
+            step.add_section("Task", "Collect the caller's account information.")
+            step.add_section("Guidelines", "Be polite and patient.")
+            ```
         """
         if self._text is not None:
             raise ValueError(
@@ -297,15 +453,29 @@ class Step:
         return self
 
     def add_bullets(self, title: str, bullets: list[str]) -> "Step":
-        """
-        Add a POM section with bullet points
+        """Add a POM section with bullet points to the step.
+
+        Cannot be combined with ``set_text()``.
 
         Args:
-            title: Section title
-            bullets: List of bullet points
+            title: Section heading.
+            bullets: List of bullet point strings.
 
         Returns:
-            Self for method chaining
+            This Step, for chaining.
+
+        Raises:
+            ValueError: If ``set_text()`` was already used on this step.
+
+        Example:
+            ```python
+            step = ctx.add_step("collect_info")
+            step.add_bullets("Required Information", [
+                "Full legal name",
+                "Account number (10 digits)",
+                "Reason for calling",
+            ])
+            ```
         """
         if self._text is not None:
             raise ValueError(
@@ -315,21 +485,35 @@ class Step:
         return self
 
     def set_step_criteria(self, criteria: str) -> "Step":
-        """
-        Set the criteria for determining when this step is complete
+        """Set the criteria for determining when this step is complete.
+
+        The AI evaluates this description against the conversation state to decide
+        whether to advance.
+
+        Be specific. Write "Customer has provided their full name AND phone number"
+        rather than "Information collected". Include failure conditions when
+        appropriate: "Verified OR after 3 failed attempts".
 
         Args:
-            criteria: Description of step completion criteria
+            criteria: Natural-language description of the completion conditions.
 
         Returns:
-            Self for method chaining
+            This Step, for chaining.
+
+        Example:
+            ```python
+            step = ctx.add_step("verify_identity")
+            step.set_text("Verify the caller's identity.")
+            step.set_step_criteria(
+                "Customer gave their account number, or 3 verification attempts failed."
+            )
+            ```
         """
         self._step_criteria = criteria
         return self
 
     def set_functions(self, functions: str | list[str]) -> "Step":
-        """
-        Set which non-internal functions are callable while this step is active.
+        """Set which non-internal functions are callable while this step is active.
 
         IMPORTANT — keep the per-step active set small:
             LLM tool selection accuracy degrades noticeably once the
@@ -377,45 +561,71 @@ class Step:
         are not affected by this list and do not need to appear in it.
 
         Returns:
-            Self for method chaining.
+            This Step, for chaining.
 
-        Examples:
+        Example:
+            ```python
             step.set_functions(["lookup_account", "check_balance"])  # whitelist
             step.set_functions([])                                   # disable all
             step.set_functions("none")                               # disable all (alt)
+            ```
         """
         self._functions = functions
         return self
 
     def set_valid_steps(self, steps: list[str]) -> "Step":
-        """
-        Set which steps can be navigated to from this step
+        """Set which steps can be navigated to from this step.
+
+        Navigation from a step is controlled with ``set_valid_steps()`` and
+        ``set_valid_contexts()``. A step's list takes precedence over the
+        context-level list set with ``Context.set_valid_steps()``.
+        ``ContextBuilder.validate()`` rejects a name that is not a step in the same
+        context.
 
         Args:
-            steps: List of valid step names (include "next" for sequential flow)
+            steps: Step names within the same context. Include ``"next"`` to allow
+                sequential advancement to the next step in order.
 
         Returns:
-            Self for method chaining
+            This Step, for chaining.
+
+        Example:
+            ```python
+            step = ctx.add_step("collect_info")
+            step.set_text("Collect the caller's information.")
+            step.set_valid_steps(["process_request", "escalate"])
+            ctx.add_step("process_request").set_text("Process the request.")
+            ctx.add_step("escalate").set_text("Escalate to a human agent.")
+            ```
         """
         self._valid_steps = steps
         return self
 
     def set_valid_contexts(self, contexts: list[str]) -> "Step":
-        """
-        Set which contexts can be navigated to from this step
+        """Set which contexts can be navigated to from this step.
+
+        Overrides any context-level ``Context.set_valid_contexts()`` for this step.
+        ``ContextBuilder.validate()`` rejects a name that is not a context in the
+        builder.
 
         Args:
-            contexts: List of valid context names
+            contexts: Context names reachable from this step.
 
         Returns:
-            Self for method chaining
+            This Step, for chaining.
+
+        Example:
+            ```python
+            step = ctx.add_step("transfer")
+            step.set_text("Transfer the caller to the right department.")
+            step.set_valid_contexts(["billing", "support"])
+            ```
         """
         self._valid_contexts = contexts
         return self
 
     def set_end(self, end: bool) -> "Step":
-        """
-        Mark this step as terminal for the step flow.
+        """Mark this step as terminal for the step flow.
 
         IMPORTANT: `end=True` does NOT end the conversation or hang up the
         call. It exits step mode entirely after this step executes — clearing
@@ -433,40 +643,71 @@ class Step:
             end: True to exit step mode after this step.
 
         Returns:
-            Self for method chaining.
+            This Step, for chaining.
+
+        Example:
+            ```python
+            farewell = ctx.add_step("farewell")
+            farewell.set_text("Thank you for calling. Goodbye!")
+            farewell.set_end(True)
+            ```
         """
         self._end = end
         return self
 
     def set_skip_user_turn(self, skip: bool) -> "Step":
-        """
-        Set whether to skip waiting for user input after this step
+        """Set whether to skip waiting for user input after this step.
+
+        When True, the AI proceeds immediately without waiting for the caller to
+        speak.
 
         Args:
-            skip: Whether to skip the user turn after this step
+            skip: True to skip the user turn after this step.
 
         Returns:
-            Self for method chaining
+            This Step, for chaining.
+
+        Example:
+            ```python
+            intro = ctx.add_step("intro")
+            intro.set_text("Introduce yourself and begin the intake process.")
+            intro.set_skip_user_turn(True)
+            ```
         """
         self._skip_user_turn = skip
         return self
 
     def set_skip_to_next_step(self, skip: bool) -> "Step":
-        """
-        Set whether to automatically advance to the next step
+        """Set whether to automatically advance to the next step.
+
+        This works only together with `set_skip_user_turn(True)`: when the
+        agent skips the caller's turn after this step, it also moves on to the
+        next step in order, without waiting for the model to call `next_step`.
+        On its own it has no effect.
 
         Args:
-            skip: Whether to skip to the next step automatically
+            skip: True to advance to the next step automatically.
 
         Returns:
-            Self for method chaining
+            This Step, for chaining.
+
+        Example:
+            ```python
+            preamble = ctx.add_step("preamble")
+            preamble.set_text("Read the disclaimer to the caller.")
+            preamble.set_skip_user_turn(True)
+            preamble.set_skip_to_next_step(True)
+            ctx.add_step("main").set_text("Help the caller with their request.")
+            ```
         """
         self._skip_to_next_step = skip
         return self
 
     def set_history(self, history: str) -> "Step":
-        """
-        Control what the model still sees when this step is entered.
+        r"""Control what the model still sees when this step is entered.
+
+        A step's mode overrides the context-level default set with
+        ``Context.set_history()``.
 
         The mode applies when the step's instructions are injected, before
         the next request to the model, and governs everything before it. The
@@ -516,12 +757,15 @@ class Step:
             ValueError: if history is not one of these modes.
 
         Returns:
-            Self for method chaining
+            This Step, for chaining.
 
         Example:
-            >>> step.set_history("hide").set_text(
-            ...     "Previously: ${step_history.prev.summary}\\n\\nNow help them."
-            ... )
+            ```python
+            ctx.add_step("collect_trip").set_text("Ask where the caller is going.")
+            ctx.add_step("confirm_trip").set_history("hide").set_text(
+                "Previously: ${step_history.prev.summary}\n\nConfirm the booking."
+            )
+            ```
         """
         self._history = _validate_history(history)
         return self
@@ -533,12 +777,12 @@ class Step:
         prompt: str | None = None,
         isolated: bool = False,
     ) -> "Step":
-        """
-        Enable info gathering for this step. Questions are presented one at a time
-        via dynamic step instruction re-injection, producing zero tool_call/tool_result
-        entries in LLM-visible history.
+        """Enable info gathering for this step.
 
-        After calling this, use add_gather_question() to define questions.
+        Questions are presented one at a time via dynamic step instruction
+        re-injection, producing zero ``tool_call`` and ``tool_result`` entries in the
+        history the model sees. After calling this, use ``add_gather_question()`` to
+        define the questions. Answers are stored in ``global_data``.
 
         Args:
             output_key: Key in global_data to store answers under (default: top-level)
@@ -557,7 +801,20 @@ class Step:
                 remain in the call log.
 
         Returns:
-            Self for method chaining
+            This Step, for chaining.
+
+        Example:
+            ```python
+            intake = ctx.add_step("intake")
+            intake.set_text("Collect patient information.")
+            intake.set_gather_info(
+                output_key="patient_info",
+                completion_action="next_step",
+                prompt="Be friendly and professional.",
+            )
+            intake.add_gather_question("full_name", "What is your full name?")
+            ctx.add_step("review").set_text("Review the information collected.")
+            ```
         """
         self._gather_info = GatherInfo(
             output_key=output_key,
@@ -578,9 +835,9 @@ class Step:
         isolated: bool | None = None,
         expected_answer: dict[str, int] | None = None,
     ) -> "Step":
-        """
-        Add a question to this step's gather_info configuration.
-        set_gather_info() must be called before this method.
+        """Add a question to this step's gather_info configuration.
+
+        ``set_gather_info()`` must be called before this method.
 
         IMPORTANT — gather mode locks function access:
             While the model is asking gather questions, the runtime forcibly
@@ -621,7 +878,25 @@ class Step:
                 asked, it replaces the step's.
 
         Returns:
-            Self for method chaining.
+            This Step, for chaining.
+
+        Raises:
+            ValueError: If ``set_gather_info()`` has not been called first, or if
+                ``expected_answer`` is not a valid expected answer.
+
+        Example:
+            ```python
+            intake = ctx.add_step("intake")
+            intake.set_text("Collect patient information.")
+            intake.set_gather_info(output_key="patient_info")
+            intake.add_gather_question("full_name", "Full name?", confirm=True)
+            intake.add_gather_question(
+                "insurance_id",
+                "What is your insurance ID number?",
+                functions=["verify_insurance"],
+            )
+            ctx.add_step("review").set_text("Review the information collected.")
+            ```
         """
         if self._gather_info is None:
             raise ValueError("Must call set_gather_info() before add_gather_question()")
@@ -644,8 +919,7 @@ class Step:
         min_digits: int | None = None,
         max_digits: int | None = None,
     ) -> "Step":
-        """
-        Tell the recognizer how many digits the caller's answer in this step
+        """Tell the recognizer how many digits the caller's answer in this step
         has, such as a ZIP code or a PIN.
 
         The recognizer ends its wait for a number once the caller has said
@@ -659,10 +933,18 @@ class Step:
             max_digits: The most digits, with ``min_digits``.
 
         Returns:
-            Self for method chaining
+            This Step, for chaining.
 
         Raises:
             ValueError: For a count or combination the platform would ignore.
+
+        Example:
+            ```python
+            ctx.add_step("zip").set_text("Ask for the ZIP code.").set_expected_answer(5)
+            ctx.add_step("pin").set_text("Ask for the PIN.").set_expected_answer(
+                min_digits=4, max_digits=6
+            )
+            ```
         """
         self._expected_answer = expected_answer(
             digits, min_digits=min_digits, max_digits=max_digits
@@ -670,20 +952,28 @@ class Step:
         return self
 
     def clear_sections(self) -> "Step":
-        """
-        Remove all POM sections and direct text from this step, allowing it
-        to be repopulated with new content.
+        """Remove all POM sections and direct text from this step.
+
+        Lets the step be repopulated with new content, with either ``set_text()`` or
+        the section methods.
 
         Returns:
-            Self for method chaining
+            This Step, for chaining.
+
+        Example:
+            ```python
+            step = ctx.add_step("collect_info")
+            step.add_section("Task", "Original instructions.")
+            step.clear_sections()
+            step.add_section("Task", "Updated instructions for this step.")
+            ```
         """
         self._sections = []
         self._text = None
         return self
 
     def set_reset_system_prompt(self, system_prompt: str) -> "Step":
-        """
-        Set the system prompt this step's reset loads.
+        """Set the system prompt this step's reset loads.
 
         A step with any reset setting is terminal: when the call enters it,
         the platform runs the reset in place of the step's text, and step
@@ -691,17 +981,25 @@ class Step:
         prompt.
 
         Args:
-            system_prompt: New system prompt for context switching
+            system_prompt: New system prompt for the reset to load.
 
         Returns:
-            Self for method chaining
+            This Step, for chaining.
+
+        Example:
+            ```python
+            transfer = ctx.add_step("transfer")
+            transfer.set_text("Transfer the caller to billing.")
+            transfer.set_reset_system_prompt(
+                "You are now a billing specialist. Help with the invoice."
+            )
+            ```
         """
         self._reset_system_prompt = system_prompt
         return self
 
     def set_reset_user_prompt(self, user_prompt: str) -> "Step":
-        """
-        Set the user message this step's reset adds.
+        """Set the user message this step's reset adds.
 
         A step with any reset setting is terminal: when the call enters it,
         the platform runs the reset in place of the step's text, and step
@@ -709,17 +1007,25 @@ class Step:
         prompt.
 
         Args:
-            user_prompt: User message to inject for context switching
+            user_prompt: User message for the reset to add.
 
         Returns:
-            Self for method chaining
+            This Step, for chaining.
+
+        Example:
+            ```python
+            transfer = ctx.add_step("transfer")
+            transfer.set_text("Transfer the caller to billing.")
+            transfer.set_reset_user_prompt(
+                "The customer needs help with their most recent invoice."
+            )
+            ```
         """
         self._reset_user_prompt = user_prompt
         return self
 
     def set_reset_consolidate(self, consolidate: bool) -> "Step":
-        """
-        Set whether this step's reset consolidates the conversation into a
+        """Set whether this step's reset consolidates the conversation into a
         summary.
 
         A step with any reset setting is terminal: when the call enters it,
@@ -728,17 +1034,24 @@ class Step:
         prompt.
 
         Args:
-            consolidate: Whether to consolidate previous conversation
+            consolidate: True to consolidate the previous conversation into a
+                summary.
 
         Returns:
-            Self for method chaining
+            This Step, for chaining.
+
+        Example:
+            ```python
+            transfer = ctx.add_step("transfer")
+            transfer.set_text("Transfer the caller to billing.")
+            transfer.set_reset_consolidate(True)
+            ```
         """
         self._reset_consolidate = consolidate
         return self
 
     def set_reset_full_reset(self, full_reset: bool) -> "Step":
-        """
-        Set whether this step's reset replaces the system prompt, seeded with
+        """Set whether this step's reset replaces the system prompt, seeded with
         the consolidated summary, rather than adding to it.
 
         A step with any reset setting is terminal: when the call enters it,
@@ -747,10 +1060,18 @@ class Step:
         prompt.
 
         Args:
-            full_reset: Whether to completely rewrite system prompt vs inject
+            full_reset: True to replace the system prompt, seeded with the
+                consolidated summary, rather than add to it.
 
         Returns:
-            Self for method chaining
+            This Step, for chaining.
+
+        Example:
+            ```python
+            transfer = ctx.add_step("transfer")
+            transfer.set_text("Transfer the caller to billing.")
+            transfer.set_reset_full_reset(True)
+            ```
         """
         self._reset_full_reset = full_reset
         return self
@@ -777,7 +1098,17 @@ class Step:
         return "\n".join(markdown_parts).strip()
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert step to dictionary for SWML generation"""
+        """Convert the step to a dictionary for SWML generation.
+
+        Returns:
+            A dict with ``name`` and ``text`` (the rendered prompt), plus any of
+            ``step_criteria``, ``functions``, ``valid_steps``, ``valid_contexts``,
+            ``end``, ``skip_user_turn``, ``skip_to_next_step``, ``history``,
+            ``expected_answer``, ``reset`` and ``gather_info`` that were set.
+
+        Raises:
+            ValueError: If the step has neither text nor POM sections.
+        """
         step_dict: dict[str, Any] = {"name": self.name, "text": self._render_text()}
 
         if self._step_criteria:
@@ -828,7 +1159,14 @@ class Step:
 
 
 class Context:
-    """A single context containing an ordered list of steps.
+    """A named conversation mode containing an ordered list of steps.
+
+    A context is a distinct mode of the conversation, such as "sales", "support"
+    or "billing". It holds an ordered sequence of ``Step`` objects and
+    configures its own prompt, system prompt, fillers and navigation rules. You
+    get one by calling ``ContextBuilder.add_context()`` or
+    ``ContextBuilder.get_context()``. When a builder holds a single context, that
+    context must be named ``"default"``.
 
     Conversation history across context switches
     --------------------------------------------
@@ -858,9 +1196,35 @@ class Context:
     FunctionResult.swml_change_step / swml_change_context docstrings
     for how to communicate transition intent through tool response text
     and global_data.
+
+    Example:
+        ```python
+        contexts = agent.define_contexts()
+        main = contexts.add_context("default")
+        main.add_step("menu").set_text("Ask whether the caller needs support.")
+        main.set_valid_contexts(["support"])
+
+        support = contexts.add_context("support")
+        support.set_system_prompt("You are a patient technical support engineer.")
+        support.add_enter_filler("en-US", ["Let me connect you with support..."])
+        support.set_valid_contexts(["default"])
+        support.add_step(
+            "diagnose",
+            task="Understand the customer's issue.",
+            criteria="Issue is clearly identified",
+            valid_steps=["next"],
+        )
+        support.add_step("farewell").set_text("Thank the caller.").set_end(True)
+        ```
     """
 
     def __init__(self, name: str):
+        """Create a context.
+
+        Args:
+            name: Unique context name. When the builder holds a single context, it
+                must be ``"default"``.
+        """
         self.name = name
         self._steps: dict[str, Step] = {}
         self._step_order: list[str] = []
@@ -900,12 +1264,11 @@ class Context:
         functions: str | list[str] | None = None,
         valid_steps: list[str] | None = None,
     ) -> Step:
-        """
-        Add a new step to this context.
+        """Add a new step to this context.
 
         When called with only ``name`` the returned Step can be configured
-        with the usual method-chaining API.  When the optional keyword
-        arguments are supplied the step is fully configured in one call:
+        with the usual method-chaining API. When the optional keyword
+        arguments are supplied the step is fully configured in one call.
 
         Args:
             name: Step name (must be unique within the context).
@@ -922,7 +1285,23 @@ class Context:
                 (equivalent to ``step.set_valid_steps(valid_steps)``).
 
         Returns:
-            The configured Step object for optional further chaining.
+            The new Step, for optional further chaining.
+
+        Raises:
+            ValueError: If a step with this name already exists in the context, or
+                the context already holds 100 steps.
+
+        Example:
+            ```python
+            ctx = agent.define_contexts().add_context("default")
+            ctx.add_step(
+                "get_name",
+                task="Ask for the customer's full name.",
+                criteria="Customer has provided their full name",
+                valid_steps=["get_email"],
+            )
+            ctx.add_step("get_email").set_text("Ask for the customer's email address.")
+            ```
         """
         if name in self._steps:
             raise ValueError(f"Step '{name}' already exists in context '{self.name}'")
@@ -950,26 +1329,40 @@ class Context:
         return step
 
     def get_step(self, name: str) -> Optional["Step"]:
-        """
-        Get an existing step by name for inspection or modification.
+        """Get an existing step by name for inspection or modification.
 
         Args:
-            name: Step name
+            name: Step name to look up.
 
         Returns:
-            Step object if found, None otherwise
+            The Step if found, None otherwise.
+
+        Example:
+            ```python
+            ctx.add_step("collect_info").set_text("Collect the account information.")
+            step = ctx.get_step("collect_info")
+            if step is not None:
+                step.set_functions(["verify_identity"])
+            ```
         """
         return self._steps.get(name)
 
     def remove_step(self, name: str) -> "Context":
-        """
-        Remove a step from this context entirely.
+        """Remove a step from this context entirely.
+
+        Does nothing if the context has no step with this name.
 
         Args:
-            name: Step name to remove
+            name: Name of the step to remove.
 
         Returns:
-            Self for method chaining
+            This Context, for chaining.
+
+        Example:
+            ```python
+            ctx.add_step("obsolete_step").set_text("No longer needed.")
+            ctx.remove_step("obsolete_step")
+            ```
         """
         if name in self._steps:
             del self._steps[name]
@@ -977,15 +1370,24 @@ class Context:
         return self
 
     def move_step(self, name: str, position: int) -> "Context":
-        """
-        Move an existing step to a specific position in the step order.
+        """Move an existing step to a specific position in the step order.
 
         Args:
-            name: Step name to move
-            position: Target index in the step order (0 = first)
+            name: Name of the step to move.
+            position: Target index in the step order. ``0`` places the step first.
 
         Returns:
-            Self for method chaining
+            This Context, for chaining.
+
+        Raises:
+            ValueError: If the context has no step with this name.
+
+        Example:
+            ```python
+            ctx.add_step("collect_info").set_text("Collect the caller's information.")
+            ctx.add_step("confirm").set_text("Confirm the details with the caller.")
+            ctx.move_step("confirm", 0)
+            ```
         """
         if name not in self._steps:
             raise ValueError(f"Step '{name}' not found in context '{self.name}'")
@@ -994,34 +1396,53 @@ class Context:
         return self
 
     def set_valid_contexts(self, contexts: list[str]) -> "Context":
-        """
-        Set which contexts can be navigated to from this context
+        """Set which contexts can be navigated to from this context.
+
+        Acts as a context-level default. A step's own ``Step.set_valid_contexts()``
+        overrides it for that step. ``ContextBuilder.validate()`` rejects a name that
+        is not a context in the builder.
 
         Args:
-            contexts: List of valid context names
+            contexts: Context names reachable from this context.
 
         Returns:
-            Self for method chaining
+            This Context, for chaining.
+
+        Example:
+            ```python
+            support = agent.define_contexts().add_context("support")
+            support.set_valid_contexts(["default", "billing"])
+            ```
         """
         self._valid_contexts = contexts
         return self
 
     def set_valid_steps(self, steps: list[str]) -> "Context":
-        """
-        Set which steps can be navigated to from any step in this context
+        """Set which steps can be navigated to from any step in this context.
+
+        Acts as a context-level default. A step's own ``Step.set_valid_steps()``
+        takes precedence when set. ``ContextBuilder.validate()`` rejects a name that
+        is not a step in this context, other than ``"next"``.
 
         Args:
-            steps: List of valid step names (include "next" for sequential flow)
+            steps: Step names. Include ``"next"`` to allow sequential advancement.
 
         Returns:
-            Self for method chaining
+            This Context, for chaining.
+
+        Example:
+            ```python
+            ctx = agent.define_contexts().add_context("default")
+            ctx.set_valid_steps(["next", "cancel"])
+            ctx.add_step("greet").set_text("Welcome the caller.")
+            ctx.add_step("cancel").set_text("Cancel the process and say goodbye.")
+            ```
         """
         self._valid_steps = steps
         return self
 
     def set_initial_step(self, step_name: str) -> "Context":
-        """
-        Set which step the context starts on when entered.
+        """Set which step the context starts on when entered.
 
         By default, a context starts on its first step (index 0). If the
         context has a preamble step that should only run on first entry
@@ -1038,39 +1459,60 @@ class Context:
                 context's step list; validated by ContextBuilder.validate().
 
         Returns:
-            Self for method chaining.
+            This Context, for chaining.
 
         Example:
-            ctx = contexts.add_context("support")
+            ```python
+            ctx = agent.define_contexts().add_context("default")
             ctx.add_step("greeting").set_text("Welcome!")
             ctx.add_step("triage").set_text("What do you need help with?")
             ctx.set_initial_step("triage")  # skip greeting on re-entry
+            ```
         """
         self._initial_step = step_name
         return self
 
     def set_post_prompt(self, post_prompt: str) -> "Context":
-        """
-        Set post prompt override for this context
+        """Set a post-prompt override for this context.
+
+        Overrides the post-prompt text while this context is active.
 
         Args:
-            post_prompt: Post prompt text to use when this context is active
+            post_prompt: Post-prompt text to use when this context is active.
 
         Returns:
-            Self for method chaining
+            This Context, for chaining.
+
+        Example:
+            ```python
+            billing = agent.define_contexts().add_context("default")
+            billing.set_post_prompt("Summarize the billing issue and resolution.")
+            ```
         """
         self._post_prompt = post_prompt
         return self
 
     def set_system_prompt(self, system_prompt: str) -> "Context":
-        """
-        Set system prompt for context switching (triggers context reset)
+        """Set a system prompt that takes effect when this context is entered.
+
+        Setting a system prompt triggers a context reset when the context is entered.
+        Cannot be combined with ``add_system_section()`` or ``add_system_bullets()``.
 
         Args:
-            system_prompt: New system prompt for when this context is entered
+            system_prompt: New system prompt for this context.
 
         Returns:
-            Self for method chaining
+            This Context, for chaining.
+
+        Raises:
+            ValueError: If system prompt sections were already added with
+                ``add_system_section()`` or ``add_system_bullets()``.
+
+        Example:
+            ```python
+            support = agent.define_contexts().add_context("default")
+            support.set_system_prompt("You are a patient technical support engineer.")
+            ```
         """
         if self._system_prompt_sections:
             raise ValueError(
@@ -1080,67 +1522,103 @@ class Context:
         return self
 
     def set_consolidate(self, consolidate: bool) -> "Context":
-        """
-        Set whether to consolidate conversation history when entering this context
+        """Set whether to consolidate conversation history when entering this context.
+
+        When True, the platform summarizes the previous conversation instead of
+        carrying it over in full, which reduces token usage while preserving key
+        information. It takes effect only together with a system prompt (see
+        ``set_system_prompt()``).
 
         Args:
-            consolidate: Whether to consolidate previous conversation
+            consolidate: True to consolidate the previous conversation on entry.
 
         Returns:
-            Self for method chaining
+            This Context, for chaining.
+
+        Example:
+            ```python
+            support = agent.define_contexts().add_context("default")
+            support.set_consolidate(True)
+            support.set_system_prompt("You are a patient technical support engineer.")
+            ```
         """
         self._consolidate = consolidate
         return self
 
     def set_full_reset(self, full_reset: bool) -> "Context":
-        """
-        Set whether to do full reset when entering this context
+        """Set whether to do a full reset when entering this context.
+
+        When True, the system prompt is completely replaced rather than having
+        additional instructions injected. It takes effect only together with a system
+        prompt (see ``set_system_prompt()``).
 
         Args:
-            full_reset: Whether to completely rewrite system prompt vs inject
+            full_reset: True to replace the system prompt on entry, False to inject
+                instead.
 
         Returns:
-            Self for method chaining
+            This Context, for chaining.
+
+        Example:
+            ```python
+            escalation = agent.define_contexts().add_context("default")
+            escalation.set_full_reset(True)
+            escalation.set_system_prompt("You are a senior escalation specialist.")
+            ```
         """
         self._full_reset = full_reset
         return self
 
     def set_user_prompt(self, user_prompt: str) -> "Context":
-        """
-        Set user prompt to inject when entering this context
+        """Set a user message to inject when entering this context.
+
+        Useful for triggering the AI to speak first after a context switch. It takes
+        effect only together with a system prompt (see ``set_system_prompt()``).
 
         Args:
-            user_prompt: User message to inject for context
+            user_prompt: User message to inject on entry.
 
         Returns:
-            Self for method chaining
+            This Context, for chaining.
+
+        Example:
+            ```python
+            sales = agent.define_contexts().add_context("default")
+            sales.set_system_prompt("You are a friendly sales representative.")
+            sales.set_user_prompt("I'd like to learn about your products.")
+            ```
         """
         self._user_prompt = user_prompt
         return self
 
     def set_history(self, history: str) -> "Context":
-        """
-        Set the default visibility mode for every step in this context.
+        """Set the default visibility mode for every step in this context.
 
         A step's own ``set_history()`` overrides this. See ``Step.set_history``
         for what each mode does.
 
         Args:
-            history: One of "keep", "default", "hide", "isolate", or
-                "spoken".
-
-        Raises:
-            ValueError: if history is not one of these modes.
+            history: One of ``"keep"``, ``"default"``, ``"hide"``, ``"isolate"`` or
+                ``"spoken"``.
 
         Returns:
-            Self for method chaining
+            This Context, for chaining.
+
+        Raises:
+            ValueError: If ``history`` is not one of these modes.
+
+        Example:
+            ```python
+            ctx = agent.define_contexts().add_context("default").set_history("hide")
+            ctx.add_step("greet").set_text("Greet the caller.")
+            ctx.add_step("help").set_text("Previously: ${step_history.prev.summary}.")
+            ```
         """
         self._history = _validate_history(history)
         return self
 
     def set_isolated(self, isolated: bool) -> "Context":
-        """
-        Mark this context as isolated — entering it wipes conversation history.
+        """Mark this context as isolated — entering it wipes conversation history.
 
         When `isolated=True` and the context is entered via change_context,
         the runtime calls ai_conversation_restart(), which drops every
@@ -1167,21 +1645,39 @@ class Context:
                 (subject to the reset exception above).
 
         Returns:
-            Self for method chaining.
+            This Context, for chaining.
+
+        Example:
+            ```python
+            secure = agent.define_contexts().add_context("default")
+            secure.set_isolated(True)
+            secure.add_step("verify").set_text("Ask for the caller's account PIN.")
+            ```
         """
         self._isolated = isolated
         return self
 
     def add_system_section(self, title: str, body: str) -> "Context":
-        """
-        Add a POM section to the system prompt
+        """Add a POM section to the system prompt.
+
+        Cannot be combined with ``set_system_prompt()``.
 
         Args:
-            title: Section title
-            body: Section body text
+            title: Section heading.
+            body: Section body text.
 
         Returns:
-            Self for method chaining
+            This Context, for chaining.
+
+        Raises:
+            ValueError: If ``set_system_prompt()`` was already used on this context.
+
+        Example:
+            ```python
+            billing = agent.define_contexts().add_context("default")
+            billing.add_system_section("Role", "You are a billing specialist.")
+            billing.add_system_section("Tone", "Be professional and empathetic.")
+            ```
         """
         if self._system_prompt is not None:
             raise ValueError(
@@ -1191,15 +1687,28 @@ class Context:
         return self
 
     def add_system_bullets(self, title: str, bullets: list[str]) -> "Context":
-        """
-        Add a POM section with bullet points to the system prompt
+        """Add a POM section with bullet points to the system prompt.
+
+        Cannot be combined with ``set_system_prompt()``.
 
         Args:
-            title: Section title
-            bullets: List of bullet points
+            title: Section heading.
+            bullets: List of bullet point strings.
 
         Returns:
-            Self for method chaining
+            This Context, for chaining.
+
+        Raises:
+            ValueError: If ``set_system_prompt()`` was already used on this context.
+
+        Example:
+            ```python
+            support = agent.define_contexts().add_context("default")
+            support.add_system_bullets("Guidelines", [
+                "Verify identity before making changes",
+                "Offer to escalate if the issue is unresolved after 5 minutes",
+            ])
+            ```
         """
         if self._system_prompt is not None:
             raise ValueError(
@@ -1209,14 +1718,25 @@ class Context:
         return self
 
     def set_prompt(self, prompt: str) -> "Context":
-        """
-        Set the context's prompt text directly
+        """Set the context's prompt text directly.
+
+        Cannot be combined with ``add_section()`` or ``add_bullets()``.
 
         Args:
-            prompt: The prompt text for this context
+            prompt: Plain-text prompt for this context.
 
         Returns:
-            Self for method chaining
+            This Context, for chaining.
+
+        Raises:
+            ValueError: If POM sections were already added with ``add_section()`` or
+                ``add_bullets()``.
+
+        Example:
+            ```python
+            ctx = agent.define_contexts().add_context("default")
+            ctx.set_prompt("You handle billing inquiries. Be concise and accurate.")
+            ```
         """
         if self._prompt_sections:
             raise ValueError(
@@ -1226,15 +1746,26 @@ class Context:
         return self
 
     def add_section(self, title: str, body: str) -> "Context":
-        """
-        Add a POM section to the context prompt
+        """Add a POM section to the context prompt.
+
+        Cannot be combined with ``set_prompt()``.
 
         Args:
-            title: Section title
-            body: Section body text
+            title: Section heading.
+            body: Section body text.
 
         Returns:
-            Self for method chaining
+            This Context, for chaining.
+
+        Raises:
+            ValueError: If ``set_prompt()`` was already used on this context.
+
+        Example:
+            ```python
+            ctx = agent.define_contexts().add_context("default")
+            ctx.add_section("Role", "You are a billing specialist.")
+            ctx.add_section("Guidelines", "Always verify account ownership first.")
+            ```
         """
         if self._prompt_text is not None:
             raise ValueError(
@@ -1244,15 +1775,28 @@ class Context:
         return self
 
     def add_bullets(self, title: str, bullets: list[str]) -> "Context":
-        """
-        Add a POM section with bullet points to the context prompt
+        """Add a POM section with bullet points to the context prompt.
+
+        Cannot be combined with ``set_prompt()``.
 
         Args:
-            title: Section title
-            bullets: List of bullet points
+            title: Section heading.
+            bullets: List of bullet point strings.
 
         Returns:
-            Self for method chaining
+            This Context, for chaining.
+
+        Raises:
+            ValueError: If ``set_prompt()`` was already used on this context.
+
+        Example:
+            ```python
+            ctx = agent.define_contexts().add_context("default")
+            ctx.add_bullets("Rules", [
+                "Never share account numbers with the caller",
+                "Always confirm changes before applying",
+            ])
+            ```
         """
         if self._prompt_text is not None:
             raise ValueError(
@@ -1262,45 +1806,80 @@ class Context:
         return self
 
     def set_enter_fillers(self, enter_fillers: dict[str, list[str]]) -> "Context":
-        """
-        Set fillers that the AI says when entering this context
+        """Set all enter fillers at once.
+
+        Fillers are short phrases the AI says when entering a context, giving the
+        caller a natural transition. An empty value, or one that is not a dict, is
+        ignored.
 
         Args:
-            enter_fillers: Dictionary mapping language codes (or "default") to lists of filler phrases
-                          Example: {"en-US": ["Welcome...", "Hello..."], "default": ["Entering..."]}
+            enter_fillers: Dictionary mapping language codes (or ``"default"``) to
+                lists of filler phrases.
 
         Returns:
-            Self for method chaining
+            This Context, for chaining.
+
+        Example:
+            ```python
+            support = agent.define_contexts().add_context("default")
+            support.set_enter_fillers({
+                "en-US": ["Let me transfer you...", "One moment please..."],
+                "es": ["Un momento por favor..."],
+            })
+            ```
         """
         if enter_fillers and isinstance(enter_fillers, dict):
             self._enter_fillers = enter_fillers
         return self
 
     def set_exit_fillers(self, exit_fillers: dict[str, list[str]]) -> "Context":
-        """
-        Set fillers that the AI says when exiting this context
+        """Set all exit fillers at once.
+
+        Exit fillers are phrases the AI says when it navigates away from this
+        context. An empty value, or one that is not a dict, is ignored.
 
         Args:
-            exit_fillers: Dictionary mapping language codes (or "default") to lists of filler phrases
-                         Example: {"en-US": ["Goodbye...", "Thank you..."], "default": ["Exiting..."]}
+            exit_fillers: Dictionary mapping language codes (or ``"default"``) to
+                lists of filler phrases.
 
         Returns:
-            Self for method chaining
+            This Context, for chaining.
+
+        Example:
+            ```python
+            support = agent.define_contexts().add_context("default")
+            support.set_exit_fillers({
+                "en-US": ["Thank you for contacting support.", "Glad I could help."],
+                "default": ["Thank you."],
+            })
+            ```
         """
         if exit_fillers and isinstance(exit_fillers, dict):
             self._exit_fillers = exit_fillers
         return self
 
     def add_enter_filler(self, language_code: str, fillers: list[str]) -> "Context":
-        """
-        Add enter fillers for a specific language
+        """Add enter fillers for a specific language.
+
+        Replaces any fillers already set for that language. Does nothing if
+        ``language_code`` or ``fillers`` is empty.
 
         Args:
-            language_code: Language code (e.g., "en-US", "es") or "default" for catch-all
-            fillers: List of filler phrases for entering this context
+            language_code: Language code, such as ``"en-US"`` or ``"es"``, or
+                ``"default"`` for a catch-all.
+            fillers: List of filler phrases for entering this context.
 
         Returns:
-            Self for method chaining
+            This Context, for chaining.
+
+        Example:
+            ```python
+            support = agent.define_contexts().add_context("default")
+            support.add_enter_filler("en-US", [
+                "Let me connect you with support...",
+                "Transferring you now...",
+            ])
+            ```
         """
         if language_code and fillers and isinstance(fillers, list):
             if self._enter_fillers is None:
@@ -1309,15 +1888,27 @@ class Context:
         return self
 
     def add_exit_filler(self, language_code: str, fillers: list[str]) -> "Context":
-        """
-        Add exit fillers for a specific language
+        """Add exit fillers for a specific language.
+
+        Replaces any fillers already set for that language. Does nothing if
+        ``language_code`` or ``fillers`` is empty.
 
         Args:
-            language_code: Language code (e.g., "en-US", "es") or "default" for catch-all
-            fillers: List of filler phrases for exiting this context
+            language_code: Language code, such as ``"en-US"`` or ``"es"``, or
+                ``"default"`` for a catch-all.
+            fillers: List of filler phrases for exiting this context.
 
         Returns:
-            Self for method chaining
+            This Context, for chaining.
+
+        Example:
+            ```python
+            support = agent.define_contexts().add_context("default")
+            support.add_exit_filler("en-US", [
+                "Thank you for contacting support.",
+                "Glad I could help.",
+            ])
+            ```
         """
         if language_code and fillers and isinstance(fillers, list):
             if self._exit_fillers is None:
@@ -1368,7 +1959,19 @@ class Context:
         return "\n".join(markdown_parts).strip()
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert context to dictionary for SWML generation"""
+        """Convert the context to a dictionary for SWML generation.
+
+        Returns:
+            A dict with ``steps`` (a list of step dicts in order), plus any of
+            ``valid_contexts``, ``valid_steps``, ``initial_step``, ``post_prompt``,
+            ``system_prompt``, ``consolidate``, ``full_reset``, ``user_prompt``,
+            ``isolated``, ``pom`` or ``prompt``, ``enter_fillers``, ``exit_fillers``
+            and ``history`` that were set.
+
+        Raises:
+            ValueError: If the context has no steps, or a step has neither text nor
+                POM sections.
+        """
         if not self._steps:
             raise ValueError(f"Context '{self.name}' has no steps defined")
 
@@ -1438,7 +2041,7 @@ RESERVED_NATIVE_TOOL_NAMES = frozenset(
 
 
 class ContextBuilder:
-    """Builder for multi-step, multi-context AI agent workflows.
+    r"""Builder for multi-step, multi-context AI agent workflows.
 
     A ContextBuilder owns one or more Contexts; each Context owns an ordered
     list of Steps. Only one context and one step is active at a time. Per
@@ -1484,9 +2087,41 @@ class ContextBuilder:
       - gather_info questions are non-empty and have unique keys
       - gather_info completion_action targets a reachable step
       - No user-defined SWAIG tool collides with a reserved native name
+
+    Limits:
+        A builder holds at most 50 contexts, and a context at most 100 steps.
+
+    Note:
+        You rarely create a ContextBuilder directly. Call
+        ``agent.define_contexts()``, which creates the builder and wires it into
+        SWML generation. The builder validates the whole context tree when the
+        SWML document is rendered.
+
+    Example:
+        ```python
+        contexts = agent.define_contexts()
+        order = contexts.add_context("default")
+        order.add_step("get_item") \
+            .set_text("Ask what item they want to order.") \
+            .set_step_criteria("Customer has specified an item") \
+            .set_valid_steps(["get_quantity"])
+        order.add_step("get_quantity") \
+            .set_text("Ask how many they want.") \
+            .set_valid_steps(["confirm"])
+        order.add_step("confirm") \
+            .set_text("Confirm the order details and thank them.") \
+            .set_end(True)
+        ```
     """
 
     def __init__(self, agent: Any) -> None:
+        """Create a builder.
+
+        Args:
+            agent: The agent that owns these contexts, or None. It is used to check
+                tool names when validating. Normally ``AgentBase.define_contexts()``
+                creates the builder, so you do not call this directly.
+        """
         self._agent = agent
         self._contexts: dict[str, Context] = {}
         self._context_order: list[str] = []
@@ -1497,37 +2132,56 @@ class ContextBuilder:
         self._warned_here: set[tuple[str, ...]] = set()
 
     def reset(self) -> "ContextBuilder":
-        """
-        Remove all contexts, returning the builder to its initial state.
+        """Remove all contexts, returning the builder to its initial state.
 
         Use this in a dynamic config callback when you need to rebuild
         contexts from scratch for a specific request — e.g. skipping a
         greeting context on transfers.
 
+        For convenience at the agent level, ``AgentBase.reset_contexts()`` wraps
+        ``define_contexts().reset()``.
+
         Returns:
-            Self for method chaining.
+            This ContextBuilder, for chaining.
 
-        Example::
-
+        Example:
+            ```python
             def on_dynamic_config(query, body, headers, agent):
                 if query.get("transfer"):
                     agent.define_contexts().reset()
                     ctx = agent.define_contexts().add_context("default")
                     ctx.add_step("route").set_text("Route the caller.")
+            ```
         """
         self._contexts.clear()
         self._context_order.clear()
         return self
 
     def add_context(self, name: str) -> Context:
-        """
-        Add a new context
+        """Add a new context and return it.
+
+        A builder with a single context must name it ``"default"``, or validation
+        fails. A builder with several contexts can use any names.
 
         Args:
-            name: Context name
+            name: Unique context name.
 
         Returns:
-            Context object for method chaining
+            The new Context, ready for adding steps.
+
+        Raises:
+            ValueError: If a context with this name already exists, or the builder
+                already holds 50 contexts.
+
+        Example:
+            ```python
+            contexts = agent.define_contexts()
+            main = contexts.add_context("default")
+            sales = contexts.add_context("sales")
+            main.add_step("menu").set_text("Ask whether the caller needs sales.")
+            main.set_valid_contexts(["sales"])
+            sales.add_step("qualify").set_text("Understand what product they want.")
+            ```
         """
         if name in self._contexts:
             raise ValueError(f"Context '{name}' already exists")
@@ -1541,19 +2195,72 @@ class ContextBuilder:
         return context
 
     def get_context(self, name: str) -> Context | None:
-        """
-        Get an existing context by name for inspection or modification.
+        """Get an existing context by name for inspection or modification.
 
         Args:
-            name: Context name
+            name: Context name.
 
         Returns:
-            Context object if found, None otherwise
+            The Context if found, None otherwise.
+
+        Example:
+            ```python
+            contexts = agent.define_contexts()
+            contexts.add_context("default")
+            ctx = contexts.get_context("default")
+            ```
         """
         return self._contexts.get(name)
 
     def validate(self) -> None:
-        """Validate the contexts configuration"""
+        """Validate the whole context configuration tree.
+
+        Called automatically when the SWML document is rendered (``to_dict()`` calls
+        it), but you can call it yourself to catch errors early.
+
+        Checks performed:
+
+        - At least one context exists.
+        - A single context is named ``"default"``.
+        - Every context has at least one step.
+        - Every context's ``initial_step``, when set, names a step in that context.
+        - Every step-level ``valid_steps`` entry names a step in the same context
+          (the special value ``"next"`` is always allowed).
+        - Every context-level and step-level ``valid_contexts`` entry names a context
+          in the builder.
+        - Every ``gather_info`` has at least one question, no duplicate question
+          keys, and a valid ``completion_action``: ``"next_step"`` needs a step after
+          it, and any other value must name a step in the same context.
+        - When the builder is attached to an agent, no user-defined tool shares a
+          name with a reserved native tool (``next_step``, ``change_context``,
+          ``gather_submit``).
+        - When the builder is attached to an agent, every name a step passes to
+          ``set_functions([...])`` is a registered SWAIG tool or a reserved native
+          tool. ``"none"`` and ``[]`` mean disable all and are never treated as
+          references.
+
+        It also logs design warnings, without raising, for settings that do not do
+        what they read as, such as a tool no step offers, a tool named in a step that
+        does not offer it, and reset settings that have no effect.
+
+        Returns:
+            None. Raises ``ValueError`` when validation fails.
+
+        Raises:
+            ValueError: If any check above fails. The message names the context,
+                step or tool at fault.
+
+        Example:
+            ```python
+            contexts = agent.define_contexts()
+            ctx = contexts.add_context("default")
+            ctx.add_step("greet").set_text("Hello!")
+            try:
+                contexts.validate()
+            except ValueError as e:
+                print(f"Invalid context config: {e}")
+            ```
+        """
         if not self._contexts:
             raise ValueError("At least one context must be defined")
 
@@ -1877,7 +2584,26 @@ class ContextBuilder:
                         )
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert all contexts to dictionary for SWML generation"""
+        """Convert all contexts to a dictionary for SWML generation.
+
+        Calls ``validate()`` first.
+
+        Returns:
+            A dict mapping each context name, in the order added, to its serialized
+            dict, ready for inclusion in the SWML document.
+
+        Raises:
+            ValueError: If ``validate()`` fails, or a step has neither text nor POM
+                sections.
+
+        Example:
+            ```python
+            contexts = agent.define_contexts()
+            contexts.add_context("default").add_step("greet").set_text("Hello!")
+            data = contexts.to_dict()
+            # {"default": {"steps": [{"name": "greet", "text": "Hello!"}]}}
+            ```
+        """
         self.validate()
 
         return {
@@ -1997,13 +2723,24 @@ def _step_offers(step: "Step", function: str) -> bool:
 
 
 def create_simple_context(name: str = "default") -> Context:
-    """
-    Helper function to create a simple single context
+    """Create a standalone Context without a ContextBuilder.
+
+    Useful for quick prototyping, or when you need a single context outside the
+    builder pattern. This is a module-level function, not a method of
+    ``ContextBuilder``.
 
     Args:
-        name: Context name (defaults to "default")
+        name: Context name. Defaults to ``"default"``, the required name for a
+            single-context agent.
 
     Returns:
-        Context object for method chaining
+        A new Context, ready for adding steps.
+
+    Example:
+        ```python
+        ctx = create_simple_context()
+        ctx.add_step("greet").set_text("Welcome the caller.")
+        ctx.add_step("farewell").set_text("Thank the caller and end the call.")
+        ```
     """
     return Context(name)

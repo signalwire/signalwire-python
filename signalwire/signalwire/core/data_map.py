@@ -18,12 +18,18 @@ from .semantic_gate import FillerPhrases, SemanticGate, apply_gate_fields
 
 
 class DataMap:
-    """
-    Builder class for creating SWAIG data_map configurations.
+    """Build a SWAIG data_map function with a fluent interface.
 
-    This provides a fluent interface for building data_map tools that execute
-    on the SignalWire server without requiring webhook endpoints. Works similar
-    to FunctionResult but for building data_map structures.
+    A DataMap defines a tool that the SignalWire platform runs itself: it calls
+    a REST API, or matches the arguments against patterns, and formats the
+    answer, with no webhook endpoint on your server. That cuts latency and
+    simplifies deployment. Use a DataMap for a simple API-to-response
+    integration. For business logic, database access or multi-step processing,
+    use a SWAIG function with a handler instead.
+
+    It works like `FunctionResult`, but builds a data_map structure. Call
+    `to_swaig_function()` for the function definition, and register that with
+    the agent using `register_swaig_function()`.
 
     The platform runs a data_map in this order. The top-level expressions
     come first, and the first one that produces an output ends the function.
@@ -41,56 +47,101 @@ class DataMap:
     there, and ``${args.location}`` is empty. Header values are sent as
     written, without template expansion.
 
-    Example usage:
-        # Simple API call - output goes inside webhook
-        data_map = (DataMap('get_weather')
-            .purpose('Get current weather information')
-            .parameter('location', 'string', 'City name', required=True)
-            .webhook('GET', 'https://api.weather.com/v1/current?key=API_KEY&q=${enc:args.location}')
-            .output(FunctionResult('Weather in ${input.args.location}: ${current.condition.text}, ${current.temp_f}°F'))
+    Variable substitution patterns:
+
+    - ``${args.param}``: a function argument, in a webhook's url and params.
+    - ``${input.args.param}``: a function argument, in a webhook's output,
+      expressions and foreach.
+    - ``${enc:args.param}``: the argument, URL-encoded (for webhook URLs).
+    - ``${lc:args.param}``: the argument, lowercased.
+    - ``${fmt_ph:args.phone}``: the argument, formatted as a phone number.
+    - ``${field}`` and ``${arr[0]}``: a field or array element of the webhook
+      response, in a webhook's output only.
+    - ``${global_data.key}``: global session data.
+    - ``${meta_data.key}``: the function's metadata, set with
+      ``FunctionResult.set_metadata()``; ``${input.meta_data.key}`` in a
+      webhook's output.
+    - ``${this.field}``: the current item, inside a foreach.
+
+    The prefix helpers ``lc:``, ``enc:`` and ``fmt_ph:`` apply in a fixed
+    order, ``fmt_ph``, then ``lc``, then ``enc``, whatever order you write
+    them in: ``${lc:enc:args.city}`` lowercases the city and then
+    URL-encodes it. There is no ``enc:url:`` prefix.
+
+    Attributes:
+        function_name: Name of the SWAIG function this data_map creates.
+
+    Note:
+        A DataMap generates the SWML ``data_map`` object inside a SWAIG
+        function definition.
+
+    Example:
+        ```python
+        # A webhook, with a fallback output used when it fails
+        weather = (
+            DataMap("get_weather")
+            .purpose("Get current weather for a city")
+            .parameter("city", "string", "City name", required=True)
+            .webhook(
+                "GET",
+                "https://api.weatherapi.com/v1/current.json"
+                "?key=YOUR_API_KEY&q=${enc:args.city}",
+            )
+            .output(
+                FunctionResult(
+                    "Weather in ${input.args.city}: "
+                    "${current.condition.text}, ${current.temp_f} F"
+                )
+            )
+            .error_keys(["error"])
+            .fallback_output(
+                FunctionResult("Sorry, I couldn't get weather for ${args.city}")
+            )
+        )
+        agent.register_swaig_function(weather.to_swaig_function())
+
+        # Expression-based responses, with no API call
+        volume = (
+            DataMap("set_volume")
+            .purpose("Control audio volume")
+            .parameter("level", "string", "Volume level", required=True)
+            .expression(
+                "${args.level}", r"high|loud|up", FunctionResult("Volume up")
+            )
+            .expression(
+                "${args.level}", r"low|quiet|down", FunctionResult("Volume down")
+            )
         )
 
-        # A webhook with a fallback output, used when the webhook fails
-        data_map = (DataMap('search')
-            .purpose('Search the catalog')
-            .parameter('query', 'string', 'Search query', required=True)
-            .webhook('GET', 'https://api.example.com/search?q=${enc:args.query}')
-            .output(FunctionResult('Top result: ${title}'))
-            .error_keys(['error'])
-            .fallback_output(FunctionResult('Sorry, search is unavailable right now'))
+        # POST with a body and an array from the response
+        search = (
+            DataMap("search_docs")
+            .purpose("Search documentation")
+            .parameter("query", "string", "Search query", required=True)
+            .webhook(
+                "POST",
+                "https://api.docs.example.com/search",
+                headers={"Authorization": "Bearer TOKEN"},
+            )
+            .params({"query": "${args.query}", "limit": 3})
+            .foreach(
+                {
+                    "input_key": "results",
+                    "output_key": "formatted_results",
+                    "max": 3,
+                    "append": "- ${this.title}: ${this.summary}\\n",
+                }
+            )
+            .output(FunctionResult("Found:\\n${formatted_results}"))
         )
-
-        # Expression-based responses (no API calls)
-        data_map = (DataMap('file_control')
-            .purpose('Control file playback')
-            .parameter('command', 'string', 'Playback command')
-            .parameter('filename', 'string', 'File to control', required=False)
-            .expression('${args.command}', r'start.*', FunctionResult().add_action('start_playback', {'file': '${args.filename}'}))
-            .expression('${args.command}', r'stop.*', FunctionResult().add_action('stop_playback', True))
-        )
-
-        # API with array processing
-        data_map = (DataMap('search_docs')
-            .purpose('Search documentation')
-            .parameter('query', 'string', 'Search query', required=True)
-            .webhook('POST', 'https://api.docs.com/search', headers={'Authorization': 'Bearer TOKEN'})
-            .params({'query': '${args.query}', 'limit': 3})
-            .foreach({
-                'input_key': 'results',
-                'output_key': 'formatted_results',
-                'max': 3,
-                'append': 'Result: ${this.title} - ${this.summary}\n'
-            })
-            .output(FunctionResult('Found:\n${formatted_results}'))
-        )
+        ```
     """
 
     def __init__(self, function_name: str):
-        """
-        Initialize a new DataMap builder
+        """Initialize a new DataMap builder.
 
         Args:
-            function_name: Name of the SWAIG function this data_map will create
+            function_name: Name of the SWAIG function this data_map will create.
         """
         self.function_name = function_name
         self._purpose = ""
@@ -103,8 +154,7 @@ class DataMap:
         self._gate_fillers: FillerPhrases | None = None
 
     def purpose(self, description: str) -> "DataMap":
-        """
-        Set the function description that the LLM will read.
+        """Set the function description that the LLM will read.
 
         A DataMap creates a SWAIG function that gets sent to the model in
         OpenAI tool-schema format. This `description` field is what the
@@ -125,16 +175,21 @@ class DataMap:
                 and when to use it. See above.
 
         Returns:
-            Self for method chaining.
+            This DataMap, for chaining.
+
+        Example:
+            ```python
+            weather = DataMap("get_weather")
+            weather.purpose("Get the current weather for a given city")
+            ```
         """
         self._purpose = description
         return self
 
     def description(self, description: str) -> "DataMap":
-        """
-        Set the function description (alias for purpose).
+        """Set the function description (alias for `purpose`).
 
-        See purpose() for guidance on writing description text the LLM
+        See `purpose()` for guidance on writing description text the LLM
         can act on.
 
         Args:
@@ -142,7 +197,7 @@ class DataMap:
                 and when to use it.
 
         Returns:
-            Self for method chaining.
+            This DataMap, for chaining.
         """
         return self.purpose(description)
 
@@ -154,8 +209,7 @@ class DataMap:
         required: bool = False,
         enum: list[str] | None = None,
     ) -> "DataMap":
-        """
-        Add a function parameter.
+        """Add a function parameter to the tool definition.
 
         Just like the function-level `description`, this parameter
         `description` is sent to the LLM as part of the tool schema and
@@ -169,17 +223,31 @@ class DataMap:
         Args:
             name: Parameter name. Becomes a key in the tool schema's
                 `properties` object and is what the model emits.
-            param_type: JSON schema type (string, number, boolean, array,
-                object).
+            param_type: JSON schema type: "string", "integer", "number",
+                "boolean", "array" or "object".
             description: LLM-facing parameter description. See above —
                 this should tell the model what value to put here, in
                 what format, and where to source it.
-            required: Whether parameter is required.
+            required: Whether the parameter is required. Defaults to False.
             enum: Optional list of allowed values. The model will only
                 emit values from this list.
 
         Returns:
-            Self for method chaining.
+            This DataMap, for chaining.
+
+        Example:
+            ```python
+            weather = (
+                DataMap("get_weather")
+                .parameter("city", "string", "City name", required=True)
+                .parameter(
+                    "units",
+                    "string",
+                    "Temperature units",
+                    enum=["fahrenheit", "celsius"],
+                )
+            )
+            ```
         """
         param_def: dict[str, Any] = {"type": param_type, "description": description}
 
@@ -203,8 +271,9 @@ class DataMap:
         output: FunctionResult,
         nomatch_output: FunctionResult | None = None,
     ) -> "DataMap":
-        """
-        Add an expression pattern for pattern-based responses
+        """Add an expression pattern for pattern-based responses.
+
+        An expression answers without an API call.
 
         The platform expands ``test_value`` against the call data, where an
         argument is ``${args.command}``, and searches it for ``pattern``: a
@@ -216,13 +285,30 @@ class DataMap:
         one, so no expression after it runs.
 
         Args:
-            test_value: Template string to test (e.g., "${args.command}")
-            pattern: Regex pattern string or compiled Pattern object to match against
-            output: FunctionResult to return when pattern matches
-            nomatch_output: Optional FunctionResult to return when pattern doesn't match
+            test_value: Template string to test, such as ``"${args.command}"``.
+            pattern: Regex pattern string, or a compiled Pattern object whose
+                pattern text is used, to match against the test value.
+            output: `FunctionResult` to return when the pattern matches.
+            nomatch_output: Optional `FunctionResult` to return when the
+                pattern doesn't match.
 
         Returns:
-            Self for method chaining
+            This DataMap, for chaining.
+
+        Example:
+            ```python
+            volume = (
+                DataMap("set_volume")
+                .purpose("Control audio volume")
+                .parameter("level", "string", "Volume level", required=True)
+                .expression(
+                    "${args.level}", r"high|loud|up", FunctionResult("Volume up")
+                )
+                .expression(
+                    "${args.level}", r"mute|off", FunctionResult("Audio muted")
+                )
+            )
+            ```
         """
         pattern_str = pattern.pattern if isinstance(pattern, Pattern) else str(pattern)
 
@@ -247,8 +333,7 @@ class DataMap:
         input_args_as_params: bool = False,
         require_args: list[str] | None = None,
     ) -> "DataMap":
-        """
-        Add a webhook API call
+        """Add a webhook API call.
 
         The platform sends GET and POST requests only. A webhook is sent as a
         POST when ``method`` is ``"POST"`` or when it has params (see
@@ -261,19 +346,35 @@ class DataMap:
         earlier one fails.
 
         Args:
-            method: HTTP method: "GET" or "POST"
+            method: HTTP method: "GET" or "POST". The method is upper-cased.
             url: API endpoint URL. Templates in it are expanded against the
                 call data, such as ``${enc:args.location}``.
             headers: Optional HTTP headers, sent as written. The platform
                 doesn't expand templates in header values.
-            form_param: Send the JSON params as one form field with this name
+            form_param: Send the JSON params as one form field with this name.
             input_args_as_params: Merge the function's arguments into params,
-                which makes the request a POST
+                which makes the request a POST. Defaults to False.
             require_args: Skip this webhook, without a request, unless at
-                least one of these arguments is present
+                least one of these arguments is present.
 
         Returns:
-            Self for method chaining
+            This DataMap, for chaining.
+
+        Example:
+            ```python
+            weather = (
+                DataMap("get_weather")
+                .purpose("Get current weather for a city")
+                .parameter("city", "string", "City name", required=True)
+                .webhook(
+                    "GET",
+                    "https://api.weatherapi.com/v1/current.json"
+                    "?key=YOUR_API_KEY&q=${enc:args.city}",
+                    headers={"Accept": "application/json"},
+                )
+                .output(FunctionResult("Weather: ${current.condition.text}"))
+            )
+            ```
         """
         webhook_def: dict[str, Any] = {"url": url, "method": method.upper()}
 
@@ -290,19 +391,52 @@ class DataMap:
         return self
 
     def webhook_expressions(self, expressions: list[dict[str, Any]]) -> "DataMap":
-        """
-        Add expressions that run after the most recent webhook completes
+        """Add expressions that run after the most recent webhook completes.
 
-        They run after the webhook's foreach, against its response, and the
-        first one that produces an output replaces the webhook's own output.
+        They give conditional output based on the API response. They run
+        after the webhook's foreach, against its response, and the first one
+        that produces an output replaces the webhook's own output.
         Their templates read the response's fields from the root, and the
         call data under ``input``, such as ``${input.args.query}``.
 
         Args:
-            expressions: List of expression definitions to check post-webhook
+            expressions: List of expression definitions to check against the
+                webhook response. Each is a dict with ``string``, ``pattern``
+                and ``output`` keys, and an optional ``nomatch-output``.
 
         Returns:
-            Self for method chaining
+            This DataMap, for chaining.
+
+        Raises:
+            ValueError: If no webhook has been added yet.
+
+        Example:
+            ```python
+            status = (
+                DataMap("check_status")
+                .purpose("Check service status")
+                .parameter("service", "string", "Service name", required=True)
+                .webhook("GET", "https://api.example.com/status/${enc:args.service}")
+                .webhook_expressions(
+                    [
+                        {
+                            "string": "${status}",
+                            "pattern": "healthy",
+                            "output": {
+                                "response": "${input.args.service} is running."
+                            },
+                        },
+                        {
+                            "string": "${status}",
+                            "pattern": "degraded|down",
+                            "output": {
+                                "response": "${input.args.service} has issues."
+                            },
+                        },
+                    ]
+                )
+            )
+            ```
         """
         if not self._webhooks:
             raise ValueError("Must add webhook before setting webhook expressions")
@@ -311,17 +445,30 @@ class DataMap:
         return self
 
     def body(self, data: dict[str, Any]) -> "DataMap":
-        """
-        Set the JSON request body for the last added webhook; the same as params()
+        """Set the JSON request body for the last added webhook (same as `params`).
 
         The platform reads a webhook's body from its ``params`` field, and
-        has no ``body`` field, so this sets ``params``. See ``params()``.
+        has no ``body`` field, so this sets ``params``. See `params()`.
 
         Args:
-            data: Request body data (can include ${variable} substitutions)
+            data: Request body data. It can include ``${variable}``
+                substitutions.
 
         Returns:
-            Self for method chaining
+            This DataMap, for chaining.
+
+        Raises:
+            ValueError: If no webhook has been added yet.
+
+        Example:
+            ```python
+            search = (
+                DataMap("search_docs")
+                .parameter("query", "string", "Search query", required=True)
+                .webhook("POST", "https://api.docs.example.com/search")
+                .body({"query": "${args.query}", "limit": 3})
+            )
+            ```
         """
         if not self._webhooks:
             raise ValueError("Must add webhook before setting body")
@@ -330,8 +477,7 @@ class DataMap:
         return self
 
     def params(self, data: dict[str, Any]) -> "DataMap":
-        """
-        Set the JSON request body for the last added webhook
+        """Set the JSON request body for the last added webhook.
 
         The platform sends ``params`` as the request's JSON body, not as URL
         query parameters, so a webhook with params is sent as a POST whatever
@@ -339,10 +485,24 @@ class DataMap:
         values are expanded against the call data, such as ``${args.query}``.
 
         Args:
-            data: Request params data (can include ${variable} substitutions)
+            data: Request params data. It can include ``${variable}``
+                substitutions.
 
         Returns:
-            Self for method chaining
+            This DataMap, for chaining.
+
+        Raises:
+            ValueError: If no webhook has been added yet.
+
+        Example:
+            ```python
+            search = (
+                DataMap("search_docs")
+                .parameter("query", "string", "Search query", required=True)
+                .webhook("POST", "https://api.docs.example.com/search")
+                .params({"q": "${args.query}", "limit": 10})
+            )
+            ```
         """
         if not self._webhooks:
             raise ValueError("Must add webhook before setting params")
@@ -351,34 +511,51 @@ class DataMap:
         return self
 
     def foreach(self, foreach_config: dict[str, Any]) -> "DataMap":
-        """
-        Process an array from the webhook response using foreach mechanism
+        """Process an array from the webhook response, one item at a time.
+
+        It builds a formatted string from each element.
 
         The platform runs the foreach before the webhook's expressions and
         output, and stores the text it builds under ``output_key``, so the
         output reads it as ``${formatted_results}``.
 
         Args:
-            foreach_config: Either:
-                - Dict: Foreach configuration with keys:
-                    - input_key: Path to the array in the API response, such
-                      as ``results`` or ``data.items``
-                    - output_key: Name for the built string variable
-                    - max: Maximum number of items to process (optional)
-                    - append: Template string to append for each item, where
-                      ``${this}`` is the current item and ``${this.title}``
-                      its field; the rest of the response stays readable
+            foreach_config: Foreach configuration, a dict with these keys:
+
+                - ``input_key``: Path to the array in the API response, such
+                  as ``results`` or ``data.items``.
+                - ``output_key``: Name for the built string variable.
+                - ``max``: Maximum number of items to process (optional).
+                - ``append``: Template string to append for each item, where
+                  ``${this}`` is the current item and ``${this.title}``
+                  its field; the rest of the response stays readable.
 
         Returns:
-            Self for method chaining
+            This DataMap, for chaining.
+
+        Raises:
+            ValueError: If no webhook has been added yet, if
+                ``foreach_config`` isn't a dict, or if it lacks any of
+                ``input_key``, ``output_key`` and ``append``.
 
         Example:
-            .foreach({
-                "input_key": "results",
-                "output_key": "formatted_results",
-                "max": 3,
-                "append": "Result: ${this.title} - ${this.summary}\n"
-            })
+            ```python
+            search = (
+                DataMap("search_docs")
+                .parameter("query", "string", "Search query", required=True)
+                .webhook("POST", "https://api.docs.example.com/search")
+                .params({"query": "${args.query}", "limit": 3})
+                .foreach(
+                    {
+                        "input_key": "results",
+                        "output_key": "formatted_results",
+                        "max": 3,
+                        "append": "- ${this.title}: ${this.summary}\\n",
+                    }
+                )
+                .output(FunctionResult("Found:\\n${formatted_results}"))
+            )
+            ```
         """
         if not self._webhooks:
             raise ValueError("Must add webhook before setting foreach")
@@ -400,8 +577,10 @@ class DataMap:
         return self
 
     def output(self, result: FunctionResult) -> "DataMap":
-        """
-        Set the output result for the most recent webhook
+        """Set the output result for the most recent webhook.
+
+        Always set a `fallback_output` too, so the AI has something to say
+        when the API is unavailable.
 
         Its templates read the webhook's JSON response: an object's fields
         from the root, such as ``${current.temp_f}``, or ``${array[0].x}``
@@ -409,10 +588,22 @@ class DataMap:
         ``${input.args.location}``; ``${args.location}`` is empty here.
 
         Args:
-            result: FunctionResult defining the response for this webhook
+            result: `FunctionResult` defining the response for this webhook.
 
         Returns:
-            Self for method chaining
+            This DataMap, for chaining.
+
+        Raises:
+            ValueError: If no webhook has been added yet.
+
+        Example:
+            ```python
+            weather = (
+                DataMap("get_weather")
+                .webhook("GET", "https://api.weather.com/v1/current")
+                .output(FunctionResult("The weather is ${current.condition.text}."))
+            )
+            ```
         """
         if not self._webhooks:
             raise ValueError("Must add webhook before setting output")
@@ -421,8 +612,7 @@ class DataMap:
         return self
 
     def fallback_output(self, result: FunctionResult) -> "DataMap":
-        """
-        Set a fallback output result at the top level
+        """Set a fallback output result at the top level.
 
         The platform uses it when no top-level expression produced an output
         and the webhook stage produced no result: the webhook it requested
@@ -431,17 +621,30 @@ class DataMap:
         ``${args.location}``.
 
         Args:
-            result: FunctionResult defining the fallback response
+            result: `FunctionResult` defining the fallback response.
 
         Returns:
-            Self for method chaining
+            This DataMap, for chaining.
+
+        Example:
+            ```python
+            weather = (
+                DataMap("get_weather")
+                .webhook("GET", "https://api.weather.com/v1/current?q=${enc:args.city}")
+                .output(FunctionResult("Weather: ${current.condition.text}"))
+                .fallback_output(FunctionResult("The weather service is down."))
+            )
+            ```
         """
         self._output = result.to_dict()
         return self
 
     def error_keys(self, keys: list[str]) -> "DataMap":
-        """
-        Set error keys for the most recent webhook (if webhooks exist) or top-level
+        """Set error keys for the most recent webhook, or top-level if none exists.
+
+        If any of these keys appear in the API response, the response is
+        treated as an error. To always set keys at the top level, use
+        `global_error_keys()`.
 
         The webhook fails when its JSON response has any of these keys at the
         top level, whatever the value, even ``false`` or ``null``. An HTTP
@@ -452,10 +655,19 @@ class DataMap:
         top-level ``error_keys`` field, which the platform ignores.
 
         Args:
-            keys: List of JSON keys whose presence indicates an error
+            keys: List of JSON keys whose presence indicates an error.
 
         Returns:
-            Self for method chaining
+            This DataMap, for chaining.
+
+        Example:
+            ```python
+            api = (
+                DataMap("api_call")
+                .webhook("GET", "https://api.example.com/data")
+                .error_keys(["error", "error_message"])
+            )
+            ```
         """
         if self._webhooks:
             # Add to most recent webhook
@@ -466,67 +678,116 @@ class DataMap:
         return self
 
     def global_error_keys(self, keys: list[str]) -> "DataMap":
-        """
-        Set top-level error keys
+        """Set top-level error keys.
+
+        This sets them at the top-level data_map scope, whatever webhooks
+        exist.
 
         The platform ignores a top-level ``error_keys`` field: it checks only
         each webhook's own. Call ``error_keys()`` after the webhook instead.
 
         Args:
-            keys: List of JSON keys whose presence indicates an error
+            keys: List of JSON keys whose presence indicates an error.
 
         Returns:
-            Self for method chaining
+            This DataMap, for chaining.
         """
         self._error_keys = keys
         return self
 
     def gate(self, gate: SemanticGate | dict[str, Any]) -> "DataMap":
-        """
-        Add a semantic gate: a yes/no precondition a decision model checks
-        right before the platform runs this function
+        """Add a semantic gate, a precondition checked before the function runs.
+
+        A semantic gate is a yes/no question that a decision model answers
+        about the call right before the platform runs this function.
 
         Every gate must pass for the function to run. When one doesn't, the
         data_map doesn't run, and the model gets that gate's ``on_fail``
         output. Call once per gate, up to 8; gates are checked when the
-        function is built, by the platform's rules.
+        function is built, by the platform's rules: `to_swaig_function()`
+        raises ``ValueError`` for any gate the platform would refuse. To set
+        what the AI says during the check, use `gate_fillers()`.
 
         Args:
-            gate: A SemanticGate, or a gate dict
+            gate: A `SemanticGate`, or a gate dict in the platform's shape
+                (``question``, ``threshold``, ``on_fail``, and optional
+                ``id``, ``criteria`` and ``visual_input``).
 
         Returns:
-            Self for method chaining
+            This DataMap, for chaining.
+
+        Example:
+            ```python
+            from signalwire import DataMap, FunctionResult, SemanticGate
+
+            cancel_order = (
+                DataMap("cancel_order")
+                .purpose("Cancel one of the caller's open orders")
+                .parameter("order_id", "string", "The order number", required=True)
+                .gate(
+                    SemanticGate(
+                        "Has the caller asked to cancel the order?",
+                        threshold=0.9,
+                        on_fail="Not run. Ask which order to cancel.",
+                    )
+                )
+                .webhook("POST", "https://api.example.com/orders/${enc:args.order_id}")
+                .output(FunctionResult("The order is cancelled. Tell the caller."))
+            )
+            ```
         """
         self._gates.append(gate)
         return self
 
     def gate_fillers(self, fillers: FillerPhrases) -> "DataMap":
-        """
-        Set what the AI says while this function's gates are checked
+        """Set what the AI says while this function's gates are checked.
 
         Shaped like a function's fillers: phrases keyed by language code,
-        "auto" or "default". Without them, the AI says nothing while the
-        gates are checked. Only for a function with gates.
+        "auto" or "default". Without them, the function's own fillers start
+        when the model calls it, before the gates decide. Only for a function
+        with gates:
+        `to_swaig_function()` raises ``ValueError`` when gate fillers are set
+        and no `gate()` was added.
 
         Args:
-            fillers: Phrases by language
+            fillers: Phrases keyed by language code (``"en-US"``), ``"auto"``
+                or ``"default"``. Each entry is a phrase, or a list of
+                phrases spoken one at a time while the call waits.
 
         Returns:
-            Self for method chaining
+            This DataMap, for chaining.
+
+        Example:
+            ```python
+            dm.gate_fillers({"en-US": ["Let me check that.", "One moment."]})
+            ```
         """
         self._gate_fillers = fillers
         return self
 
     def to_swaig_function(self) -> dict[str, Any]:
-        """
-        Convert this DataMap to a SWAIG function definition
+        """Convert this DataMap to a SWAIG function definition.
+
+        Register the result with the agent using `register_swaig_function()`.
 
         Returns:
-            Dictionary with function definition and data_map instead of url
+            A dict with the function name, description, parameter schema and
+            ``data_map`` configuration (instead of a webhook URL).
 
         Raises:
             ValueError: For gates the platform would refuse, or gate fillers
-                without gates
+                without gates.
+
+        Example:
+            ```python
+            weather = (
+                DataMap("get_weather")
+                .parameter("city", "string", "City name", required=True)
+                .webhook("GET", "https://api.example.com/w?q=${enc:args.city}")
+                .output(FunctionResult("Weather: ${current.condition.text}"))
+            )
+            agent.register_swaig_function(weather.to_swaig_function())
+            ```
         """
         # Build parameter schema
         if self._parameters:
@@ -586,24 +847,48 @@ def create_simple_api_tool(
     body: dict[str, Any] | None = None,
     error_keys: list[str] | None = None,
 ) -> DataMap:
-    """
-    Create a simple API tool with minimal configuration
+    """Create a simple API tool with minimal configuration.
+
+    It builds a `DataMap` for a single-endpoint API call.
 
     Args:
-        name: Function name
+        name: Function name.
         url: API endpoint URL. Templates read the arguments as ``${args.x}``.
         response_template: Template for formatting the response. It reads the
             response's fields from the root, such as ``${current.temp_f}``, and
             the arguments as ``${input.args.x}``.
-        parameters: Optional parameter definitions
+        parameters: Optional parameter definitions. Keys are parameter names,
+            and values are dicts with ``"type"``, ``"description"`` and an
+            optional ``"required"`` key.
         method: HTTP method (default: GET). A webhook with a body is sent as a
             POST.
-        headers: Optional HTTP headers, sent as written
-        body: Optional JSON request body, set as the webhook's params
-        error_keys: Optional list of error indicator keys
+        headers: Optional HTTP headers, sent as written.
+        body: Optional JSON request body, set as the webhook's params.
+        error_keys: Optional list of error indicator keys.
 
     Returns:
-        Configured DataMap object
+        The configured `DataMap`, ready for more chaining or conversion.
+
+    Example:
+        ```python
+        from signalwire import create_simple_api_tool
+
+        weather = create_simple_api_tool(
+            name="get_weather",
+            url="https://api.weatherapi.com/v1/current.json?q=${enc:args.city}",
+            response_template="Weather in ${input.args.city}: "
+            "${current.condition.text}",
+            parameters={
+                "city": {
+                    "type": "string",
+                    "description": "City name",
+                    "required": True,
+                }
+            },
+            error_keys=["error"],
+        )
+        agent.register_swaig_function(weather.to_swaig_function())
+        ```
     """
     data_map = DataMap(name)
 
@@ -640,16 +925,34 @@ def create_expression_tool(
     patterns: dict[str, tuple[str, FunctionResult]],
     parameters: dict[str, dict[str, Any]] | None = None,
 ) -> DataMap:
-    """
-    Create an expression-based tool for pattern matching responses
+    """Create an expression-based tool for pattern matching responses.
+
+    It builds a `DataMap` that answers without an API call.
 
     Args:
-        name: Function name
-        patterns: Dictionary mapping test_values to (pattern, FunctionResult) tuples
-        parameters: Optional parameter definitions
+        name: Function name.
+        patterns: Dict mapping test values to ``(pattern, FunctionResult)``
+            tuples.
+        parameters: Optional parameter definitions, in the same format as
+            `create_simple_api_tool()`.
 
     Returns:
-        Configured DataMap object
+        The configured `DataMap`.
+
+    Example:
+        ```python
+        from signalwire import FunctionResult, create_expression_tool
+
+        greeting = create_expression_tool(
+            name="greet",
+            patterns={
+                "${args.language}": (r"spanish|espanol", FunctionResult("Hola!")),
+            },
+            parameters={
+                "language": {"type": "string", "description": "Language"}
+            },
+        )
+        ```
     """
     data_map = DataMap(name)
 

@@ -21,21 +21,40 @@ from signalwire.core.mixins._mixin_host import _HostTyped
 
 class AuthMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at runtime; AgentBase under TYPE_CHECKING — intentional split
     """
-    Mixin class containing all authentication-related methods for AgentBase
+    Mixin class containing all authentication-related methods for AgentBase.
     """
 
     def validate_basic_auth(self, username: str, password: str) -> bool:
-        """
-        Validate basic auth credentials
+        """Validate a username and password against the agent's Basic Auth credentials.
+
+        The comparison is constant-time (`hmac.compare_digest`), which guards
+        against timing attacks.
+
+        Note:
+            This method is an override point. A subclass can replace it with
+            custom authentication logic, such as a database lookup or an external
+            identity provider. The rest of the auth pipeline keeps calling it.
 
         Args:
-            username: Username from request
-            password: Password from request
+            username: Username from the request's `Authorization` header.
+            password: Password from the request's `Authorization` header.
 
         Returns:
-            True if valid, False otherwise
+            True if the credentials are valid, False otherwise. Returns False
+            when the agent has no credentials configured.
 
-        This method can be overridden by subclasses.
+        Example:
+            ```python
+            is_valid = agent.validate_basic_auth("admin", "secret123")
+            ```
+
+        Example:
+            ```python
+            class SecureAgent(AgentBase):
+                def validate_basic_auth(self, username: str, password: str) -> bool:
+                    # Look up credentials in an external user store.
+                    return username == "admin" and password == "secret123"
+            ```
         """
         exp_user, exp_pass = self._basic_auth
         if exp_user is None or exp_pass is None:
@@ -47,18 +66,35 @@ class AuthMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
     def get_basic_auth_credentials(
         self, include_source: bool = False
     ) -> tuple[str, str] | tuple[str, str, str]:
-        """
-        Get the basic auth credentials
+        """Get the username and password used for HTTP Basic Auth on this agent.
+
+        Credentials are auto-generated unless the `SWML_BASIC_AUTH_USER` and
+        `SWML_BASIC_AUTH_PASSWORD` environment variables are set.
 
         Args:
-            include_source: Whether to include the source of the credentials
+            include_source: When True, the returned tuple has a third element
+                naming where the credentials came from: `"provided"` (set
+                explicitly), `"environment"` (the `SWML_BASIC_AUTH_USER` and
+                `SWML_BASIC_AUTH_PASSWORD` variables), `"config file"`, or
+                `"generated"` (auto-generated at startup). Defaults to False.
 
         Returns:
-            If include_source is False:
-                (username, password) tuple
-            If include_source is True:
-                (username, password, source) tuple, where source is one of:
-                "provided", "environment", "config file", or "generated"
+            `(username, password)` when `include_source` is False, or
+            `(username, password, source)` when it is True.
+
+        Example:
+            ```python
+            user, password = agent.get_basic_auth_credentials()
+            ```
+
+        Example:
+            ```python
+            user, password, source = agent.get_basic_auth_credentials(
+                include_source=True
+            )
+            if source == "generated":
+                print(f"Auto-generated credentials: {user}:{password}")
+            ```
         """
         username, password = self._basic_auth
 
