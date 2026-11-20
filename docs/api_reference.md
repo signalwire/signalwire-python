@@ -356,6 +356,12 @@ agent.add_language(
 )
 ```
 
+##### `set_agent_voice(voice: str | List[str] | None) -> AgentBase`
+Set the agent's own voice, the AI verb's `voice`, for a language that has none of its own: one voice as `engine.voice:model`, or a list of up to 8, the first speaking and the rest its fallbacks. None clears it.
+
+##### `set_fallback_voice(voice: str | List[str] | None) -> AgentBase`
+Set the voices tried once every voice of a language, or the agent's, has failed, before the platform's own last resort: the AI verb's `fallback_voice`, one voice or a list of up to 8. None clears it.
+
 ##### `set_default_voice(voice: str | List[str] | Dict[str, str | List[str]] | None) -> AgentBase`
 Set the voice for every voice the agent leaves out: its own, a language's with no voice, a multilingual language's with no voice. The SWML variable `default_voice` is set just before the AI verb, and a voice the agent sets itself wins.
 

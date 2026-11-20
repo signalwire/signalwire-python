@@ -1817,6 +1817,15 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         if agent_to_use._multilingual and "multilingual" not in ai_config:
             ai_config["multilingual"] = agent_to_use._multilingual
 
+        if agent_to_use._ai_voice is not None and "voice" not in ai_config:
+            ai_config["voice"] = agent_to_use._ai_voice
+
+        if (
+            agent_to_use._ai_fallback_voice is not None
+            and "fallback_voice" not in ai_config
+        ):
+            ai_config["fallback_voice"] = agent_to_use._ai_fallback_voice
+
         if agent_to_use._pronounce and "pronounce" not in ai_config:
             ai_config["pronounce"] = agent_to_use._pronounce
 
@@ -2165,7 +2174,8 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         copies, and those -- and only those -- are safe to mutate from a
         per-request callback:
 
-            _params, _hints, _languages, _multilingual, _default_voice, _pronounce,
+            _params, _hints, _languages, _multilingual, _default_voice, _ai_voice,
+            _ai_fallback_voice, _pronounce,
             _global_data, _function_includes, _routing_callbacks,
             _pre_answer_verbs, _answer_config, _post_answer_verbs,
             _post_ai_verbs, _prompt_llm_params, _post_prompt_llm_params,
@@ -2236,6 +2246,8 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         ephemeral_agent._languages = copy.deepcopy(self._languages)
         ephemeral_agent._multilingual = copy.deepcopy(self._multilingual)
         ephemeral_agent._default_voice = copy.deepcopy(self._default_voice)
+        ephemeral_agent._ai_voice = copy.deepcopy(self._ai_voice)
+        ephemeral_agent._ai_fallback_voice = copy.deepcopy(self._ai_fallback_voice)
         ephemeral_agent._pronounce = copy.deepcopy(self._pronounce)
         ephemeral_agent._global_data = copy.deepcopy(self._global_data)
         ephemeral_agent._function_includes = copy.deepcopy(self._function_includes)

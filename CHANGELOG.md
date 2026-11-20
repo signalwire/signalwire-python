@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.15.0] - 2026-11-21
+
+### Added
+- `set_agent_voice()` sets the agent's own voice (the AI verb's `voice`),
+  for a language with none of its own, and `set_fallback_voice()` the
+  voices tried once a language's or the agent's have all failed, before
+  the platform's own last resort (`fallback_voice`). Each takes one voice
+  or a list of up to 8.
+
 ## [3.14.0] - 2026-11-21
 
 ### Added

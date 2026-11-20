@@ -1248,6 +1248,13 @@ self.add_language(
 )
 ```
 
+`set_agent_voice()` sets the agent's own voice, for a language with none of its own, and `set_fallback_voice()` the voices tried once a language's or the agent's have all failed, before the platform's own last resort. Each takes one voice or a list of up to 8.
+
+```python
+self.set_agent_voice(["elevenlabs.rachel:eleven_turbo_v2_5", "rime.spore"])
+self.set_fallback_voice("gcloud.en-US-Neural2-C")
+```
+
 `set_default_voice()` gives a voice to every language that has none: one voice, a list, or a mapping of language codes to either, with a `"default"` entry for the rest. A language matches by its exact code, then its base language (`es` for `es-MX`), then `default`. With no multilingual languages of its own, the mapping's languages become them. A voice the agent gives a language itself wins.
 
 ```python
