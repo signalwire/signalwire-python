@@ -248,6 +248,10 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
         """
         Set the agent's voice, for a language that has none of its own.
 
+        The platform takes a list here from its release after 2026-11-21; a
+        platform without it refuses the AI verb, so the call doesn't run. One
+        voice as a string works everywhere.
+
         Args:
             voice: One voice as ``engine.voice:model``, or a list of up to 8,
                 the first speaking and the rest its fallbacks, tried in order
@@ -263,6 +267,10 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
         """
         Set the voices tried when every voice of a language, or the agent's,
         has failed, before the platform's own last resort.
+
+        The platform takes ``fallback_voice`` from its release after
+        2026-11-21; a platform without it refuses the AI verb, so the call
+        doesn't run.
 
         Args:
             voice: One voice as ``engine.voice:model``, or a list of up to 8,
