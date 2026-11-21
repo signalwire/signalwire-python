@@ -21,6 +21,7 @@ reference/
   gen.sh              installs the SDK editable, generates the API pages, builds
   dev-server.sh       generates the pages, then serves them with live reload
   overrides/main.html extends Material's base.html; injects the Fern navbar
+  templates/          mkdocstrings template overrides (a TypedDict renders its fields as one table)
   assets/             Fern tokens/CSS/JS + logo/favicon (committed; no shared host yet)
   _docs/              GENERATED docs tree (one page per public module, see below) [gitignored]
   _site/              local `mkdocs build` output                                  [gitignored]
