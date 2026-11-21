@@ -1462,7 +1462,7 @@ class AIParams(TypedDict, total=False):
     asr_diarize: bool | SWMLVar
     asr_speaker_affinity: bool | SWMLVar
     background_file: str
-    background_file_loops: int | None | SWMLVar
+    background_file_loops: int | SWMLVar | None
     background_file_volume: int | SWMLVar
     enable_barge: str | bool | SWMLVar
     enable_inner_dialog: bool | SWMLVar
@@ -4295,7 +4295,7 @@ class _SwmlVerbs:
         """
         raise NotImplementedError  # installed dynamically at runtime
 
-    def cond(self: _Self, config: Mapping[str, Any] | None = None) -> _Self:
+    def cond(self: _Self, config: list[CondParams] | None = None) -> _Self:
         """Execute a sequence of instructions depending on the value of a JavaScript condition.
 
         Args:
@@ -4588,7 +4588,7 @@ class _SwmlVerbs:
         """
         raise NotImplementedError  # installed dynamically at runtime
 
-    def return_(self: _Self, config: Mapping[str, Any] | None = None) -> _Self:
+    def return_(self: _Self, config: Any = None) -> _Self:
         """Return a value from an execute call or exit the script.
 
         The value can be any type.
@@ -4635,7 +4635,9 @@ class _SwmlVerbs:
         """
         raise NotImplementedError  # installed dynamically at runtime
 
-    def send_sms(self: _Self, config: Mapping[str, Any] | None = None) -> _Self:
+    def send_sms(
+        self: _Self, config: SMSWithBody | SMSWithMedia | None = None
+    ) -> _Self:
         """Send an outbound SMS or MMS message to a PSTN phone number.
 
         Args:
@@ -4668,7 +4670,9 @@ class _SwmlVerbs:
         """
         raise NotImplementedError  # installed dynamically at runtime
 
-    def sleep(self: _Self, config: Mapping[str, Any] | None = None) -> _Self:
+    def sleep(
+        self: _Self, config: dict[str, Any] | int | SWMLVar | None = None
+    ) -> _Self:
         """Pause execution for a specified duration.
 
         Args:
@@ -4795,7 +4799,7 @@ class _SwmlVerbs:
         """
         raise NotImplementedError  # installed dynamically at runtime
 
-    def unset(self: _Self, config: Mapping[str, Any] | None = None) -> _Self:
+    def unset(self: _Self, config: str | list[str] | None = None) -> _Self:
         """Unset specified variables.
 
         The variables may have been set using the set method or as a byproduct of other
