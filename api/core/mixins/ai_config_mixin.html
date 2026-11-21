@@ -2704,6 +2704,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.core.mixins.ai_config_mixin.AIConfigMixin.set_agent_voice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        set_agent_voice
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signalwire.core.mixins.ai_config_mixin.AIConfigMixin.set_fallback_voice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        set_fallback_voice
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.core.mixins.ai_config_mixin.AIConfigMixin.set_default_voice" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -8852,6 +8874,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.core.mixins.ai_config_mixin.AIConfigMixin.set_agent_voice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        set_agent_voice
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signalwire.core.mixins.ai_config_mixin.AIConfigMixin.set_fallback_voice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        set_fallback_voice
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.core.mixins.ai_config_mixin.AIConfigMixin.set_default_voice" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -9865,6 +9909,160 @@ loader). Returns self for chaining.</p>
             <td>
               <div class="doc-md-description">
                 <p>List of language configuration dictionaries</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="AgentBase (signalwire.core.agent_base.AgentBase)" href="../agent_base.html#signalwire.core.agent_base.AgentBase">AgentBase</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Self for method chaining</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="signalwire.core.mixins.ai_config_mixin.AIConfigMixin.set_agent_voice" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">set_agent_voice</span><span class="p">(</span><span class="n">voice</span><span class="p">)</span></code>
+
+<a href="#signalwire.core.mixins.ai_config_mixin.AIConfigMixin.set_agent_voice" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Set the agent's voice, for a language that has none of its own.</p>
+<p>The platform takes a list here from its release after 2026-11-21; a
+platform without it refuses the AI verb, so the call doesn't run. One
+voice as a string works everywhere.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>voice</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | <span title="collections.abc.Sequence">Sequence</span>[<span title="str">str</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>One voice as <code>engine.voice:model</code>, or a list of up to 8,
+the first speaking and the rest its fallbacks, tried in order
+when it fails. None clears it.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="AgentBase (signalwire.core.agent_base.AgentBase)" href="../agent_base.html#signalwire.core.agent_base.AgentBase">AgentBase</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Self for method chaining</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="signalwire.core.mixins.ai_config_mixin.AIConfigMixin.set_fallback_voice" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">set_fallback_voice</span><span class="p">(</span><span class="n">voice</span><span class="p">)</span></code>
+
+<a href="#signalwire.core.mixins.ai_config_mixin.AIConfigMixin.set_fallback_voice" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Set the voices tried when every voice of a language, or the agent's,
+has failed, before the platform's own last resort.</p>
+<p>The platform takes <code>fallback_voice</code> from its release after
+2026-11-21; a platform without it refuses the AI verb, so the call
+doesn't run.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>voice</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | <span title="collections.abc.Sequence">Sequence</span>[<span title="str">str</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>One voice as <code>engine.voice:model</code>, or a list of up to 8,
+tried in order. None clears it.</p>
               </div>
             </td>
             <td>
