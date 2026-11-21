@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.13.1] - 2026-11-21
+
+### Added
+- `SwaigRequest` types `tool_call_id`, the id of the model's tool call that
+  a SWAIG request carries, the same on a request the platform sends again.
+
 ## [3.13.0] - 2026-11-20
 
 ### Added

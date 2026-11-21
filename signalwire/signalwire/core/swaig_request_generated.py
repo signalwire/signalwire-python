@@ -47,4 +47,5 @@ class SwaigRequest(TypedDict, total=False):
     project_id: str
     raw_call_log: list[Any]
     space_id: str
+    tool_call_id: str
     version: Literal["2.0"]
