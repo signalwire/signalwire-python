@@ -1827,6 +1827,9 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
             ai_config["global_data"] = agent_to_use._global_data
 
         # ========== PHASE 4: AI VERB ==========
+        # The default voice, a SWML variable the ai verb reads, set just before it
+        if agent_to_use._default_voice is not None:
+            agent_to_use.add_verb("set", {"default_voice": agent_to_use._default_voice})
         # Add the AI verb to the document
         agent_to_use.add_verb("ai", ai_config)
 
@@ -1874,7 +1877,11 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
             for verb_name, verb_config in agent_to_use._post_answer_verbs:
                 agent_to_use.add_verb(verb_name, verb_config)
 
-            # PHASE 4: AI verb
+            # PHASE 4: AI verb, after the default voice it reads
+            if agent_to_use._default_voice is not None:
+                agent_to_use.add_verb(
+                    "set", {"default_voice": agent_to_use._default_voice}
+                )
             agent_to_use.add_verb("ai", ai_config)
 
             # PHASE 5: Post-AI verbs
@@ -2158,7 +2165,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         copies, and those -- and only those -- are safe to mutate from a
         per-request callback:
 
-            _params, _hints, _languages, _multilingual, _pronounce,
+            _params, _hints, _languages, _multilingual, _default_voice, _pronounce,
             _global_data, _function_includes, _routing_callbacks,
             _pre_answer_verbs, _answer_config, _post_answer_verbs,
             _post_ai_verbs, _prompt_llm_params, _post_prompt_llm_params,
@@ -2228,6 +2235,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         ephemeral_agent._hints = copy.deepcopy(self._hints)
         ephemeral_agent._languages = copy.deepcopy(self._languages)
         ephemeral_agent._multilingual = copy.deepcopy(self._multilingual)
+        ephemeral_agent._default_voice = copy.deepcopy(self._default_voice)
         ephemeral_agent._pronounce = copy.deepcopy(self._pronounce)
         ephemeral_agent._global_data = copy.deepcopy(self._global_data)
         ephemeral_agent._function_includes = copy.deepcopy(self._function_includes)

@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -44,7 +45,11 @@ NATIVE_ONLY_PREFIXES = ("signalwire.livewire",)
 
 
 def _resolve_porting_sdk() -> Path:
-    for cand in (REPO.parent / "porting-sdk", REPO / "porting-sdk"):
+    # PORTING_SDK first, as run-ci.sh resolves it, so the sidecar and the
+    # surface it complements come from the same porting-sdk
+    env = os.environ.get("PORTING_SDK")
+    candidates = [Path(env)] if env else []
+    for cand in (*candidates, REPO.parent / "porting-sdk", REPO / "porting-sdk"):
         if (cand / "scripts" / "enumerate_python.py").is_file():
             return cand
     raise SystemExit(
@@ -60,7 +65,7 @@ def main(argv: list[str]) -> int:
 
     psdk = _resolve_porting_sdk()
     sys.path.insert(0, str(psdk / "scripts"))
-    import enumerate_python as ep  # noqa: E402  (path set above)
+    import enumerate_python as ep
 
     # ``enumerate_module`` short-circuits on ``_module_excluded`` and returns an empty
     # entry — which is the whole point of the oracle exclusion and exactly what we need

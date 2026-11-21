@@ -1,0 +1,360 @@
+"""
+Copyright (c) 2025 SignalWire
+
+This file is part of the SignalWire SDK.
+
+Licensed under the MIT License.
+See LICENSE file in the project root for full license information.
+
+InfoBotKnowledge: a read/inform layer that installs on its own, composes beside
+Operations on one agent, and governs its search results.
+"""
+
+from __future__ import annotations
+
+import asyncio
+
+from typing import Any
+
+import pytest
+
+from signalwire import AgentBase
+from signalwire.core.swaig_function import SWAIGFunction
+from signalwire.operations import Change, Field, Operation, Operations
+from signalwire.operations.infobot import InfoBotKnowledge
+
+
+def _main_step(agent: AgentBase) -> dict[str, Any]:
+    contexts = agent.define_contexts().to_dict()
+    return next(s for s in contexts["default"]["steps"] if s["name"] == "main")
+
+
+def test_knowledge_installs_standalone() -> None:
+    agent = AgentBase(name="kb", route="/kb", suppress_logs=True)
+    InfoBotKnowledge(search=lambda q: []).install(agent)
+
+    main = _main_step(agent)
+    assert "search_knowledge" in main["functions"]
+    assert "search_knowledge" in main["text"]
+    assert "conscience" not in agent._params, "search keeps no record, so it adds no conscience line"
+
+
+def test_knowledge_composes_beside_operations() -> None:
+    agent = AgentBase(name="both", route="/both", suppress_logs=True)
+    InfoBotKnowledge(search=lambda q: []).install(agent)
+
+    ops = Operations(role="You help customers.")
+    ops.writes_with(lambda call, w: None)
+
+    @ops.operation(tool="cancel_order")
+    class Cancel(Operation):
+        """Cancel an order."""
+
+        def prepare(self, call: Any, f: Any) -> Change:
+            return Change(read_back="Cancel it. Shall I?")
+
+    ops.install(agent)
+
+    main = _main_step(agent)
+    assert "search_knowledge" in main["functions"]
+    assert "cancel_order" in main["functions"]
+    assert "cancel_order" in main["text"]
+    assert agent._params["conscience"] == "${global_data.ops.now}"
+
+
+def test_blank_query_asks_rather_than_searches() -> None:
+    seen: list[str] = []
+
+    def search(q: str) -> list[dict[str, Any]]:
+        seen.append(q)
+        return [{"content": "x", "score": 1.0}]
+
+    kb = InfoBotKnowledge(search=search)
+    result = kb._handle_search({"query": "  "}, {})
+    assert "no query" in str(result.response).lower()
+    assert seen == []
+
+
+def test_governance_excludes_demotes_ranks_and_labels() -> None:
+    def search(q: str) -> list[dict[str, Any]]:
+        return [
+            {"content": "low", "score": 0.4, "kind": "keep"},
+            {"content": "high", "score": 0.9, "kind": "keep"},
+            {"content": "commentary", "score": 0.95, "kind": "demote"},
+            {"content": "spam", "score": 0.99, "kind": "drop"},
+        ]
+
+    kb = InfoBotKnowledge(search=search)
+    kb.set_exclude(lambda r, q: r["kind"] == "drop")
+    kb.set_demote(lambda r: r["kind"] == "demote")
+    kb.set_result_context(lambda r: f"[{r['kind']}]")
+
+    blob = str(kb._handle_search({"query": "anything"}, {}).response)
+    assert "spam" not in blob  # excluded before the cut
+    assert blob.index("high") < blob.index("low")  # higher score first
+    assert blob.index("low") < blob.index("commentary")  # demoted ranks last
+    assert "[keep]" in blob  # context labels present
+    assert blob.startswith(kb._grounding)  # grounding leads
+
+
+def test_governance_limits_and_empty_case() -> None:
+    def search(q: str) -> list[dict[str, Any]]:
+        return [{"content": f"r{i}", "score": i / 10} for i in range(10)]
+
+    blob = str(
+        InfoBotKnowledge(search=search, result_limit=3)
+        ._handle_search({"query": "q"}, {})
+        .response
+    )
+    assert "r9" in blob and "r8" in blob and "r7" in blob  # top 3 by score
+    assert "r6" not in blob  # cut by the limit
+
+    empty = InfoBotKnowledge(search=lambda q: [])
+    assert (
+        "do not cover it"
+        in str(empty._handle_search({"query": "q"}, {}).response).lower()
+    )
+
+
+def test_contact_tool_offered_only_when_enabled() -> None:
+    bare = AgentBase(name="a", route="/a", suppress_logs=True)
+    InfoBotKnowledge(search=lambda q: []).install(bare)
+    assert "collect_contact" not in _main_step(bare)["functions"]
+
+    withc = AgentBase(name="b", route="/b", suppress_logs=True)
+    InfoBotKnowledge(search=lambda q: [], contact=lambda f: None).install(withc)
+    assert "collect_contact" in _main_step(withc)["functions"]
+
+
+def test_contact_records_and_confirms() -> None:
+    captured: list[dict[str, Any]] = []
+    kb = InfoBotKnowledge(search=lambda q: [], contact=captured.append)
+    result = kb._handle_contact(
+        {"name": "Ann", "email": "ann@example.com", "topic": "pricing"}, {}
+    )
+    assert captured == [{"name": "Ann", "email": "ann@example.com", "topic": "pricing"}]
+    assert "follow up" in str(result.response).lower()
+
+
+def test_contact_requires_email() -> None:
+    captured: list[dict[str, Any]] = []
+    kb = InfoBotKnowledge(search=lambda q: [], contact=captured.append)
+    result = kb._handle_contact({"name": "Ann"}, {})
+    assert "email" in str(result.response).lower()
+    assert captured == []
+
+
+def test_rules_fire_by_condition() -> None:
+    def search(q: str) -> list[dict[str, Any]]:
+        return [{"content": "hit", "score": 1.0}] if q == "has" else []
+
+    kb = InfoBotKnowledge(search=search)
+    kb.add_rule("ALWAYS", when="always")
+    kb.add_rule("RESULTS", when="results")
+    kb.add_rule("EMPTY", when="empty")
+
+    with_results = str(kb._handle_search({"query": "has"}, {}).response)
+    assert "ALWAYS" in with_results and "RESULTS" in with_results
+    assert "EMPTY" not in with_results
+
+    none = str(kb._handle_search({"query": "none"}, {}).response)
+    assert "ALWAYS" in none and "EMPTY" in none
+    assert "RESULTS" not in none
+
+
+def test_result_rule_fires_on_content() -> None:
+    def search(q: str) -> list[dict[str, Any]]:
+        return [{"content": q, "score": 1.0}]
+
+    kb = InfoBotKnowledge(search=search)
+    kb.add_result_rule(
+        lambda query, rs: any("code" in str(r["content"]) for r in rs), "SAW CODE"
+    )
+    assert "SAW CODE" in str(kb._handle_search({"query": "show code"}, {}).response)
+    assert "SAW CODE" not in str(kb._handle_search({"query": "pricing"}, {}).response)
+
+
+def test_query_type_qualifies_the_search_not_the_grounding() -> None:
+    searched: list[str] = []
+
+    def search(q: str) -> list[dict[str, Any]]:
+        searched.append(q)
+        return [{"content": "x", "score": 1.0}]
+
+    kb = InfoBotKnowledge(search=search)
+    kb.add_query_type("code", "code example").set_query_type_help("pick code for code")
+
+    kb._handle_search({"query": "send a fax", "query_type": "code"}, {})
+    assert searched == ["send a fax code example"]  # qualifier aids retrieval
+    kb._handle_search({"query": "pricing"}, {})
+    assert searched[-1] == "pricing"  # no query_type -> bare query
+    kb._handle_search({"query": "pricing", "query_type": "nope"}, {})
+    assert searched[-1] == "pricing"  # unknown type ignored
+
+
+def test_use_search_service_posts_and_parses(monkeypatch: pytest.MonkeyPatch) -> None:
+    import requests
+
+    captured: dict[str, Any] = {}
+
+    class FakeResp:
+        def raise_for_status(self) -> None:
+            pass
+
+        def json(self) -> dict[str, Any]:
+            return {"results": [{"content": "hit", "score": 0.9}]}
+
+    def fake_post(endpoint: str, **kw: Any) -> FakeResp:
+        captured.update(endpoint=endpoint, json=kw.get("json"), auth=kw.get("auth"))
+        return FakeResp()
+
+    monkeypatch.setattr(requests, "post", fake_post)
+    kb = InfoBotKnowledge().use_search_service(
+        "http://svc:8001",
+        user="u",
+        password="p",  # noqa: S106 - test placeholder, not a real credential
+        index_name="idx",
+        count=7,
+    )
+    blob = str(kb._handle_search({"query": "fax"}, {}).response)
+    assert "hit" in blob
+    assert captured["endpoint"] == "http://svc:8001/search"
+    assert captured["json"] == {"query": "fax", "index_name": "idx", "count": 7}
+    assert captured["auth"] == ("u", "p")
+
+
+def test_missing_backend_fails_fast() -> None:
+    agent = AgentBase(name="nb", route="/nb", suppress_logs=True)
+    with pytest.raises(ValueError, match="search backend"):
+        InfoBotKnowledge().install(agent)
+
+
+def test_authority_ranks_before_score() -> None:
+    def search(q: str) -> list[dict[str, Any]]:
+        return [
+            {"content": "low-auth-high-score", "score": 0.9, "auth": 1},
+            {"content": "high-auth-low-score", "score": 0.4, "auth": 5},
+        ]
+
+    kb = InfoBotKnowledge(search=search)
+    kb.set_authority(lambda r: r["auth"])
+    blob = str(kb._handle_search({"query": "q"}, {}).response)
+    assert blob.index("high-auth-low-score") < blob.index("low-auth-high-score")
+
+
+def test_query_transform_rewrites_the_search_not_the_grounding() -> None:
+    searched: list[str] = []
+
+    def search(q: str) -> list[dict[str, Any]]:
+        searched.append(q)
+        return [{"content": "x", "score": 1.0}]
+
+    kb = InfoBotKnowledge(search=search)
+    kb.set_query_transform(lambda q: q.replace("fax", "send_fax"))
+    kb._handle_search({"query": "how to fax"}, {})
+    assert searched == ["how to send_fax"]
+
+
+def test_fallback_used_only_when_empty() -> None:
+    kb = InfoBotKnowledge(search=lambda q: [])
+    kb.set_fallback(lambda q: f"web says: {q}")
+    blob = str(kb._handle_search({"query": "obscure"}, {}).response)
+    assert "web says: obscure" in blob
+    assert "do not cover it" not in blob.lower()
+
+    kb.set_fallback(lambda q: None)  # no fallback text -> the not-covered line
+    assert (
+        "do not cover it" in str(kb._handle_search({"query": "x"}, {}).response).lower()
+    )
+
+
+def test_expander_transforms_kept_results() -> None:
+    def search(q: str) -> list[dict[str, Any]]:
+        return [{"content": "short", "score": 1.0}]
+
+    kb = InfoBotKnowledge(search=search)
+    kb.set_expander(
+        lambda results: [
+            {**r, "content": r["content"] + " (expanded)"} for r in results
+        ]
+    )
+    assert "short (expanded)" in str(kb._handle_search({"query": "q"}, {}).response)
+
+
+def _ops_with_cancel() -> Operations:
+    ops = Operations(role="You help customers.")
+    ops.writes_with(lambda call, w: None)
+
+    @ops.operation(tool="cancel_order")
+    class Cancel(Operation):
+        """Cancel an order."""
+
+        def prepare(self, call: Any, f: Any) -> Change:
+            return Change(read_back="Cancel it. Shall I?")
+
+    return ops
+
+
+def test_knowledge_installs_after_operations_too() -> None:
+    agent = AgentBase(name="later", route="/later", suppress_logs=True)
+    _ops_with_cancel().install(agent)
+    InfoBotKnowledge(search=lambda q: [], contact=lambda f: None).install(agent)
+    main = _main_step(agent)
+    assert {"cancel_order", "search_knowledge", "collect_contact"} <= set(main["functions"])
+    assert "cancel_order" in main["text"] and "from search_knowledge, not memory" in main["text"]
+
+
+def test_knowledge_goes_in_the_step_named() -> None:
+    agent = AgentBase(name="faq", route="/faq", suppress_logs=True)
+    InfoBotKnowledge(search=lambda q: [], step="answers").install(agent)
+    steps = agent.define_contexts().to_dict()["default"]["steps"]
+    assert [s["name"] for s in steps] == ["answers"] and steps[0]["functions"] == ["search_knowledge"]
+
+
+def test_contact_takes_any_one_of_its_field_sets() -> None:
+    took: list[dict[str, Any]] = []
+    kb = InfoBotKnowledge(
+        search=lambda q: [],
+        contact=took.append,
+        contact_fields={
+            "name": Field(str, "The caller's name.", required=False),
+            "email": Field(str, "An email address."),
+            "phone": Field(str, "A phone number to call back.", ask="Ask for a number to call them back on."),
+        },
+        contact_any_of=[["email"], ["phone"]],
+    )
+    agent = AgentBase(name="cb", route="/cb", suppress_logs=True)
+    kb.install(agent)
+    tool = agent._tool_registry._swaig_functions["collect_contact"]
+    assert isinstance(tool, SWAIGFunction)
+    fn = tool.to_swaig(base_url="http://x")
+    assert "required" not in fn["parameters"] or not fn["parameters"]["required"]
+    asked = kb._handle_contact({"name": "Ann"}, None).to_dict()["response"]
+    assert asked == "Ask them for email or phone."
+    done = kb._handle_contact({"phone": "555"}, None).to_dict()["response"]
+    assert done.startswith("Thanks") and took == [{"name": "", "email": "", "phone": "555"}]
+    with pytest.raises(ValueError, match="fax"):
+        InfoBotKnowledge(search=lambda q: [], contact_any_of=[["fax"]])
+
+
+def test_one_contact_set_asks_with_each_fields_own_words() -> None:
+    kb = InfoBotKnowledge(search=lambda q: [], contact=lambda f: None)
+    assert kb._handle_contact({}, None).to_dict()["response"] == "Ask them for an email address to reach them at."
+
+
+def test_an_async_search_is_awaited() -> None:
+    async def search(q: str) -> list[dict[str, Any]]:
+        return [{"content": f"about {q}", "score": 1.0}]
+
+    kb = InfoBotKnowledge(search=search)
+    agent = AgentBase(name="as", route="/as", suppress_logs=True)
+    kb.install(agent)
+    out = asyncio.run(kb._handle_search_async({"query": "hours"}, None))
+    assert "about hours" in out.to_dict()["response"]
+
+
+def test_knowledge_wording_overrides_its_words() -> None:
+    kb = InfoBotKnowledge(search=lambda q: [], wording={"search.not_covered": "No lo cubren."})
+    assert kb._format("q", []).endswith("No lo cubren.")
+    with pytest.raises(ValueError, match="KNOWLEDGE_WORDING"):
+        InfoBotKnowledge(search=lambda q: [], wording={"nope": "x"})

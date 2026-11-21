@@ -1236,6 +1236,26 @@ self.add_language(
 )
 ```
 
+### Fallback Voices
+
+A voice can be a list of up to 8 voices in the combined `engine.voice:model` form. The first speaks; the rest are its fallbacks, tried in order when it fails, then the platform's own last resort. A list is sent as it is, so it takes no `engine` or `model`. `FunctionResult.change_voice()` takes a list too, and so does each voice of `set_multilingual()`'s languages.
+
+```python
+self.add_language(
+    name="English",
+    code="en-US",
+    voice=["elevenlabs.rachel:eleven_turbo_v2_5", "rime.spore", "gcloud.en-US-Neural2-F"],
+)
+```
+
+`set_default_voice()` gives a voice to every language that has none: one voice, a list, or a mapping of language codes to either, with a `"default"` entry for the rest. A language matches by its exact code, then its base language (`es` for `es-MX`), then `default`. With no multilingual languages of its own, the mapping's languages become them. A voice the agent gives a language itself wins.
+
+```python
+self.set_default_voice({"es": "elevenlabs.lucia", "default": ["rime.spore", "gcloud.en-US-Neural2-F"]})
+```
+
+When a voice fails on a call, RELAY's `calling.error` event (`CallingErrorEvent`) says which voice failed and why (`error_reason`), and which took over: `fallback_index` is its place in the list, 0 being the voice that was speaking, and `fallback_source` is where it came from (`voice`, `fallback_voice` or `platform`). `fatal` is true when no voice is left.
+
 ### Voice Providers
 
 A combined voice string is `engine.voice:model`: the text-to-speech provider, the voice's name or ID, and, for providers that have them, a model variant. Voice strings are case-insensitive. SignalWire offered these providers in September 2026; each line shows one sample voice string:
@@ -2573,7 +2593,7 @@ Prefab agents are pre-configured agent implementations designed for specific use
 
 ### Built-in Prefabs
 
-The SDK includes several built-in prefab agents:
+The SDK includes several built-in prefab agents. `FrontDeskAgent` (a business's front desk: departments with opening hours, appointments, messages and answers from documents) and `PersonalAssistantAgent` (screens callers for one person and puts them through with a whisper) are built on `signalwire.operations`, against your own backend; see [Operations](operations.md#a-front-desk-and-a-personal-assistant).
 
 #### InfoGathererAgent
 
@@ -2598,6 +2618,8 @@ agent.serve(host="0.0.0.0", port=8000)
 
 #### FAQBotAgent
 
+Deprecated: use `InfoBotKnowledge`, which answers from any search you give it, a list of questions and answers included. `FAQBotAgent` still works, and warns when it's made.
+
 Answers questions based on a knowledge base:
 
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
@@ -2618,6 +2640,8 @@ agent.serve(host="0.0.0.0", port=8000)
 ```
 
 #### ConciergeAgent
+
+Deprecated: its availability check answers yes for any listed service, with no calendar behind it. Use `FrontDeskAgent`, with `Appointments` for bookings and `InfoBotKnowledge` for amenities and hours. `ConciergeAgent` still works, and warns when it's made.
 
 Routes users to specialized agents:
 
@@ -2672,6 +2696,8 @@ agent.serve(host="0.0.0.0", port=8000)
 ```
 
 #### ReceptionistAgent
+
+Deprecated: use `FrontDeskAgent`, whose departments can say when they're taking calls and which takes a message when one isn't. `ReceptionistAgent` still works, and warns when it's made.
 
 Handles call routing and department transfers:
 
