@@ -46,6 +46,15 @@ _VALIDATION_ERRORS: tuple[type[Exception], ...] = tuple(
 )
 
 
+PLATFORM_KEYS_AHEAD_OF_SCHEMA: dict[str, tuple[str, ...]] = {
+    # The ai verb's own voice and its fallbacks, which the platform reads from
+    # the verb itself; the published schema doesn't list them yet
+    "ai": ("voice", "fallback_voice"),
+}
+"""Top-level verb keys the platform reads that the published schema doesn't list yet, accepted by the shallow key
+check."""
+
+
 class SchemaValidationError(Exception):
     """Raised when SWML schema validation fails."""
 
@@ -553,6 +562,7 @@ class SchemaUtils:
         if known is None:
             # No enumerable closed key-set — nothing shallow to enforce.
             return True, []
+        known = set(known) | set(PLATFORM_KEYS_AHEAD_OF_SCHEMA.get(verb_name, ()))
         unknown = [k for k in verb_config if k not in known]
         if unknown:
             return False, [

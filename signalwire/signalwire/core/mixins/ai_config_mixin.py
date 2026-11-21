@@ -29,6 +29,9 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
     # type is dict|None (mypy would otherwise infer a non-optional dict from the
     # setter and reject AgentBase's None initializer).
     _multilingual: dict[str, Any] | None = None
+    # The ai verb's own voice and fallback voice (ai.voice, ai.fallback_voice); None when unset
+    _ai_voice: str | list[str] | None = None
+    _ai_fallback_voice: str | list[str] | None = None
     # The SWML variable default_voice, set before the ai verb; None when unset
     _default_voice: str | list[str] | dict[str, Any] | None = None
 
@@ -239,6 +242,46 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
         """
         if languages and isinstance(languages, list):
             self._languages = languages
+        return self
+
+    def set_agent_voice(self, voice: str | Sequence[str] | None) -> "AgentBase":
+        """
+        Set the agent's voice, for a language that has none of its own.
+
+        The platform takes a list here from its release after 2026-11-21; a
+        platform without it refuses the AI verb, so the call doesn't run. One
+        voice as a string works everywhere.
+
+        Args:
+            voice: One voice as ``engine.voice:model``, or a list of up to 8,
+                the first speaking and the rest its fallbacks, tried in order
+                when it fails. None clears it.
+
+        Returns:
+            Self for method chaining
+        """
+        self._ai_voice = None if voice is None else _voice_chain(voice)
+        return self
+
+    def set_fallback_voice(self, voice: str | Sequence[str] | None) -> "AgentBase":
+        """
+        Set the voices tried when every voice of a language, or the agent's,
+        has failed, before the platform's own last resort.
+
+        The platform takes ``fallback_voice`` from its release after
+        2026-11-21; a platform without it refuses the AI verb, so the call
+        doesn't run.
+
+        Args:
+            voice: One voice as ``engine.voice:model``, or a list of up to 8,
+                tried in order. None clears it.
+
+        Returns:
+            Self for method chaining
+        """
+        self._ai_fallback_voice = (
+            None if voice is None else _voice_chain(voice, "fallback_voice")
+        )
         return self
 
     def set_default_voice(

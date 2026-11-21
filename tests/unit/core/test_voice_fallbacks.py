@@ -62,6 +62,14 @@ def test_a_language_takes_a_list_of_voices_as_sent() -> None:
         agent().add_language("English", "en-US", ["rime.spore", ""])
 
 
+def test_the_agents_voice_and_fallback_voice_are_the_ai_verbs_own() -> None:
+    a = agent().set_agent_voice(CHAIN).set_fallback_voice("gcloud.en-US-Neural2-C")
+    ai = ai_of(a)
+    assert ai["voice"] == CHAIN and ai["fallback_voice"] == "gcloud.en-US-Neural2-C"
+    a.set_agent_voice(None).set_fallback_voice(None)
+    assert "voice" not in ai_of(a) and "fallback_voice" not in ai_of(a)
+
+
 @pytest.mark.parametrize(
     "voice",
     [
