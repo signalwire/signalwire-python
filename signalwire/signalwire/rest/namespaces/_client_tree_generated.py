@@ -1,8 +1,11 @@
 # AUTO-GENERATED from porting-sdk/rest-apis/*/openapi.yaml — DO NOT EDIT.
 # Regenerate: python3 porting-sdk/scripts/generate_python_rest_types.py
-#
-# The SDK client object tree: one namespace container per x-sdk-namespace group
-# plus the flat resources, wired from each resource's spec placement.
+"""The generated REST client object tree.
+
+One namespace container per API group plus the flat resources, wired from each
+resource's spec placement.
+"""
+
 from __future__ import annotations
 
 from typing import Any
@@ -87,14 +90,22 @@ from .voice_resources_generated import (
 
 
 class DatasphereNamespace:
-    """Generated ``client.datasphere`` namespace."""
+    """Generated ``client.datasphere`` namespace.
+
+    Construct it as ``DatasphereNamespace(http)``; it attaches the ``datasphere``
+    resources to the client's HTTP transport.
+    """
 
     def __init__(self, http: Any) -> None:
         self.documents = DatasphereDocuments(http)
 
 
 class FabricNamespace:
-    """Generated ``client.fabric`` namespace."""
+    """Generated ``client.fabric`` namespace.
+
+    Construct it as ``FabricNamespace(http)``; it attaches the ``fabric`` resources to
+    the client's HTTP transport.
+    """
 
     def __init__(self, http: Any) -> None:
         self.addresses = FabricAddresses(http)
@@ -116,7 +127,11 @@ class FabricNamespace:
 
 
 class LogsNamespace:
-    """Generated ``client.logs`` namespace."""
+    """Generated ``client.logs`` namespace.
+
+    Construct it as ``LogsNamespace(http)``; it attaches the ``logs`` resources to the
+    client's HTTP transport.
+    """
 
     def __init__(self, http: Any) -> None:
         self.conferences = ConferenceLogs(http)
@@ -126,14 +141,22 @@ class LogsNamespace:
 
 
 class ProjectNamespace:
-    """Generated ``client.project`` namespace."""
+    """Generated ``client.project`` namespace.
+
+    Construct it as ``ProjectNamespace(http)``; it attaches the ``project`` resources to
+    the client's HTTP transport.
+    """
 
     def __init__(self, http: Any) -> None:
         self.tokens = ProjectTokens(http)
 
 
 class RegistryNamespace:
-    """Generated ``client.registry`` namespace."""
+    """Generated ``client.registry`` namespace.
+
+    Construct it as ``RegistryNamespace(http)``; it attaches the ``registry`` resources
+    to the client's HTTP transport.
+    """
 
     def __init__(self, http: Any) -> None:
         self.brands = RegistryBrands(http)
@@ -143,7 +166,11 @@ class RegistryNamespace:
 
 
 class VideoNamespace:
-    """Generated ``client.video`` namespace."""
+    """Generated ``client.video`` namespace.
+
+    Construct it as ``VideoNamespace(http)``; it attaches the ``video`` resources to the
+    client's HTTP transport.
+    """
 
     def __init__(self, http: Any) -> None:
         self.conference_tokens = VideoConferenceTokens(http)
