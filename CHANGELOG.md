@@ -2,6 +2,14 @@
 
 ## [3.14.0] - 2026-11-21
 
+### Added
+- Gather questions the platform says itself: `set_gather_info(say_questions=True)`
+  has the platform say each question word for word when the gather reaches
+  it, the model being told the caller was just asked it; the answer still
+  goes through `gather_submit`. A question's `say=` overrides it. A
+  realtime model asks every question itself, and a platform build without
+  it ignores the setting and the model asks.
+
 ### Changed
 - The generated REST, RELAY, SWML and SWAIG types carry the specs'
   descriptions as their module and field docstrings, so an editor shows

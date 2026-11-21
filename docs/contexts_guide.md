@@ -895,6 +895,7 @@ Flow:
 | `completion_action` | str | None | Where to go when all questions are answered: `"next_step"` to advance sequentially, or a specific step name (e.g. `"process_results"`) to jump to that step. If None, returns to normal step mode. The target is validated: `"next_step"` requires a following step, and named steps must exist in the context. |
 | `prompt` | str | None | Preamble text sent with every question, ahead of the question's own message; each copy replaces the one before, except under the `keep` history mode, where only the first question's copy is sent and it stays. |
 | `isolated` | bool | `False` | Default for every question in this gather. When True, a question is asked with the sibling Q&A hidden from the model, so it must ask rather than derive the answer from an earlier one. A question's own `isolated` overrides this default. The hidden turns remain in the call log. |
+| `say_questions` | bool | `False` | True for the platform to say each question's text itself, word for word (its `${...}` filled in), when the gather reaches it. The model doesn't ask it, and is told the caller was just asked it in those words. The answer still goes through `gather_submit`, the model checking it and doing any `confirm` read-back; if the answer is unclear, or the caller stays silent, the model asks again in its own words. A greeting at the start of the call still plays first. A question's own `say` overrides this. A realtime model asks every question itself. |
 
 **`add_gather_question()` Parameters:**
 
@@ -908,6 +909,7 @@ Flow:
 | `functions` | list | None | Function names to make visible for this question only |
 | `isolated` | bool \| None | None | Override the gather's `isolated` default for this one question. True hides the sibling Q&A while this question is asked; False keeps it visible even in an isolated gather. None inherits the gather's setting. |
 | `expected_answer` | dict \| None | None | The number of digits the answer has, for the recognizer: `{"digits": 5}` or `{"min_digits": 4, "max_digits": 6}`. It replaces the step's `set_expected_answer()` while this question is asked. |
+| `say` | bool \| None | None | True for the platform to say this question itself, False for the model to ask it, overriding the gather's `say_questions`. None follows the gather. |
 
 ## Real-World Examples
 
