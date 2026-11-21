@@ -186,9 +186,11 @@ class WeatherApiSkill(SkillBase):
                         "url": f"https://api.weatherapi.com/v1/current.json?key={self.api_key}&q=${{lc:enc:args.location}}&aqi=no",
                         "method": "GET",
                         "output": FunctionResult(weather_template).to_dict(),
+                        # The platform reads error_keys on the webhook only. It
+                        # adds http_code to the response when the status isn't 2xx.
+                        "error_keys": ["error", "http_code"],
                     }
                 ],
-                "error_keys": ["error"],
                 "output": FunctionResult(
                     "Sorry, I cannot get weather information right now. Please try again later or check if the location name is correct."
                 ).to_dict(),
