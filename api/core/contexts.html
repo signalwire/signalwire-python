@@ -1278,6 +1278,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.core.contexts.GatherQuestion.say" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        say
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.core.contexts.GatherQuestion.__init__" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -9445,6 +9456,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.core.contexts.GatherQuestion.say" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        say
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.core.contexts.GatherQuestion.__init__" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -10615,6 +10637,26 @@ contains its own prompt, completion criteria, and function restrictions.</p>
 
 </div>
 
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="signalwire.core.contexts.GatherQuestion.say" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">say</span> <span class="o">=</span> <span class="n">say</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#signalwire.core.contexts.GatherQuestion.say" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
 
 
 
@@ -10622,7 +10664,7 @@ contains its own prompt, completion criteria, and function restrictions.</p>
 
 
 <h4 id="signalwire.core.contexts.GatherQuestion.__init__" class="doc doc-heading">
-            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">question</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">'string'</span><span class="p">,</span> <span class="n">confirm</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">prompt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">functions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">isolated</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">expected_answer</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">question</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">'string'</span><span class="p">,</span> <span class="n">confirm</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">prompt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">functions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">isolated</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">expected_answer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">say</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 <a href="#signalwire.core.contexts.GatherQuestion.__init__" class="headerlink" title="Permanent link">&para;</a></h4>
 
@@ -10705,7 +10747,7 @@ at a time.</p>
 
 
 <h4 id="signalwire.core.contexts.GatherInfo.__init__" class="doc doc-heading">
-            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">output_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">completion_action</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">prompt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">isolated</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">output_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">completion_action</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">prompt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">isolated</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">say_questions</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
 
 <a href="#signalwire.core.contexts.GatherInfo.__init__" class="headerlink" title="Permanent link">&para;</a></h4>
 
@@ -10784,7 +10826,7 @@ at a time.</p>
             <td>
               <div class="doc-md-description">
                 <p>Optional fields - type, confirm, prompt, functions,
-isolated, expected_answer</p>
+isolated, expected_answer, say</p>
               </div>
             </td>
             <td>
@@ -11886,7 +11928,7 @@ Nothing is deleted: the call log keeps every message.</p>
 
 
 <h4 id="signalwire.core.contexts.Step.set_gather_info" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">set_gather_info</span><span class="p">(</span><span class="n">output_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">completion_action</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">prompt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">isolated</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">set_gather_info</span><span class="p">(</span><span class="n">output_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">completion_action</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">prompt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">isolated</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">say_questions</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
 
 <a href="#signalwire.core.contexts.Step.set_gather_info" class="headerlink" title="Permanent link">&para;</a></h4>
 
@@ -11984,6 +12026,30 @@ remain in the call log.</p>
                   <code>False</code>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>say_questions</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>True for the platform to say each question's text
+itself, word for word (its <code>${...}</code> filled in), when the
+gather reaches it; the model doesn't ask it, and is told the
+caller was just asked it. The answer still goes through
+<code>gather_submit</code>, the model checking it and doing any
+confirm read-back, and it asks again in its own words if the
+answer is unclear or the caller stays silent. A question's
+own <code>say</code> overrides this. A realtime model asks every
+question itself.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -12019,7 +12085,7 @@ remain in the call log.</p>
 
 
 <h4 id="signalwire.core.contexts.Step.add_gather_question" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">add_gather_question</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">question</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">'string'</span><span class="p">,</span> <span class="n">confirm</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">prompt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">functions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">isolated</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">expected_answer</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">add_gather_question</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">question</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">'string'</span><span class="p">,</span> <span class="n">confirm</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">prompt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">functions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">isolated</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">expected_answer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">say</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 <a href="#signalwire.core.contexts.Step.add_gather_question" class="headerlink" title="Permanent link">&para;</a></h4>
 
@@ -12190,6 +12256,24 @@ recognizer, as <code>set_expected_answer</code> takes it:
 <code>{"digits": 5}</code> or <code>{"min_digits": 4, "max_digits": 6}</code>
 (<code>expected_answer()</code> builds one). While this question is
 asked, it replaces the step's.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>say</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>True for the platform to say this question itself, False for
+the model to ask it, overriding the gather's <code>say_questions</code>;
+None (default) follows the gather.</p>
               </div>
             </td>
             <td>

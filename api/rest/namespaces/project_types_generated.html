@@ -9097,6 +9097,11 @@
 
     <div class="doc doc-contents first">
 
+        <p>Typed <code>project</code> REST API shapes, generated from the OpenAPI spec.</p>
+<p>One <code>TypedDict</code> per spec schema plus per-operation <code>*Request</code> / <code>*Response</code>
+aliases. Every shape is static-only: at runtime each is a plain <code>dict</code>, so a
+differently-shaped server response is returned unchanged and never raises.</p>
+
 
 
 
@@ -9194,8 +9199,75 @@
 
 
         <p>Request body for creating a new API Token.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="name
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.project_types_generated.CreateTokenRequest.name)" href="#signalwire.rest.namespaces.project_types_generated.CreateTokenRequest.name">name</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The name representing the API token.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="permissions
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.project_types_generated.CreateTokenRequest.permissions)" href="#signalwire.rest.namespaces.project_types_generated.CreateTokenRequest.permissions">permissions</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<a class="autorefs autorefs-internal" title="TokenPermission = "Literal['calling', 'chat', 'datasphere', 'fax', 'management', 'messaging', 'numbers', 'pubsub', 'storage', 'tasking', 'video']"
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.project_types_generated.TokenPermission)" href="#signalwire.rest.namespaces.project_types_generated.TokenPermission">TokenPermission</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The permissions you would like to enable for this token. Valid
+permissions are calling, chat, datasphere, fax, management, messaging,
+numbers, pubsub, storage, tasking, and video</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="subproject_id
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.project_types_generated.CreateTokenRequest.subproject_id)" href="#signalwire.rest.namespaces.project_types_generated.CreateTokenRequest.subproject_id">subproject_id</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifier of the subproject you would like to create
+a token for. The subproject passed must be a child of the project used to
+authenticate the request.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -9304,6 +9376,85 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>Open shape: extra server keys permitted; not validated at runtime.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="id
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.project_types_generated.TokenResponse.id)" href="#signalwire.rest.namespaces.project_types_generated.TokenResponse.id">id</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The ID of the created API Token.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="name
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.project_types_generated.TokenResponse.name)" href="#signalwire.rest.namespaces.project_types_generated.TokenResponse.name">name</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The name of the created API Token.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="permissions
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.project_types_generated.TokenResponse.permissions)" href="#signalwire.rest.namespaces.project_types_generated.TokenResponse.permissions">permissions</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<a class="autorefs autorefs-internal" title="TokenPermission = "Literal['calling', 'chat', 'datasphere', 'fax', 'management', 'messaging', 'numbers', 'pubsub', 'storage', 'tasking', 'video']"
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.project_types_generated.TokenPermission)" href="#signalwire.rest.namespaces.project_types_generated.TokenPermission">TokenPermission</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The permissions enabled for this token.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="token
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.project_types_generated.TokenResponse.token)" href="#signalwire.rest.namespaces.project_types_generated.TokenResponse.token">token</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The API token that can be used along with the project ID for basic
+authentication</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -9431,9 +9582,39 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>The request contains invalid parameters. See errors for details.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>The request contains invalid parameters.</p>
+<p>See errors for details.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="errors
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.project_types_generated.TokenStatusCode422.errors)" href="#signalwire.rest.namespaces.project_types_generated.TokenStatusCode422.errors">errors</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<a class="autorefs autorefs-internal" title="Types_StatusCodes_RestApiErrorItem (signalwire.rest.namespaces.project_types_generated.Types_StatusCodes_RestApiErrorItem)" href="#signalwire.rest.namespaces.project_types_generated.Types_StatusCodes_RestApiErrorItem">Types_StatusCodes_RestApiErrorItem</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>List of validation errors.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -9502,8 +9683,97 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>Details about a specific error.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="type
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.project_types_generated.Types_StatusCodes_RestApiErrorItem.type)" href="#signalwire.rest.namespaces.project_types_generated.Types_StatusCodes_RestApiErrorItem.type">type</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The category of error.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="code
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.project_types_generated.Types_StatusCodes_RestApiErrorItem.code)" href="#signalwire.rest.namespaces.project_types_generated.Types_StatusCodes_RestApiErrorItem.code">code</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A specific error code.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="message
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.project_types_generated.Types_StatusCodes_RestApiErrorItem.message)" href="#signalwire.rest.namespaces.project_types_generated.Types_StatusCodes_RestApiErrorItem.message">message</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A description of what caused the error.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="attribute
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.project_types_generated.Types_StatusCodes_RestApiErrorItem.attribute)" href="#signalwire.rest.namespaces.project_types_generated.Types_StatusCodes_RestApiErrorItem.attribute">attribute</a></code></td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The request parameter that caused the error, if applicable.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="url
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.project_types_generated.Types_StatusCodes_RestApiErrorItem.url)" href="#signalwire.rest.namespaces.project_types_generated.Types_StatusCodes_RestApiErrorItem.url">url</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A link to documentation about this error.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -9652,8 +9922,8 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>Access is unauthorized.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -9722,8 +9992,8 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>The server cannot find the requested resource.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -9792,8 +10062,8 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>An internal server error occurred.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -9862,8 +10132,58 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>Request body for updating an API Token.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="name
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.project_types_generated.UpdateTokenRequest.name)" href="#signalwire.rest.namespaces.project_types_generated.UpdateTokenRequest.name">name</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The name representing the API token.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="permissions
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.project_types_generated.UpdateTokenRequest.permissions)" href="#signalwire.rest.namespaces.project_types_generated.UpdateTokenRequest.permissions">permissions</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<a class="autorefs autorefs-internal" title="TokenPermission = "Literal['calling', 'chat', 'datasphere', 'fax', 'management', 'messaging', 'numbers', 'pubsub', 'storage', 'tasking', 'video']"
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.project_types_generated.TokenPermission)" href="#signalwire.rest.namespaces.project_types_generated.TokenPermission">TokenPermission</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The permissions you would like to enable for this token. Valid
+permissions are calling, chat, datasphere, fax, management, messaging,
+numbers, pubsub, storage, tasking, and video</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 

@@ -9111,6 +9111,12 @@
 
     <div class="doc doc-contents first">
 
+        <p>TypedDicts for the SWAIG function-webhook request payload.</p>
+<p>The body a SWAIG function handler receives (<code>swaig_function.execute(raw_data)</code>,
+<code>tool_mixin.on_function_call</code>). Static-only: a plain <code>dict</code> at runtime; this
+<code>TypedDict</code> types its known shape (conditional fields are optional; extra keys are
+tolerated).</p>
+
 
 
 
@@ -9147,7 +9153,69 @@
 
 
 
-        <p>Open shape: extra server keys permitted; not validated at runtime.</p>
+        <p>Always present.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="parsed
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigArgument.parsed)" href="#signalwire.core.swaig_request_generated.SwaigArgument.parsed">parsed</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>JSON objects parsed from the model's argument string (always an array,
+possibly empty).</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="raw
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigArgument.raw)" href="#signalwire.core.swaig_request_generated.SwaigArgument.raw">raw</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The original argument string.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="substituted
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigArgument.substituted)" href="#signalwire.core.swaig_request_generated.SwaigArgument.substituted">substituted</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The argument string with JSON blocks replaced.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -9255,7 +9323,470 @@
 
 
 
-        <p>Open shape: extra server keys permitted; not validated at runtime.</p>
+        <p>The SWAIG function-webhook request payload.</p>
+<p>Open shape: conditional fields appear only when their precondition holds.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="ai_session_id
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.ai_session_id)" href="#signalwire.core.swaig_request_generated.SwaigRequest.ai_session_id">ai_session_id</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Always present.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="app_name
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.app_name)" href="#signalwire.core.swaig_request_generated.SwaigRequest.app_name">app_name</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Always present.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="args
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.args)" href="#signalwire.core.swaig_request_generated.SwaigRequest.args">args</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>added <strong>only on the data_map path</strong>. <code>args</code> is <code>argument.parsed[0]</code>
+promoted to the top level; <code>input</code> is a shallow self-duplicate of the
+post_data. The webhook-URL path does not add these.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="argument
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.argument)" href="#signalwire.core.swaig_request_generated.SwaigRequest.argument">argument</a></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="SwaigArgument (signalwire.core.swaig_request_generated.SwaigArgument)" href="#signalwire.core.swaig_request_generated.SwaigArgument">SwaigArgument</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Always present.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="argument_desc
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.argument_desc)" href="#signalwire.core.swaig_request_generated.SwaigRequest.argument_desc">argument_desc</a></code></td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Always present.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="call_id
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.call_id)" href="#signalwire.core.swaig_request_generated.SwaigRequest.call_id">call_id</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Always present.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="call_log
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.call_log)" href="#signalwire.core.swaig_request_generated.SwaigRequest.call_log">call_log</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>only if <code>swaig_post_conversation</code> is set. <code>call_log</code> is redacted when
+<code>redact_prompt</code> is enabled; <code>raw_call_log</code> is the full transcript.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="caller_id_name
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.caller_id_name)" href="#signalwire.core.swaig_request_generated.SwaigRequest.caller_id_name">caller_id_name</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>only if the caller-ID channel vars are set. The source channel
+var for <code>caller_id_num</code> is <code>caller_id_number</code> — the JSON key is renamed to
+<code>caller_id_num</code>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="caller_id_num
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.caller_id_num)" href="#signalwire.core.swaig_request_generated.SwaigRequest.caller_id_num">caller_id_num</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>only if the caller-ID channel vars are set. The source channel
+var for <code>caller_id_num</code> is <code>caller_id_number</code> — the JSON key is renamed to
+<code>caller_id_num</code>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="channel_active
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.channel_active)" href="#signalwire.core.swaig_request_generated.SwaigRequest.channel_active">channel_active</a></code></td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Always present.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="channel_offhook
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.channel_offhook)" href="#signalwire.core.swaig_request_generated.SwaigRequest.channel_offhook">channel_offhook</a></code></td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Always present.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="channel_ready
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.channel_ready)" href="#signalwire.core.swaig_request_generated.SwaigRequest.channel_ready">channel_ready</a></code></td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Always present.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="content_disposition
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.content_disposition)" href="#signalwire.core.swaig_request_generated.SwaigRequest.content_disposition">content_disposition</a></code></td>
+            <td>
+                  <code><span title="typing.Literal">Literal</span>[&#39;SWAIG Function&#39;]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Always present.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="content_type
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.content_type)" href="#signalwire.core.swaig_request_generated.SwaigRequest.content_type">content_type</a></code></td>
+            <td>
+                  <code><span title="typing.Literal">Literal</span>[&#39;text/swaig&#39;]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Always present.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="conversation_id
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.conversation_id)" href="#signalwire.core.swaig_request_generated.SwaigRequest.conversation_id">conversation_id</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>only if configured.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="description
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.description)" href="#signalwire.core.swaig_request_generated.SwaigRequest.description">description</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Always present.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="error_reason
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.error_reason)" href="#signalwire.core.swaig_request_generated.SwaigRequest.error_reason">error_reason</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>only on a hangup-hook/error invocation when <code>fatal_error_reason</code>
+is set.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="fatal_error
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.fatal_error)" href="#signalwire.core.swaig_request_generated.SwaigRequest.fatal_error">fatal_error</a></code></td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>only on a hangup-hook/error invocation when <code>fatal_error_reason</code> is
+set.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="function
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.function)" href="#signalwire.core.swaig_request_generated.SwaigRequest.function">function</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Always present.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="global_data
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.global_data)" href="#signalwire.core.swaig_request_generated.SwaigRequest.global_data">global_data</a></code></td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>only if global data exists.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="input
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.input)" href="#signalwire.core.swaig_request_generated.SwaigRequest.input">input</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>added <strong>only on the data_map path</strong>. <code>args</code> is <code>argument.parsed[0]</code>
+promoted to the top level; <code>input</code> is a shallow self-duplicate of the
+post_data. The webhook-URL path does not add these.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="meta_data
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.meta_data)" href="#signalwire.core.swaig_request_generated.SwaigRequest.meta_data">meta_data</a></code></td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>only if the function has a <code>meta_data_token</code>. <code>meta_data</code> is that
+token's metadata store (empty object if none).</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="meta_data_token
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.meta_data_token)" href="#signalwire.core.swaig_request_generated.SwaigRequest.meta_data_token">meta_data_token</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>only if the function has a <code>meta_data_token</code>. <code>meta_data</code> is
+that token's metadata store (empty object if none).</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="project_id
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.project_id)" href="#signalwire.core.swaig_request_generated.SwaigRequest.project_id">project_id</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>only if the <code>signalwire_project_id</code> / <code>signalwire_space_id</code> channel
+vars are set.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="raw_call_log
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.raw_call_log)" href="#signalwire.core.swaig_request_generated.SwaigRequest.raw_call_log">raw_call_log</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>only if <code>swaig_post_conversation</code> is set. <code>call_log</code> is redacted
+when <code>redact_prompt</code> is enabled; <code>raw_call_log</code> is the full transcript.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="space_id
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.space_id)" href="#signalwire.core.swaig_request_generated.SwaigRequest.space_id">space_id</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>only if the <code>signalwire_project_id</code> / <code>signalwire_space_id</code> channel
+vars are set.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="tool_call_id
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.tool_call_id)" href="#signalwire.core.swaig_request_generated.SwaigRequest.tool_call_id">tool_call_id</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>only if the model gave the call an id. The <code>id</code> of the model's
+tool call: an OpenAI-style <code>call_...</code>, Anthropic's <code>tool_use</code> id, the
+Responses API's <code>call_id</code>, Bedrock's <code>toolUseId</code>, and for Gemini, which
+gives none, the one its adapter makes (<code>call_</code> + 8 hex digits). A retry of
+the request after a curl error or a 5xx sends the same body, so the same id;
+each call the model makes has its own, so a webhook can tell a resend from
+the model calling again with the same arguments. Absent for a request the
+module makes on its own (<code>startup_hook</code>, <code>hangup_hook</code>, <code>check_for_input</code>),
+for a function an in-band <code>~FN:</code> directive runs, and when the provider gave
+no id. On the data_map path it is always the call's own id, never a
+<code>global_data</code> key of that name.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="version
+
+  
+      instance-attribute
+   (signalwire.core.swaig_request_generated.SwaigRequest.version)" href="#signalwire.core.swaig_request_generated.SwaigRequest.version">version</a></code></td>
+            <td>
+                  <code><span title="typing.Literal">Literal</span>[&#39;2.0&#39;]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Always present.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 

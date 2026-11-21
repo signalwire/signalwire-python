@@ -25501,6 +25501,11 @@
 
     <div class="doc doc-contents first">
 
+        <p>Typed RELAY WebSocket protocol payloads, generated from the wire schemas.</p>
+<p>One <code>TypedDict</code> per RELAY method's request params (<code>&lt;Method&gt;Params</code>) and
+acknowledgement result (<code>&lt;Method&gt;Result</code>). Static-only: at runtime each is a plain
+<code>dict</code>; the wire layer stays untyped and tolerant.</p>
+
 
 
 
@@ -25597,9 +25602,13 @@
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.ai_hold</code> (params). Extracted from switchblade <code>PublicCallAiHoldParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.ai_hold</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallAiHoldParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+attributes; read them with item access):
+- <code>async</code> (<code>bool | None</code>)</p>
 
 
 
@@ -25747,9 +25756,13 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.ai_message</code> (params). Extracted from switchblade <code>PublicCallAiMessageParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.ai_message</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallAiMessageParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+attributes; read them with item access):
+- <code>async</code> (<code>bool | None</code>)</p>
 
 
 
@@ -25937,9 +25950,13 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.ai_unhold</code> (params). Extracted from switchblade <code>PublicCallAiUnholdParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.ai_unhold</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallAiUnholdParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+attributes; read them with item access):
+- <code>async</code> (<code>bool | None</code>)</p>
 
 
 
@@ -26067,9 +26084,13 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.amazon_bedrock</code> (params). Extracted from switchblade <code>PublicCallAmazonBedrockParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.amazon_bedrock</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallAmazonBedrockParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+attributes; read them with item access):
+- <code>async</code> (<code>bool | None</code>)</p>
 
 
 
@@ -26297,9 +26318,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.answer</code> (params). Extracted from switchblade <code>PublicCallAnswerParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.answer</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallAnswerParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -26407,9 +26429,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.begin</code> (params). Extracted from switchblade <code>PublicCallBeginParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.begin</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallBeginParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -26557,9 +26580,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.bind_digit</code> (params). Extracted from switchblade <code>PublicCallBindDigitParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.bind_digit</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallBindDigitParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -26767,9 +26791,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.clear_digit_bindings</code> (params). Extracted from switchblade <code>PublicCallClearDigitBindingsParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.clear_digit_bindings</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallClearDigitBindingsParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -26897,9 +26922,13 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.collect</code> (params). Extracted from switchblade <code>PublicCallCollectParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.collect</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallCollectParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+attributes; read them with item access):
+- <code>continue</code> (<code>bool | None</code>)</p>
 
 
 
@@ -27147,9 +27176,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.collect.start_input_timers</code> (params). Extracted from switchblade <code>PublicCallCollectStartInputTimersParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.collect.start_input_timers</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallCollectStartInputTimersParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -27257,9 +27287,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.collect.stop</code> (params). Extracted from switchblade <code>PublicCallCollectStopParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.collect.stop</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallCollectStopParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -27367,9 +27398,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.connect</code> (params). Extracted from switchblade <code>PublicCallConnectParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.connect</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallConnectParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -27557,9 +27589,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.denoise</code> (params). Extracted from switchblade <code>PublicCallDenoiseParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.denoise</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallDenoiseParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -27647,9 +27680,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.denoise.stop</code> (params). Extracted from switchblade <code>PublicCallDenoiseStopParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.denoise.stop</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallDenoiseStopParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -27737,9 +27771,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.detect</code> (params). Extracted from switchblade <code>PublicCallDetectParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.detect</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallDetectParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -27887,9 +27922,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.detect.stop</code> (params). Extracted from switchblade <code>PublicCallDetectStopParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.detect.stop</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallDetectStopParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -27997,9 +28033,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.dial</code> (params). Extracted from switchblade <code>PublicCallDialParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.dial</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallDialParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -28147,9 +28184,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.disconnect</code> (params). Extracted from switchblade <code>PublicCallDisconnectParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.disconnect</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallDisconnectParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -28237,9 +28275,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.echo</code> (params). Extracted from switchblade <code>PublicCallEchoParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.echo</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallEchoParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -28387,9 +28426,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.end</code> (params). Extracted from switchblade <code>PublicCallEndParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.end</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallEndParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -28497,9 +28537,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.join_conference</code> (params). Extracted from switchblade <code>PublicCallJoinConferenceParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.join_conference</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallJoinConferenceParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -29027,9 +29068,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.join_room</code> (params). Extracted from switchblade <code>PublicCallJoinRoomParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.join_room</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallJoinRoomParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -29217,9 +29259,13 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.leave_conference</code> (params). Extracted from switchblade <code>PublicCallLeaveConferenceParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.leave_conference</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallLeaveConferenceParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+attributes; read them with item access):
+- <code>async</code> (<code>bool | None</code>)</p>
 
 
 
@@ -29327,9 +29373,13 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.leave_room</code> (params). Extracted from switchblade <code>PublicCallLeaveRoomParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.leave_room</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallLeaveRoomParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+attributes; read them with item access):
+- <code>async</code> (<code>bool | None</code>)</p>
 
 
 
@@ -29417,9 +29467,13 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.live_transcribe</code> (params). Extracted from switchblade <code>PublicCallLiveTranscribeParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.live_transcribe</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallLiveTranscribeParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+attributes; read them with item access):
+- <code>async</code> (<code>bool | None</code>)</p>
 
 
 
@@ -29547,9 +29601,13 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.live_translate</code> (params). Extracted from switchblade <code>PublicCallLiveTranslateParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.live_translate</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallLiveTranslateParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+attributes; read them with item access):
+- <code>async</code> (<code>bool | None</code>)</p>
 
 
 
@@ -29697,9 +29755,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.pass</code> (params). Extracted from switchblade <code>PublicCallPassParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.pass</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallPassParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -29787,9 +29846,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.pay</code> (params). Extracted from switchblade <code>PublicCallPayParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.pay</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallPayParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -30277,9 +30337,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.pay.stop</code> (params). Extracted from switchblade <code>PublicCallPayStopParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.pay.stop</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallPayStopParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -30387,9 +30448,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.play</code> (params). Extracted from switchblade <code>PublicCallPlayParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.play</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallPlayParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -30537,9 +30599,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.play.pause</code> (params). Extracted from switchblade <code>PublicCallPlayPauseParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.play.pause</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallPlayPauseParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -30647,9 +30710,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.play.resume</code> (params). Extracted from switchblade <code>PublicCallPlayResumeParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.play.resume</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallPlayResumeParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -30757,9 +30821,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.play.stop</code> (params). Extracted from switchblade <code>PublicCallPlayStopParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.play.stop</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallPlayStopParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -30867,9 +30932,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.play.volume</code> (params). Extracted from switchblade <code>PublicCallPlayVolumeParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.play.volume</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallPlayVolumeParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -30997,9 +31063,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.play_and_collect</code> (params). Extracted from switchblade <code>PublicCallPlayAndCollectParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.play_and_collect</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallPlayAndCollectParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -31167,9 +31234,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.play_and_collect.stop</code> (params). Extracted from switchblade <code>PublicCallPlayAndCollectStopParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.play_and_collect.stop</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallPlayAndCollectStopParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -31277,9 +31345,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.play_and_collect.volume</code> (params). Extracted from switchblade <code>PublicCallPlayAndCollectVolumeParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.play_and_collect.volume</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallPlayAndCollectVolumeParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -31407,9 +31476,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.queue.enter</code> (params). Extracted from switchblade <code>PublicCallQueueEnterParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.queue.enter</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallQueueEnterParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -31577,9 +31647,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.queue.leave</code> (params). Extracted from switchblade <code>PublicCallQueueLeaveParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.queue.leave</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallQueueLeaveParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -31747,9 +31818,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.receive</code> (params). Extracted from switchblade <code>PublicCallReceiveParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.receive</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallReceiveParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -31837,9 +31909,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.receive_fax</code> (params). Extracted from switchblade <code>PublicCallReceiveFaxParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.receive_fax</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallReceiveFaxParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -31947,9 +32020,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.receive_fax.stop</code> (params). Extracted from switchblade <code>PublicCallReceiveFaxStopParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.receive_fax.stop</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallReceiveFaxStopParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -32057,9 +32131,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.record</code> (params). Extracted from switchblade <code>PublicCallRecordParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.record</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallRecordParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -32187,9 +32262,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.record.pause</code> (params). Extracted from switchblade <code>PublicCallRecordPauseParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.record.pause</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallRecordPauseParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -32317,9 +32393,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.record.resume</code> (params). Extracted from switchblade <code>PublicCallRecordResumeParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.record.resume</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallRecordResumeParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -32427,9 +32504,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.record.stop</code> (params). Extracted from switchblade <code>PublicCallRecordStopParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.record.stop</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallRecordStopParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -32537,9 +32615,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.refer</code> (params). Extracted from switchblade <code>PublicCallReferParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.refer</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallReferParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -32647,9 +32726,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.send_digits</code> (params). Extracted from switchblade <code>PublicCallSendDigitsParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.send_digits</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallSendDigitsParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -32777,9 +32857,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.send_fax</code> (params). Extracted from switchblade <code>PublicCallSendFaxParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.send_fax</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallSendFaxParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -32947,9 +33028,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.send_fax.stop</code> (params). Extracted from switchblade <code>PublicCallSendFaxStopParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.send_fax.stop</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallSendFaxStopParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -33057,9 +33139,13 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.stream</code> (params). Extracted from switchblade <code>PublicCallStreamParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.stream</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallStreamParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+attributes; read them with item access):
+- <code>async</code> (<code>bool | None</code>)</p>
 
 
 
@@ -33347,9 +33433,13 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.stream.stop</code> (params). Extracted from switchblade <code>PublicCallStreamStopParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.stream.stop</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallStreamStopParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+attributes; read them with item access):
+- <code>async</code> (<code>bool | None</code>)</p>
 
 
 
@@ -33477,9 +33567,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.tap</code> (params). Extracted from switchblade <code>PublicCallTapParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.tap</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallTapParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -33627,9 +33718,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.tap.stop</code> (params). Extracted from switchblade <code>PublicCallTapStopParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.tap.stop</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallTapStopParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -33737,9 +33829,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.transfer</code> (params). Extracted from switchblade <code>PublicCallTransferParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.transfer</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallTransferParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -33847,9 +33940,13 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.user_event</code> (params). Extracted from switchblade <code>PublicCallUserEventParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.user_event</code> (params).</p>
+<p>Extracted from switchblade <code>PublicCallUserEventParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+attributes; read them with item access):
+- <code>async</code> (<code>bool | None</code>)</p>
 
 
 
@@ -33977,9 +34074,12 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Permissive schema for the messaging.send RPC params. Switchblade forwards the JObject as-is to the messaging gateway, so the schema is derived from the Python relay client (<code>signalwire/relay/client.py:send_message</code>). At least one of <code>body</code> or <code>media</code> is required.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Permissive schema for the messaging.send RPC params.</p>
+<p>Switchblade forwards the JObject as-is to the messaging gateway, so the schema is
+derived from the Python relay client (<code>signalwire/relay/client.py:send_message</code>).
+At least one of <code>body</code> or <code>media</code> is required.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -34167,9 +34267,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the Blade envelope <code>signalwire.connect</code> (params). Extracted from switchblade <code>Messages/ConnectParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the Blade envelope <code>signalwire.connect</code> (params).</p>
+<p>Extracted from switchblade <code>Messages/ConnectParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -34357,9 +34458,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the Blade envelope <code>signalwire.disconnect</code> (params). Extracted from switchblade <code>Messages/DisconnectParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the Blade envelope <code>signalwire.disconnect</code> (params).</p>
+<p>Extracted from switchblade <code>Messages/DisconnectParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -34427,9 +34529,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the Blade envelope <code>signalwire.execute</code> (params). Extracted from switchblade <code>Messages/ExecuteParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the Blade envelope <code>signalwire.execute</code> (params).</p>
+<p>Extracted from switchblade <code>Messages/ExecuteParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -34637,9 +34740,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the Blade envelope <code>signalwire.ping</code> (params). Extracted from switchblade <code>Messages/PingParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the Blade envelope <code>signalwire.ping</code> (params).</p>
+<p>Extracted from switchblade <code>Messages/PingParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -34727,9 +34831,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the Blade envelope <code>signalwire.reauthenticate</code> (params). Extracted from switchblade <code>Messages/ReauthenticateParams.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the Blade envelope <code>signalwire.reauthenticate</code> (params).</p>
+<p>Extracted from switchblade <code>Messages/ReauthenticateParams.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -34817,9 +34922,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.ai_hold</code> (result). Extracted from switchblade <code>PublicCallAiHoldResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.ai_hold</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallAiHoldResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -34947,9 +35053,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.ai_message</code> (result). Extracted from switchblade <code>PublicCallAiMessageResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.ai_message</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallAiMessageResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -35077,9 +35184,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.ai_unhold</code> (result). Extracted from switchblade <code>PublicCallAiUnholdResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.ai_unhold</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallAiUnholdResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -35207,9 +35315,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.amazon_bedrock</code> (result). Extracted from switchblade <code>PublicCallAmazonBedrockResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.amazon_bedrock</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallAmazonBedrockResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -35337,9 +35446,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.answer</code> (result). Extracted from switchblade <code>PublicCallAnswerResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.answer</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallAnswerResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -35447,9 +35557,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.begin</code> (result). Extracted from switchblade <code>PublicCallBeginResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.begin</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallBeginResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -35617,9 +35728,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.bind_digit</code> (result). Extracted from switchblade <code>PublicCallBindDigitResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.bind_digit</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallBindDigitResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -35747,9 +35859,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.clear_digit_bindings</code> (result). Extracted from switchblade <code>PublicCallClearDigitBindingsResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.clear_digit_bindings</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallClearDigitBindingsResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -35877,9 +35990,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.collect</code> (result). Extracted from switchblade <code>PublicCallCollectResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.collect</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallCollectResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -36027,9 +36141,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.collect.start_input_timers</code> (result). Extracted from switchblade <code>PublicCallCollectStartInputTimersResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.collect.start_input_timers</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallCollectStartInputTimersResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -36177,9 +36292,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.collect.stop</code> (result). Extracted from switchblade <code>PublicCallCollectStopResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.collect.stop</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallCollectStopResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -36327,9 +36443,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.connect</code> (result). Extracted from switchblade <code>PublicCallConnectResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.connect</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallConnectResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -36457,9 +36574,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.denoise</code> (result). Extracted from switchblade <code>PublicCallDenoiseResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.denoise</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallDenoiseResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -36587,9 +36705,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.denoise.stop</code> (result). Extracted from switchblade <code>PublicCallDenoiseStopResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.denoise.stop</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallDenoiseStopResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -36717,9 +36836,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.detect</code> (result). Extracted from switchblade <code>PublicCallDetectResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.detect</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallDetectResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -36867,9 +36987,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.detect.stop</code> (result). Extracted from switchblade <code>PublicCallDetectStopResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.detect.stop</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallDetectStopResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -37017,9 +37138,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.dial</code> (result). Extracted from switchblade <code>PublicCallDialResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.dial</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallDialResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -37147,9 +37269,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.disconnect</code> (result). Extracted from switchblade <code>PublicCallDisconnectResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.disconnect</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallDisconnectResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -37257,9 +37380,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.echo</code> (result). Extracted from switchblade <code>PublicCallEchoResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.echo</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallEchoResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -37387,9 +37511,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.end</code> (result). Extracted from switchblade <code>PublicCallEndResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.end</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallEndResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -37497,9 +37622,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.join_conference</code> (result). Extracted from switchblade <code>PublicCallJoinConferenceResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.join_conference</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallJoinConferenceResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -37647,9 +37773,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.join_room</code> (result). Extracted from switchblade <code>PublicCallJoinRoomResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.join_room</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallJoinRoomResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -37777,9 +37904,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.leave_conference</code> (result). Extracted from switchblade <code>PublicCallLeaveConferenceResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.leave_conference</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallLeaveConferenceResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -37907,9 +38035,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.leave_room</code> (result). Extracted from switchblade <code>PublicCallLeaveRoomResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.leave_room</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallLeaveRoomResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -38037,9 +38166,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.live_transcribe</code> (result). Extracted from switchblade <code>PublicCallLiveTranscribeResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.live_transcribe</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallLiveTranscribeResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -38167,9 +38297,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.live_translate</code> (result). Extracted from switchblade <code>PublicCallLiveTranslateResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.live_translate</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallLiveTranslateResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -38297,9 +38428,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.pass</code> (result). Extracted from switchblade <code>PublicCallPassResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.pass</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallPassResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -38427,9 +38559,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.pay</code> (result). Extracted from switchblade <code>PublicCallPayResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.pay</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallPayResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -38577,9 +38710,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.pay.stop</code> (result). Extracted from switchblade <code>PublicCallPayStopResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.pay.stop</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallPayStopResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -38727,9 +38861,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.play.pause</code> (result). Extracted from switchblade <code>PublicCallPlayPauseResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.play.pause</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallPlayPauseResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -38877,9 +39012,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.play</code> (result). Extracted from switchblade <code>PublicCallPlayResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.play</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallPlayResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -39027,9 +39163,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.play.resume</code> (result). Extracted from switchblade <code>PublicCallPlayResumeResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.play.resume</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallPlayResumeResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -39177,9 +39314,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.play.stop</code> (result). Extracted from switchblade <code>PublicCallPlayStopResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.play.stop</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallPlayStopResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -39327,9 +39465,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.play.volume</code> (result). Extracted from switchblade <code>PublicCallPlayVolumeResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.play.volume</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallPlayVolumeResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -39477,9 +39616,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.play_and_collect</code> (result). Extracted from switchblade <code>PublicCallPlayAndCollectResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.play_and_collect</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallPlayAndCollectResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -39627,9 +39767,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.play_and_collect.stop</code> (result). Extracted from switchblade <code>PublicCallPlayAndCollectStopResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.play_and_collect.stop</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallPlayAndCollectStopResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -39777,9 +39918,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.play_and_collect.volume</code> (result). Extracted from switchblade <code>PublicCallPlayAndCollectVolumeResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.play_and_collect.volume</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallPlayAndCollectVolumeResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -39927,9 +40069,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.queue.enter</code> (result). Extracted from switchblade <code>PublicCallQueueEnterResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.queue.enter</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallQueueEnterResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -40077,9 +40220,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.queue.leave</code> (result). Extracted from switchblade <code>PublicCallQueueLeaveResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.queue.leave</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallQueueLeaveResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -40227,9 +40371,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.receive</code> (result). Extracted from switchblade <code>PublicCallReceiveResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.receive</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallReceiveResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -40317,9 +40462,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.receive_fax</code> (result). Extracted from switchblade <code>PublicCallReceiveFaxResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.receive_fax</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallReceiveFaxResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -40467,9 +40613,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.receive_fax.stop</code> (result). Extracted from switchblade <code>PublicCallReceiveFaxStopResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.receive_fax.stop</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallReceiveFaxStopResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -40617,9 +40764,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.record.pause</code> (result). Extracted from switchblade <code>PublicCallRecordPauseResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.record.pause</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallRecordPauseResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -40767,9 +40915,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.record</code> (result). Extracted from switchblade <code>PublicCallRecordResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.record</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallRecordResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -40937,9 +41086,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.record.resume</code> (result). Extracted from switchblade <code>PublicCallRecordResumeResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.record.resume</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallRecordResumeResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -41087,9 +41237,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.record.stop</code> (result). Extracted from switchblade <code>PublicCallRecordStopResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.record.stop</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallRecordStopResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -41237,9 +41388,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.refer</code> (result). Extracted from switchblade <code>PublicCallReferResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.refer</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallReferResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -41347,9 +41499,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.send_digits</code> (result). Extracted from switchblade <code>PublicCallSendDigitsResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.send_digits</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallSendDigitsResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -41497,9 +41650,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.send_fax</code> (result). Extracted from switchblade <code>PublicCallSendFaxResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.send_fax</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallSendFaxResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -41647,9 +41801,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.send_fax.stop</code> (result). Extracted from switchblade <code>PublicCallSendFaxStopResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.send_fax.stop</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallSendFaxStopResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -41797,9 +41952,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.stream</code> (result). Extracted from switchblade <code>PublicCallStreamResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.stream</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallStreamResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -41947,9 +42103,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.stream.stop</code> (result). Extracted from switchblade <code>PublicCallStreamStopResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.stream.stop</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallStreamStopResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -42097,9 +42254,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.tap</code> (result). Extracted from switchblade <code>PublicCallTapResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.tap</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallTapResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -42267,9 +42425,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.tap.stop</code> (result). Extracted from switchblade <code>PublicCallTapStopResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.tap.stop</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallTapStopResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -42417,9 +42576,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.transfer</code> (result). Extracted from switchblade <code>PublicCallTransferResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.transfer</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallTransferResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -42547,9 +42707,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the JSON payload of <code>calling.user_event</code> (result). Extracted from switchblade <code>PublicCallUserEventResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the JSON payload of <code>calling.user_event</code> (result).</p>
+<p>Extracted from switchblade <code>PublicCallUserEventResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -42677,9 +42838,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Permissive schema for the messaging.send RPC response. The message_id from the response is used to route subsequent messaging.state events.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Permissive schema for the messaging.send RPC response.</p>
+<p>The message_id from the response is used to route subsequent messaging.state events.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -42787,9 +42949,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the Blade envelope <code>signalwire.connect</code> (result). Extracted from switchblade <code>Messages/ConnectResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the Blade envelope <code>signalwire.connect</code> (result).</p>
+<p>Extracted from switchblade <code>Messages/ConnectResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -43137,9 +43300,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the Blade envelope <code>signalwire.execute</code> (result). Extracted from switchblade <code>Messages/ExecuteResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the Blade envelope <code>signalwire.execute</code> (result).</p>
+<p>Extracted from switchblade <code>Messages/ExecuteResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -43247,9 +43411,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the Blade envelope <code>signalwire.ping</code> (result). Extracted from switchblade <code>Messages/PingResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the Blade envelope <code>signalwire.ping</code> (result).</p>
+<p>Extracted from switchblade <code>Messages/PingResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -43337,9 +43502,10 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Wire schema for the Blade envelope <code>signalwire.reauthenticate</code> (result). Extracted from switchblade <code>Messages/ReauthenticateResult.cs</code>.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Wire schema for the Blade envelope <code>signalwire.reauthenticate</code> (result).</p>
+<p>Extracted from switchblade <code>Messages/ReauthenticateResult.cs</code>.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 

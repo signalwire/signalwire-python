@@ -9915,6 +9915,11 @@
 
     <div class="doc doc-contents first">
 
+        <p>Typed <code>fax</code> REST API shapes, generated from the OpenAPI spec.</p>
+<p>One <code>TypedDict</code> per spec schema plus per-operation <code>*Request</code> / <code>*Response</code>
+aliases. Every shape is static-only: at runtime each is a plain <code>dict</code>, so a
+differently-shaped server response is returned unchanged and never raises.</p>
+
 
 
 
@@ -10014,6 +10019,50 @@
         <p>Open shape: extra server keys permitted; not validated at runtime.</p>
 
 
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="description
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.ChargeDetail.description)" href="#signalwire.rest.namespaces.fax_types_generated.ChargeDetail.description">description</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Description for this charge.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="charge
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.ChargeDetail.charge)" href="#signalwire.rest.namespaces.fax_types_generated.ChargeDetail.charge">charge</a></code></td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Charged amount.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
 
 
 
@@ -10100,6 +10149,252 @@
 
 
         <p>Open shape: extra server keys permitted; not validated at runtime.</p>
+<p>Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+attributes; read them with item access):
+- <code>from</code> (<code>str | None</code>): The origin phone number in E.164 format.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="id
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.FaxLog.id)" href="#signalwire.rest.namespaces.fax_types_generated.FaxLog.id">id</a></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="uuid = 'str'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.fax_types_generated.uuid)" href="#signalwire.rest.namespaces.fax_types_generated.uuid">uuid</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A unique identifier for the log</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="to
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.FaxLog.to)" href="#signalwire.rest.namespaces.fax_types_generated.FaxLog.to">to</a></code></td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The destination phone number in E.164 format.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="status
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.FaxLog.status)" href="#signalwire.rest.namespaces.fax_types_generated.FaxLog.status">status</a></code></td>
+            <td>
+                  <code><span title="typing.Literal">Literal</span>[&#39;queued&#39;, &#39;initiated&#39;, &#39;ringing&#39;, &#39;in-progress&#39;, &#39;busy&#39;, &#39;failed&#39;, &#39;no-answer&#39;, &#39;canceled&#39;, &#39;completed&#39;]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The status of this fax call.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="direction
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.FaxLog.direction)" href="#signalwire.rest.namespaces.fax_types_generated.FaxLog.direction">direction</a></code></td>
+            <td>
+                  <code><span title="typing.Literal">Literal</span>[&#39;inbound&#39;, &#39;outbound-api&#39;, &#39;outbound-dial&#39;] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The direction of this fax call.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="source
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.FaxLog.source)" href="#signalwire.rest.namespaces.fax_types_generated.FaxLog.source">source</a></code></td>
+            <td>
+                  <code><span title="typing.Literal">Literal</span>[&#39;laml&#39;]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Source of this log entry.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="type
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.FaxLog.type)" href="#signalwire.rest.namespaces.fax_types_generated.FaxLog.type">type</a></code></td>
+            <td>
+                  <code><span title="typing.Literal">Literal</span>[&#39;laml_call&#39;]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Type of this log entry.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="url
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.FaxLog.url)" href="#signalwire.rest.namespaces.fax_types_generated.FaxLog.url">url</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>URL for the associated fax resource with this log entry.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="remote_station
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.FaxLog.remote_station)" href="#signalwire.rest.namespaces.fax_types_generated.FaxLog.remote_station">remote_station</a></code></td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Represents a customer hosted Fax server.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="charge
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.FaxLog.charge)" href="#signalwire.rest.namespaces.fax_types_generated.FaxLog.charge">charge</a></code></td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The amount charged for this fax request.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="number_of_pages
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.FaxLog.number_of_pages)" href="#signalwire.rest.namespaces.fax_types_generated.FaxLog.number_of_pages">number_of_pages</a></code></td>
+            <td>
+                  <code><span title="int">int</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The number of pages the fax document contained.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="quality
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.FaxLog.quality)" href="#signalwire.rest.namespaces.fax_types_generated.FaxLog.quality">quality</a></code></td>
+            <td>
+                  <code><span title="typing.Literal">Literal</span>[&#39;fine&#39;, &#39;standard&#39;, &#39;superfine&#39;] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The quality that was set when the fax document was sent.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="charge_details
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.FaxLog.charge_details)" href="#signalwire.rest.namespaces.fax_types_generated.FaxLog.charge_details">charge_details</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<a class="autorefs autorefs-internal" title="ChargeDetail (signalwire.rest.namespaces.fax_types_generated.ChargeDetail)" href="#signalwire.rest.namespaces.fax_types_generated.ChargeDetail">ChargeDetail</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Details on charges associated with this log.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="created_at
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.FaxLog.created_at)" href="#signalwire.rest.namespaces.fax_types_generated.FaxLog.created_at">created_at</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Date and time when the fax was created.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="error_code
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.FaxLog.error_code)" href="#signalwire.rest.namespaces.fax_types_generated.FaxLog.error_code">error_code</a></code></td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Error code for this resource (if available).</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="error_message
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.FaxLog.error_message)" href="#signalwire.rest.namespaces.fax_types_generated.FaxLog.error_message">error_message</a></code></td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The description of this error (if available).</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -10447,9 +10742,39 @@
 
 
 
-        <p>The request contains invalid parameters. See errors for details.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>The request contains invalid parameters.</p>
+<p>See errors for details.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="errors
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.FaxLogShowStatusCode422.errors)" href="#signalwire.rest.namespaces.fax_types_generated.FaxLogShowStatusCode422.errors">errors</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<a class="autorefs autorefs-internal" title="Types_StatusCodes_RestApiErrorItem (signalwire.rest.namespaces.fax_types_generated.Types_StatusCodes_RestApiErrorItem)" href="#signalwire.rest.namespaces.fax_types_generated.Types_StatusCodes_RestApiErrorItem">Types_StatusCodes_RestApiErrorItem</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>List of validation errors.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -10517,9 +10842,39 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>The request contains invalid parameters. See errors for details.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>The request contains invalid parameters.</p>
+<p>See errors for details.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="errors
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.FaxLogsListStatusCode422.errors)" href="#signalwire.rest.namespaces.fax_types_generated.FaxLogsListStatusCode422.errors">errors</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<a class="autorefs autorefs-internal" title="Types_StatusCodes_RestApiErrorItem (signalwire.rest.namespaces.fax_types_generated.Types_StatusCodes_RestApiErrorItem)" href="#signalwire.rest.namespaces.fax_types_generated.Types_StatusCodes_RestApiErrorItem">Types_StatusCodes_RestApiErrorItem</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>List of validation errors.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -10588,6 +10943,50 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>Open shape: extra server keys permitted; not validated at runtime.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="links
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.LogListResponse.links)" href="#signalwire.rest.namespaces.fax_types_generated.LogListResponse.links">links</a></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="LogPaginationResponse (signalwire.rest.namespaces.fax_types_generated.LogPaginationResponse)" href="#signalwire.rest.namespaces.fax_types_generated.LogPaginationResponse">LogPaginationResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Object containing pagination links</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="data
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.LogListResponse.data)" href="#signalwire.rest.namespaces.fax_types_generated.LogListResponse.data">data</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<a class="autorefs autorefs-internal" title="FaxLog (signalwire.rest.namespaces.fax_types_generated.FaxLog)" href="#signalwire.rest.namespaces.fax_types_generated.FaxLog">FaxLog</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Array of log data</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -10676,6 +11075,82 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>Open shape: extra server keys permitted; not validated at runtime.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="self
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.LogPaginationResponse.self)" href="#signalwire.rest.namespaces.fax_types_generated.LogPaginationResponse.self">self</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>URL for the current page of results.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="first
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.LogPaginationResponse.first)" href="#signalwire.rest.namespaces.fax_types_generated.LogPaginationResponse.first">first</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>URL for the first page of results.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="next
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.LogPaginationResponse.next)" href="#signalwire.rest.namespaces.fax_types_generated.LogPaginationResponse.next">next</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>URL for the next page of results. Only present when more results are
+available.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="prev
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.LogPaginationResponse.prev)" href="#signalwire.rest.namespaces.fax_types_generated.LogPaginationResponse.prev">prev</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>URL for the previous page of results. Only present when on page 1 or
+later.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -10804,6 +11279,252 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>Open shape: extra server keys permitted; not validated at runtime.</p>
+<p>Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+attributes; read them with item access):
+- <code>from</code> (<code>str | None</code>): The origin phone number in E.164 format.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="id
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.LogResponse.id)" href="#signalwire.rest.namespaces.fax_types_generated.LogResponse.id">id</a></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="uuid = 'str'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.fax_types_generated.uuid)" href="#signalwire.rest.namespaces.fax_types_generated.uuid">uuid</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A unique identifier for the log</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="to
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.LogResponse.to)" href="#signalwire.rest.namespaces.fax_types_generated.LogResponse.to">to</a></code></td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The destination phone number in E.164 format.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="status
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.LogResponse.status)" href="#signalwire.rest.namespaces.fax_types_generated.LogResponse.status">status</a></code></td>
+            <td>
+                  <code><span title="typing.Literal">Literal</span>[&#39;queued&#39;, &#39;initiated&#39;, &#39;ringing&#39;, &#39;in-progress&#39;, &#39;busy&#39;, &#39;failed&#39;, &#39;no-answer&#39;, &#39;canceled&#39;, &#39;completed&#39;]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The status of this fax call.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="direction
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.LogResponse.direction)" href="#signalwire.rest.namespaces.fax_types_generated.LogResponse.direction">direction</a></code></td>
+            <td>
+                  <code><span title="typing.Literal">Literal</span>[&#39;inbound&#39;, &#39;outbound-api&#39;, &#39;outbound-dial&#39;] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The direction of this fax call.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="source
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.LogResponse.source)" href="#signalwire.rest.namespaces.fax_types_generated.LogResponse.source">source</a></code></td>
+            <td>
+                  <code><span title="typing.Literal">Literal</span>[&#39;laml&#39;]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Source of this log entry.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="type
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.LogResponse.type)" href="#signalwire.rest.namespaces.fax_types_generated.LogResponse.type">type</a></code></td>
+            <td>
+                  <code><span title="typing.Literal">Literal</span>[&#39;laml_call&#39;]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Type of this log entry.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="url
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.LogResponse.url)" href="#signalwire.rest.namespaces.fax_types_generated.LogResponse.url">url</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>URL for the associated fax resource with this log entry.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="remote_station
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.LogResponse.remote_station)" href="#signalwire.rest.namespaces.fax_types_generated.LogResponse.remote_station">remote_station</a></code></td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Represents a customer hosted Fax server.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="charge
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.LogResponse.charge)" href="#signalwire.rest.namespaces.fax_types_generated.LogResponse.charge">charge</a></code></td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The amount charged for this fax request.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="number_of_pages
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.LogResponse.number_of_pages)" href="#signalwire.rest.namespaces.fax_types_generated.LogResponse.number_of_pages">number_of_pages</a></code></td>
+            <td>
+                  <code><span title="int">int</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The number of pages the fax document contained.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="quality
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.LogResponse.quality)" href="#signalwire.rest.namespaces.fax_types_generated.LogResponse.quality">quality</a></code></td>
+            <td>
+                  <code><span title="typing.Literal">Literal</span>[&#39;fine&#39;, &#39;standard&#39;, &#39;superfine&#39;] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The quality that was set when the fax document was sent.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="charge_details
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.LogResponse.charge_details)" href="#signalwire.rest.namespaces.fax_types_generated.LogResponse.charge_details">charge_details</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<a class="autorefs autorefs-internal" title="ChargeDetail (signalwire.rest.namespaces.fax_types_generated.ChargeDetail)" href="#signalwire.rest.namespaces.fax_types_generated.ChargeDetail">ChargeDetail</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Details on charges associated with this log.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="created_at
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.LogResponse.created_at)" href="#signalwire.rest.namespaces.fax_types_generated.LogResponse.created_at">created_at</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Date and time when the fax was created.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="error_code
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.LogResponse.error_code)" href="#signalwire.rest.namespaces.fax_types_generated.LogResponse.error_code">error_code</a></code></td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Error code for this resource (if available).</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="error_message
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.LogResponse.error_message)" href="#signalwire.rest.namespaces.fax_types_generated.LogResponse.error_message">error_message</a></code></td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The description of this error (if available).</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -11152,8 +11873,97 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>Details about a specific error.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="type
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.Types_StatusCodes_RestApiErrorItem.type)" href="#signalwire.rest.namespaces.fax_types_generated.Types_StatusCodes_RestApiErrorItem.type">type</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The category of error.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="code
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.Types_StatusCodes_RestApiErrorItem.code)" href="#signalwire.rest.namespaces.fax_types_generated.Types_StatusCodes_RestApiErrorItem.code">code</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A specific error code.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="message
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.Types_StatusCodes_RestApiErrorItem.message)" href="#signalwire.rest.namespaces.fax_types_generated.Types_StatusCodes_RestApiErrorItem.message">message</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A description of what caused the error.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="attribute
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.Types_StatusCodes_RestApiErrorItem.attribute)" href="#signalwire.rest.namespaces.fax_types_generated.Types_StatusCodes_RestApiErrorItem.attribute">attribute</a></code></td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The request parameter that caused the error, if applicable.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="url
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.fax_types_generated.Types_StatusCodes_RestApiErrorItem.url)" href="#signalwire.rest.namespaces.fax_types_generated.Types_StatusCodes_RestApiErrorItem.url">url</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A link to documentation about this error.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -11302,8 +12112,8 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>The request is invalid.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -11372,8 +12182,8 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>Access is unauthorized.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -11442,8 +12252,8 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>The server cannot find the requested resource.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -11512,8 +12322,8 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>An internal server error occurred.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 

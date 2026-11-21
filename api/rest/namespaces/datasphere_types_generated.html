@@ -10803,6 +10803,11 @@
 
     <div class="doc doc-contents first">
 
+        <p>Typed <code>datasphere</code> REST API shapes, generated from the OpenAPI spec.</p>
+<p>One <code>TypedDict</code> per spec schema plus per-operation <code>*Request</code> / <code>*Response</code>
+aliases. Every shape is static-only: at runtime each is a plain <code>dict</code>, so a
+differently-shaped server response is returned unchanged and never raises.</p>
+
 
 
 
@@ -11242,6 +11247,54 @@
         <p>Open shape: extra server keys permitted; not validated at runtime.</p>
 
 
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="text
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.Chunk.text)" href="#signalwire.rest.namespaces.datasphere_types_generated.Chunk.text">text</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A search result.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="document_id
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.Chunk.document_id)" href="#signalwire.rest.namespaces.datasphere_types_generated.Chunk.document_id">document_id</a></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="docid = 'str'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.docid)" href="#signalwire.rest.namespaces.datasphere_types_generated.docid">docid</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of the Document.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
 
 
 
@@ -11330,6 +11383,50 @@
         <p>Open shape: extra server keys permitted; not validated at runtime.</p>
 
 
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="data
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.ChunkListResponse.data)" href="#signalwire.rest.namespaces.datasphere_types_generated.ChunkListResponse.data">data</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<a class="autorefs autorefs-internal" title="ChunkResponse (signalwire.rest.namespaces.datasphere_types_generated.ChunkResponse)" href="#signalwire.rest.namespaces.datasphere_types_generated.ChunkResponse">ChunkResponse</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A list of chunks.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="links
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.ChunkListResponse.links)" href="#signalwire.rest.namespaces.datasphere_types_generated.ChunkListResponse.links">links</a></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ChunkPaginationResponse (signalwire.rest.namespaces.datasphere_types_generated.ChunkPaginationResponse)" href="#signalwire.rest.namespaces.datasphere_types_generated.ChunkPaginationResponse">ChunkPaginationResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Pagination links.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
 
 
 
@@ -11416,6 +11513,80 @@
 
 
         <p>Open shape: extra server keys permitted; not validated at runtime.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="self
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.ChunkPaginationResponse.self)" href="#signalwire.rest.namespaces.datasphere_types_generated.ChunkPaginationResponse.self">self</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Link of the current page.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="first
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.ChunkPaginationResponse.first)" href="#signalwire.rest.namespaces.datasphere_types_generated.ChunkPaginationResponse.first">first</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Link to the first page.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="next
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.ChunkPaginationResponse.next)" href="#signalwire.rest.namespaces.datasphere_types_generated.ChunkPaginationResponse.next">next</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Link to the next page. Only present when there are more results.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="prev
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.ChunkPaginationResponse.prev)" href="#signalwire.rest.namespaces.datasphere_types_generated.ChunkPaginationResponse.prev">prev</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Link to the previous page. Only present when not on the first page.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -11544,6 +11715,156 @@
 
 
         <p>Open shape: extra server keys permitted; not validated at runtime.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="id
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.ChunkResponse.id)" href="#signalwire.rest.namespaces.datasphere_types_generated.ChunkResponse.id">id</a></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="uuid = 'str'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.uuid)" href="#signalwire.rest.namespaces.datasphere_types_generated.uuid">uuid</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of the chunk.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="datasphere_document_id
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.ChunkResponse.datasphere_document_id)" href="#signalwire.rest.namespaces.datasphere_types_generated.ChunkResponse.datasphere_document_id">datasphere_document_id</a></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="uuid = 'str'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.uuid)" href="#signalwire.rest.namespaces.datasphere_types_generated.uuid">uuid</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of the chunk's datasphere document.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="project_id
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.ChunkResponse.project_id)" href="#signalwire.rest.namespaces.datasphere_types_generated.ChunkResponse.project_id">project_id</a></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="uuid = 'str'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.uuid)" href="#signalwire.rest.namespaces.datasphere_types_generated.uuid">uuid</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of the project.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="status
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.ChunkResponse.status)" href="#signalwire.rest.namespaces.datasphere_types_generated.ChunkResponse.status">status</a></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ChunkStatus = "Literal['submitted', 'in_progress', 'completed', 'failed']"
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.ChunkStatus)" href="#signalwire.rest.namespaces.datasphere_types_generated.ChunkStatus">ChunkStatus</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Status of the chunk.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="tags
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.ChunkResponse.tags)" href="#signalwire.rest.namespaces.datasphere_types_generated.ChunkResponse.tags">tags</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The tags of the document associated with the chunk.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="content
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.ChunkResponse.content)" href="#signalwire.rest.namespaces.datasphere_types_generated.ChunkResponse.content">content</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Content of the chunk.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="created_at
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.ChunkResponse.created_at)" href="#signalwire.rest.namespaces.datasphere_types_generated.ChunkResponse.created_at">created_at</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Chunk Creation Date.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="updated_at
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.ChunkResponse.updated_at)" href="#signalwire.rest.namespaces.datasphere_types_generated.ChunkResponse.updated_at">updated_at</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Chunk Update Date.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -11751,9 +12072,39 @@
 
 
 
-        <p>The request contains invalid parameters. See errors for details.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>The request contains invalid parameters.</p>
+<p>See errors for details.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="errors
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.CreateStatusCode422.errors)" href="#signalwire.rest.namespaces.datasphere_types_generated.CreateStatusCode422.errors">errors</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<a class="autorefs autorefs-internal" title="Types_StatusCodes_RestApiErrorItem (signalwire.rest.namespaces.datasphere_types_generated.Types_StatusCodes_RestApiErrorItem)" href="#signalwire.rest.namespaces.datasphere_types_generated.Types_StatusCodes_RestApiErrorItem">Types_StatusCodes_RestApiErrorItem</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>List of validation errors.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -11822,6 +12173,231 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>Open shape: extra server keys permitted; not validated at runtime.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="id
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.Document.id)" href="#signalwire.rest.namespaces.datasphere_types_generated.Document.id">id</a></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="docid = 'str'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.docid)" href="#signalwire.rest.namespaces.datasphere_types_generated.docid">docid</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of the Document.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="filename
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.Document.filename)" href="#signalwire.rest.namespaces.datasphere_types_generated.Document.filename">filename</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Name of the Document.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="status
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.Document.status)" href="#signalwire.rest.namespaces.datasphere_types_generated.Document.status">status</a></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="DocumentStatus = "Literal['submitted', 'in_progress', 'completed', 'failed']"
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.DocumentStatus)" href="#signalwire.rest.namespaces.datasphere_types_generated.DocumentStatus">DocumentStatus</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Status of the Document.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="tags
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.Document.tags)" href="#signalwire.rest.namespaces.datasphere_types_generated.Document.tags">tags</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Document tags.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="chunking_strategy
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.Document.chunking_strategy)" href="#signalwire.rest.namespaces.datasphere_types_generated.Document.chunking_strategy">chunking_strategy</a></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ChunkingStrategy = "Literal['sentence', 'paragraph', 'page', 'sliding']"
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.ChunkingStrategy)" href="#signalwire.rest.namespaces.datasphere_types_generated.ChunkingStrategy">ChunkingStrategy</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Strategy used to chunk the document.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="max_sentences_per_chunk
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.Document.max_sentences_per_chunk)" href="#signalwire.rest.namespaces.datasphere_types_generated.Document.max_sentences_per_chunk">max_sentences_per_chunk</a></code></td>
+            <td>
+                  <code><span title="int">int</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Max Sentences per Chunk. Only present when chunking
+strategy is 'sentence', null otherwise.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="split_newlines
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.Document.split_newlines)" href="#signalwire.rest.namespaces.datasphere_types_generated.Document.split_newlines">split_newlines</a></code></td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Split on Newlines. Only present when chunking strategy is
+'sentence', null otherwise.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="overlap_size
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.Document.overlap_size)" href="#signalwire.rest.namespaces.datasphere_types_generated.Document.overlap_size">overlap_size</a></code></td>
+            <td>
+                  <code><span title="int">int</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Overlap Size. Only present when chunking strategy is 'sliding',
+null otherwise.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="chunk_size
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.Document.chunk_size)" href="#signalwire.rest.namespaces.datasphere_types_generated.Document.chunk_size">chunk_size</a></code></td>
+            <td>
+                  <code><span title="int">int</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Chunk Size. Only present when chunking strategy is 'sliding', null
+otherwise.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="number_of_chunks
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.Document.number_of_chunks)" href="#signalwire.rest.namespaces.datasphere_types_generated.Document.number_of_chunks">number_of_chunks</a></code></td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of Chunks in the Document.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="chunks_uri
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.Document.chunks_uri)" href="#signalwire.rest.namespaces.datasphere_types_generated.Document.chunks_uri">chunks_uri</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>URI path to the chunks for this document.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="created_at
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.Document.created_at)" href="#signalwire.rest.namespaces.datasphere_types_generated.Document.created_at">created_at</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Document Creation Date.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="updated_at
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.Document.updated_at)" href="#signalwire.rest.namespaces.datasphere_types_generated.Document.updated_at">updated_at</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Document Update Date.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -12132,6 +12708,50 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
         <p>Open shape: extra server keys permitted; not validated at runtime.</p>
 
 
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="url
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.DocumentCreateRequestBase.url)" href="#signalwire.rest.namespaces.datasphere_types_generated.DocumentCreateRequestBase.url">url</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>URL of the document.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="tags
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.DocumentCreateRequestBase.tags)" href="#signalwire.rest.namespaces.datasphere_types_generated.DocumentCreateRequestBase.tags">tags</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Document tags.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
 
 
 
@@ -12220,6 +12840,50 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
         <p>Open shape: extra server keys permitted; not validated at runtime.</p>
 
 
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="data
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.DocumentListResponse.data)" href="#signalwire.rest.namespaces.datasphere_types_generated.DocumentListResponse.data">data</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<a class="autorefs autorefs-internal" title="Document (signalwire.rest.namespaces.datasphere_types_generated.Document)" href="#signalwire.rest.namespaces.datasphere_types_generated.Document">Document</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A list of documents.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="links
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.DocumentListResponse.links)" href="#signalwire.rest.namespaces.datasphere_types_generated.DocumentListResponse.links">links</a></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="PaginationResponse (signalwire.rest.namespaces.datasphere_types_generated.PaginationResponse)" href="#signalwire.rest.namespaces.datasphere_types_generated.PaginationResponse">PaginationResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Pagination links.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
 
 
 
@@ -12306,6 +12970,146 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>Open shape: extra server keys permitted; not validated at runtime.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="tags
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.DocumentSearchRequest.tags)" href="#signalwire.rest.namespaces.datasphere_types_generated.DocumentSearchRequest.tags">tags</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Document tags.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="document_id
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.DocumentSearchRequest.document_id)" href="#signalwire.rest.namespaces.datasphere_types_generated.DocumentSearchRequest.document_id">document_id</a></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="docid = 'str'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.docid)" href="#signalwire.rest.namespaces.datasphere_types_generated.docid">docid</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of a Document.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="query_string
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.DocumentSearchRequest.query_string)" href="#signalwire.rest.namespaces.datasphere_types_generated.DocumentSearchRequest.query_string">query_string</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Search term.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="distance
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.DocumentSearchRequest.distance)" href="#signalwire.rest.namespaces.datasphere_types_generated.DocumentSearchRequest.distance">distance</a></code></td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Specifies how closely related the query is to the document. Low
+distance means high relevance and similarity. High distance means low
+relevance and similarity.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="count
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.DocumentSearchRequest.count)" href="#signalwire.rest.namespaces.datasphere_types_generated.DocumentSearchRequest.count">count</a></code></td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Specifies number of returned Chunks.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="language
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.DocumentSearchRequest.language)" href="#signalwire.rest.namespaces.datasphere_types_generated.DocumentSearchRequest.language">language</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Language of the Document.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="pos_to_expand
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.DocumentSearchRequest.pos_to_expand)" href="#signalwire.rest.namespaces.datasphere_types_generated.DocumentSearchRequest.pos_to_expand">pos_to_expand</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Part of Speech considered for expansion or analysis.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="max_synonyms
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.DocumentSearchRequest.max_synonyms)" href="#signalwire.rest.namespaces.datasphere_types_generated.DocumentSearchRequest.max_synonyms">max_synonyms</a></code></td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Maximum number of synonyms to consider.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -12516,6 +13320,35 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
         <p>Open shape: extra server keys permitted; not validated at runtime.</p>
 
 
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="tags
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.DocumentUpdateRequest.tags)" href="#signalwire.rest.namespaces.datasphere_types_generated.DocumentUpdateRequest.tags">tags</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Document tags.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
 
 
 
@@ -12581,9 +13414,39 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>The request contains invalid parameters. See errors for details.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>The request contains invalid parameters.</p>
+<p>See errors for details.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="errors
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.ListStatusCode422.errors)" href="#signalwire.rest.namespaces.datasphere_types_generated.ListStatusCode422.errors">errors</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<a class="autorefs autorefs-internal" title="Types_StatusCodes_RestApiErrorItem (signalwire.rest.namespaces.datasphere_types_generated.Types_StatusCodes_RestApiErrorItem)" href="#signalwire.rest.namespaces.datasphere_types_generated.Types_StatusCodes_RestApiErrorItem">Types_StatusCodes_RestApiErrorItem</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>List of validation errors.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -12652,6 +13515,80 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>Open shape: extra server keys permitted; not validated at runtime.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="self
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.PaginationResponse.self)" href="#signalwire.rest.namespaces.datasphere_types_generated.PaginationResponse.self">self</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Link of the current page.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="first
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.PaginationResponse.first)" href="#signalwire.rest.namespaces.datasphere_types_generated.PaginationResponse.first">first</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Link to the first page.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="next
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.PaginationResponse.next)" href="#signalwire.rest.namespaces.datasphere_types_generated.PaginationResponse.next">next</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Link to the next page. Only present when there are more results.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="prev
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.PaginationResponse.prev)" href="#signalwire.rest.namespaces.datasphere_types_generated.PaginationResponse.prev">prev</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Link to the previous page. Only present when not on the first page.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -12782,6 +13719,35 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
         <p>Open shape: extra server keys permitted; not validated at runtime.</p>
 
 
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="chunks
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.SearchResponse.chunks)" href="#signalwire.rest.namespaces.datasphere_types_generated.SearchResponse.chunks">chunks</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<a class="autorefs autorefs-internal" title="Chunk (signalwire.rest.namespaces.datasphere_types_generated.Chunk)" href="#signalwire.rest.namespaces.datasphere_types_generated.Chunk">Chunk</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A list of search result chunks.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
 
 
 
@@ -12847,9 +13813,39 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>The request contains invalid parameters. See errors for details.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>The request contains invalid parameters.</p>
+<p>See errors for details.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="errors
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.SearchStatusCode422.errors)" href="#signalwire.rest.namespaces.datasphere_types_generated.SearchStatusCode422.errors">errors</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<a class="autorefs autorefs-internal" title="Types_StatusCodes_RestApiErrorItem (signalwire.rest.namespaces.datasphere_types_generated.Types_StatusCodes_RestApiErrorItem)" href="#signalwire.rest.namespaces.datasphere_types_generated.Types_StatusCodes_RestApiErrorItem">Types_StatusCodes_RestApiErrorItem</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>List of validation errors.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -12918,8 +13914,97 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>Details about a specific error.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="type
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.Types_StatusCodes_RestApiErrorItem.type)" href="#signalwire.rest.namespaces.datasphere_types_generated.Types_StatusCodes_RestApiErrorItem.type">type</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The category of error.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="code
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.Types_StatusCodes_RestApiErrorItem.code)" href="#signalwire.rest.namespaces.datasphere_types_generated.Types_StatusCodes_RestApiErrorItem.code">code</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A specific error code.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="message
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.Types_StatusCodes_RestApiErrorItem.message)" href="#signalwire.rest.namespaces.datasphere_types_generated.Types_StatusCodes_RestApiErrorItem.message">message</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A description of what caused the error.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="attribute
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.Types_StatusCodes_RestApiErrorItem.attribute)" href="#signalwire.rest.namespaces.datasphere_types_generated.Types_StatusCodes_RestApiErrorItem.attribute">attribute</a></code></td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The request parameter that caused the error, if applicable.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="url
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.Types_StatusCodes_RestApiErrorItem.url)" href="#signalwire.rest.namespaces.datasphere_types_generated.Types_StatusCodes_RestApiErrorItem.url">url</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A link to documentation about this error.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -13068,8 +14153,8 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>The request is invalid.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -13138,8 +14223,8 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>Access is unauthorized.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -13208,8 +14293,8 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>The server cannot find the requested resource.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -13278,8 +14363,8 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>An internal server error occurred.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -13347,9 +14432,39 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>The request contains invalid parameters. See errors for details.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>The request contains invalid parameters.</p>
+<p>See errors for details.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="errors
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.UpdateStatusCode422.errors)" href="#signalwire.rest.namespaces.datasphere_types_generated.UpdateStatusCode422.errors">errors</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<a class="autorefs autorefs-internal" title="Types_StatusCodes_RestApiErrorItem (signalwire.rest.namespaces.datasphere_types_generated.Types_StatusCodes_RestApiErrorItem)" href="#signalwire.rest.namespaces.datasphere_types_generated.Types_StatusCodes_RestApiErrorItem">Types_StatusCodes_RestApiErrorItem</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>List of validation errors.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 

@@ -8485,6 +8485,12 @@
 
     <div class="doc doc-contents first">
 
+        <p>Typed <code>project</code> REST resources, generated from the OpenAPI spec.</p>
+<p>One resource class per spec collection: closed, typed <code>create</code> / <code>update</code>
+parameters (the explicit spec fields) and typed sub-operation methods, plus an
+<code>extras</code> escape hatch and a <code>**_reserved_kw</code> tail for unknown or reserved-word
+wire fields.</p>
+
 
 
 
@@ -8522,6 +8528,8 @@
 
 
         <p>Typed resource for <code>/tokens</code> (generated).</p>
+<p>Bound to <code>/api/project/tokens</code>; construct it as <code>ProjectTokens(http)</code> with the
+client's HTTP transport.</p>
 
 
 
@@ -8571,6 +8579,168 @@
 
     <div class="doc doc-contents ">
 
+        <p>Generate an API Token for a project to be used to authenticate requests within the project.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Management</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+<p><strong>Token Permissions</strong></p>
+<p>You must set the functions allowed by this API Token by selecting which types of
+requests this API Token is allowed to make.</p>
+<p>Valid options are: calling, chat, datasphere, fax, management, messaging,
+numbers, pubsub, storage, tasking, and video</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>name</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The name representing the API token.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>permissions</code>
+            </td>
+            <td>
+                  <code><span title="list">list</span>[<a class="autorefs autorefs-internal" title="TokenPermission = "Literal['calling', 'chat', 'datasphere', 'fax', 'management', 'messaging', 'numbers', 'pubsub', 'storage', 'tasking', 'video']"
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.project_types_generated.TokenPermission)" href="project_types_generated.html#signalwire.rest.namespaces.project_types_generated.TokenPermission">TokenPermission</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The permissions you would like to enable for this token. Valid
+permissions are calling, chat, datasphere, fax, management, messaging,
+numbers, pubsub, storage, tasking, and video</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>subproject_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifier of the subproject you would like to
+create a token for. The subproject passed must be a child of the project
+used to authenticate the request.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**_reserved_kw</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Further wire fields passed as bare keywords, including
+reserved-word keys such as <code>from</code> (<code>**{'from': ...}</code>).</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="TokenResponse (signalwire.rest.namespaces.project_types_generated.TokenResponse)" href="project_types_generated.html#signalwire.rest.namespaces.project_types_generated.TokenResponse">TokenResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The request has succeeded.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -8587,6 +8757,166 @@
 
     <div class="doc doc-contents ">
 
+        <p>Update an API Token's name or permissions.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Management</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+<p><strong>Token Permissions</strong></p>
+<p>You can modify the functions allowed by this API Token by selecting which types
+of requests this API Token is allowed to make.</p>
+<p>Valid options are: calling, chat, datasphere, fax, management, messaging,
+numbers, pubsub, storage, tasking, and video</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>token_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifier of the token to update.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>name</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The name representing the API token.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>permissions</code>
+            </td>
+            <td>
+                  <code><span title="list">list</span>[<a class="autorefs autorefs-internal" title="TokenPermission = "Literal['calling', 'chat', 'datasphere', 'fax', 'management', 'messaging', 'numbers', 'pubsub', 'storage', 'tasking', 'video']"
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.project_types_generated.TokenPermission)" href="project_types_generated.html#signalwire.rest.namespaces.project_types_generated.TokenPermission">TokenPermission</a>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The permissions you would like to enable for this token. Valid
+permissions are calling, chat, datasphere, fax, management, messaging,
+numbers, pubsub, storage, tasking, and video</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**_reserved_kw</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Further wire fields passed as bare keywords, including
+reserved-word keys such as <code>from</code> (<code>**{'from': ...}</code>).</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="TokenResponse (signalwire.rest.namespaces.project_types_generated.TokenResponse)" href="project_types_generated.html#signalwire.rest.namespaces.project_types_generated.TokenResponse">TokenResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The request has succeeded.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -8602,6 +8932,90 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Delete an API Token.</p>
+<p>This action cannot be undone.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Management</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>token_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifier of the token that you want to delete.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The decoded JSON response (an empty dict when the server sends no body).</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>

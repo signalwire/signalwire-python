@@ -8551,6 +8551,12 @@
 
     <div class="doc doc-contents first">
 
+        <p>Typed <code>datasphere</code> REST resources, generated from the OpenAPI spec.</p>
+<p>One resource class per spec collection: closed, typed <code>create</code> / <code>update</code>
+parameters (the explicit spec fields) and typed sub-operation methods, plus an
+<code>extras</code> escape hatch and a <code>**_reserved_kw</code> tail for unknown or reserved-word
+wire fields.</p>
+
 
 
 
@@ -8588,6 +8594,8 @@
 
 
         <p>Typed resource for <code>/documents</code> (generated).</p>
+<p>Bound to <code>/api/datasphere/documents</code>; construct it as
+<code>DatasphereDocuments(http)</code> with the client's HTTP transport.</p>
 
 
 
@@ -8637,6 +8645,127 @@
 
     <div class="doc doc-contents ">
 
+        <p>Creates a Datasphere Document.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>DataSphere</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>body</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="DocumentCreateRequest = 'DocumentCreateSentenceRequest | DocumentCreateSlidingRequest | DocumentCreatePageRequest | DocumentCreateParagraphRequest'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.DocumentCreateRequest)" href="datasphere_types_generated.html#signalwire.rest.namespaces.datasphere_types_generated.DocumentCreateRequest">DocumentCreateRequest</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The request body (a <code>DocumentCreateRequest</code>).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**_reserved_kw</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Further wire fields passed as bare keywords, including
+reserved-word keys such as <code>from</code> (<code>**{'from': ...}</code>).</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Document (signalwire.rest.namespaces.datasphere_types_generated.Document)" href="datasphere_types_generated.html#signalwire.rest.namespaces.datasphere_types_generated.Document">Document</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The request has succeeded and a new resource has been created as a result.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -8652,6 +8781,139 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Updates a Datasphere Document by ID.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>DataSphere</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of a Document.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>tags</code>
+            </td>
+            <td>
+                  <code><span title="list">list</span>[<span title="str">str</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Document tags.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**_reserved_kw</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Further wire fields passed as bare keywords, including
+reserved-word keys such as <code>from</code> (<code>**{'from': ...}</code>).</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Document (signalwire.rest.namespaces.datasphere_types_generated.Document)" href="datasphere_types_generated.html#signalwire.rest.namespaces.datasphere_types_generated.Document">Document</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The request has succeeded.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -8669,6 +8931,241 @@
 
     <div class="doc doc-contents ">
 
+        <p>Search Datasphere Documents.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>DataSphere</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>query_string</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Search term.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>tags</code>
+            </td>
+            <td>
+                  <code><span title="list">list</span>[<span title="str">str</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Document tags.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>document_id</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="docid = 'str'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.datasphere_types_generated.docid)" href="datasphere_types_generated.html#signalwire.rest.namespaces.datasphere_types_generated.docid">docid</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of a Document.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>distance</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Specifies how closely related the query is to the document. Low
+distance means high relevance and similarity. High distance means low
+relevance and similarity.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>count</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Specifies number of returned Chunks.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>language</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Language of the Document.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>pos_to_expand</code>
+            </td>
+            <td>
+                  <code><span title="list">list</span>[<span title="str">str</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Part of Speech considered for expansion or analysis.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>max_synonyms</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Maximum number of synonyms to consider.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**_reserved_kw</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Further wire fields passed as bare keywords, including
+reserved-word keys such as <code>from</code> (<code>**{'from': ...}</code>).</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="SearchResponse (signalwire.rest.namespaces.datasphere_types_generated.SearchResponse)" href="datasphere_types_generated.html#signalwire.rest.namespaces.datasphere_types_generated.SearchResponse">SearchResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The request has succeeded.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -8684,6 +9181,111 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>A list of chunks for a Datasphere Document.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>DataSphere</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>document_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of the Document.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**params</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional query parameters, sent as the query string. Recognized by
+this operation:
+- <code>page_number</code>: The page number to retrieve (0-indexed).
+- <code>page_size</code>: Specify the number of results to return on a single
+  page. The default page size is <code>50</code> and the maximum is <code>1000</code>.
+- <code>page_token</code>: Token for cursor-based pagination. Required when
+  <code>page_number</code> &gt; 0.</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ChunkListResponse (signalwire.rest.namespaces.datasphere_types_generated.ChunkListResponse)" href="datasphere_types_generated.html#signalwire.rest.namespaces.datasphere_types_generated.ChunkListResponse">ChunkListResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The request has succeeded.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -8701,6 +9303,121 @@
 
     <div class="doc doc-contents ">
 
+        <p>Retrieves a specific chunk for a Datasphere Document by ID.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>DataSphere</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>document_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of the parent Document.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>chunk_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of a Chunk.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**params</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional query parameters, sent as the query string.</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ChunkResponse (signalwire.rest.namespaces.datasphere_types_generated.ChunkResponse)" href="datasphere_types_generated.html#signalwire.rest.namespaces.datasphere_types_generated.ChunkResponse">ChunkResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The request has succeeded.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -8716,6 +9433,105 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Deletes a specific chunk for a Datasphere Document by ID.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>DataSphere</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>document_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of the parent Document.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>chunk_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of a Chunk.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The decoded JSON response (an empty dict when the server sends no body).</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>

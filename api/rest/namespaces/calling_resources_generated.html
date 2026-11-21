@@ -9233,6 +9233,12 @@
 
     <div class="doc doc-contents first">
 
+        <p>Typed <code>calling</code> REST resources, generated from the OpenAPI spec.</p>
+<p>One resource class per spec collection: closed, typed <code>create</code> / <code>update</code>
+parameters (the explicit spec fields) and typed sub-operation methods, plus an
+<code>extras</code> escape hatch and a <code>**_reserved_kw</code> tail for unknown or reserved-word
+wire fields.</p>
+
 
 
 
@@ -9270,6 +9276,8 @@
 
 
         <p>Typed resource for <code>/calls</code> (generated).</p>
+<p>Bound to <code>/api/calling/calls</code>; construct it as <code>Calling(http)</code> with the client's
+HTTP transport.</p>
 
 
 
@@ -9319,6 +9327,266 @@
 
     <div class="doc doc-contents ">
 
+        <p>Send the <code>dial</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>from_</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The address that initiated the call. Can be either a E.164 formatted
+number (<code>+xxxxxxxxxxx</code>), or a SIP endpoint (<code>sip:xxx@yyy.zzz</code>). Sent as
+the wire key <code>from</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>to</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The address that received the call. Can be either a E.164 formatted
+number (<code>+xxxxxxxxxxx</code>), or a SIP endpoint (<code>sip:xxx@yyy.zzz</code>).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>caller_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The number, in E.164 format, or identifier of the caller.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>fallback_url</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The Fallback URL to handle the call. This parameter allows you
+to specify a backup webhook or different route in your code containing
+SWML instructions for handling the call.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>status_url</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A URL that will recieve status updates of the current call. Any
+call events defined in <code>status_events</code> will be delivered to the defined
+URL.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>status_events</code>
+            </td>
+            <td>
+                  <code><span title="list">list</span>[<span title="typing.Literal">Literal</span>[&#39;answered&#39;, &#39;queued&#39;, &#39;initiated&#39;, &#39;ringing&#39;, &#39;ending&#39;, &#39;ended&#39;]] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call events that will be monitored and sent to the
+<code>status_url</code> when active.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>url_method</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The HTTP method to use when requesting the URL.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>url</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The URL to handle the call. This parameter allows you to specify a
+webhook or different route in your code containing SWML instructions for
+handling the call. Either <code>url</code> or <code>swml</code> must be included for a new
+call.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>codecs</code>
+            </td>
+            <td>
+                  <code><span title="list">list</span>[<span title="str">str</span>] | <span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A list of codecs to use for the call. Can be an array of codec
+strings or a comma-separated string. Valid codecs are: <code>PCMU</code>, <code>PCMA</code>,
+<code>G722</code>, <code>G729</code>, <code>OPUS</code>, <code>VP8</code>, <code>H264</code>. For PSTN calls, <code>PCMA</code> and <code>PCMU</code>
+are recommended as many other codecs are not supported by PSTN gateways.
+If a SIP URI with included codecs is passed in the <code>to</code> field along with
+this parameter, the SIP URI codecs will be prioritized.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>swml</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="SWMLObject (signalwire.rest.namespaces.calling_types_generated.SWMLObject)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.SWMLObject">SWMLObject</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Inline SWML object containing SWML instructions for handling the call.
+Either <code>url</code> or <code>swml</code> must be included for a new call.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9334,6 +9602,196 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Send the <code>update</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>id</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="uuid = 'str'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.uuid)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.uuid">uuid</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of a existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>fallback_url</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The Fallback URL to handle the call. This parameter allows you
+to specify a backup webhook or different route in your code containing
+SWML instructions for handling the call.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>status</code>
+            </td>
+            <td>
+                  <code><span title="typing.Literal">Literal</span>[&#39;canceled&#39;, &#39;completed&#39;] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Either <code>canceled</code> (to cancel a not yet connected call) or
+<code>completed</code> (to end a call that is in progress).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>status_url</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A URL to receive call status update callbacks.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>url</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The URL to handle the call. This parameter allows you to specify a
+webhook or different route in your code containing SWML instructions for
+handling the call. Either <code>url</code> or <code>swml</code> must be included for a new
+call.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>swml</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="SWMLObject (signalwire.rest.namespaces.calling_types_generated.SWMLObject)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.SWMLObject">SWMLObject</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Inline SWML object containing SWML instructions for handling the call.
+Either <code>url</code> or <code>swml</code> must be included for a new call.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9351,6 +9809,125 @@
 
     <div class="doc doc-contents ">
 
+        <p>Send the <code>calling.end</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of a existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>reason</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="HangupReason = "Literal['hangup', 'cancel', 'busy', 'noAnswer', 'decline', 'error']"
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.HangupReason)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.HangupReason">HangupReason</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Set the reason why the call was hung up.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9366,6 +9943,139 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Send the <code>calling.ai_hold</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of a existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>timeout</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The duration to hold the caller in seconds.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>prompt</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A system message added to the AI conversation before placing the
+caller on hold. The AI will speak this message to the caller before hold
+music begins.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9383,6 +10093,122 @@
 
     <div class="doc doc-contents ">
 
+        <p>Send the <code>calling.ai_unhold</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of a existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>prompt</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A system message added to the AI conversation when taking the caller
+off hold. The AI will use this context when resuming the conversation.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9398,6 +10224,184 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Send the <code>calling.ai_message</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of a existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>role</code>
+            </td>
+            <td>
+                  <code><span title="typing.Literal">Literal</span>[&#39;system&#39;, &#39;user&#39;, &#39;assistant&#39;] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The role that the message is from. Required when <code>reset</code> is not
+provided. Each role type has a different purpose and will influence how
+the AI will interpret the message.
+- <code>system</code>: Inject instructions or context that modify the AI's behavior
+  mid-conversation without the caller hearing it. This could change the
+  AI's personality, add new constraints, provide context about the
+  conversation, or give the AI information it should know going forward.
+- <code>user</code>: Inject a message as if the caller said it. This would appear
+  in the conversation history as coming from the caller, and the AI
+  would respond to it as if the caller just spoke it.
+- <code>assistant</code>: Inject a message as if the AI said it. This would appear
+  as an AI response in the conversation history. The AI would treat this
+  as its own previous response when generating future replies.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>message_text</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The text content that will be sent to the AI. Required when
+<code>reset</code> is not provided.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>reset</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallAIMessageResetParams (signalwire.rest.namespaces.calling_types_generated.CallAIMessageResetParams)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallAIMessageResetParams">CallAIMessageResetParams</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Parameters for resetting the AI conversation state. When provided,
+<code>role</code> and <code>message_text</code> are optional.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>global_data</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Arbitrary JSON data to merge into the AI session's global data
+store.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9415,6 +10419,125 @@
 
     <div class="doc doc-contents ">
 
+        <p>Send the <code>calling.live_transcribe</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of a existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>action</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="LiveTranscribeStartAction (signalwire.rest.namespaces.calling_types_generated.LiveTranscribeStartAction)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.LiveTranscribeStartAction">LiveTranscribeStartAction</a> | <a class="autorefs autorefs-internal" title="LiveTranscribeSummarizeAction (signalwire.rest.namespaces.calling_types_generated.LiveTranscribeSummarizeAction)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.LiveTranscribeSummarizeAction">LiveTranscribeSummarizeAction</a> | <a class="autorefs autorefs-internal" title="LiveTranscribeStopAction = "Literal['stop']"
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.LiveTranscribeStopAction)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.LiveTranscribeStopAction">LiveTranscribeStopAction</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The transcription action to perform: start, stop, or summarize.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9430,6 +10553,143 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Send the <code>calling.live_translate</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of a existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>action</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="LiveTranslateStartAction (signalwire.rest.namespaces.calling_types_generated.LiveTranslateStartAction)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.LiveTranslateStartAction">LiveTranslateStartAction</a> | <a class="autorefs autorefs-internal" title="LiveTranslateSummarizeAction (signalwire.rest.namespaces.calling_types_generated.LiveTranslateSummarizeAction)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.LiveTranslateSummarizeAction">LiveTranslateSummarizeAction</a> | <a class="autorefs autorefs-internal" title="LiveTranslateInjectAction (signalwire.rest.namespaces.calling_types_generated.LiveTranslateInjectAction)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.LiveTranslateInjectAction">LiveTranslateInjectAction</a> | <a class="autorefs autorefs-internal" title="LiveTranslateStopAction = "Literal['stop']"
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.LiveTranslateStopAction)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.LiveTranslateStopAction">LiveTranslateStopAction</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The translation action to perform: start, stop, summarize, or
+inject.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>status_url</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A URL to receive status update callbacks for the translation
+session.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9447,6 +10707,122 @@
 
     <div class="doc doc-contents ">
 
+        <p>Send the <code>calling.transfer</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of a existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>dest</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | <a class="autorefs autorefs-internal" title="SWMLObject (signalwire.rest.namespaces.calling_types_generated.SWMLObject)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.SWMLObject">SWMLObject</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The destination to transfer the call to. Can be a SIP URI, phone
+number, or an inline SWML object.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9462,6 +10838,121 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Send the <code>calling.user_event</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of a existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>event</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Arbitrary JSON event data to fire on the call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9479,6 +10970,105 @@
 
     <div class="doc doc-contents ">
 
+        <p>Send the <code>calling.disconnect</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9494,6 +11084,202 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Send the <code>calling.play</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>play</code>
+            </td>
+            <td>
+                  <code><span title="list">list</span>[<span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Array of media objects to play.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>control_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique identifier for this play operation. Auto-generated if not
+provided.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>volume</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Volume adjustment in dB. 0 is default.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>direction</code>
+            </td>
+            <td>
+                  <code><span title="typing.Literal">Literal</span>[&#39;listen&#39;, &#39;speak&#39;, &#39;both&#39;] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Which leg of the call to play to.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>loop</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of times to loop. 0 means infinite.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>status_url</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Webhook URL for play state events.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9511,6 +11297,121 @@
 
     <div class="doc doc-contents ">
 
+        <p>Send the <code>calling.play.pause</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>control_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The control_id of the play operation to pause.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9526,6 +11427,121 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Send the <code>calling.play.resume</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>control_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The control_id of the play operation to resume.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9543,6 +11559,121 @@
 
     <div class="doc doc-contents ">
 
+        <p>Send the <code>calling.play.stop</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>control_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The control_id of the play operation to stop.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9558,6 +11689,137 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Send the <code>calling.play.volume</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>control_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The control_id of the play operation.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>volume</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Volume adjustment in dB.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9575,6 +11837,154 @@
 
     <div class="doc doc-contents ">
 
+        <p>Send the <code>calling.record</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>control_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique identifier for this recording. Auto-generated if not
+provided.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>audio</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Audio recording parameters.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>status_url</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Webhook URL for recording state events.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9590,6 +12000,121 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Send the <code>calling.record.pause</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>control_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The control_id of the recording to pause.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9607,6 +12132,121 @@
 
     <div class="doc doc-contents ">
 
+        <p>Send the <code>calling.record.resume</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>control_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The control_id of the recording to resume.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9622,6 +12262,121 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Send the <code>calling.record.stop</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>control_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The control_id of the recording to stop.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9639,6 +12394,201 @@
 
     <div class="doc doc-contents ">
 
+        <p>Send the <code>calling.collect</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>control_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique identifier for this collect operation.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>initial_timeout</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Seconds to wait for first input before timeout.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>digits</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DTMF digit collection parameters.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>speech</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Speech recognition parameters.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>continuous</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Keep collecting after each result.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>partial_results</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Deliver partial recognition results.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9654,6 +12604,121 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Send the <code>calling.collect.stop</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>control_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The control_id of the collect operation to stop.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9671,6 +12736,121 @@
 
     <div class="doc doc-contents ">
 
+        <p>Send the <code>calling.collect.start_input_timers</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>control_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The control_id of the collect operation.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9686,6 +12866,153 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Send the <code>calling.detect</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>detect</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Detection configuration.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>control_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique identifier for this detect operation.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>timeout</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Overall timeout in seconds for the detect operation.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9703,6 +13030,121 @@
 
     <div class="doc doc-contents ">
 
+        <p>Send the <code>calling.detect.stop</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>control_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The control_id of the detect operation to stop.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9718,6 +13160,153 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Send the <code>calling.tap</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>tap</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>What to tap.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>device</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Target device to send tapped audio to.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>control_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique identifier for this tap operation.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9735,6 +13324,121 @@
 
     <div class="doc doc-contents ">
 
+        <p>Send the <code>calling.tap.stop</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>control_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The control_id of the tap operation to stop.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9750,6 +13454,201 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Send the <code>calling.stream</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>url</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>WebSocket URL (wss://) to stream audio to.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>control_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique identifier for this stream operation.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>codec</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Audio codec for the stream.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>track</code>
+            </td>
+            <td>
+                  <code><span title="typing.Literal">Literal</span>[&#39;inbound_track&#39;, &#39;outbound_track&#39;, &#39;both_tracks&#39;] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Which audio track(s) to stream.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>authorization_bearer_token</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Bearer token sent in the WebSocket handshake.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>custom_parameters</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Custom key-value pairs sent with the stream.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9767,6 +13666,121 @@
 
     <div class="doc doc-contents ">
 
+        <p>Send the <code>calling.stream.stop</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>control_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The control_id of the stream to stop.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9782,6 +13796,105 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Send the <code>calling.denoise</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9799,6 +13912,105 @@
 
     <div class="doc doc-contents ">
 
+        <p>Send the <code>calling.denoise.stop</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9814,6 +14026,137 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Send the <code>calling.transcribe</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>control_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique identifier for this transcription.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>status_url</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Webhook URL for transcription results.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9831,6 +14174,121 @@
 
     <div class="doc doc-contents ">
 
+        <p>Send the <code>calling.transcribe.stop</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>control_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The control_id of the transcription to stop.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9846,6 +14304,121 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Send the <code>calling.ai.stop</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>control_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The control_id of the AI session to stop.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9863,6 +14436,121 @@
 
     <div class="doc doc-contents ">
 
+        <p>Send the <code>calling.send_fax.stop</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>control_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The control_id of the fax send to stop.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9879,6 +14567,121 @@
 
     <div class="doc doc-contents ">
 
+        <p>Send the <code>calling.receive_fax.stop</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>control_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The control_id of the fax receive to stop.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9894,6 +14697,137 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Send the <code>calling.refer</code> command.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>call_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifying ID of an existing call.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>device</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Target device for the REFER.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>status_url</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Webhook URL for REFER state events.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="CallResponse = 'CallLeg | FabricDeviceLeg'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.calling_types_generated.CallResponse)" href="calling_types_generated.html#signalwire.rest.namespaces.calling_types_generated.CallResponse">CallResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The call state after the command.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>

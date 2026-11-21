@@ -9835,6 +9835,11 @@
 
     <div class="doc doc-contents first">
 
+        <p>Typed <code>swml-webhooks</code> REST API shapes, generated from the OpenAPI spec.</p>
+<p>One <code>TypedDict</code> per spec schema plus per-operation <code>*Request</code> / <code>*Response</code>
+aliases. Every shape is static-only: at runtime each is a plain <code>dict</code>, so a
+differently-shaped server response is returned unchanged and never raises.</p>
+
 
 
 
@@ -9872,8 +9877,187 @@
 
 
         <p>Body POSTed to a SWAIG function's web_hook_url when the AI invokes it.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="call_id
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigRequestData.call_id)" href="#signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigRequestData.call_id">call_id</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique identifier for the call.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="ai_session_id
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigRequestData.ai_session_id)" href="#signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigRequestData.ai_session_id">ai_session_id</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Identifier for the AI session.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="app_name
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigRequestData.app_name)" href="#signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigRequestData.app_name">app_name</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Application name (e.g. "swml").</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="project_id
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigRequestData.project_id)" href="#signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigRequestData.project_id">project_id</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Your SignalWire project UUID.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="space_id
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigRequestData.space_id)" href="#signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigRequestData.space_id">space_id</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Your SignalWire space UUID.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="action
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigRequestData.action)" href="#signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigRequestData.action">action</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The function name being invoked.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="function
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigRequestData.function)" href="#signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigRequestData.function">function</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The function name (same as action).</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="meta_data
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigRequestData.meta_data)" href="#signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigRequestData.meta_data">meta_data</a></code></td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Custom metadata from SWAIG.defaults.meta_data.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="conversation_id
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigRequestData.conversation_id)" href="#signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigRequestData.conversation_id">conversation_id</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Identifier for the conversation thread.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="content_type
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigRequestData.content_type)" href="#signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigRequestData.content_type">content_type</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Content type identifier (e.g. "text/swaig").</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="version
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigRequestData.version)" href="#signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigRequestData.version">version</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>SWAIG protocol version (e.g. "2.0").</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -10162,8 +10346,67 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>The arguments the AI extracted for a SWAIG function call.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="parsed
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigArgument.parsed)" href="#signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigArgument.parsed">parsed</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Structured argument data as JSON objects.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="raw
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigArgument.raw)" href="#signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigArgument.raw">raw</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Raw argument string from the AI.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="substituted
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigArgument.substituted)" href="#signalwire.rest.namespaces.swml_webhooks_types_generated.SwaigArgument.substituted">substituted</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Argument with variable substitutions applied.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -10272,8 +10515,8 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>Body POSTed to post_prompt_url at the end of an AI call — the calling.call.ai.complete event envelope.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -10442,8 +10685,52 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>The AI-completion payload carried by a post-prompt webhook.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="summary
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.swml_webhooks_types_generated.PostPromptParams.summary)" href="#signalwire.rest.namespaces.swml_webhooks_types_generated.PostPromptParams.summary">summary</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The model's conversation summary.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="post_prompt_result
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.swml_webhooks_types_generated.PostPromptParams.post_prompt_result)" href="#signalwire.rest.namespaces.swml_webhooks_types_generated.PostPromptParams.post_prompt_result">post_prompt_result</a></code></td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | <span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Structured summary requested via post_prompt.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -10632,8 +10919,8 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>A single turn in a post-prompt conversation transcript.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -10722,8 +11009,8 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>A function the AI called during the conversation, as reported post-prompt.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -10832,8 +11119,67 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>Body POSTed to a dynamic-SWML request handler.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="vars
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.swml_webhooks_types_generated.SwmlRequestData.vars)" href="#signalwire.rest.namespaces.swml_webhooks_types_generated.SwmlRequestData.vars">vars</a></code></td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>SWML variables.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="envs
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.swml_webhooks_types_generated.SwmlRequestData.envs)" href="#signalwire.rest.namespaces.swml_webhooks_types_generated.SwmlRequestData.envs">envs</a></code></td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Environment values.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="params
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.swml_webhooks_types_generated.SwmlRequestData.params)" href="#signalwire.rest.namespaces.swml_webhooks_types_generated.SwmlRequestData.params">params</a></code></td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Request params (query/body merge).</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -10962,8 +11308,11 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>The call object embedded in a dynamic-SWML request.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+attributes; read them with item access):
+- <code>from</code> (<code>str</code>)</p>
 
 
 
@@ -11251,9 +11600,85 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Error body returned by the Compatibility REST API (single-error form). Source: signalwire/docs specs/compatibility-api/_shared/errors.tsp (CompatibilityErrorResponse).</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Error body returned by the Compatibility REST API (single-error form).</p>
+<p>Source: signalwire/docs specs/compatibility-api/_shared/errors.tsp
+(CompatibilityErrorResponse).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="code
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.swml_webhooks_types_generated.SignalWireErrorBody.code)" href="#signalwire.rest.namespaces.swml_webhooks_types_generated.SignalWireErrorBody.code">code</a></code></td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Numeric error code.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="message
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.swml_webhooks_types_generated.SignalWireErrorBody.message)" href="#signalwire.rest.namespaces.swml_webhooks_types_generated.SignalWireErrorBody.message">message</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Human-readable error message.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="more_info
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.swml_webhooks_types_generated.SignalWireErrorBody.more_info)" href="#signalwire.rest.namespaces.swml_webhooks_types_generated.SignalWireErrorBody.more_info">more_info</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>URL with more information about the error.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="status
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.swml_webhooks_types_generated.SignalWireErrorBody.status)" href="#signalwire.rest.namespaces.swml_webhooks_types_generated.SignalWireErrorBody.status">status</a></code></td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>HTTP status code.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 

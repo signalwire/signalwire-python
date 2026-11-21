@@ -9539,6 +9539,11 @@
 
     <div class="doc doc-contents first">
 
+        <p>Typed <code>messages</code> REST API shapes, generated from the OpenAPI spec.</p>
+<p>One <code>TypedDict</code> per spec schema plus per-operation <code>*Request</code> / <code>*Response</code>
+aliases. Every shape is static-only: at runtime each is a plain <code>dict</code>, so a
+differently-shaped server response is returned unchanged and never raises.</p>
+
 
 
 
@@ -9696,8 +9701,134 @@
 
 
         <p>Request body for sending a new SMS or MMS message.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+attributes; read them with item access):
+- <code>from</code> (<code>str</code>): Source phone number. Must be a purchased SignalWire phone
+  number on the project in E.164 format, or a shortcode (5-6 digits). Verified
+  caller IDs are not permitted.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="to
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.CreateMessageRequest.to)" href="#signalwire.rest.namespaces.messages_types_generated.CreateMessageRequest.to">to</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Destination phone number in E.164 format (<code>+</code> followed by 5-17 digits). Also
+accepts passthrough numbers like <code>988</code>/<code>+988</code>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="body
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.CreateMessageRequest.body)" href="#signalwire.rest.namespaces.messages_types_generated.CreateMessageRequest.body">body</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Message body text. Required if <code>media</code> is not provided. Subject to
+provider-specific character limits.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="media
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.CreateMessageRequest.media)" href="#signalwire.rest.namespaces.messages_types_generated.CreateMessageRequest.media">media</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Array of HTTP or HTTPS URLs for media attachments. Presence of media
+makes the message MMS. Maximum 8 items.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="send_as_mms
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.CreateMessageRequest.send_as_mms)" href="#signalwire.rest.namespaces.messages_types_generated.CreateMessageRequest.send_as_mms">send_as_mms</a></code></td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Force the message to be sent as MMS even when no media attachments
+are provided.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="status_callback
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.CreateMessageRequest.status_callback)" href="#signalwire.rest.namespaces.messages_types_generated.CreateMessageRequest.status_callback">status_callback</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A valid URL to receive message status callback events at each
+state change. See the <a href="https://signalwire.com/docs/apis/rest/messages/webhooks/message-status-callback">Message status
+callback</a>
+webhook for the payload your URL will receive.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="custom_variables
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.CreateMessageRequest.custom_variables)" href="#signalwire.rest.namespaces.messages_types_generated.CreateMessageRequest.custom_variables">custom_variables</a></code></td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Your own key/value string pairs to attach to the message — for
+example, an order or case number you want to recognize later. When you also
+set <code>status_callback</code>, SignalWire includes these pairs as a
+<code>custom_variables</code> object in every status callback it sends to that URL, so
+you can match each callback to a record in your own system. If you don't set
+<code>status_callback</code>, there is nowhere for the variables to be delivered.</p>
+<p>Each value must be a non-empty string of at most 1024 bytes. You can send at
+most 20 pairs. Each key must start with a letter or underscore and contain
+only letters, numbers, and underscores, and cannot begin with the reserved
+prefixes <code>signalwire_</code>, <code>sw_</code>, <code>rtc_</code>, or <code>internal_</code> (case-insensitive).
+Keys are case-sensitive.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -9865,9 +9996,41 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>Request body for redacting the body of a previously sent message. Only <code>body</code> may be updated, and it must be an empty string.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>Request body for redacting the body of a previously sent message.</p>
+<p>Only <code>body</code> may be updated, and it must be an empty string.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="body
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.UpdateMessageRequest.body)" href="#signalwire.rest.namespaces.messages_types_generated.UpdateMessageRequest.body">body</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Must be an empty string (<code>""</code>) to redact the message. Any non-empty value
+is rejected with <code>body_must_be_empty</code>. This is the only field that can be
+updated.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -9935,9 +10098,207 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>A message record. Returned by the create and update endpoints.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>A message record.</p>
+<p>Returned by the create and update endpoints.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Wire-only keys (not valid Python identifiers, so they are listed here rather than as
+attributes; read them with item access):
+- <code>from</code> (<code>str</code>): The source phone number.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="id
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.Message.id)" href="#signalwire.rest.namespaces.messages_types_generated.Message.id">id</a></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="uuid = 'str'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.messages_types_generated.uuid)" href="#signalwire.rest.namespaces.messages_types_generated.uuid">uuid</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique ID of the message. This is the <code>MessageSegment</code> ID, consistent
+with the dashboard and the <code>/api/messaging/logs</code> endpoint.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="to
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.Message.to)" href="#signalwire.rest.namespaces.messages_types_generated.Message.to">to</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The destination phone number.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="body
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.Message.body)" href="#signalwire.rest.namespaces.messages_types_generated.Message.body">body</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The message body text. Returns an empty string when the message has been
+redacted.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="media
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.Message.media)" href="#signalwire.rest.namespaces.messages_types_generated.Message.media">media</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Array of URLs for any media attachments on the message. Empty for SMS.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="number_of_segments
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.Message.number_of_segments)" href="#signalwire.rest.namespaces.messages_types_generated.Message.number_of_segments">number_of_segments</a></code></td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of segments the message body was split into for
+delivery.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="error_code
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.Message.error_code)" href="#signalwire.rest.namespaces.messages_types_generated.Message.error_code">error_code</a></code></td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Provider-specific error code if delivery failed. Null when no error
+occurred.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="error_message
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.Message.error_message)" href="#signalwire.rest.namespaces.messages_types_generated.Message.error_message">error_message</a></code></td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Human-readable error message if delivery failed. Null when no
+error occurred.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="created_at
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.Message.created_at)" href="#signalwire.rest.namespaces.messages_types_generated.Message.created_at">created_at</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Date and time when the message was created.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="project_id
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.Message.project_id)" href="#signalwire.rest.namespaces.messages_types_generated.Message.project_id">project_id</a></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="uuid = 'str'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.messages_types_generated.uuid)" href="#signalwire.rest.namespaces.messages_types_generated.uuid">uuid</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The ID of the project the message belongs to.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="status_callback_url
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.Message.status_callback_url)" href="#signalwire.rest.namespaces.messages_types_generated.Message.status_callback_url">status_callback_url</a></code></td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Callback URL configured to receive message status events.
+Null if no callback was configured.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="message_uri
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.Message.message_uri)" href="#signalwire.rest.namespaces.messages_types_generated.Message.message_uri">message_uri</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Relative URL for retrieving the message via the
+<code>/api/messaging/logs</code> endpoint.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -10265,9 +10626,39 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>The request contains invalid parameters. See errors for details.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>The request contains invalid parameters.</p>
+<p>See errors for details.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="errors
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.MessagesCreateStatusCode422.errors)" href="#signalwire.rest.namespaces.messages_types_generated.MessagesCreateStatusCode422.errors">errors</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<a class="autorefs autorefs-internal" title="Types_StatusCodes_RestApiErrorItem (signalwire.rest.namespaces.messages_types_generated.Types_StatusCodes_RestApiErrorItem)" href="#signalwire.rest.namespaces.messages_types_generated.Types_StatusCodes_RestApiErrorItem">Types_StatusCodes_RestApiErrorItem</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>List of validation errors.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -10335,9 +10726,39 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
-        <p>The request contains invalid parameters. See errors for details.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>The request contains invalid parameters.</p>
+<p>See errors for details.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="errors
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.MessagesUpdateStatusCode422.errors)" href="#signalwire.rest.namespaces.messages_types_generated.MessagesUpdateStatusCode422.errors">errors</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<a class="autorefs autorefs-internal" title="Types_StatusCodes_RestApiErrorItem (signalwire.rest.namespaces.messages_types_generated.Types_StatusCodes_RestApiErrorItem)" href="#signalwire.rest.namespaces.messages_types_generated.Types_StatusCodes_RestApiErrorItem">Types_StatusCodes_RestApiErrorItem</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>List of validation errors.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -10406,8 +10827,97 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>Details about a specific error.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="type
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.Types_StatusCodes_RestApiErrorItem.type)" href="#signalwire.rest.namespaces.messages_types_generated.Types_StatusCodes_RestApiErrorItem.type">type</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The category of error.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="code
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.Types_StatusCodes_RestApiErrorItem.code)" href="#signalwire.rest.namespaces.messages_types_generated.Types_StatusCodes_RestApiErrorItem.code">code</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A specific error code.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="message
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.Types_StatusCodes_RestApiErrorItem.message)" href="#signalwire.rest.namespaces.messages_types_generated.Types_StatusCodes_RestApiErrorItem.message">message</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A description of what caused the error.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="attribute
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.Types_StatusCodes_RestApiErrorItem.attribute)" href="#signalwire.rest.namespaces.messages_types_generated.Types_StatusCodes_RestApiErrorItem.attribute">attribute</a></code></td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The request parameter that caused the error, if applicable.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="url
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.messages_types_generated.Types_StatusCodes_RestApiErrorItem.url)" href="#signalwire.rest.namespaces.messages_types_generated.Types_StatusCodes_RestApiErrorItem.url">url</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A link to documentation about this error.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -10556,8 +11066,8 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>The request is invalid.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -10626,8 +11136,8 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>Access is unauthorized.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -10696,8 +11206,8 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>The server cannot find the requested resource.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -10766,8 +11276,8 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>An internal server error occurred.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 

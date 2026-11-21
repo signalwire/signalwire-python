@@ -9239,6 +9239,12 @@
 
     <div class="doc doc-contents first">
 
+        <p>Typed <code>video</code> REST resources, generated from the OpenAPI spec.</p>
+<p>One resource class per spec collection: closed, typed <code>create</code> / <code>update</code>
+parameters (the explicit spec fields) and typed sub-operation methods, plus an
+<code>extras</code> escape hatch and a <code>**_reserved_kw</code> tail for unknown or reserved-word
+wire fields.</p>
+
 
 
 
@@ -9276,6 +9282,8 @@
 
 
         <p>Typed resource for <code>/conference_tokens</code> (generated).</p>
+<p>Bound to <code>/api/video/conference_tokens</code>; construct it as
+<code>VideoConferenceTokens(http)</code> with the client's HTTP transport.</p>
 
 
 
@@ -9325,6 +9333,105 @@
 
     <div class="doc doc-contents ">
 
+        <p>Find a conference token by ID.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Video</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of the conference token.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**params</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional query parameters, sent as the query string.</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ConferenceToken (signalwire.rest.namespaces.video_types_generated.ConferenceToken)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.ConferenceToken">ConferenceToken</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A conference token object.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9340,6 +9447,89 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Reset a conference token by ID.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Video</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of the conference token.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ConferenceToken (signalwire.rest.namespaces.video_types_generated.ConferenceToken)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.ConferenceToken">ConferenceToken</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A conference token object.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9372,6 +9562,8 @@
 
 
         <p>Typed resource for <code>/conferences</code> (generated).</p>
+<p>Bound to <code>/api/video/conferences</code>; construct it as <code>VideoConferences(http)</code> with
+the client's HTTP transport.</p>
 
 
 
@@ -9421,6 +9613,464 @@
 
     <div class="doc doc-contents ">
 
+        <p>Create a Video Conference.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Video</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>display_name</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Display name of the video conference. Maximum of 200
+characters.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>name</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A named unique identifier for the conference. Allowed characters:
+<code>A-Za-z0-9_-</code>. Maximum of 100 characters.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>description</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Description of the conference. Maximum of 3000 characters.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>join_from</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Conference does not accept new participants before this time.
+Expects RFC 3339 datetime: <code>2022-01-01T23:59:60Z</code>. Date only:
+<code>2022-01-01</code> will be converted to <code>2022-01-01T00:00:00Z</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>join_until</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Conference stops accepting new participants at this time, but
+keeps running until all participants leave. Expects RFC 3339 datetime:
+<code>2022-01-01T23:59:60Z</code>. Date only: <code>2022-01-01</code> will be converted to
+<code>2022-01-01T00:00:00Z</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>quality</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="VideoQuality = "Literal['720p', '1080p']"
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.video_types_generated.VideoQuality)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.VideoQuality">VideoQuality</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The conference's resolution.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>layout</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="VideoLayout = "Literal['grid-responsive', 'grid-responsive-mobile', 'highlight-1-responsive', '1x1', '2x1', '2x2', '5up', '3x3', '4x4', '5x5', '6x6', '8x8', '10x10']"
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.video_types_generated.VideoLayout)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.VideoLayout">VideoLayout</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The conference's initial layout.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>size</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ConferenceSize = "Literal['small', 'medium', 'large']"
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.video_types_generated.ConferenceSize)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.ConferenceSize">ConferenceSize</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The size of the video conference.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>record_on_start</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether to start recording when a conference session
+begins.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>enable_room_previews</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether a preview video of the conference content is
+generated.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>enable_chat</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether group chat is enabled for conference participants.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>dark_primary</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>CTA buttons and selected items color (dark theme).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>dark_background</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Main background color (dark theme).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>dark_foreground</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Main foreground color (dark theme).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>dark_success</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Success indication color (dark theme).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>dark_negative</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Error indication color (dark theme).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>light_primary</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>CTA buttons and selected items color (light theme).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>light_background</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Main background color (light theme).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>light_foreground</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Main foreground color (light theme).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>light_success</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Success indication color (light theme).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>light_negative</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Error indication color (light theme).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**_reserved_kw</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Further wire fields passed as bare keywords, including
+reserved-word keys such as <code>from</code> (<code>**{'from': ...}</code>).</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Conference (signalwire.rest.namespaces.video_types_generated.Conference)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.Conference">Conference</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Video conference response object.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9436,6 +10086,514 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Update a Video Conference.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Video</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of the video conference.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>display_name</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Display name of the video conference. Maximum of 200
+characters.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>description</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Description of the conference. Maximum of 3000 characters.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>join_from</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Conference does not accept new participants before this time.
+Expects RFC 3339 datetime: <code>2022-01-01T23:59:60Z</code>. Date only:
+<code>2022-01-01</code> will be converted to <code>2022-01-01T00:00:00Z</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>join_until</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Conference stops accepting new participants at this time, but
+keeps running until all participants leave. Expects RFC 3339 datetime:
+<code>2022-01-01T23:59:60Z</code>. Date only: <code>2022-01-01</code> will be converted to
+<code>2022-01-01T00:00:00Z</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>quality</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="VideoQuality = "Literal['720p', '1080p']"
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.video_types_generated.VideoQuality)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.VideoQuality">VideoQuality</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The conference's resolution.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>layout</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="VideoLayout = "Literal['grid-responsive', 'grid-responsive-mobile', 'highlight-1-responsive', '1x1', '2x1', '2x2', '5up', '3x3', '4x4', '5x5', '6x6', '8x8', '10x10']"
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.video_types_generated.VideoLayout)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.VideoLayout">VideoLayout</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The conference's initial layout.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>size</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ConferenceSize = "Literal['small', 'medium', 'large']"
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.video_types_generated.ConferenceSize)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.ConferenceSize">ConferenceSize</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The size of the video conference.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>record_on_start</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether to start recording when a conference session
+begins.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>tone_on_entry_and_exit</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether a tone is played when a member enters or
+exits the conference.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>room_join_video_off</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether participants join with video off by room
+setting.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>user_join_video_off</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether participants join with video off by user
+setting.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>enable_room_previews</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether a preview video of the conference content is
+generated.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>enable_chat</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether group chat is enabled for conference participants.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>dark_primary</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>CTA buttons and selected items color (dark theme).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>dark_background</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Main background color (dark theme).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>dark_foreground</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Main foreground color (dark theme).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>dark_success</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Success indication color (dark theme).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>dark_negative</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Error indication color (dark theme).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>light_primary</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>CTA buttons and selected items color (light theme).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>light_background</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Main background color (light theme).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>light_foreground</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Main foreground color (light theme).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>light_success</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Success indication color (light theme).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>light_negative</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Error indication color (light theme).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**_reserved_kw</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Further wire fields passed as bare keywords, including
+reserved-word keys such as <code>from</code> (<code>**{'from': ...}</code>).</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Conference (signalwire.rest.namespaces.video_types_generated.Conference)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.Conference">Conference</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Video conference response object.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9453,6 +10611,112 @@
 
     <div class="doc doc-contents ">
 
+        <p>List conference tokens.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Video</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of the video conference.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**params</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional query parameters, sent as the query string. Recognized by
+this operation:
+- <code>page_number</code>: Page number to return. Requires <code>page_token</code> for
+  values greater than 0.
+- <code>page_size</code>: Specify the number of results to return on a single
+  page. The default page size is <code>50</code> and the maximum is <code>1000</code>.
+- <code>page_token</code>: Token for cursor-based pagination. Required when
+  <code>page_number</code> is greater than 0.</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ListConferenceTokensResponse (signalwire.rest.namespaces.video_types_generated.ListConferenceTokensResponse)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.ListConferenceTokensResponse">ListConferenceTokensResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>List conference tokens response.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9469,6 +10733,105 @@
 
     <div class="doc doc-contents ">
 
+        <p>List Streams by Conference.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Video</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique id of a video conference</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**params</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional query parameters, sent as the query string.</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ListStreamsResponse (signalwire.rest.namespaces.video_types_generated.ListStreamsResponse)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.ListStreamsResponse">ListStreamsResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>List streams response.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9484,6 +10847,140 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Create a Stream for a Conference.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Video</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique id of a video conference</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>url</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>RTMP or RTMPS URL. This must be the address of a server accepting
+incoming RTMP/RTMPS streams.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**_reserved_kw</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Further wire fields passed as bare keywords, including
+reserved-word keys such as <code>from</code> (<code>**{'from': ...}</code>).</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Stream (signalwire.rest.namespaces.video_types_generated.Stream)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.Stream">Stream</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A video stream object.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9516,6 +11013,8 @@
 
 
         <p>Typed resource for <code>/room_recordings</code> (generated).</p>
+<p>Bound to <code>/api/video/room_recordings</code>; construct it as
+<code>VideoRoomRecordings(http)</code> with the client's HTTP transport.</p>
 
 
 
@@ -9565,6 +11064,98 @@
 
     <div class="doc doc-contents ">
 
+        <p>A list of all Room Recordings.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Video</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**params</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional query parameters, sent as the query string. Recognized by
+this operation:
+- <code>media_ttl</code>: Generated media links will be valid for this many
+  seconds. Default is 900 (15 minutes).
+- <code>page_number</code>: Page number to return. Requires <code>page_token</code> for
+  values greater than 0.
+- <code>page_size</code>: Specify the number of results to return on a single
+  page. The default page size is <code>50</code> and the maximum is <code>1000</code>.
+- <code>page_token</code>: Token for cursor-based pagination. Required when
+  <code>page_number</code> is greater than 0.</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ListRoomRecordingsResponse (signalwire.rest.namespaces.video_types_generated.ListRoomRecordingsResponse)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.ListRoomRecordingsResponse">ListRoomRecordingsResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>List room recordings response.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9580,6 +11171,108 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>A detailed summary of a particular Room Recording.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Video</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of the Room Recording.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**params</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional query parameters, sent as the query string. Recognized by
+this operation:
+- <code>media_ttl</code>: Generated media links will be valid for this many
+  seconds. Default is 900 (15 minutes).</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RoomRecording (signalwire.rest.namespaces.video_types_generated.RoomRecording)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.RoomRecording">RoomRecording</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Room recording response object.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9597,6 +11290,89 @@
 
     <div class="doc doc-contents ">
 
+        <p>Delete a Room Recording.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Video</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of the Room Recording.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The decoded JSON response (an empty dict when the server sends no body).</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9612,6 +11388,112 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>A list of Events for a particular Room Recording.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Video</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of the Room Recording.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**params</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional query parameters, sent as the query string. Recognized by
+this operation:
+- <code>page_number</code>: Page number to return. Requires <code>page_token</code> for
+  values greater than 0.
+- <code>page_size</code>: Specify the number of results to return on a single
+  page. The default page size is <code>50</code> and the maximum is <code>1000</code>.
+- <code>page_token</code>: Token for cursor-based pagination. Required when
+  <code>page_number</code> is greater than 0.</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ListRoomRecordingEventsResponse (signalwire.rest.namespaces.video_types_generated.ListRoomRecordingEventsResponse)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.ListRoomRecordingEventsResponse">ListRoomRecordingEventsResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>List room recording events response.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9644,6 +11526,8 @@
 
 
         <p>Typed resource for <code>/room_sessions</code> (generated).</p>
+<p>Bound to <code>/api/video/room_sessions</code>; construct it as <code>VideoRoomSessions(http)</code>
+with the client's HTTP transport.</p>
 
 
 
@@ -9693,6 +11577,112 @@
 
     <div class="doc doc-contents ">
 
+        <p>A list of Events for a particular Room Session.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Video</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of the Room Session.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**params</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional query parameters, sent as the query string. Recognized by
+this operation:
+- <code>page_number</code>: Page number to return. Requires <code>page_token</code> for
+  values greater than 0.
+- <code>page_size</code>: Specify the number of results to return on a single
+  page. The default page size is <code>50</code> and the maximum is <code>1000</code>.
+- <code>page_token</code>: Token for cursor-based pagination. Required when
+  <code>page_number</code> is greater than 0.</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ListRoomSessionEventsResponse (signalwire.rest.namespaces.video_types_generated.ListRoomSessionEventsResponse)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.ListRoomSessionEventsResponse">ListRoomSessionEventsResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>List room session events response.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9709,6 +11699,112 @@
 
     <div class="doc doc-contents ">
 
+        <p>A list of Members for a particular Room Session.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Video</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of the Room Session.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**params</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional query parameters, sent as the query string. Recognized by
+this operation:
+- <code>page_number</code>: Page number to return. Requires <code>page_token</code> for
+  values greater than 0.
+- <code>page_size</code>: Specify the number of results to return on a single
+  page. The default page size is <code>50</code> and the maximum is <code>1000</code>.
+- <code>page_token</code>: Token for cursor-based pagination. Required when
+  <code>page_number</code> is greater than 0.</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ListRoomSessionMembersResponse (signalwire.rest.namespaces.video_types_generated.ListRoomSessionMembersResponse)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.ListRoomSessionMembersResponse">ListRoomSessionMembersResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>List room session members response.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9724,6 +11820,114 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>A list of Room Recordings for a particular Room Session.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Video</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of the Room Session.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**params</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional query parameters, sent as the query string. Recognized by
+this operation:
+- <code>media_ttl</code>: Generated media links will be valid for this many
+  seconds. Default is 900 (15 minutes).
+- <code>page_number</code>: Page number to return. Requires <code>page_token</code> for
+  values greater than 0.
+- <code>page_size</code>: Specify the number of results to return on a single
+  page. The default page size is <code>50</code> and the maximum is <code>1000</code>.
+- <code>page_token</code>: Token for cursor-based pagination. Required when
+  <code>page_number</code> is greater than 0.</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ListRoomSessionRecordingsResponse (signalwire.rest.namespaces.video_types_generated.ListRoomSessionRecordingsResponse)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.ListRoomSessionRecordingsResponse">ListRoomSessionRecordingsResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>List room session recordings response.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9756,6 +11960,8 @@
 
 
         <p>Typed resource for <code>/room_tokens</code> (generated).</p>
+<p>Bound to <code>/api/video/room_tokens</code>; construct it as <code>VideoRoomTokens(http)</code> with
+the client's HTTP transport.</p>
 
 
 
@@ -9805,6 +12011,432 @@
 
     <div class="doc doc-contents ">
 
+        <p>Generate a Room Token allowing a client to join a Room.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Video</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>room_name</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Room's unique named identifier. Allowed characters: A-Za-z0-9_-.
+Up to 100 characters. The room does not have to exist when the token is
+created, but must exist prior to joining, or ensure auto_create_room is
+set to true.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>user_name</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A display name to use for the user. Up to 100 characters. (If not
+supplied, a random alphanumeric string will be returned for each
+authorization with this token.)</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>permissions</code>
+            </td>
+            <td>
+                  <code><span title="list">list</span>[<a class="autorefs autorefs-internal" title="RoomTokenPermission = "Literal['room.member.audio_mute', 'room.member.audio_unmute', 'room.member.video_mute', 'room.member.video_unmute', 'room.member.deaf', 'room.member.undeaf', 'room.member.set_input_volume', 'room.member.set_output_volume', 'room.member.set_input_sensitivity', 'room.member.set_position', 'room.member.set_meta', 'room.member.raisehand', 'room.member.lowerhand', 'room.member.remove', 'room.member.promote', 'room.member.demote', 'room.hide_video_muted', 'room.list_available_layouts', 'room.lock', 'room.playback', 'room.playback_seek', 'room.prioritize_handraise', 'room.recording', 'room.set_layout', 'room.set_position', 'room.set_meta', 'room.show_video_muted', 'room.stream', 'room.unlock', 'room.self.audio_mute', 'room.self.audio_unmute', 'room.self.video_mute', 'room.self.video_unmute', 'room.self.deaf', 'room.self.undeaf', 'room.self.set_input_volume', 'room.self.set_output_volume', 'room.self.set_input_sensitivity', 'room.self.set_position', 'room.self.set_meta', 'room.self.raisehand', 'room.self.lowerhand', 'room.self.screenshare', 'room.self.additional_source']"
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.video_types_generated.RoomTokenPermission)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.RoomTokenPermission">RoomTokenPermission</a>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A list of permissions, which define what user can do once they
+join the room. If <code>join_as</code> is <code>audience</code>, permissions are set to an
+empty array regardless of the value provided.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>join_from</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The user can't join the room before this time. Expects RFC 3339
+datetime: <code>2022-01-01T23:59:60Z</code>. Date only: <code>2022-01-01</code> will be
+converted to <code>2022-01-01T00:00:00Z</code></p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>join_until</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The user can't join the room after this time. Expects RFC 3339
+datetime: <code>2022-01-01T23:59:60Z</code>. Date only: <code>2022-01-01</code> will be
+converted to <code>2022-01-01T00:00:00Z</code></p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>remove_at</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Remove user from the room at this time. Expects RFC 3339
+datetime: <code>2022-01-01T23:59:60Z</code>. Date only: <code>2022-01-01</code> will be
+converted to <code>2022-01-01T00:00:00Z</code></p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>remove_after_seconds_elapsed</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Remove user after they are in the room for N
+seconds.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>join_audio_muted</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether the user joins the room with their audio muted.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>join_video_muted</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether the user joins the room with their video muted.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>auto_create_room</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>By default, if the user tries to use this token to join a
+room that doesn't exist, it will be created with default configuration.
+Set this to false to require the room to exist beforehand.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>enable_room_previews</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether to generate a video with a preview of the
+content of the room. This parameter has effect only if this token
+auto-creates the room, thus it will be ignored if the room already
+exists.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>room_display_name</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Display name used if a room is auto-created when the
+token joins. Maximum of 200 characters. Defaults to the value of
+room_name.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>end_room_session_on_leave</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether to end the room session when the member
+using this token leaves the room.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>join_as</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="JoinAsType = "Literal['audience', 'member']"
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.video_types_generated.JoinAsType)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.JoinAsType">JoinAsType</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether the user should join as a member or as a non-interactive
+audience participant. Audience participants cannot send audio or video.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>media_allowed</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="MediaAllowedType = "Literal['all', 'video-only', 'audio-only']"
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.video_types_generated.MediaAllowedType)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.MediaAllowedType">MediaAllowedType</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Indicates what media the user is allowed to receive.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>room_meta</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Set the room meta. Maximum of 2000 characters when serialized to
+JSON.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>meta</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Set the member meta. Maximum of 2000 characters when serialized to
+JSON.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>sync_audio_video</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Enable/disable jitter buffer audio-video sync.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**_reserved_kw</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Further wire fields passed as bare keywords, including
+reserved-word keys such as <code>from</code> (<code>**{'from': ...}</code>).</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RoomTokenResponse (signalwire.rest.namespaces.video_types_generated.RoomTokenResponse)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.RoomTokenResponse">RoomTokenResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Room token response object.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9836,6 +12468,8 @@
 
 
         <p>Typed resource for <code>/rooms</code> (generated).</p>
+<p>Bound to <code>/api/video/rooms</code>; construct it as <code>VideoRooms(http)</code> with the
+client's HTTP transport.</p>
 
 
 
@@ -9885,6 +12519,353 @@
 
     <div class="doc doc-contents ">
 
+        <p>Create a room.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Video</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>name</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A named unique identifier for the room. Allowed characters:
+<code>A-Za-z0-9_-</code>. Maximum of 100 characters.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>display_name</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Display name of the room. Maximum of 200 characters. Defaults
+to the value of name.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>description</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Description of the room. Maximum of 3000 characters.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>max_members</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The maximum number of members in the room at a time. Must be at
+least 1 to a maximum of 300.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>quality</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="VideoQuality = "Literal['720p', '1080p']"
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.video_types_generated.VideoQuality)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.VideoQuality">VideoQuality</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The room's resolution.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>join_from</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Room does not accept new participants before this time. Expects
+RFC 3339 datetime: <code>2022-01-01T23:59:60Z</code>. Date only: <code>2022-01-01</code> will
+be converted to <code>2022-01-01T00:00:00Z</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>join_until</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Room stops accepting new participants at this time, but keeps
+running until all participants leave. Expects RFC 3339 datetime:
+<code>2022-01-01T23:59:60Z</code>. Date only: <code>2022-01-01</code> will be converted to
+<code>2022-01-01T00:00:00Z</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>remove_at</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Remove users from the room at this time. Expects RFC 3339
+datetime: <code>2022-01-01T23:59:60Z</code>. Date only: <code>2022-01-01</code> will be
+converted to <code>2022-01-01T00:00:00Z</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>remove_after_seconds_elapsed</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Remove users after they are in the room for N
+seconds.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>layout</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RoomLayout = "Literal['grid-responsive', 'grid-responsive-mobile', 'highlight-1-responsive', '1x1', '2x1', '2x2', '5up', '3x3', '4x4', '5x5', '6x6', '8x8', '10x10']"
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.video_types_generated.RoomLayout)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.RoomLayout">RoomLayout</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The room's initial layout.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>record_on_start</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Specifies whether to start recording a Room Session when
+one is started for this Room.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>enable_room_previews</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether a video with a preview of the content of the
+room is to be generated.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>meta</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>User-defined metadata for the room. Must be a valid JSON object.
+Maximum of 2000 characters when serialized.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>sync_audio_video</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Enable/disable jitter buffer audio-video sync.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**_reserved_kw</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Further wire fields passed as bare keywords, including
+reserved-word keys such as <code>from</code> (<code>**{'from': ...}</code>).</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RoomResponse (signalwire.rest.namespaces.video_types_generated.RoomResponse)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.RoomResponse">RoomResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Room response object.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9900,6 +12881,352 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Update a room.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Video</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of the room.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>display_name</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Display name of the room. Maximum of 200 characters. Defaults
+to the value of name.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>description</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Description of the room. Maximum of 3000 characters.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>max_members</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The maximum number of members in the room at a time. Must be at
+least 1 to a maximum of 300.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>quality</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="VideoQuality = "Literal['720p', '1080p']"
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.video_types_generated.VideoQuality)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.VideoQuality">VideoQuality</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The room's resolution.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>join_from</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Room does not accept new participants before this time. Expects
+RFC 3339 datetime: <code>2022-01-01T23:59:60Z</code>. Date only: <code>2022-01-01</code> will
+be converted to <code>2022-01-01T00:00:00Z</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>join_until</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Room stops accepting new participants at this time, but keeps
+running until all participants leave. Expects RFC 3339 datetime:
+<code>2022-01-01T23:59:60Z</code>. Date only: <code>2022-01-01</code> will be converted to
+<code>2022-01-01T00:00:00Z</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>remove_at</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Remove users from the room at this time. Expects RFC 3339
+datetime: <code>2022-01-01T23:59:60Z</code>. Date only: <code>2022-01-01</code> will be
+converted to <code>2022-01-01T00:00:00Z</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>remove_after_seconds_elapsed</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Remove users after they are in the room for N
+seconds.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>layout</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RoomLayout = "Literal['grid-responsive', 'grid-responsive-mobile', 'highlight-1-responsive', '1x1', '2x1', '2x2', '5up', '3x3', '4x4', '5x5', '6x6', '8x8', '10x10']"
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.video_types_generated.RoomLayout)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.RoomLayout">RoomLayout</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The room's initial layout.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>record_on_start</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Specifies whether to start recording a Room Session when
+one is started for this Room.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>enable_room_previews</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether a video with a preview of the content of the
+room is to be generated.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>meta</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>User-defined metadata for the room. Must be a valid JSON object.
+Maximum of 2000 characters when serialized.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>sync_audio_video</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Enable/disable jitter buffer audio-video sync.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**_reserved_kw</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Further wire fields passed as bare keywords, including
+reserved-word keys such as <code>from</code> (<code>**{'from': ...}</code>).</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RoomResponse (signalwire.rest.namespaces.video_types_generated.RoomResponse)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.RoomResponse">RoomResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Room response object.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9917,6 +13244,105 @@
 
     <div class="doc doc-contents ">
 
+        <p>List Streams by Room.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Video</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of the video room.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**params</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional query parameters, sent as the query string.</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ListStreamsResponse (signalwire.rest.namespaces.video_types_generated.ListStreamsResponse)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.ListStreamsResponse">ListStreamsResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>List streams response.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -9932,6 +13358,140 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Create a Stream for a Room.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Video</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of the video room.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>url</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>RTMP or RTMPS URL. This must be the address of a server accepting
+incoming RTMP/RTMPS streams.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**_reserved_kw</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Further wire fields passed as bare keywords, including
+reserved-word keys such as <code>from</code> (<code>**{'from': ...}</code>).</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Stream (signalwire.rest.namespaces.video_types_generated.Stream)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.Stream">Stream</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A video stream object.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
@@ -9964,6 +13524,8 @@
 
 
         <p>Typed resource for <code>/streams</code> (generated).</p>
+<p>Bound to <code>/api/video/streams</code>; construct it as <code>VideoStreams(http)</code> with the
+client's HTTP transport.</p>
 
 
 
@@ -10013,6 +13575,105 @@
 
     <div class="doc doc-contents ">
 
+        <p>Find a Stream by ID.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Video</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of the stream.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**params</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional query parameters, sent as the query string.</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Stream (signalwire.rest.namespaces.video_types_generated.Stream)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.Stream">Stream</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A video stream object.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -10029,6 +13690,140 @@
 
     <div class="doc doc-contents ">
 
+        <p>Update a Stream.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Video</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of the stream.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>url</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>RTMP or RTMPS URL. This must be the address of a server accepting
+incoming RTMP/RTMPS streams.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**_reserved_kw</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Further wire fields passed as bare keywords, including
+reserved-word keys such as <code>from</code> (<code>**{'from': ...}</code>).</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Stream (signalwire.rest.namespaces.video_types_generated.Stream)" href="video_types_generated.html#signalwire.rest.namespaces.video_types_generated.Stream">Stream</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A video stream object.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
     </div>
 
@@ -10044,6 +13839,89 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Delete a Stream.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Video</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unique ID of the stream.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The decoded JSON response (an empty dict when the server sends no body).</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>

@@ -8441,6 +8441,12 @@
 
     <div class="doc doc-contents first">
 
+        <p>Typed <code>logs</code> REST resources, generated from the OpenAPI spec.</p>
+<p>One resource class per spec collection: closed, typed <code>create</code> / <code>update</code>
+parameters (the explicit spec fields) and typed sub-operation methods, plus an
+<code>extras</code> escape hatch and a <code>**_reserved_kw</code> tail for unknown or reserved-word
+wire fields.</p>
+
 
 
 
@@ -8478,6 +8484,8 @@
 
 
         <p>Typed resource for <code>/conferences</code> (generated).</p>
+<p>Bound to <code>/api/logs/conferences</code>; construct it as <code>ConferenceLogs(http)</code> with
+the client's HTTP transport.</p>
 
 
 
@@ -8526,6 +8534,102 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>A list of Conferences.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Voice</em> or <em>Video</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**params</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional query parameters, sent as the query string. Recognized by
+this operation:
+- <code>include_deleted</code>: Include logs for deleted activity.
+- <code>created_on</code>: Return logs for activity on this date. Accepts a date
+  (YYYY-MM-DD) or ISO 8601 timestamp.
+- <code>created_before</code>: Return logs for activity prior to this date.
+  Accepts a date (YYYY-MM-DD) or ISO 8601 timestamp.
+- <code>created_after</code>: Return logs for activity after this date. Accepts a
+  date (YYYY-MM-DD) or ISO 8601 timestamp.
+- <code>page_number</code>: The page number to retrieve (0-indexed).
+- <code>page_size</code>: Specify the number of results to return on a single
+  page. The default page size is <code>50</code> and the maximum is <code>1000</code>.
+- <code>page_token</code>: Token for cursor-based pagination. Required when
+  <code>page_number</code> &gt; 0.</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ConferencesResponse (signalwire.rest.namespaces.logs_types_generated.ConferencesResponse)" href="logs_types_generated.html#signalwire.rest.namespaces.logs_types_generated.ConferencesResponse">ConferencesResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Response containing a list of conferences.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>

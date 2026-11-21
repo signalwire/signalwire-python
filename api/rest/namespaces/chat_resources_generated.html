@@ -8441,6 +8441,12 @@
 
     <div class="doc doc-contents first">
 
+        <p>Typed <code>chat</code> REST resources, generated from the OpenAPI spec.</p>
+<p>One resource class per spec collection: closed, typed <code>create</code> / <code>update</code>
+parameters (the explicit spec fields) and typed sub-operation methods, plus an
+<code>extras</code> escape hatch and a <code>**_reserved_kw</code> tail for unknown or reserved-word
+wire fields.</p>
+
 
 
 
@@ -8478,6 +8484,8 @@
 
 
         <p>Typed resource for <code>/tokens</code> (generated).</p>
+<p>Bound to <code>/api/chat/tokens</code>; construct it as <code>Chat(http)</code> with the client's HTTP
+transport.</p>
 
 
 
@@ -8526,6 +8534,185 @@
 
 
     <div class="doc doc-contents ">
+
+        <p>Generate a Chat Token to be used to authenticate clients to the Chat Service.</p>
+<p><strong>Permissions</strong></p>
+<p>The API token used to authenticate must have the following scope(s) enabled to
+make a successful request: <em>Chat</em>.</p>
+<p><a href="https://signalwire.com/docs/platform/your-signalwire-api-space">Learn more about API
+scopes</a>.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>ttl</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The maximum time, in minutes, that the access token will be valid for.
+Between 1 and 43,200 (30 days).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>channels</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ChatChannel = 'dict[str, Any]'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.chat_types_generated.ChatChannel)" href="chat_types_generated.html#signalwire.rest.namespaces.chat_types_generated.ChatChannel">ChatChannel</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>User-defined channel names with read/write permissions. Max of 500
+channels. Channel names cannot start with the reserved prefix <code>sw_</code> and
+can be up to 250 characters.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>member_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifier of the member. Up to 250 characters. If not
+specified, a random UUID will be generated.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>state</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ChatState = 'dict[str, Any]'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.chat_types_generated.ChatState)" href="chat_types_generated.html#signalwire.rest.namespaces.chat_types_generated.ChatState">ChatState</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>An arbitrary JSON object available to store stateful application
+information in. Must be valid JSON and have a maximum size of 2,000
+characters.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>extras</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Mapping">Mapping</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional wire fields to merge into the request body (fields the
+spec does not enumerate).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>request_options</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="RequestOptions
+
+
+  
+      dataclass
+   (signalwire.rest._request_options.RequestOptions)" href="../index.html#signalwire.rest.RequestOptions">RequestOptions</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Per-call HTTP options (timeout, retries, headers); never
+sent on the wire.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>**_reserved_kw</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Further wire fields passed as bare keywords, including
+reserved-word keys such as <code>from</code> (<code>**{'from': ...}</code>).</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ChatToken (signalwire.rest.namespaces.chat_types_generated.ChatToken)" href="chat_types_generated.html#signalwire.rest.namespaces.chat_types_generated.ChatToken">ChatToken</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The request has succeeded.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>

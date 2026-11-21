@@ -8739,6 +8739,13 @@
 
     <div class="doc doc-contents first">
 
+        <p>Typed SWAIG response actions.</p>
+<p>One <code>&lt;Action&gt;</code> value <code>TypedDict</code> per object-shaped action plus <code>_SwaigActions</code>, a
+base with one typed builder method per wire action (keyed by the wire key). The SDK's
+ergonomic <code>FunctionResult</code> methods (<code>say(text)</code>, <code>hold(timeout=300)</code>, ...) are
+hand-written on top of these builders. Static-only: the action list is a plain list of
+<code>dict</code>s at runtime; this layer just types the shapes.</p>
+
 
 
 
@@ -8775,7 +8782,12 @@
 
 
 
-        <p>Open shape: extra server keys permitted; not validated at runtime.</p>
+        <p>Replace the system prompt / start a new conversation context.</p>
+<p>Object form: <code>{system_prompt, user_prompt, system_pom, user_pom, consolidate,
+full_reset}</code>. <code>system_pom</code>/<code>user_pom</code> render to prompt text; prompts are expanded
+against prompt vars + post_data; <code>consolidate:true</code> summarizes first</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -8943,7 +8955,11 @@
 
 
 
-        <p>Open shape: extra server keys permitted; not validated at runtime.</p>
+        <p>Put the call on hold for N seconds.</p>
+<p>Accepts a number, a time string (<code>"5m"</code>, <code>"1:30"</code> via <code>parse_time</code>), or <code>{timeout}</code>.
+Default 300s; values &lt;0 or &gt;900 clamp to 300</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -9011,7 +9027,11 @@
 
 
 
-        <p>Open shape: extra server keys permitted; not validated at runtime.</p>
+        <p>Play an audio file in the background.</p>
+<p><code>{wait:true}</code> makes the agent wait for it. Replaces any currently-open background
+file</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -9099,7 +9119,11 @@
 
 
 
-        <p>Open shape: extra server keys permitted; not validated at runtime.</p>
+        <p>Transfer the call to <code>dest</code>.</p>
+<p><code>summarize:true</code> sets <code>transfer_summary</code>. Sets <code>openai_transfer_check</code> var,
+interrupts, stops the loop. Ignored if already interrupted</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 

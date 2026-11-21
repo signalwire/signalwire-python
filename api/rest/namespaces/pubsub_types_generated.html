@@ -9153,6 +9153,11 @@
 
     <div class="doc doc-contents first">
 
+        <p>Typed <code>pubsub</code> REST API shapes, generated from the OpenAPI spec.</p>
+<p>One <code>TypedDict</code> per spec schema plus per-operation <code>*Request</code> / <code>*Response</code>
+aliases. Every shape is static-only: at runtime each is a plain <code>dict</code>, so a
+differently-shaped server response is returned unchanged and never raises.</p>
+
 
 
 
@@ -9270,6 +9275,95 @@
 
 
         <p>Open shape: extra server keys permitted; not validated at runtime.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="ttl
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.pubsub_types_generated.NewPubSubToken.ttl)" href="#signalwire.rest.namespaces.pubsub_types_generated.NewPubSubToken.ttl">ttl</a></code></td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The maximum time, in minutes, for which the access token will be valid.
+Between 1 and 43,200 (30 days).</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="channels
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.pubsub_types_generated.NewPubSubToken.channels)" href="#signalwire.rest.namespaces.pubsub_types_generated.NewPubSubToken.channels">channels</a></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="PubSubChannels = 'dict[str, Any]'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.pubsub_types_generated.PubSubChannels)" href="#signalwire.rest.namespaces.pubsub_types_generated.PubSubChannels">PubSubChannels</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Each channel with <code>write</code> and <code>read</code> objects with boolean as values.
+Max of 500 channels inside main <code>channels</code>. Either <code>read</code>, <code>write</code>, or both
+are required inside each channel and default to false. Each channel name can
+be up to 250 characters. Must be valid JSON.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="member_id
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.pubsub_types_generated.NewPubSubToken.member_id)" href="#signalwire.rest.namespaces.pubsub_types_generated.NewPubSubToken.member_id">member_id</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The unique identifier of the member. Up to 250 characters. If not
+specified, a random UUID will be generated.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="state
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.pubsub_types_generated.NewPubSubToken.state)" href="#signalwire.rest.namespaces.pubsub_types_generated.NewPubSubToken.state">state</a></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="PubSubState = 'dict[str, Any]'
+
+  
+      module-attribute
+   (signalwire.rest.namespaces.pubsub_types_generated.PubSubState)" href="#signalwire.rest.namespaces.pubsub_types_generated.PubSubState">PubSubState</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>An arbitrary JSON object available to store stateful application
+information in. Must be valid JSON and have a maximum size of 2,000
+characters.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -9400,6 +9494,50 @@
         <p>Open shape: extra server keys permitted; not validated at runtime.</p>
 
 
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="read
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.pubsub_types_generated.PubSubPermissionWithRead.read)" href="#signalwire.rest.namespaces.pubsub_types_generated.PubSubPermissionWithRead.read">read</a></code></td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Gives the token read access to the channel.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="write
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.pubsub_types_generated.PubSubPermissionWithRead.write)" href="#signalwire.rest.namespaces.pubsub_types_generated.PubSubPermissionWithRead.write">write</a></code></td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Gives the token write access to the channel.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
 
 
 
@@ -9486,6 +9624,50 @@
 
 
         <p>Open shape: extra server keys permitted; not validated at runtime.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="read
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.pubsub_types_generated.PubSubPermissionWithWrite.read)" href="#signalwire.rest.namespaces.pubsub_types_generated.PubSubPermissionWithWrite.read">read</a></code></td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Gives the token read access to the channel.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="write
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.pubsub_types_generated.PubSubPermissionWithWrite.write)" href="#signalwire.rest.namespaces.pubsub_types_generated.PubSubPermissionWithWrite.write">write</a></code></td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Gives the token write access to the channel.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -9576,6 +9758,35 @@
         <p>Open shape: extra server keys permitted; not validated at runtime.</p>
 
 
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="token
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.pubsub_types_generated.PubSubToken.token)" href="#signalwire.rest.namespaces.pubsub_types_generated.PubSubToken.token">token</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A PubSub Token to be used to authenticate clients to the PubSub Service.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
 
 
 
@@ -9641,9 +9852,39 @@
 
 
 
-        <p>The request contains invalid parameters. See errors for details.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+        <p>The request contains invalid parameters.</p>
+<p>See errors for details.</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="errors
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.pubsub_types_generated.PubSubToken422Error.errors)" href="#signalwire.rest.namespaces.pubsub_types_generated.PubSubToken422Error.errors">errors</a></code></td>
+            <td>
+                  <code><span title="list">list</span>[<a class="autorefs autorefs-internal" title="Types_StatusCodes_RestApiErrorItem (signalwire.rest.namespaces.pubsub_types_generated.Types_StatusCodes_RestApiErrorItem)" href="#signalwire.rest.namespaces.pubsub_types_generated.Types_StatusCodes_RestApiErrorItem">Types_StatusCodes_RestApiErrorItem</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>List of validation errors.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -9712,8 +9953,97 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>Details about a specific error.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="type
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.pubsub_types_generated.Types_StatusCodes_RestApiErrorItem.type)" href="#signalwire.rest.namespaces.pubsub_types_generated.Types_StatusCodes_RestApiErrorItem.type">type</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The category of error.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="code
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.pubsub_types_generated.Types_StatusCodes_RestApiErrorItem.code)" href="#signalwire.rest.namespaces.pubsub_types_generated.Types_StatusCodes_RestApiErrorItem.code">code</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A specific error code.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="message
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.pubsub_types_generated.Types_StatusCodes_RestApiErrorItem.message)" href="#signalwire.rest.namespaces.pubsub_types_generated.Types_StatusCodes_RestApiErrorItem.message">message</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A description of what caused the error.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="attribute
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.pubsub_types_generated.Types_StatusCodes_RestApiErrorItem.attribute)" href="#signalwire.rest.namespaces.pubsub_types_generated.Types_StatusCodes_RestApiErrorItem.attribute">attribute</a></code></td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The request parameter that caused the error, if applicable.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="url
+
+  
+      instance-attribute
+   (signalwire.rest.namespaces.pubsub_types_generated.Types_StatusCodes_RestApiErrorItem.url)" href="#signalwire.rest.namespaces.pubsub_types_generated.Types_StatusCodes_RestApiErrorItem.url">url</a></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A link to documentation about this error.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -9862,8 +10192,8 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>The request is invalid.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -9932,8 +10262,8 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>Access is unauthorized.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
@@ -10002,8 +10332,8 @@ not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
         <p>An internal server error occurred.</p>
-<p>Open shape: extra server keys are permitted and partial payloads are valid;
-not validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
+<p>Open shape: extra server keys are permitted and partial payloads are valid; not
+validated at runtime (a TypedDict is a plain <code>dict</code>).</p>
 
 
 
