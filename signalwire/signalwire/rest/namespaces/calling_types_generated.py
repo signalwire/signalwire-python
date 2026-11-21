@@ -330,7 +330,7 @@ class AIParams(TypedDict, total=False):
     asr_diarize: bool | SWMLVar
     asr_speaker_affinity: bool | SWMLVar
     background_file: str
-    background_file_loops: int | None | SWMLVar
+    background_file_loops: int | SWMLVar | None
     background_file_volume: int | SWMLVar
     enable_barge: str | bool | SWMLVar
     enable_inner_dialog: bool | SWMLVar

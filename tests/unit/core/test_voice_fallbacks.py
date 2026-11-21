@@ -7,8 +7,8 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 
 Voices with fallbacks (a voice field takes a list, the first speaking and the
-rest tried in order when it fails), the default voice, duration strings, and
-calling.error's voice fields.
+rest tried in order when it fails), the default voice, duration strings,
+calling.error's voice fields, and gather questions the platform says itself.
 """
 
 from __future__ import annotations
@@ -164,3 +164,21 @@ def test_calling_error_carries_the_voice_that_failed_and_the_one_that_took_over(
         }
     )
     assert fatal.fatal and fatal.fallback_index is None
+
+
+def test_a_gather_can_have_the_platform_say_its_questions() -> None:
+    a = agent()
+    step = (
+        a.define_contexts()
+        .add_context("default")
+        .add_step("intake")
+        .set_text("Gather their details.")
+    )
+    step.set_gather_info(say_questions=True)
+    step.add_gather_question("name", "What's your name?")
+    step.add_gather_question("reason", "What can we help with?", say=False)
+    gather = ai_of(a)["prompt"]["contexts"]["default"]["steps"][0]["gather_info"]
+    assert gather["say_questions"] is True
+    assert (
+        "say" not in gather["questions"][0] and gather["questions"][1]["say"] is False
+    )

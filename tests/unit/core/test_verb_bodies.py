@@ -105,9 +105,8 @@ def test_keyword_options_still_work_and_merge_with_an_object_body() -> None:
 
 def test_a_builder_method_chains() -> None:
     builder = SWMLBuilder(SWMLService(name="example"))
-    # The generated declaration types unset's body as a mapping until porting-sdk's
-    # generator gives scalar bodies their types (#151-#154)
-    assert builder.label("start").unset("x") is builder  # type: ignore[arg-type]
+    # unset takes a name as its body, and its generated declaration says so (#152)
+    assert builder.label("start").unset("x") is builder
 
 
 @pytest.mark.parametrize("make", [lambda s: s, SWMLBuilder])

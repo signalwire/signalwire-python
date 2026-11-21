@@ -1,5 +1,27 @@
 # Changelog
 
+## [3.14.0] - 2026-11-21
+
+### Added
+- Gather questions the platform says itself: `set_gather_info(say_questions=True)`
+  has the platform say each question word for word when the gather reaches
+  it, the model being told the caller was just asked it; the answer still
+  goes through `gather_submit`. A question's `say=` overrides it. A
+  realtime model asks every question itself, and a platform build without
+  it ignores the setting and the model asks.
+
+### Changed
+- The generated REST, RELAY, SWML and SWAIG types carry the specs'
+  descriptions as their module and field docstrings, so an editor shows
+  what each field means.
+- The generated `SWMLBuilder` methods for verbs whose body isn't an object
+  are typed as the platform takes them: `cond()` a list of conditions,
+  `sleep()` a number of milliseconds, a SWML variable or an object,
+  `unset()` a name or a list of names, and `return_()` any value (#151,
+  #152, #153, #154). `send_sms()` is typed as one of the SMS bodies the
+  spec allows. The runtime methods took these bodies already.
+- In the generated types' unions, `None` comes last.
+
 ## [3.13.1] - 2026-11-21
 
 ### Added

@@ -123,6 +123,7 @@ class GatherQuestion:
         functions: list[str] | None = None,
         isolated: bool | None = None,
         expected_answer: dict[str, int] | None = None,
+        say: bool | None = None,
     ):
         self.key = key
         self.question = question
@@ -136,6 +137,8 @@ class GatherQuestion:
         self.expected_answer = (
             None if expected_answer is None else _check_expected_answer(expected_answer)
         )
+        # Tri-state: None means "as the gather's say_questions says"
+        self.say = say
 
     def to_dict(self) -> dict[str, Any]:
         """Convert question to dictionary for SWML generation"""
@@ -153,6 +156,9 @@ class GatherQuestion:
             d["isolated"] = self.isolated
         if self.expected_answer is not None:
             d["expected_answer"] = dict(self.expected_answer)
+        # Emitted even when False, so it can override a gather that says its questions
+        if self.say is not None:
+            d["say"] = self.say
         return d
 
 
@@ -170,12 +176,14 @@ class GatherInfo:
         completion_action: str | None = None,
         prompt: str | None = None,
         isolated: bool = False,
+        say_questions: bool = False,
     ):
         self._questions: list[GatherQuestion] = []
         self._output_key = output_key
         self._completion_action = completion_action
         self._prompt = prompt
         self._isolated = isolated
+        self._say_questions = say_questions
 
     def add_question(self, key: str, question: str, **kwargs: Any) -> "GatherInfo":
         """
@@ -185,7 +193,7 @@ class GatherInfo:
             key: Key name for storing the answer in global_data
             question: The question text to ask
             **kwargs: Optional fields - type, confirm, prompt, functions,
-                isolated, expected_answer
+                isolated, expected_answer, say
 
         Returns:
             Self for method chaining
@@ -199,6 +207,7 @@ class GatherInfo:
             functions=kwargs.get("functions"),
             isolated=kwargs.get("isolated"),
             expected_answer=kwargs.get("expected_answer"),
+            say=kwargs.get("say"),
         )
         self._questions.append(q)
         return self
@@ -216,6 +225,8 @@ class GatherInfo:
             d["completion_action"] = self._completion_action
         if self._isolated:
             d["isolated"] = True
+        if self._say_questions:
+            d["say_questions"] = True
         return d
 
 
@@ -550,6 +561,7 @@ class Step:
         completion_action: str | None = None,
         prompt: str | None = None,
         isolated: bool = False,
+        say_questions: bool = False,
     ) -> "Step":
         """
         Enable info gathering for this step. Questions are presented one at a time
@@ -573,6 +585,15 @@ class Step:
                 it must ask rather than derive the answer from an earlier one.
                 A question's own ``isolated`` overrides this. The hidden turns
                 remain in the call log.
+            say_questions: True for the platform to say each question's text
+                itself, word for word (its ``${...}`` filled in), when the
+                gather reaches it; the model doesn't ask it, and is told the
+                caller was just asked it. The answer still goes through
+                ``gather_submit``, the model checking it and doing any
+                confirm read-back, and it asks again in its own words if the
+                answer is unclear or the caller stays silent. A question's
+                own ``say`` overrides this. A realtime model asks every
+                question itself.
 
         Returns:
             Self for method chaining
@@ -582,6 +603,7 @@ class Step:
             completion_action=completion_action,
             prompt=prompt,
             isolated=isolated,
+            say_questions=say_questions,
         )
         return self
 
@@ -595,6 +617,7 @@ class Step:
         functions: list[str] | None = None,
         isolated: bool | None = None,
         expected_answer: dict[str, int] | None = None,
+        say: bool | None = None,
     ) -> "Step":
         """
         Add a question to this step's gather_info configuration.
@@ -637,6 +660,9 @@ class Step:
                 ``{"digits": 5}`` or ``{"min_digits": 4, "max_digits": 6}``
                 (``expected_answer()`` builds one). While this question is
                 asked, it replaces the step's.
+            say: True for the platform to say this question itself, False for
+                the model to ask it, overriding the gather's ``say_questions``;
+                None (default) follows the gather.
 
         Returns:
             Self for method chaining.
@@ -652,6 +678,7 @@ class Step:
             functions=functions,
             isolated=isolated,
             expected_answer=expected_answer,
+            say=say,
         )
         return self
 

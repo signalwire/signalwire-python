@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "signalwire-sdk"
-version = "3.13.1"
+version = "3.14.0"
 description = "SignalWire SDK for AI voice agents, live call control (RELAY) and REST. Run sw-pydocs for its documentation."
 authors = [
     {name = "SignalWire Team", email = "info@signalwire.com"}
@@ -212,10 +212,6 @@ select = ["E4", "E7", "E9", "F", "B", "S", "C4", "PERF", "SIM", "PTH", "RET", "R
 # subscript is a runtime NameError under TYPE_CHECKING). Exempt F401 here; mypy +
 # the SIGNATURES/DRIFT gate prove these imports are real and correct.
 "signalwire/signalwire/rest/namespaces/*.py" = ["F401"]
-# Generated types write a union in the spec's order (`int | None | SWMLVar`);
-# RUF036 wants None last. The order belongs to porting-sdk's generator, and a
-# hand edit here would fail GEN-FRESH.
-"signalwire/signalwire/**/*_generated.py" = ["RUF036"]
 # Runnable docs — examples/, rest/examples/, relay/examples/. These are teaching
 # programs, not shipped SDK surface, so a few production-lint rules are demo-idiomatic
 # noise here (and are the ONLY findings that survive after autofix):
