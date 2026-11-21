@@ -20,7 +20,7 @@ MAX_VOICES = 8
 """The most voices a voice field takes: the one that speaks and its fallbacks."""
 
 
-def voice_chain(value: Any, what: str = "voice") -> str | list[str]:
+def _voice_chain(value: Any, what: str = "voice") -> str | list[str]:
     """
     A voice field's value, checked: a non-empty string, or a list of 1 to 8
     non-empty strings (a one-item list is kept as a list).
@@ -53,7 +53,7 @@ def voice_chain(value: Any, what: str = "voice") -> str | list[str]:
     )
 
 
-def voices_by_language(
+def _voices_by_language(
     value: Any, what: str = "default_voice"
 ) -> str | list[str] | dict[str, Any]:
     """
@@ -69,9 +69,9 @@ def voices_by_language(
                 raise ValueError(
                     f"{what}'s languages must be codes such as 'es-MX' or 'default', got {code!r}"
                 )
-            out[code] = voice_chain(voices, f"{what}[{code!r}]")
+            out[code] = _voice_chain(voices, f"{what}[{code!r}]")
         return out
-    return voice_chain(value, what)
+    return _voice_chain(value, what)
 
 
 __all__: list[str] = []

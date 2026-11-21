@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from signalwire.core.agent_base import AgentBase  # type: ignore[attr-defined]  # cycle: agent_base imports the mixins; the name resolves at type-check time but mypy flags the back-reference
 
 
-from signalwire.core._voices import voice_chain, voices_by_language
+from signalwire.core._voices import _voice_chain, _voices_by_language
 from signalwire.core.mixins._mixin_host import _HostTyped
 
 
@@ -139,7 +139,7 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
                                params={"stability": 0.5, "similarity_boost": 0.75})
         """
         language: dict[str, Any] = {"name": name, "code": code}
-        checked = voice_chain(voice)
+        checked = _voice_chain(voice)
 
         # Handle voice formatting (a list of voices, explicit params, or a combined string)
         if isinstance(checked, list):
@@ -267,7 +267,7 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
             ValueError: For an empty voice, more than 8, or a language that
                 isn't a code
         """
-        self._default_voice = None if voice is None else voices_by_language(voice)
+        self._default_voice = None if voice is None else _voices_by_language(voice)
         return self
 
     def set_multilingual(self, config: dict[str, Any]) -> "AgentBase":

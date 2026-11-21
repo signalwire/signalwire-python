@@ -16,7 +16,7 @@ import re
 from collections.abc import Sequence
 from typing import Any, Literal
 
-from signalwire.core._voices import voice_chain
+from signalwire.core._voices import _voice_chain
 
 # A SWML variable reference, such as ${timeout}, which the schema accepts
 # wherever it accepts an integer or a boolean
@@ -943,7 +943,7 @@ class FunctionResult:
         Raises:
             ValueError: If voice is empty, or names more than 8
         """
-        return self.add_action("change_voice", voice_chain(voice))
+        return self.add_action("change_voice", _voice_chain(voice))
 
     def toggle_functions(
         self, function_toggles: list[dict[str, Any]]
