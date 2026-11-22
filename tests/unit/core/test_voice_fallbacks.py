@@ -38,6 +38,32 @@ def ai_of(a: AgentBase) -> dict[str, Any]:
     return next(v["ai"] for v in main_of(a) if isinstance(v, dict) and "ai" in v)
 
 
+def test_an_agent_with_no_voice_settings_renders_as_before() -> None:
+    # Nothing new is sent unless the agent asks for it
+    assert json.loads(AgentBase(name="v", suppress_logs=True)._render_swml()) == {
+        "version": "1.0.0",
+        "sections": {
+            "main": [{"answer": {}}, {"ai": {"prompt": {"pom": []}, "params": {}}}]
+        },
+    }
+    a = agent().add_language("English", "en-US", "elevenlabs.josh:eleven_turbo_v2_5")
+    a.set_params({"end_of_speech_timeout": 700, "attention_timeout": 15000})
+    main = main_of(a)
+    assert main[0] == {"answer": {}} and len(main) == 2
+    ai = main[1]["ai"]
+    assert set(ai) == {"prompt", "params", "languages"}
+    assert ai["languages"] == [
+        {
+            "name": "English",
+            "code": "en-US",
+            "voice": "josh",
+            "engine": "elevenlabs",
+            "model": "eleven_turbo_v2_5",
+        }
+    ]
+    assert ai["params"] == {"end_of_speech_timeout": 700, "attention_timeout": 15000}
+
+
 def test_a_language_takes_a_list_of_voices_as_sent() -> None:
     a = agent().add_language("English", "en-US", CHAIN)
     language = ai_of(a)["languages"][0]

@@ -1255,8 +1255,6 @@ self.set_agent_voice(["elevenlabs.rachel:eleven_turbo_v2_5", "rime.spore"])
 self.set_fallback_voice("gcloud.en-US-Neural2-C")
 ```
 
-The platform takes `fallback_voice`, and a list as the agent's voice, from its release after 2026-11-21. A platform without it refuses the AI verb, and the call doesn't run, so check your platform has it before using either; one voice as a string in `set_agent_voice()` works everywhere.
-
 `set_default_voice()` gives a voice to every language that has none: one voice, a list, or a mapping of language codes to either, with a `"default"` entry for the rest. A language matches by its exact code, then its base language (`es` for `es-MX`), then `default`. With no multilingual languages of its own, the mapping's languages become them. A voice the agent gives a language itself wins.
 
 ```python
