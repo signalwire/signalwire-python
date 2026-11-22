@@ -371,8 +371,8 @@ class _SwaigActions:
     def toggle_functions(self: _Self, value: list[dict[str, Any]]) -> _Self:
         """Enable/disable functions.
 
-        `active` via `check_active`: `-1` default/toggle, `0` off, `1+` use-count.
-        **Only affects functions sharing the calling function's `meta_data_token`**
+        `active`: `-1` default/toggle, `0` off, `1+` use-count. **Only affects functions
+        sharing the calling function's `meta_data_token`**
 
         Args:
             value: The action value, appended to the action list as

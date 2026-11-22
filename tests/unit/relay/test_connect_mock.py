@@ -11,7 +11,7 @@ Each test checks two things:
    protocol string is set, the connect call returned, exceptions raise on
    error paths).
 2. **Wire** — what the mock journaled. Because the mock is schema-driven
-   from the production server's C# Params/Result classes, asserting on the
+   from the RELAY protocol's own schemas, asserting on the
    journal verifies the SDK is sending the exact wire shape the real RELAY
    expects.
 """

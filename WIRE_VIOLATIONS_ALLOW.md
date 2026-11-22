@@ -30,9 +30,9 @@ future real violation on the many endpoints that DO declare `page_size`:
 
   * `page_size` on `relay-rest.list_recordings` — the spec's `list_recordings` op has
     `parameters: []` while every sibling `list_*` op declares `page_size`.
-    Owner-approved to FIX THE SPEC (add `page_size`), pending prime-rails confirmation
-    that the server accepts it. Tracked separately; do NOT strip the test.
+    Owner-approved to FIX THE SPEC (add `page_size`), pending the server side's confirmation
+    that it accepts it. Tracked separately; do NOT strip the test.
   * `cursor` on `fabric.list_fabric_addresses` — same class: the fabric list ops have
     `parameters: []`, but the server returns a `links.next` cursor URL that the SDK's
-    generic `PaginatedIterator` replays as a `?cursor=` param. Same owner+prime-rails
+    generic `PaginatedIterator` replays as a `?cursor=` param. Same owner and server-side
     adjudication as recordings.
