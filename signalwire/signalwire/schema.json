@@ -12518,7 +12518,7 @@
                       "file"
                     ]
                   },
-                  "description": "POM object passed through to mod_openai's prompt resolver."
+                  "description": "POM object passed through to the AI engine's prompt resolver."
                 },
                 {
                   "type": "object",
@@ -12573,7 +12573,7 @@
             },
             "permissions": {
               "type": "object",
-              "description": "SWAIG permission overrides — pass-through to mod_openai.",
+              "description": "SWAIG permission overrides — passed through to the AI engine.",
               "additionalProperties": true
             },
             "global_data": {
@@ -12590,7 +12590,7 @@
             },
             "params": {
               "type": "object",
-              "description": "Tunable knobs (idle_timeout_ms, ai_summary, etc.) — pass-through to mod_openai which validates them strictly. New tunables only land here.",
+              "description": "Tunable knobs (idle_timeout_ms, ai_summary, etc.) — passed through to the AI engine, which validates them strictly. New tunables only land here.",
               "additionalProperties": true
             },
             "action": {

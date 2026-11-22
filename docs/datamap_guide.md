@@ -242,7 +242,7 @@ The SDK's part in this pipeline is small: `DataMap.to_swaig_function()` (in `sig
 
 ### 2.1 Server-Side Processing Flow
 
-DataMap execution occurs entirely within the SignalWire infrastructure, following a deterministic processing pipeline implemented in the server-side `mod_openai.c` module. This flow determines how you configure DataMap functions.
+DataMap execution occurs entirely within the SignalWire infrastructure, following a deterministic processing pipeline. This flow determines how you configure DataMap functions.
 
 **Server-Side Architecture:**
 ```

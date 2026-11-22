@@ -1,7 +1,7 @@
 """
 swaig-test's DataMap simulator expands templates as the platform does.
 
-The platform's expander (mod_openai's swaig.c) works like this, and the
+The platform's expander works like this, and the
 simulator now matches it:
 
 - A path uses dots and one [n] per name; names match without regard to case,

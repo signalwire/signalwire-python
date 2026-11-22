@@ -15,7 +15,7 @@ Two test backends coexist:
 2. The ``signalwire_relay_client`` / ``mock_relay`` fixtures — back the SDK with
    a real WebSocket server provided by the ``mock_relay`` package
    (``porting-sdk/test_harness/mock_relay``).  The mock loads RELAY's JSON
-   schemas (extracted from switchblade) and synthesizes schema-conformant
+   schemas and synthesizes schema-conformant
    responses.  Tests written against this fixture exercise the SDK's actual
    ``websockets`` transport and then assert on parsed SDK state and the mock's
    HTTP-exposed journal / scenario plumbing.

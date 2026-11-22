@@ -276,7 +276,7 @@ class TestModelView:
     """What the model gets, after each step's history mode: applied when the
     step's instructions are injected, before the follow-up request right after
     the result that moved the call there, to everything before it
-    (STEP_HISTORY.md; mod_openai check_steps runs before every request)."""
+    (the platform checks the step before every request)."""
 
     def _agent(self, mode: str | None) -> AgentBase:
         agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
@@ -324,8 +324,7 @@ class TestModelView:
 
     def test_a_post_process_change_keeps_its_call_and_the_reply(self) -> None:
         # The actions run after the model's reply to the result; the change
-        # keeps the call and everything stored from it on (mod_openai
-        # delayed_call_id, ai_conversation_tag_call_cause)
+        # keeps the call and everything stored from it on
         agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
         agent.define_tool("lookup", "Look up", {}, lambda a, r: FunctionResult(
             "Order 7.", post_process=True).swml_change_step("next"))
@@ -370,7 +369,7 @@ class TestModelView:
         sim.caller("A large tea.")
         sim.call("confirm")
         # The say goes after the call's result, held past system entries until
-        # the next caller or agent turn (mod_openai conversation.c held_says)
+        # the next caller or agent turn
         assert [e["content"] for e in sim.model_view()] == [
             "", "Read back.", "Confirm.", "That's a large tea."]
         sim.caller("Yes.")
@@ -417,7 +416,6 @@ class TestModelView:
 
     def test_an_end_step_brings_back_what_isolate_hid(self) -> None:
         # Steps end there, and what an isolate step hid is the model's again
-        # (mod_openai check_steps, ai_conversation_restore_isolated)
         agent = self._agent("isolate")
         ctx = agent._contexts_builder._contexts["default"]  # type: ignore[union-attr]
         ctx.add_step("done").set_text("Done.").set_end(True)
@@ -464,7 +462,7 @@ class TestModelView:
 class TestSpokenMode:
     """history "spoken": at the step's entry, earlier tool calls, tool
     results, turn-scoped system notes and old instructions leave for the rest
-    of the call; every spoken turn stays (mod_openai STEP_HISTORY.md)."""
+    of the call; every spoken turn stays."""
 
     def test_the_work_goes_and_the_talk_stays(self) -> None:
         agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
@@ -615,10 +613,9 @@ class TestGateConversation:
             "assistant: Is that right?", "user: Yes."]
 
 
-class TestThePlatformAt7afb159:
+class TestFoundByTheDifferentialTest:
     """Found by the TypeScript port's differential test, checked against
-    mod_openai 7afb159 (step_management.c check_steps, semantic_gates.c
-    semantic_gates_note_state)."""
+    the platform."""
 
     def _agent(self, last: Any) -> AgentBase:
         agent = AgentBase(name="t", route="/", basic_auth=("u", "p"), suppress_logs=True)
@@ -641,7 +638,7 @@ class TestThePlatformAt7afb159:
         assert sim.gate_conversation() == ["user: Please also check my balance"]
 
     def test_an_end_steps_text_follows_its_contexts_prompt(self) -> None:
-        # As every step's does (mod_openai dc20c53)
+        # As every step's does
         agent = self._agent(lambda s: s.set_text("The end.").set_end(True))
         agent._contexts_builder._contexts["default"].set_prompt("Be brief.")  # type: ignore[union-attr]
         sim = CallSimulator(agent)

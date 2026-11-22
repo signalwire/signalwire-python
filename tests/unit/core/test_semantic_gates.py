@@ -1,8 +1,8 @@
 """
 Semantic gates, change_voice and the semantic gate params.
 
-The platform refuses a whole function when any of its gates breaks a rule
-(mod_openai semantic_gates.c), so the SDK checks gates by the same rules when
+The platform refuses a whole function when any of its gates breaks a rule,
+so the SDK checks gates by the same rules when
 a tool is defined. These tests follow those rules one by one.
 """
 
@@ -96,7 +96,7 @@ class TestSemanticGate:
 
 
 class TestPlatformRules:
-    """Each rule semantic_gates.c applies, with its reason."""
+    """Each rule the platform applies, with its reason."""
 
     @pytest.mark.parametrize(
         ("gates", "reason"),
@@ -409,8 +409,8 @@ class TestGateVisualInput:
 
 
 class TestGateDialogueAndUnclear:
-    """A gate's dialogue, history, unclear and on_unclear, as semantic_gates.c
-    reads them (sg_parse_one): dialogue is window or proposal without regard
+    """A gate's dialogue, history, unclear and on_unclear, as the platform
+    reads them: dialogue is window or proposal without regard
     to case, history a whole number from 1 to 100, unclear a boolean, and
     on_unclear an output shaped as on_fail. Every gate of a function must name
     the same dialogue and history, set or not (semantic_gates_parse)."""

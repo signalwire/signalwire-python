@@ -1,7 +1,7 @@
 """Real-mock-backed tests for messaging (``send_message`` + inbound).
 
-The messaging schemas are permissive (the C# server forwards JObject to
-the messaging gateway), so the mock validates the wire frame loosely. We
+The messaging schemas are permissive (the server forwards the params to
+the messaging gateway as they are), so the mock validates the wire frame loosely. We
 still assert that the SDK builds the right ``messaging.send`` shape and
 correctly processes the inbound ``messaging.receive`` and
 ``messaging.state`` events the mock can push.

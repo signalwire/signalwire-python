@@ -547,7 +547,7 @@ async def test_tap_journals_calling_tap(signalwire_relay_client: RelayClient, mo
     [entry] = mock_relay.journal_recv(method="calling.tap")
     p = entry.frame["params"]
     # The tap config carries {type, params} per the authoritative calling.tap
-    # schema (switchblade PublicCallTapParams — both required); a bare {type}
+    # schema (both required); a bare {type}
     # is rejected by the server, which the A2 raise-on-error contract now surfaces.
     assert p["tap"] == {"type": "audio", "params": {"direction": "both"}}
     assert p["device"]["params"]["port"] == 4000

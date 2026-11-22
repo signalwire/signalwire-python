@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.15.1] - 2026-11-21
+
+### Changed
+- The docs for `set_agent_voice()` and `set_fallback_voice()` drop their
+  note on platform releases, and earlier entries here drop the platform
+  commits they cited. Docstrings, comments, tests, the bundled SWML schema's
+  descriptions and the generated SWAIG types no longer cite the platform's
+  source.
+- A test pins what an agent with no voice settings renders, as it always
+  has: a voice given as one string is still sent as its voice, engine and
+  model, and numeric params are still numbers.
+
 ## [3.15.0] - 2026-11-21
 
 ### Added
@@ -7,10 +19,7 @@
   for a language with none of its own, and `set_fallback_voice()` the
   voices tried once a language's or the agent's have all failed, before
   the platform's own last resort (`fallback_voice`). Each takes one voice
-  or a list of up to 8. The platform takes `fallback_voice`, and a list as
-  the agent's voice, from its release after 2026-11-21; a platform without
-  it refuses the AI verb and the call doesn't run. One voice as a string in
-  `set_agent_voice()` works everywhere.
+  or a list of up to 8.
 
 ## [3.14.0] - 2026-11-21
 
@@ -241,19 +250,19 @@
 
 ### Fixed
 - `CallSimulator` puts an end step's text after its context's prompt, as for
-  every other step. The platform joined them the other way, with a stray
-  slash, until mod_openai dc20c53.
+  every other step. The platform once joined them the other way, with a
+  stray slash.
 
 ## [3.10.1] - 2026-11-15
 
 ### Fixed
 - The docs for `refresh_step()`, `Step.set_text()` and `RequestList` still
   said a step's text is expanded only once, on entry, which 3.10.0's own
-  history section contradicts. Current platform releases (mod_openai 7afb159)
+  history section contradicts. Current platform releases
   expand it again before a request when a value it reads changes;
   `refresh_step()` is for earlier releases and realtime models, which keep
   the values from entry. Reported by the TypeScript port.
-- `CallSimulator` against mod_openai 7afb159, found by the TypeScript port's
+- `CallSimulator` against the platform, found by the TypeScript port's
   differential test:
   - An end step took its history mode's pass. The platform runs none there,
     since steps end, so `hide` on an end step no longer takes the caller's
@@ -279,13 +288,12 @@
   and every earlier tool call, tool result and turn-scoped system note, leave
   the model's context for the rest of the call, while every spoken turn stays.
   Use it at a stage boundary where the caller's earlier requests must stay but
-  the finished stage's tool results shouldn't. The platform side is mod_openai
-  7afb159; a release without it treats the value as `"default"`.
+  the finished stage's tool results shouldn't. A platform release without it
+  treats the value as `"default"`.
 - History modes `"hide"` and `"isolate"`, like `"spoken"`, keep the exchange
   that entered the step: the call whose action changed it, its result, notes
   and say. A step entered from a tool kept nothing of it before, not even the
-  read-back the caller just heard. This is the platform's change (mod_openai
-  7afb159); the SDK's docs and `CallSimulator` follow it.
+  read-back the caller just heard. This is the platform's change; the SDK's docs and `CallSimulator` follow it.
 - `CallSimulator.model_view()` gives the entries the model gets now, after
   each step's history mode, and `CallSimulator.gate_conversation(gate)` the
   dialogue a semantic gate judges: the same spoken turns, by its window,
@@ -296,7 +304,7 @@
   does.
 - The Contexts and Steps Guide has a section on history between steps: what
   each mode removes, and which to use at a stage boundary. It also covers the
-  platform's other history changes in the same mod_openai commit: a
+  platform's other history changes in the same release: a
   consolidation's summary stays under `hide` and `spoken`; consolidation and
   the sliding window keep the current step's instructions; and the step's
   text is expanded again, in place, when a value it reads changes.
@@ -307,8 +315,8 @@
   result replaces actions still waiting. They ran at once before, so a test
   that checks a `post_process` hangup or step change right after the call now
   needs the reply first. The change keeps the call and everything stored from
-  it on, the reply included, under `hide`, `isolate` and `spoken` (mod_openai
-  7afb159; it kept nothing before).
+  it on, the reply included, under `hide`, `isolate` and `spoken` (it kept
+  nothing before).
 - `CallSimulator.model_view()` shows the current step's text expanded with
   the global data now, as the platform expands it again before a request;
   `call_log` keeps the text as it went in.
@@ -316,14 +324,13 @@
   (`set_semantic_gate_mark`) dates from the start of the result's whole
   action list, so a `say` anywhere in the result is in the proposal's or the
   mark's dialogue, and a change anywhere in the list keeps what the list
-  added, before the change too (mod_openai 7afb159). Before it, each dated
+  added, before the change too. Before it, each dated
   from its own action object, and `result.say(read_back)` followed by
   `set_semantic_state(...)` left the read-back out of the proposal's
   dialogue. The docs say so, and `CallSimulator` follows the new rule.
   `Proposal` writes both in one action object, which works on either.
 - `update_settings()` documents that the platform merges the keys named into
-  the current settings (mod_openai 7afb159; before it, every key not named
-  went back to the model's default). The API reference's example no longer
+  the current settings (before, every key not named went back to the model's default). The API reference's example no longer
   uses `end_of_speech_timeout`, which isn't a model setting.
 
 ### Fixed

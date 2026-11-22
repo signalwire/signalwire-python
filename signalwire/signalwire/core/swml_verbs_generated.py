@@ -3734,11 +3734,11 @@ class AiSidecarConfig(TypedDict, total=False):
         customer_role: Which leg is the customer (turn-end trigger source).
         url: Webhook URL for transcribe events AND sidecar events.
         SWAIG: SWAIG functions and MCP servers.
-        permissions: SWAIG permission overrides.
+        permissions: SWAIG permission overrides — passed through to the AI engine.
         global_data: Initial sidecar global_data.
         hints: Speech-recognition hints biasing ASR toward specific terms.
-        params: Tunable knobs (idle_timeout_ms, ai_summary, etc.). New tunables only
-            land here.
+        params: Tunable knobs (idle_timeout_ms, ai_summary, etc.) — passed through to
+            the AI engine, which validates them strictly. New tunables only land here.
         action: Reserved for future runtime sub-actions.
     """
 

@@ -5,8 +5,8 @@ confirm tool's gates judge the caller's answer on the proposal's dialogue.
 The platform starts a proposal when semantic_state changes, as of the start
 of the result's action list (before the whole-list rule, of the action
 object that sets it), so the read-back after it is the proposal's first turn
-(SEMANTIC_GATES.md §2). The state comes first: a say the caller talks over
-ends the result's actions there (mod_openai actions.c, "Transparent barge").
+The state comes first: a say the caller talks over
+ends the result's actions there.
 Setting the same state again marks nothing, so asking again needs a new
 revision.
 """
@@ -71,8 +71,8 @@ class TestPropose:
         ]
 
     def test_a_refused_yes_turns_chaining_off_and_the_next_result_back_on(self) -> None:
-        # A gate's back_to_back_functions(False) lasts for the call
-        # (mod_openai ai_back2back_value): the proposal's own results restore
+        # A gate's back_to_back_functions(False) lasts for the call:
+        # the proposal's own results restore
         # the call's default, or every later tool result would need words
         proposal = Proposal("place_order")
         on_fail = proposal.confirm_gates()[1].to_dict()["on_fail"]

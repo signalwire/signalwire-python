@@ -217,7 +217,7 @@ rest_coverage_gate() {
     # helper reads the same live mock journal and exits non-zero on any offender
     # (see porting-sdk/scripts/assert_no_wire_violations.py). WIRE_VIOLATIONS_ALLOW.md
     # holds ONLY owner-signed spec-gap parks (recordings page_size + fabric cursor,
-    # pending prime-rails confirmation of the server-side param).
+    # pending the server side's confirmation of the param).
     python3 "$PORTING_SDK_DIR/scripts/assert_no_wire_violations.py" \
         --rest-mock-url "http://127.0.0.1:$port" \
         --allowlist "$PORT_ROOT/WIRE_VIOLATIONS_ALLOW.md"

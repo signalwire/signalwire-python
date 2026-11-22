@@ -93,7 +93,7 @@ class SalesSidecar(SWMLService):
 
         # 3. (Optional) Mount an event sink for ai_sidecar lifecycle events
         #    at POST /sales-sidecar/events. Comment this out if you don't
-        #    need it. mod_openai POSTs each event as JSON.
+        #    need it. The platform POSTs each event as JSON.
         self.register_routing_callback(self.on_sidecar_event, path="/events")
 
     def on_sidecar_event(self, request, body):

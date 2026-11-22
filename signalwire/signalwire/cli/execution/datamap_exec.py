@@ -140,7 +140,7 @@ def _atoi(text: str) -> int:
 
 
 def _is_true(value: Any) -> bool:
-    """mod_openai's cJSON_FSTrue(): JSON true, or a string switch_true() accepts."""
+    """JSON true, or a string switch_true() accepts, as the platform reads a switch."""
     return value is True or (isinstance(value, str) and _switch_true(value))
 
 
@@ -358,7 +358,7 @@ def _expand(
     nested: bool = True,
     unresolved: list[tuple[str, str]] | None = None,
 ) -> str:
-    """Expand ``${...}`` and ``%{...}`` templates as mod_openai's expander does."""
+    """Expand ``${...}`` and ``%{...}`` templates as the platform does."""
     parts: list[str] = []
     index = 0
     length = len(template)
@@ -572,7 +572,7 @@ def _run_expressions(run: _Run, expressions: Any, data: Any, stage: str) -> Any:
 
 
 def _any_present(keys: Any, container: Any) -> bool:
-    """mod_openai's args_present(): whether any of the named keys is present."""
+    """Whether any of the named keys is present, as the platform checks ``require_args``."""
     if keys is None or container is None:
         return False
     if isinstance(keys, list):
@@ -680,7 +680,7 @@ def _send(
 
 
 def _request(run: _Run, webhook: Any, call_data: dict[str, Any]) -> Any:
-    """Send one webhook's request as parse_webhook() does, and return its reply.
+    """Send one webhook's request as the platform does, and return its reply.
 
     Returns _MISSING when the webhook has no url, so no request is made.
     """
@@ -791,7 +791,7 @@ def _failure(reply: Any, error_keys: Any) -> str:
 def _run_webhooks(
     run: _Run, webhooks: Any, call_data: dict[str, Any]
 ) -> tuple[Any, Any]:
-    """Request the first eligible webhook, as get_input_from_webhooks() does.
+    """Request the first eligible webhook, as the platform does.
 
     Returns the reply, with an array wrapped as ``{"array": [...]}``, and the
     webhook when its reply counts as a success, or None.
@@ -846,7 +846,7 @@ def _run_webhooks(
 
 
 def _process_foreach(run: _Run, foreach: Any, data: dict[str, Any]) -> None:
-    """Build a foreach's text into its output_key, as process_foreach() does."""
+    """Build a foreach's text into its output_key, as the platform does."""
     input_key = _string_item(foreach, "input_key")
     output_key = _string_item(foreach, "output_key")
     append = _string_item(foreach, "append")

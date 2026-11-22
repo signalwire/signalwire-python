@@ -1,8 +1,8 @@
 """
 swaig-test's DataMap simulator runs a data_map as the platform does.
 
-These follow mod_openai's actions.c (process_data_map, parse_webhook,
-get_input_from_webhooks, parse_expression, process_foreach):
+These follow the platform's data_map processing: its webhooks, expressions
+and foreach:
 
 - A webhook's url and params read the call data, where the arguments are
   ${args.x}. Its foreach, expressions and output read the response, with the

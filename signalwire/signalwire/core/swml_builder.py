@@ -137,8 +137,8 @@ class SWMLBuilder(_VerbsBase):
 
         # Handle prompt (either text or POM, but not both). The SWML `ai` verb requires
         # `prompt` to be an OBJECT — {"text": ...} or {"pom": [...]}; a bare string is a
-        # fatal error in the AI engine (mod_openai app_config.c: `!cJSON_IsObject(prompt)`
-        # fires calling.error and aborts the call), so wrap accordingly.
+        # fatal error in the AI engine (it fires calling.error and aborts the call), so
+        # wrap accordingly.
         if prompt_text is not None:
             config["prompt"] = {"text": prompt_text}
         elif prompt_pom is not None:

@@ -2,9 +2,9 @@
 Tool middleware and the dedupe of transport retries.
 
 SignalWire sends a tool request again, with the same body, after a timeout,
-a failed connection or a 5xx (webhook.c). The retry carries the first
+a failed connection or a 5xx. The retry carries the first
 request's tool_call_id; a call the model makes again gets a new one, and some
-calls carry none (actions.c). So a retry is the same call_id, tool_call_id and
+calls carry none. So a retry is the same call_id, tool_call_id and
 function, and only that is answered from the first attempt.
 """
 

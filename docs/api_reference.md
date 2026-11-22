@@ -362,8 +362,6 @@ Set the agent's own voice, the AI verb's `voice`, for a language that has none o
 ##### `set_fallback_voice(voice: str | List[str] | None) -> AgentBase`
 Set the voices tried once every voice of a language, or the agent's, has failed, before the platform's own last resort: the AI verb's `fallback_voice`, one voice or a list of up to 8. None clears it.
 
-The platform takes `fallback_voice`, and a list as the agent's voice, from its release after 2026-11-21. A platform without it refuses the AI verb, and the call doesn't run, so check your platform has it before using either; one voice as a string in `set_agent_voice()` works everywhere.
-
 ##### `set_default_voice(voice: str | List[str] | Dict[str, str | List[str]] | None) -> AgentBase`
 Set the voice for every voice the agent leaves out: its own, a language's with no voice, a multilingual language's with no voice. The SWML variable `default_voice` is set just before the AI verb, and a voice the agent sets itself wins.
 

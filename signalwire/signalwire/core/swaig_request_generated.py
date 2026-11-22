@@ -1,5 +1,5 @@
 # AUTO-GENERATED from porting-sdk/swaig-specs/swaig-request.yaml — DO NOT EDIT.
-# (vendored from mod_openai; regenerate via
+# (regenerate via
 #  python3 porting-sdk/scripts/generate_python_rest_types.py)
 """TypedDicts for the SWAIG function-webhook request payload.
 
