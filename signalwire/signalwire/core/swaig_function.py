@@ -42,7 +42,7 @@ VOUCHED_PROMPT = "Get the answer from the user before using this tool."
 if TYPE_CHECKING:
     # The inbound SWAIG function-webhook payload, typed from the spec (a plain dict at
     # runtime; TYPE_CHECKING-only so there's no import cost / cycle). Generated from
-    # porting-sdk/swaig-specs/swaig-request.yaml (vendored from mod_openai).
+    # porting-sdk/swaig-specs/swaig-request.yaml.
     from signalwire.core.swaig_request_generated import SwaigRequest
     from signalwire.core.tool_middleware import ToolMiddleware
 

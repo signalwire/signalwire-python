@@ -3,9 +3,8 @@ Step and tool options the platform reads: expected_answer, refresh_step,
 back_to_back_functions, nullable optional arguments, native tools, and the
 steps that offer a tool.
 
-The shapes follow mod_openai: expected_answer as speech_detect.c reads it
-(expected_answer_json), back_to_back_functions as ai_back2back_value_json
-does, and a native tool as actions.c dispatches one: a web_hook_url of
+The shapes follow the platform: expected_answer and back_to_back_functions
+as it reads them, and a native tool as it dispatches one: a web_hook_url of
 "native" runs the platform's own implementation by name.
 """
 

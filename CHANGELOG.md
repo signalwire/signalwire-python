@@ -5,7 +5,9 @@
 ### Changed
 - The docs for `set_agent_voice()` and `set_fallback_voice()` drop their
   note on platform releases, and earlier entries here drop the platform
-  commits they cited.
+  commits they cited. Docstrings, comments, tests, the bundled SWML schema's
+  descriptions and the generated SWAIG types no longer cite the platform's
+  source.
 - A test pins what an agent with no voice settings renders, as it always
   has: a voice given as one string is still sent as its voice, engine and
   model, and numeric params are still numbers.

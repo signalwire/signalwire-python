@@ -1,5 +1,5 @@
 # AUTO-GENERATED from porting-sdk/swaig-specs/swaig-response.yaml — DO NOT EDIT.
-# (which is vendored from mod_openai; regenerate via
+# (regenerate via
 #  python3 porting-sdk/scripts/generate_python_rest_types.py)
 """Typed SWAIG response actions.
 
@@ -96,7 +96,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:547
+        """
         self.action.append({"add_dynamic_hints": value})  # type: ignore[attr-defined]
         return self
 
@@ -111,7 +111,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:359
+        """
         self.action.append({"back_to_back_functions": value})  # type: ignore[attr-defined]
         return self
 
@@ -124,7 +124,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:238
+        """
         self.action.append({"change_context": value})  # type: ignore[attr-defined]
         return self
 
@@ -137,7 +137,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:248
+        """
         self.action.append({"change_step": value})  # type: ignore[attr-defined]
         return self
 
@@ -150,7 +150,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:579
+        """
         self.action.append({"clear_dynamic_hints": value})  # type: ignore[attr-defined]
         return self
 
@@ -167,7 +167,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:594
+        """
         self.action.append({"context_switch": value})  # type: ignore[attr-defined]
         return self
 
@@ -180,7 +180,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:312
+        """
         self.action.append({"end_of_speech_timeout": value})  # type: ignore[attr-defined]
         return self
 
@@ -193,7 +193,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:373
+        """
         self.action.append({"extensive_data": value})  # type: ignore[attr-defined]
         return self
 
@@ -206,7 +206,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:369
+        """
         self.action.append({"functions_on_speaker_timeout": value})  # type: ignore[attr-defined]
         return self
 
@@ -222,7 +222,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:294
+        """
         self.action.append({"hangup": value})  # type: ignore[attr-defined]
         return self
 
@@ -237,7 +237,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:258
+        """
         self.action.append({"hold": value})  # type: ignore[attr-defined]
         return self
 
@@ -253,7 +253,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:695
+        """
         self.action.append({"playback_bg": value})  # type: ignore[attr-defined]
         return self
 
@@ -269,7 +269,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:379
+        """
         self.action.append({"replace_in_history": value})  # type: ignore[attr-defined]
         return self
 
@@ -283,7 +283,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:434
+        """
         self.action.append({"say": value})  # type: ignore[attr-defined]
         return self
 
@@ -298,7 +298,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:498
+        """
         self.action.append({"set_global_data": value})  # type: ignore[attr-defined]
         return self
 
@@ -311,7 +311,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:459
+        """
         self.action.append({"set_meta_data": value})  # type: ignore[attr-defined]
         return self
 
@@ -326,7 +326,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:442
+        """
         self.action.append({"settings": value})  # type: ignore[attr-defined]
         return self
 
@@ -339,7 +339,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:326
+        """
         self.action.append({"speech_event_timeout": value})  # type: ignore[attr-defined]
         return self
 
@@ -351,7 +351,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:452
+        """
         self.action.append({"stop": value})  # type: ignore[attr-defined]
         return self
 
@@ -364,7 +364,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:685
+        """
         self.action.append({"stop_playback_bg": value})  # type: ignore[attr-defined]
         return self
 
@@ -380,7 +380,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:389
+        """
         self.action.append({"toggle_functions": value})  # type: ignore[attr-defined]
         return self
 
@@ -396,7 +396,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:136
+        """
         self.action.append({"transfer": value})  # type: ignore[attr-defined]
         return self
 
@@ -411,7 +411,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:515
+        """
         self.action.append({"unset_global_data": value})  # type: ignore[attr-defined]
         return self
 
@@ -424,7 +424,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:477
+        """
         self.action.append({"unset_meta_data": value})  # type: ignore[attr-defined]
         return self
 
@@ -437,7 +437,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:231
+        """
         self.action.append({"user_event": value})  # type: ignore[attr-defined]
         return self
 
@@ -450,7 +450,7 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:541
+        """
         self.action.append({"user_input": value})  # type: ignore[attr-defined]
         return self
 
@@ -465,6 +465,6 @@ class _SwaigActions:
 
         Returns:
             The builder, for chaining.
-        """  # actions.c:300
+        """
         self.action.append({"wait_for_user": value})  # type: ignore[attr-defined]
         return self

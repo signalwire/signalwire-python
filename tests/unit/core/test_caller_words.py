@@ -2,10 +2,10 @@
 The caller's own words in a tool handler.
 
 A SWAIG request carries the conversation as call_log only with
-swaig_post_conversation on (actions.c). The recognizer's finals with their
+swaig_post_conversation on. The recognizer's finals with their
 word confidences come as ai.speech_detect AI events, posted to the call's
 event_webhook_url as {"event_type", "timestamp", "params": {"text", "words",
-"call_id"}} (webhook.c build_event_webhook_envelope).
+"call_id"}}.
 """
 
 import json
