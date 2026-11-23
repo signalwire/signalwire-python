@@ -375,10 +375,10 @@ class SWAIGFunction:
         try:
             import jsonschema_rs
 
-            validator = jsonschema_rs.JSONSchema(schema)  # type: ignore[attr-defined]  # jsonschema_rs ships no type stubs
+            validator = jsonschema_rs.Draft7Validator(schema)
             if validator.is_valid(args):
                 return True, []
-            errors = [str(error) for error in validator.iter_errors(args)]
+            errors = [error.message for error in validator.iter_errors(args)]
             return False, errors
         except ImportError:
             pass
