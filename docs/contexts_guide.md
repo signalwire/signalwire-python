@@ -428,7 +428,7 @@ step.set_functions("none")
 # set (or every registered function, on a context's first step)
 ```
 
-`ContextBuilder.steps_offering(name)` returns the `(context, step)` pairs whose function list, or a gather question's, names a tool. A step without `set_functions()` isn't counted, since what it offers depends on the step before it. When every step lists its functions and none lists a registered tool, rendering the SWML logs a `tool_offered_by_no_step` warning for it, once: the model never gets that tool unless a function result turns it on with `toggle_functions()`.
+`ContextBuilder.steps_offering(function)` returns the `(context, step)` pairs whose function list, or a gather question's, names the tool `function`. A step without `set_functions()` isn't counted, since what it offers depends on the step before it. When every step lists its functions and none lists a registered tool, rendering the SWML logs a `tool_offered_by_no_step` warning for it, once: the model never gets that tool unless a function result turns it on with `toggle_functions()`.
 
 Name only a step's own tools in what the model reads in that step. When a step lists its functions, rendering also logs a `tool_named_but_not_offered` warning, once each, for a registered tool named in the step's text, its criteria, its context's prompt (which goes before every step's text), a gather question, or a gate's output on one of its tools, when the step doesn't offer it. A name with an underscore counts anywhere; a one-word name counts only in backticks or before "(". Tool results are built at run time, so check those in tests with `CallSimulator(agent, check_tool_mentions=True)`.
 
@@ -664,7 +664,7 @@ Gather info mode solves this by using **dynamic step instruction re-injection**.
 #### How It Works Internally
 
 1. **Step entry**: When the AI enters a step with `gather_info`, the system switches to gather questioning mode.
-2. **Preamble injection** (first question only): If the gather has a `prompt`, it's injected as a **persistent** system message for the entire gather sequence.
+2. **Preamble injection**: If the gather has a `prompt`, it's sent with every question, as a system message ahead of the question's own, and each copy replaces the one before. Under the `keep` history mode it's sent with the first question only, and that copy stays.
 3. **Question injection**: A minimal system instruction is injected as a **clearable** message containing the question text, type hint, confirmation instructions, and any per-question prompt text.
 4. **Tool lockdown**: During gather mode, **all normal functions are hidden**. Only `gather_submit` (an internal function) and any per-question `functions` are visible.
 5. **Answer submission**: When the AI calls `gather_submit`, the answer is written to `global_data` and the next question's instruction is re-injected. The `gather_submit` call routes through the system-log path, so the LLM never sees tool_call/tool_result for it.
@@ -676,7 +676,7 @@ Gather info mode solves this by using **dynamic step instruction re-injection**.
 Here's what the LLM conversation history looks like during gather mode:
 
 ```
-[system] You are a travel assistant. You need to collect some details.    <- persistent preamble
+[system] You are a travel assistant. You need to collect some details.    <- preamble, sent again with each question
 [system] Ask the user: "What is your first name?"                        <- clearable, changes per question
          When you have the answer, call the gather_submit function.
          Do not ask the user any other questions.

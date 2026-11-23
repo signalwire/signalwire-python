@@ -876,7 +876,10 @@ def search_command() -> None:
         # Import search dependencies
         try:
             from signalwire.search.search_engine import SearchEngine
-            from signalwire.search.query_processor import preprocess_query
+            from signalwire.search.query_processor import (
+                drop_corpus_terms,
+                preprocess_query,
+            )
         except ImportError as e:
             print(
                 "Error: Search functionality not available. Install with: pip install signalwire-sdk[search]"
@@ -989,7 +992,9 @@ def search_command() -> None:
 
                     # Preprocess query
                     enhanced = preprocess_query(
-                        query,
+                        drop_corpus_terms(
+                            query, getattr(engine, "query_stopwords", None) or []
+                        ),
                         vector=True,
                         query_nlp_backend=args.query_nlp_backend,
                         model_name=model_to_use,
@@ -1076,8 +1081,11 @@ def search_command() -> None:
             print()
 
         # Preprocess query
+        # Terms the index says every document is about, as the agent drops them
         enhanced = preprocess_query(
-            args.query,
+            drop_corpus_terms(
+                args.query, getattr(engine, "query_stopwords", None) or []
+            ),
             vector=True,  # Both backends need vector for similarity search
             query_nlp_backend=args.query_nlp_backend,
             model_name=model_to_use,

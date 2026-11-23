@@ -1,5 +1,31 @@
 # Changelog
 
+## [3.15.3] - 2026-11-23
+
+### Added
+- `signalwire.operations` exports `RECORD`, `RECORD_KEYS` and
+  `RECORD_VERSION`, importable before only from
+  `signalwire.operations.record`.
+
+### Fixed
+- `sw-search search` drops the terms an index was built to drop from
+  queries (`--query-stopwords`), as an agent's search does, so it ranks
+  results as the agent will.
+- Docs and docstrings that disagreed with the code:
+  - A gather's preamble is sent with every question, in the Contexts and
+    Steps Guide's "How It Works Internally" and `set_gather_info()`'s
+    docstring.
+  - `steps_offering()`'s parameter is `function`.
+  - `set_multilingual()` sends its config as given, without the voice
+    checks of the other voice methods.
+  - `Dialer` takes `swml=` in place of `url=`, and exactly one of them.
+  - A deprecated prefab's `DeprecationWarning` shows by default only in
+    `__main__` and under pytest.
+  - `rank_weight` counts when it's greater than 0 and at most 1.
+  - The record's key is the service's `namespace` when it has one.
+  - `pay()` documents `ai_response`.
+  - The `sw-search` man page has `--query-stopwords`.
+
 ## [3.15.2] - 2026-11-22
 
 ### Fixed

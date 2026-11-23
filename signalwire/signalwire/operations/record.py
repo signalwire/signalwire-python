@@ -24,8 +24,8 @@ from signalwire.operations.money import amount_of
 from signalwire.operations.wording import _Wording
 
 RECORD = "ops"
-"""The ``global_data`` key the record lives under (``ops_<name>`` for an
-``Operations`` given a ``name``), so other layers' state sits beside it."""
+"""The ``global_data`` key the record lives under (a service's ``namespace``
+when it has one), so other layers' state sits beside it."""
 
 RECORD_VERSION = 1
 """The record's ``v``. It goes up when a key is renamed or changes meaning,

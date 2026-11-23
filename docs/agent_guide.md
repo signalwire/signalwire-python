@@ -2625,7 +2625,7 @@ agent.serve(host="0.0.0.0", port=8000)
 
 #### FAQBotAgent
 
-Deprecated: use `InfoBotKnowledge`, which answers from any search you give it, a list of questions and answers included. `FAQBotAgent` still works, and warns when it's made.
+Deprecated: use `InfoBotKnowledge`, which answers from any search you give it, a list of questions and answers included. `FAQBotAgent` still works; making one raises a `DeprecationWarning`, which Python shows by default only in `__main__` and under pytest (run with `-W default::DeprecationWarning` to see it elsewhere).
 
 Answers questions based on a knowledge base:
 
@@ -2648,7 +2648,7 @@ agent.serve(host="0.0.0.0", port=8000)
 
 #### ConciergeAgent
 
-Deprecated: its availability check answers yes for any listed service, with no calendar behind it. Use `FrontDeskAgent`, with `Appointments` for bookings and `InfoBotKnowledge` for amenities and hours. `ConciergeAgent` still works, and warns when it's made.
+Deprecated: its availability check answers yes for any listed service, with no calendar behind it. Use `FrontDeskAgent`, with `Appointments` for bookings and `InfoBotKnowledge` for amenities and hours. `ConciergeAgent` still works; making one raises a `DeprecationWarning`, which Python shows by default only in `__main__` and under pytest (run with `-W default::DeprecationWarning` to see it elsewhere).
 
 Routes users to specialized agents:
 
@@ -2704,7 +2704,7 @@ agent.serve(host="0.0.0.0", port=8000)
 
 #### ReceptionistAgent
 
-Deprecated: use `FrontDeskAgent`, whose departments can say when they're taking calls and which takes a message when one isn't. `ReceptionistAgent` still works, and warns when it's made.
+Deprecated: use `FrontDeskAgent`, whose departments can say when they're taking calls and which takes a message when one isn't. `ReceptionistAgent` still works; making one raises a `DeprecationWarning`, which Python shows by default only in `__main__` and under pytest (run with `-W default::DeprecationWarning` to see it elsewhere).
 
 Handles call routing and department transfers:
 

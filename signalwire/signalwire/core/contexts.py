@@ -578,8 +578,11 @@ class Step:
                 - None (default) to return to normal step mode after gathering
                 The target must be valid: "next_step" requires a following step,
                 and named steps must exist in the same context.
-            prompt: Preamble text injected once when entering the gather step, giving
-                the model personality/context for why it is asking these questions
+            prompt: Preamble text sent with every question, as a system message
+                ahead of the question's own, giving the model personality/context
+                for why it is asking these questions. Each copy replaces the one
+                before; under the ``keep`` history mode only the first question's
+                copy is sent, and it stays
             isolated: Default for every question in this gather. When True, a
                 question is asked with the sibling Q&A hidden from the model, so
                 it must ask rather than derive the answer from an earlier one.
