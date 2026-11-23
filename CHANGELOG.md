@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.15.2] - 2026-11-22
+
+### Fixed
+- A tool's arguments are checked against its parameters with jsonschema-rs
+  again. The SDK still used the `JSONSchema` class, which jsonschema-rs no
+  longer has, so the check fell back to jsonschema, or was skipped where
+  jsonschema isn't installed, and the warning for arguments that don't match
+  went with it. Both validators give the same messages.
+
 ## [3.15.1] - 2026-11-21
 
 ### Changed

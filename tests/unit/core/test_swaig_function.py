@@ -283,6 +283,35 @@ class TestSWAIGFunctionValidation:
         assert is_valid is True
         is_valid, errors = func.validate_args({"invalid": "value"})
         assert isinstance(is_valid, bool)
+
+    @pytest.mark.parametrize("pure_python", [True, False])
+    def test_validate_args_reports_errors_with_either_validator(
+        self, pure_python: bool
+    ) -> None:
+        """jsonschema-rs validates on its own, and both give the same errors"""
+        func = SWAIGFunction(
+            name="count",
+            handler=lambda args, raw: None,
+            description="Count",
+            parameters={"n": {"type": "integer"}},
+            required=["n"],
+        )
+        # None in sys.modules makes an import raise ImportError
+        blocked = "jsonschema_rs" if pure_python else "jsonschema"
+        with patch.dict("sys.modules", {blocked: None}):
+            assert func.validate_args({"n": 3}) == (True, [])
+            assert func.validate_args({"n": "x"}) == (
+                False,
+                ["'x' is not of type 'integer'"]
+                if pure_python
+                else ['"x" is not of type "integer"'],
+            )
+            assert func.validate_args({}) == (
+                False,
+                ["'n' is a required property"]
+                if pure_python
+                else ['"n" is a required property'],
+            )
     
     def test_function_name_validation(self) -> None:
         """Test function name validation"""
