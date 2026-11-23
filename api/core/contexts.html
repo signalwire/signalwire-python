@@ -11998,8 +11998,11 @@ and named steps must exist in the same context.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Preamble text injected once when entering the gather step, giving
-the model personality/context for why it is asking these questions</p>
+                <p>Preamble text sent with every question, as a system message
+ahead of the question's own, giving the model personality/context
+for why it is asking these questions. Each copy replaces the one
+before; under the <code>keep</code> history mode only the first question's
+copy is sent, and it stays</p>
               </div>
             </td>
             <td>

@@ -14374,6 +14374,24 @@ earlier "voice" option was never valid.</p>
                   <code>None</code>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>ai_response</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>What the AI is told once the payment is done, set as
+the SWML variable <code>ai_response</code> after the pay verb;
+<code>${pay_result}</code> in it is the payment's outcome</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;The payment status is ${pay_result}, do not mention anything else about collecting payment if successful.&#39;</code>
+            </td>
+          </tr>
       </tbody>
     </table>
         <p>timeout, max_attempts and min_postal_code_length must be integers,

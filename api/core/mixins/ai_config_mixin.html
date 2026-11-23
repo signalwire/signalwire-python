@@ -10240,7 +10240,9 @@ mutually exclusive with set_languages(); if both are set the server uses
             <td>
               <div class="doc-md-description">
                 <p>The multilingual config object (languages, allowed,
-start_language, min_switch_words, fillers, etc.).</p>
+start_language, min_switch_words, fillers, etc.). It's sent as
+given: unlike the other voice methods, the SDK doesn't check
+its voices, so a list of more than 8 reaches the platform.</p>
               </div>
             </td>
             <td>
