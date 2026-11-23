@@ -182,6 +182,11 @@ NLP backend for document processing:
 .BI \-\-tags " TAGS"
 Comma-separated tags to add to all chunks.
 .TP
+.BI \-\-query\-stopwords " TERMS"
+Comma-separated terms every document is about, such as your product's
+name. Recorded in the index; search drops them from queries unless the
+query would be left with fewer than two content words.
+.TP
 .B \-\-verbose
 Enable verbose output showing processing details.
 .TP

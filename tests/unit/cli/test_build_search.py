@@ -394,6 +394,24 @@ class TestSearchCommand:
             
             mock_print.assert_any_call("Found 1 result(s) for 'test query':")
     
+    @patch('sys.argv', ['search', 'test.swsearch', 'Acme call pricing'])
+    def test_search_drops_the_index_query_stopwords(self) -> None:
+        """The query loses the terms the index was built to drop, as the agent's does"""
+        mock_engine = Mock()
+        mock_engine.get_stats.return_value = {'total_chunks': 1, 'total_files': 1}
+        mock_engine.search.return_value = []
+        mock_engine.query_stopwords = ['Acme']
+        preprocess = Mock(return_value={'vector': [0.1], 'enhanced_text': 'call pricing'})
+
+        with patch('pathlib.Path.exists', return_value=True), \
+             patch('builtins.print'), \
+             patch('signalwire.search.search_engine.SearchEngine', return_value=mock_engine), \
+             patch('signalwire.search.query_processor.preprocess_query', preprocess), \
+             pytest.raises(SystemExit):  # no results
+            search_command()
+
+        assert preprocess.call_args.args[0] == 'call pricing'
+
     @patch('sys.argv', [
         'search', 'test.swsearch', 'test query',
         '--count', '10',

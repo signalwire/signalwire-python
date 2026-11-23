@@ -2311,7 +2311,7 @@ result.join_conference(
 
 ### Payment Processing
 
-##### `pay(payment_connector_url: str, input_method: str = "dtmf", status_url: Optional[str] = None, payment_method: str = "credit-card", timeout: int = 5, max_attempts: int = 1, security_code: bool = True, postal_code: Union[bool, str] = True, min_postal_code_length: int = 0, token_type: str = "reusable", charge_amount: Optional[str] = None, currency: str = "usd", language: str = "en-US", voice: str = "woman", description: Optional[str] = None, valid_card_types: str = "visa mastercard amex", parameters: Optional[List[Dict[str, str]]] = None, prompts: Optional[List[Dict[str, Any]]] = None) -> FunctionResult`
+##### `pay(payment_connector_url: str, input_method: str = "dtmf", status_url: Optional[str] = None, payment_method: str = "credit-card", timeout: int = 5, max_attempts: int = 1, security_code: bool = True, postal_code: Union[bool, str] = True, min_postal_code_length: int = 0, token_type: str = "reusable", charge_amount: Optional[str] = None, currency: str = "usd", language: str = "en-US", voice: str = "woman", description: Optional[str] = None, valid_card_types: str = "visa mastercard amex", parameters: Optional[List[Dict[str, str]]] = None, prompts: Optional[List[Dict[str, Any]]] = None, ai_response: Optional[str] = "The payment status is ${pay_result}, do not mention anything else about collecting payment if successful.") -> FunctionResult`
 Process a payment through the call.
 
 **Parameters:**
@@ -2333,6 +2333,7 @@ Process a payment through the call.
 - `valid_card_types` (str): Accepted card types (default: "visa mastercard amex")
 - `parameters` (Optional[List[Dict[str, str]]]): Additional parameters
 - `prompts` (Optional[List[Dict[str, Any]]]): Custom prompts
+- `ai_response` (Optional[str]): What the AI is told once the payment is done, set as the SWML variable `ai_response` after the pay verb; `${pay_result}` in it is the payment's outcome
 
 **Usage:**
 ```python

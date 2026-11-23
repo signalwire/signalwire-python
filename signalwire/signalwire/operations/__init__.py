@@ -47,6 +47,7 @@ from signalwire.operations.payments import (
     PaymentResult,
     Payments,
 )
+from signalwire.operations.record import RECORD, RECORD_KEYS, RECORD_VERSION
 from signalwire.operations.wording import DEFAULT_WORDING
 
 __all__ = [
@@ -57,6 +58,9 @@ __all__ = [
     "MESSAGES_WORDING",
     "NOT_SAID",
     "PAYMENTS_WORDING",
+    "RECORD",
+    "RECORD_KEYS",
+    "RECORD_VERSION",
     "Appointment",
     "Appointments",
     "CallContext",

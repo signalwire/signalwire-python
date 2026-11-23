@@ -1250,6 +1250,9 @@ class FunctionResult:
             valid_card_types: Space-separated card types (default: "visa mastercard amex")
             parameters: Array of name/value pairs for payment connector
             prompts: Array of custom prompt configurations
+            ai_response: What the AI is told once the payment is done, set as
+                the SWML variable ``ai_response`` after the pay verb;
+                ``${pay_result}`` in it is the payment's outcome
 
         timeout, max_attempts and min_postal_code_length must be integers,
         and security_code a boolean; each also accepts a SWML variable
