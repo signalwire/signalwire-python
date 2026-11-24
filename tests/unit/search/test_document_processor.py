@@ -19,7 +19,7 @@ from typing import Any
 from unittest.mock import Mock, patch, MagicMock, mock_open
 from pathlib import Path
 
-from signalwire.search.document_processor import DocumentProcessor
+from signalwire.search.document_processor import DocumentExtractionError, DocumentProcessor
 
 
 class TestDocumentProcessorInit:
@@ -111,7 +111,7 @@ class TestDocumentProcessorChunking:
         
         # Test with list input (like PDF pages)
         page_list = ["Page 1 content", "Page 2 content", "Page 3 content"]
-        chunks = processor.create_chunks(page_list, self.filename, self.file_type)  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
+        chunks = processor.create_chunks(page_list, self.filename, self.file_type)
         
         assert len(chunks) == 3
         assert all(chunk['metadata']['chunk_method'] == 'page_based' for chunk in chunks)
@@ -149,7 +149,7 @@ class TestDocumentProcessorSentenceChunking:
         processor = DocumentProcessor(max_sentences_per_chunk=2)
         content = ["First line.", "Second line.", "Third line."]
         
-        chunks = processor._chunk_by_sentences(content, "test.txt", "txt")  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
+        chunks = processor._chunk_by_sentences(content, "test.txt", "txt")
         
         assert len(chunks) >= 1
         assert all('content' in chunk for chunk in chunks)
@@ -191,7 +191,7 @@ class TestDocumentProcessorSlidingWindow:
         processor = DocumentProcessor(chunk_size=2, chunk_overlap=1)
         content = ["line one", "line two", "line three"]
         
-        chunks = processor._chunk_by_sliding_window(content, "test.txt", "txt")  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
+        chunks = processor._chunk_by_sliding_window(content, "test.txt", "txt")
         
         assert len(chunks) >= 1
         assert all('content' in chunk for chunk in chunks)
@@ -240,7 +240,7 @@ class TestDocumentProcessorParagraphChunking:
         processor = DocumentProcessor()
         content = ["First line", "Second line", "", "Third line"]
         
-        chunks = processor._chunk_by_paragraphs(content, "test.txt", "txt")  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
+        chunks = processor._chunk_by_paragraphs(content, "test.txt", "txt")
         
         assert len(chunks) >= 1
         assert all('content' in chunk for chunk in chunks)
@@ -277,7 +277,7 @@ class TestDocumentProcessorPageChunking:
         processor = DocumentProcessor()
         content = ["Page 1 content", "Page 2 content", "", "Page 3 content"]
         
-        chunks = processor._chunk_by_pages(content, "test.txt", "txt")  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
+        chunks = processor._chunk_by_pages(content, "test.txt", "txt")
         
         assert len(chunks) == 3  # Empty page should be skipped
         assert chunks[0]['content'] == "Page 1 content"
@@ -376,21 +376,24 @@ class TestDocumentProcessorFileExtraction:
             mock_extract.assert_called_once_with("test.docx")
             assert result == ["paragraph 1", "paragraph 2"]
     
-    def test_extract_text_from_file_html(self) -> None:
-        """Test HTML file extraction"""
-        # HTML files with fallback detection go to _extract_text due to 'text' in 'text/html'
-        with patch('signalwire.search.document_processor.magic', None):
-            with patch.object(self.processor, '_extract_text') as mock_extract:
+    @pytest.mark.parametrize("mime", [None, "text/html"])
+    def test_extract_text_from_file_html(self, mime: str | None) -> None:
+        """HTML goes to the HTML extractor, by extension or by its text/html type"""
+        detector = None if mime is None else MagicMock()
+        if detector is not None:
+            detector.Magic.return_value.from_file.return_value = mime
+        with patch('signalwire.search.document_processor.magic', detector):
+            with patch.object(self.processor, '_extract_html') as mock_extract:
                 mock_extract.return_value = "html content"
-                
+
                 result = self.processor._extract_text_from_file("test.html")
-                
+
                 mock_extract.assert_called_once_with("test.html")
                 assert result == "html content"
-    
+
     def test_extract_text_from_file_markdown(self) -> None:
         """Test Markdown file extraction"""
-        # Markdown files with fallback detection go to _extract_text due to 'text' in 'text/plain'
+        # Markdown comes back as written, so the markdown strategy can read its headers
         with patch('signalwire.search.document_processor.magic', None):
             with patch.object(self.processor, '_extract_text') as mock_extract:
                 mock_extract.return_value = "markdown content"
@@ -422,9 +425,9 @@ class TestDocumentProcessorSpecificExtractors:
     @patch('signalwire.search.document_processor.pdfplumber', None)
     def test_extract_pdf_no_library(self) -> None:
         """Test PDF extraction without pdfplumber"""
-        result = self.processor._extract_pdf("test.pdf")
+        with pytest.raises(DocumentExtractionError, match="pdfplumber\ not\ available"):
+            self.processor._extract_pdf("test.pdf")
         
-        assert "pdfplumber not available" in result
     
     @patch('signalwire.search.document_processor.pdfplumber')
     def test_extract_pdf_success(self, mock_pdfplumber: MagicMock) -> None:
@@ -450,16 +453,16 @@ class TestDocumentProcessorSpecificExtractors:
         """Test PDF extraction with error"""
         mock_pdfplumber.open.side_effect = Exception("PDF error")
         
-        result = self.processor._extract_pdf("test.pdf")
+        with pytest.raises(DocumentExtractionError, match="Error\ processing\ PDF"):
+            self.processor._extract_pdf("test.pdf")
         
-        assert "Error processing PDF" in result
     
     @patch('signalwire.search.document_processor.DocxDocument', None)
     def test_extract_docx_no_library(self) -> None:
         """Test DOCX extraction without python-docx"""
-        result = self.processor._extract_docx("test.docx")
+        with pytest.raises(DocumentExtractionError, match="python\-docx\ not\ available"):
+            self.processor._extract_docx("test.docx")
         
-        assert "python-docx not available" in result
     
     @patch('signalwire.search.document_processor.DocxDocument')
     def test_extract_docx_success(self, mock_docx: MagicMock) -> None:
@@ -484,9 +487,9 @@ class TestDocumentProcessorSpecificExtractors:
         """Test DOCX extraction with error"""
         mock_docx.side_effect = Exception("DOCX error")
         
-        result = self.processor._extract_docx("test.docx")
+        with pytest.raises(DocumentExtractionError, match="Error\ processing\ DOCX"):
+            self.processor._extract_docx("test.docx")
         
-        assert "Error processing DOCX" in result
     
     def test_extract_text_success(self) -> None:
         """Test successful text file extraction"""
@@ -498,21 +501,21 @@ class TestDocumentProcessorSpecificExtractors:
     def test_extract_text_error(self) -> None:
         """Test text file extraction with error"""
         with patch('builtins.open', side_effect=Exception("File error")):
-            result = self.processor._extract_text("test.txt")
+            with pytest.raises(DocumentExtractionError, match="Error\ processing\ TXT"):
+                self.processor._extract_text("test.txt")
             
-            assert "Error processing TXT" in result
     
     @patch('signalwire.search.document_processor.BeautifulSoup', None)
     def test_extract_html_no_library(self) -> None:
         """Test HTML extraction without BeautifulSoup"""
-        result = self.processor._extract_html("test.html")
+        with pytest.raises(DocumentExtractionError, match="beautifulsoup4\ not\ available"):
+            self.processor._extract_html("test.html")
         
-        assert "beautifulsoup4 not available" in result
     
     @patch('signalwire.search.document_processor.BeautifulSoup')
     def test_extract_html_success(self, mock_bs: MagicMock) -> None:
         """Test successful HTML extraction"""
-        mock_soup = Mock()
+        mock_soup = Mock(return_value=[])
         mock_soup.get_text.return_value = "HTML content"
         mock_bs.return_value = mock_soup
         
@@ -701,7 +704,7 @@ class TestDocumentProcessorEdgeCases:
         """Test page chunking with empty pages"""
         processor = DocumentProcessor(chunking_strategy='page')
         
-        chunks = processor.create_chunks(["", "  ", "Content", ""], "test.txt", "txt")  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
+        chunks = processor.create_chunks(["", "  ", "Content", ""], "test.txt", "txt")
         
         assert len(chunks) == 1
         assert chunks[0]['content'] == "Content"
@@ -753,14 +756,14 @@ class TestFileExtraction:
 
     @patch('signalwire.search.document_processor.pdfplumber', None)
     def test_extract_pdf_missing_dependency(self) -> None:
-        result = self.processor._extract_pdf("/fake/doc.pdf")
-        assert "pdfplumber not available" in result
+        with pytest.raises(DocumentExtractionError, match="pdfplumber\ not\ available"):
+            self.processor._extract_pdf("/fake/doc.pdf")
 
     @patch('signalwire.search.document_processor.pdfplumber')
     def test_extract_pdf_exception(self, mock_pdfplumber: MagicMock) -> None:
         mock_pdfplumber.open.side_effect = RuntimeError("corrupt file")
-        result = self.processor._extract_pdf("/fake/doc.pdf")
-        assert "Error processing PDF" in result
+        with pytest.raises(DocumentExtractionError, match="Error\ processing\ PDF"):
+            self.processor._extract_pdf("/fake/doc.pdf")
 
     # ── DOCX ─────────────────────────────────────────────────────────
 
@@ -775,14 +778,14 @@ class TestFileExtraction:
 
     @patch('signalwire.search.document_processor.DocxDocument', None)
     def test_extract_docx_missing_dependency(self) -> None:
-        result = self.processor._extract_docx("/fake/doc.docx")
-        assert "python-docx not available" in result
+        with pytest.raises(DocumentExtractionError, match="python\-docx\ not\ available"):
+            self.processor._extract_docx("/fake/doc.docx")
 
     @patch('signalwire.search.document_processor.DocxDocument')
     def test_extract_docx_exception(self, mock_docx_cls: MagicMock) -> None:
         mock_docx_cls.side_effect = ValueError("bad docx")
-        result = self.processor._extract_docx("/fake/doc.docx")
-        assert "Error processing DOCX" in result
+        with pytest.raises(DocumentExtractionError, match="Error\ processing\ DOCX"):
+            self.processor._extract_docx("/fake/doc.docx")
 
     # ── XLSX (Excel) ─────────────────────────────────────────────────
 
@@ -806,14 +809,14 @@ class TestFileExtraction:
 
     def test_extract_excel_missing_dependency(self) -> None:
         with patch.dict(sys.modules, {"openpyxl": None}):
-            result = self.processor._extract_excel("/fake/data.xlsx")
-        assert "openpyxl not available" in result
+            with pytest.raises(DocumentExtractionError, match="openpyxl\ not\ available"):
+                self.processor._extract_excel("/fake/data.xlsx")
 
     def test_extract_excel_exception(self) -> None:
         mock_lwb = MagicMock(side_effect=Exception("xlsx error"))
         with patch.dict(sys.modules, {"openpyxl": Mock(load_workbook=mock_lwb)}):
-            result = self.processor._extract_excel("/fake/data.xlsx")
-        assert "Error processing Excel" in result
+            with pytest.raises(DocumentExtractionError, match="Error\ processing\ Excel"):
+                self.processor._extract_excel("/fake/data.xlsx")
 
     def test_importing_the_module_does_not_load_openpyxl(self) -> None:
         """openpyxl (and the numpy it imports) loads only for Excel files."""
@@ -846,20 +849,20 @@ class TestFileExtraction:
 
     @patch('signalwire.search.document_processor.Presentation', None)
     def test_extract_powerpoint_missing_dependency(self) -> None:
-        result = self.processor._extract_powerpoint("/fake/pres.pptx")
-        assert "python-pptx not available" in result
+        with pytest.raises(DocumentExtractionError, match="python\-pptx\ not\ available"):
+            self.processor._extract_powerpoint("/fake/pres.pptx")
 
     @patch('signalwire.search.document_processor.Presentation')
     def test_extract_powerpoint_exception(self, mock_pres_cls: MagicMock) -> None:
         mock_pres_cls.side_effect = Exception("pptx error")
-        result = self.processor._extract_powerpoint("/fake/pres.pptx")
-        assert "Error processing PowerPoint" in result
+        with pytest.raises(DocumentExtractionError, match="Error\ processing\ PowerPoint"):
+            self.processor._extract_powerpoint("/fake/pres.pptx")
 
     # ── HTML ─────────────────────────────────────────────────────────
 
     @patch('signalwire.search.document_processor.BeautifulSoup')
     def test_extract_html_success(self, mock_bs: MagicMock) -> None:
-        mock_soup = Mock(); mock_soup.get_text.return_value = "Hello World"
+        mock_soup = Mock(return_value=[]); mock_soup.get_text.return_value = "Hello World"
         mock_bs.return_value = mock_soup
         with patch('builtins.open', mock_open(read_data="<p>Hello World</p>")):
             result = self.processor._extract_html("/fake/page.html")
@@ -867,14 +870,14 @@ class TestFileExtraction:
 
     @patch('signalwire.search.document_processor.BeautifulSoup', None)
     def test_extract_html_missing_dependency(self) -> None:
-        result = self.processor._extract_html("/fake/page.html")
-        assert "beautifulsoup4 not available" in result
+        with pytest.raises(DocumentExtractionError, match="beautifulsoup4\ not\ available"):
+            self.processor._extract_html("/fake/page.html")
 
     @patch('signalwire.search.document_processor.BeautifulSoup')
     def test_extract_html_exception(self, mock_bs: MagicMock) -> None:
         with patch('builtins.open', side_effect=IOError("disk")):
-            result = self.processor._extract_html("/fake/page.html")
-        assert "Error processing HTML" in result
+            with pytest.raises(DocumentExtractionError, match="Error\ processing\ HTML"):
+                self.processor._extract_html("/fake/page.html")
 
     # ── Markdown ─────────────────────────────────────────────────────
 
@@ -898,8 +901,8 @@ class TestFileExtraction:
 
     def test_extract_markdown_io_error(self) -> None:
         with patch('builtins.open', side_effect=OSError("nope")):
-            result = self.processor._extract_markdown("/fake/doc.md")
-        assert "Error processing Markdown" in result
+            with pytest.raises(DocumentExtractionError, match="Error\ processing\ Markdown"):
+                self.processor._extract_markdown("/fake/doc.md")
 
     # ── RTF ───────────────────────────────────────────────────────────
 
@@ -912,14 +915,14 @@ class TestFileExtraction:
 
     @patch('signalwire.search.document_processor.rtf_to_text', None)
     def test_extract_rtf_missing_dependency(self) -> None:
-        result = self.processor._extract_rtf("/fake/doc.rtf")
-        assert "striprtf not available" in result
+        with pytest.raises(DocumentExtractionError, match="striprtf\ not\ available"):
+            self.processor._extract_rtf("/fake/doc.rtf")
 
     @patch('signalwire.search.document_processor.rtf_to_text')
     def test_extract_rtf_exception(self, mock_rtf: MagicMock) -> None:
         with patch('builtins.open', side_effect=IOError("disk")):
-            result = self.processor._extract_rtf("/fake/doc.rtf")
-        assert "Error processing RTF" in result
+            with pytest.raises(DocumentExtractionError, match="Error\ processing\ RTF"):
+                self.processor._extract_rtf("/fake/doc.rtf")
 
     # ── Plain text ────────────────────────────────────────────────────
 
@@ -930,8 +933,8 @@ class TestFileExtraction:
 
     def test_extract_text_encoding_error(self) -> None:
         with patch('builtins.open', side_effect=UnicodeDecodeError('utf-8', b'', 0, 1, 'bad')):
-            result = self.processor._extract_text("/fake/file.txt")
-        assert "Error processing TXT" in result
+            with pytest.raises(DocumentExtractionError, match="Error\ processing\ TXT"):
+                self.processor._extract_text("/fake/file.txt")
 
     # ── _extract_text_from_file routing ──────────────────────────────
 
@@ -969,13 +972,18 @@ class TestFileExtraction:
         """When magic reports text/html, route to _extract_html."""
         mock_mime = Mock(); mock_mime.from_file.return_value = "text/html"
         mock_magic.Magic.return_value = mock_mime
-        # 'html' in 'text/html' is True, but 'plain' in 'text/html' is False,
-        # and 'text' in 'text/html' is True -> goes to _extract_text first
-        # Actually 'plain' in 'text/html' is False but 'text' in 'text/html' is True
-        # So it hits the 'plain' or 'text' branch -> _extract_text
-        with patch.object(self.processor, '_extract_text', return_value="content") as m:
+        with patch.object(self.processor, '_extract_html', return_value="content") as m:
             result = self.processor._extract_text_from_file("page.html")
         assert result == "content"
+        m.assert_called_once_with("page.html")
+
+    @patch('signalwire.search.document_processor.magic')
+    def test_extract_text_from_file_magic_text_rtf(self, mock_magic: MagicMock) -> None:
+        """When magic reports text/rtf, route to _extract_rtf, not plain text."""
+        mock_magic.Magic.return_value.from_file.return_value = "text/rtf"
+        with patch.object(self.processor, '_extract_rtf', return_value="content") as m:
+            assert self.processor._extract_text_from_file("doc.rtf") == "content"
+        m.assert_called_once_with("doc.rtf")
 
     @patch('signalwire.search.document_processor.magic')
     def test_extract_text_from_file_magic_rtf(self, mock_magic: MagicMock) -> None:
@@ -1027,7 +1035,7 @@ class TestChunkingStrategies:
 
     def test_sentence_chunking_list_input(self) -> None:
         proc = DocumentProcessor(chunking_strategy='sentence', max_sentences_per_chunk=3)
-        chunks = proc.create_chunks(["Line A.", "Line B.", "Line C."], "f.txt", "txt")  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
+        chunks = proc.create_chunks(["Line A.", "Line B.", "Line C."], "f.txt", "txt")
         assert len(chunks) >= 1
 
     # ── sliding_window ───────────────────────────────────────────────
@@ -1040,7 +1048,7 @@ class TestChunkingStrategies:
 
     def test_sliding_window_list_input(self) -> None:
         proc = DocumentProcessor(chunking_strategy='sliding', chunk_size=4, chunk_overlap=1)
-        chunks = proc.create_chunks(["word1 word2", "word3 word4 word5"], "f.txt", "txt")  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
+        chunks = proc.create_chunks(["word1 word2", "word3 word4 word5"], "f.txt", "txt")
         assert len(chunks) >= 1
 
     def test_sliding_window_empty(self) -> None:
@@ -1071,7 +1079,7 @@ class TestChunkingStrategies:
 
     def test_paragraphs_list_input(self) -> None:
         proc = DocumentProcessor(chunking_strategy='paragraph')
-        chunks = proc.create_chunks(["line1", "", "line3"], "f.txt", "txt")  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
+        chunks = proc.create_chunks(["line1", "", "line3"], "f.txt", "txt")
         assert len(chunks) >= 1
 
     def test_paragraphs_metadata(self) -> None:
@@ -1084,7 +1092,7 @@ class TestChunkingStrategies:
 
     def test_pages_list_input(self) -> None:
         proc = DocumentProcessor(chunking_strategy='page')
-        chunks = proc.create_chunks(["P1", "P2"], "f.pdf", "pdf")  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
+        chunks = proc.create_chunks(["P1", "P2"], "f.pdf", "pdf")
         assert len(chunks) == 2
         assert chunks[0]['metadata']['page_number'] == 1
 
@@ -1192,7 +1200,7 @@ class TestChunkingStrategies:
     def test_topics_list_input(self) -> None:
         proc = DocumentProcessor(chunking_strategy='topic')
         chunks = proc.create_chunks(
-            ["First about dogs.", "Second about cats.", "Third about birds.", "Fourth about fish."],  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
+            ["First about dogs.", "Second about cats.", "Third about birds.", "Fourth about fish."],
             "f.txt", "txt"
         )
         assert len(chunks) >= 1
@@ -1238,7 +1246,7 @@ class TestChunkingStrategies:
     @patch('signalwire.search.document_processor.sent_tokenize', None)
     def test_qa_optimization_list_input(self) -> None:
         proc = DocumentProcessor(chunking_strategy='qa')
-        chunks = proc.create_chunks(["Question? Answer.", "More content."], "f.txt", "txt")  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
+        chunks = proc.create_chunks(["Question? Answer.", "More content."], "f.txt", "txt")
         assert len(chunks) >= 1
 
     # ── json ─────────────────────────────────────────────────────────
@@ -1648,3 +1656,40 @@ class TestEdgeCases:
         pages = ["Content", "", "  ", "More content"]
         chunks = proc._chunk_document_aware(pages, "doc.pdf", "pdf")
         assert len(chunks) == 2
+
+class TestExtractText:
+    """extract_text() reads a file by its type, and raises when it can't."""
+
+    def setup_method(self) -> None:
+        self.processor = DocumentProcessor()
+
+    def test_html_loses_its_markup_scripts_and_styles(self, tmp_path: Path) -> None:
+        pytest.importorskip("bs4")
+        page = tmp_path / "page.html"
+        page.write_text(
+            "<html><head><style>p {color: red}</style><script>track()</script></head>"
+            "<body><h1>Hours</h1><p>Open <b>9</b> to 5.</p></body></html>",
+            encoding="utf-8",
+        )
+        text = self.processor.extract_text(str(page))
+        assert isinstance(text, str)
+        assert "Hours" in text and "Open" in text and "9" in text
+        for left_out in ("<", "track()", "color: red"):
+            assert left_out not in text
+
+    def test_an_unsupported_type_raises(self, tmp_path: Path) -> None:
+        image = tmp_path / "logo.png"
+        image.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 64)
+        with patch('signalwire.search.document_processor.magic') as magic:
+            magic.Magic.return_value.from_file.return_value = "image/png"
+            with pytest.raises(DocumentExtractionError, match="Unsupported file type: image/png"):
+                self.processor.extract_text(str(image))
+            # The older method still returns the error as JSON, as it always has
+            assert json.loads(self.processor._extract_text_from_file(str(image))) == {
+                "error": "Unsupported file type: image/png"
+            }
+
+    def test_markdown_comes_back_as_written(self, tmp_path: Path) -> None:
+        doc = tmp_path / "guide.md"
+        doc.write_text("# Setup\n\nRun **it**.\n", encoding="utf-8")
+        assert self.processor.extract_text(str(doc)) == "# Setup\n\nRun **it**.\n"

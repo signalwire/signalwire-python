@@ -94,6 +94,23 @@ builder.build_index(
 )
 ```
 
+### Extracting a File's Text (DocumentProcessor)
+
+`DocumentProcessor.extract_text(path)` reads a file by its type, the way the index builder does, for chunking with `create_chunks()`. A PDF comes back as a list of pages, a Word document as a list of paragraphs and a PowerPoint deck as a list of slides; anything else as one string. HTML loses its markup, scripts and styles, and Markdown comes back as written, so the `markdown` strategy can read its headers. A file it can't read raises `DocumentExtractionError`: a type it doesn't support (an image, or a legacy `.doc`, `.xls` or `.ppt`), a library the type needs that isn't installed, or a read that fails.
+
+<!-- snippet: no-run reads a file of yours -->
+```python
+from signalwire.search import DocumentExtractionError, DocumentProcessor
+
+processor = DocumentProcessor(chunking_strategy="paragraph")
+try:
+    text = processor.extract_text("handbook.pdf")
+except DocumentExtractionError as e:
+    print(f"Skipped: {e}")
+else:
+    chunks = processor.create_chunks(text, "handbook.pdf", "pdf")
+```
+
 ### Output Formats (.swsearch)
 
 Each `.swsearch` file is a SQLite database containing:
@@ -1282,7 +1299,7 @@ The top-level `sw-search --help` shortcut is hand-maintained and sometimes omits
 |----------|-----------|
 | Text | `txt`, `md`, `rst`, `asciidoc` |
 | Code | `py`, `js`, `ts`, `java`, `cpp`, `c`, `go`, `rs` |
-| Documents | `pdf`, `docx`, `xlsx`, `pptx` |
+| Documents | `pdf`, `docx`, `xlsx`, `pptx`, `rtf` |
 | Web | `html`, `xml` |
 | Data | `json`, `yaml`, `csv` |
 

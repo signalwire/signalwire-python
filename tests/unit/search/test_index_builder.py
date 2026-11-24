@@ -292,6 +292,20 @@ class TestIndexBuilderFileProcessing:
         
         assert result[0]["tags"] == ["existing", "tag1", "tag2"]
     
+    def test_process_file_html_is_indexed_without_its_markup(self, tmp_path: Path) -> None:
+        """An HTML page's chunks carry its text, not its tags or scripts"""
+        pytest.importorskip("bs4")
+        page = tmp_path / "hours.html"
+        page.write_text(
+            "<html><head><script>track()</script></head>"
+            "<body><h1>Opening hours</h1><p>We open at nine and close at five.</p></body></html>",
+            encoding="utf-8",
+        )
+        chunks = self.builder._process_file(page, str(tmp_path))
+        text = " ".join(c["content"] for c in chunks)
+        assert "Opening hours" in text and "nine" in text
+        assert "<" not in text and "track()" not in text
+
     @patch('pathlib.Path.read_text')
     def test_process_file_unicode_error(self, mock_read_text: MagicMock) -> None:
         """Test file processing with unicode error"""

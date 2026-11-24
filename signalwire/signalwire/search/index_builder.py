@@ -31,7 +31,7 @@ else:
     except ImportError:
         SentenceTransformer = None
 
-from .document_processor import DocumentProcessor
+from .document_processor import DocumentExtractionError, DocumentProcessor
 from .query_processor import preprocess_document_content
 from signalwire.core.logging_config import get_logger
 
@@ -568,57 +568,14 @@ class IndexBuilder:
             relative_path = str(file_path.relative_to(source_dir))
             file_extension = file_path.suffix.lower()
 
-            # Handle different file types appropriately
-            if file_extension == ".pdf":
-                # Use document processor for PDF extraction
-                content_result = self.doc_processor._extract_text_from_file(
-                    str(file_path)
-                )
-                if isinstance(content_result, str) and content_result.startswith(
-                    '{"error"'
-                ):
+            # Documents go through the document processor for their text
+            if file_extension in (".pdf", ".docx", ".xlsx", ".pptx", ".html", ".rtf"):
+                try:
+                    content = self.doc_processor.extract_text(str(file_path))
+                except DocumentExtractionError as e:
                     if self.verbose:
-                        print(f"Skipping PDF file (extraction failed): {file_path}")
+                        print(f"Skipping {file_path} (extraction failed): {e}")
                     return []
-                content = content_result
-            elif file_extension in [".docx", ".xlsx", ".pptx"]:
-                # Use document processor for Office documents
-                content_result = self.doc_processor._extract_text_from_file(
-                    str(file_path)
-                )
-                if isinstance(content_result, str) and content_result.startswith(
-                    '{"error"'
-                ):
-                    if self.verbose:
-                        print(
-                            f"Skipping office document (extraction failed): {file_path}"
-                        )
-                    return []
-                content = content_result
-            elif file_extension == ".html":
-                # Use document processor for HTML
-                content_result = self.doc_processor._extract_text_from_file(
-                    str(file_path)
-                )
-                if isinstance(content_result, str) and content_result.startswith(
-                    '{"error"'
-                ):
-                    if self.verbose:
-                        print(f"Skipping HTML file (extraction failed): {file_path}")
-                    return []
-                content = content_result
-            elif file_extension == ".rtf":
-                # Use document processor for RTF
-                content_result = self.doc_processor._extract_text_from_file(
-                    str(file_path)
-                )
-                if isinstance(content_result, str) and content_result.startswith(
-                    '{"error"'
-                ):
-                    if self.verbose:
-                        print(f"Skipping RTF file (extraction failed): {file_path}")
-                    return []
-                content = content_result
             else:
                 # Try to read as text file (markdown, txt, code, etc.)
                 try:

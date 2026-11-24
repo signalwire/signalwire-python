@@ -1,5 +1,25 @@
 # Changelog
 
+## [3.16.0] - 2026-11-24
+
+### Added
+- `DocumentProcessor.extract_text(path)` reads a file by its type, as the
+  index builder does, and raises `DocumentExtractionError` (exported from
+  `signalwire.search`) when it can't: a type it doesn't support, a library
+  the type needs that isn't installed, or a read that fails. The older
+  `_extract_text_from_file()` still returns the error as a JSON string.
+- `create_chunks()` is typed to take the list `extract_text()` gives for a
+  PDF, Word document or PowerPoint deck, which it always accepted. The
+  `json` and `markdown` strategies join the list into one text.
+
+### Fixed
+- HTML and RTF files reach their extractors. The type check took any
+  `text/*` type as plain text first, so `text/html`, and RTF where
+  python-magic reports `text/rtf`, were read as written: `sw-search`
+  indexed an HTML page with its tags and scripts, and an RTF file with its
+  control words.
+- HTML's text leaves out its scripts and styles.
+
 ## [3.15.3] - 2026-11-23
 
 ### Added
