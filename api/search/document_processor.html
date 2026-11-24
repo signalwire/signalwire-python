@@ -5585,6 +5585,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.search.document_processor.DocumentExtractionError" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DocumentExtractionError
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.search.document_processor.DocumentProcessor" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5700,6 +5711,17 @@
     <span class="md-ellipsis">
       
         create_chunks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signalwire.search.document_processor.DocumentProcessor.extract_text" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        extract_text
       
     </span>
   </a>
@@ -8474,6 +8496,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.search.document_processor.DocumentExtractionError" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DocumentExtractionError
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.search.document_processor.DocumentProcessor" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -8595,6 +8628,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#signalwire.search.document_processor.DocumentProcessor.extract_text" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        extract_text
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -8680,6 +8724,38 @@ See LICENSE file in the project root for full license information.</p>
 </div>
 
 
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="signalwire.search.document_processor.DocumentExtractionError" class="doc doc-heading">
+            <code>DocumentExtractionError</code>
+
+
+<a href="#signalwire.search.document_processor.DocumentExtractionError" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="ValueError">ValueError</span></code></p>
+
+
+
+        <p>A file's text couldn't be extracted: its type isn't supported, the
+library its type needs isn't installed, or reading it failed.</p>
+
+
+
+
+
+
+
+
+
+    </div>
+
+</div>
 
 <div class="doc doc-object doc-class">
 
@@ -9115,11 +9191,12 @@ of splitting at every heading.</p>
                 <code>content</code>
             </td>
             <td>
-                  <code><span title="str">str</span></code>
+                  <code><span title="str">str</span> | <span title="list">list</span>[<span title="str">str</span>]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Document content (string) - should be the actual content, not a file path</p>
+                <p>Document content, not a file path: a string, or the list
+of pages, paragraphs or slides extract_text() gives</p>
               </div>
             </td>
             <td>
@@ -9178,6 +9255,107 @@ of splitting at every heading.</p>
             <td>
               <div class="doc-md-description">
                 <p>List of chunk dictionaries</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="signalwire.search.document_processor.DocumentProcessor.extract_text" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">extract_text</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span></code>
+
+<a href="#signalwire.search.document_processor.DocumentProcessor.extract_text" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Extract a file's text, by its type, ready for create_chunks().</p>
+<p>A PDF comes back as a list of pages, a Word document as a list of
+paragraphs and a PowerPoint deck as a list of slides; anything else as
+one string. HTML loses its markup, scripts and styles. Markdown comes
+back as written, so the markdown chunking strategy can read its
+headers.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>file_path</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The file to read.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="str">str</span> | <span title="list">list</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The file's text.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="DocumentExtractionError (signalwire.search.document_processor.DocumentExtractionError)" href="#signalwire.search.document_processor.DocumentExtractionError">DocumentExtractionError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>When the file's type isn't supported, the
+library its type needs isn't installed, or reading it fails.</p>
               </div>
             </td>
           </tr>
