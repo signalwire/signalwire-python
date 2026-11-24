@@ -100,6 +100,11 @@ from signalwire.search.models import document_key
 logger = get_logger(__name__)
 
 
+class DocumentExtractionError(ValueError):
+    """A file's text couldn't be extracted: its type isn't supported, the
+    library its type needs isn't installed, or reading it failed."""
+
+
 class DocumentProcessor:
     """Enhanced document processor with smart chunking capabilities"""
 
@@ -157,13 +162,14 @@ class DocumentProcessor:
         self.chunk_overlap = chunk_overlap
 
     def create_chunks(
-        self, content: str, filename: str, file_type: str
+        self, content: str | list[str], filename: str, file_type: str
     ) -> list[dict[str, Any]]:
         """
         Create chunks from document content using specified chunking strategy
 
         Args:
-            content: Document content (string) - should be the actual content, not a file path
+            content: Document content, not a file path: a string, or the list
+                of pages, paragraphs or slides extract_text() gives
             filename: Name of the file (for metadata)
             file_type: File extension/type
 
@@ -186,16 +192,19 @@ class DocumentProcessor:
             return self._chunk_by_topics(content, filename, file_type)
         if self.chunking_strategy == "qa":
             return self._chunk_by_qa_optimization(content, filename, file_type)
+        # The JSON and markdown strategies read one text
+        text = "\n\n".join(content) if isinstance(content, list) else content
         if self.chunking_strategy == "json":
-            return self._chunk_from_json(content, filename, file_type)
+            return self._chunk_from_json(text, filename, file_type)
         if self.chunking_strategy == "markdown":
             # Use markdown-aware chunking for better structure preservation
-            return self._chunk_markdown_enhanced(content, filename)
+            return self._chunk_markdown_enhanced(text, filename)
         # Fallback to sentence-based chunking
         return self._chunk_by_sentences(content, filename, file_type)
 
-    def _extract_text_from_file(self, file_path: str) -> Any:
-        """Extract text from various file formats"""
+    def _file_type(self, file_path: str) -> str:
+        """A file's MIME type, by its content where python-magic is installed,
+        otherwise by its extension."""
         if not magic:
             # Fallback to extension-based detection
             file_path_obj = Path(file_path)
@@ -238,29 +247,61 @@ class DocumentProcessor:
                     ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
                 }
                 file_type = ext_map.get(extension, "text/plain")
+        return file_type
 
+    def extract_text(self, file_path: str) -> str | list[str]:
+        """
+        Extract a file's text, by its type, ready for create_chunks().
+
+        A PDF comes back as a list of pages, a Word document as a list of
+        paragraphs and a PowerPoint deck as a list of slides; anything else as
+        one string. HTML loses its markup, scripts and styles. Markdown comes
+        back as written, so the markdown chunking strategy can read its
+        headers.
+
+        Args:
+            file_path: The file to read.
+
+        Returns:
+            The file's text.
+
+        Raises:
+            DocumentExtractionError: When the file's type isn't supported, the
+                library its type needs isn't installed, or reading it fails.
+        """
+        file_type = self._file_type(file_path)
+        # The specific types first: HTML, RTF and Markdown are text/* types
+        # too, and a test for "text" would take them as plain text.
         if "pdf" in file_type:
-            return self._extract_pdf(file_path)
+            return cast("str | list[str]", self._extract_pdf(file_path))
         if "vnd.openxmlformats-officedocument.wordprocessingml.document" in file_type:
-            return self._extract_docx(file_path)
-        if "plain" in file_type or "text" in file_type:
-            return self._extract_text(file_path)
-        if "html" in file_type:
-            return self._extract_html(file_path)
-        if "markdown" in file_type or file_path.endswith(".md"):
-            return self._extract_markdown(file_path)
-        if "rtf" in file_type:
-            return self._extract_rtf(file_path)
+            return cast("str | list[str]", self._extract_docx(file_path))
         if "vnd.openxmlformats-officedocument.spreadsheetml.sheet" in file_type:
             return self._extract_excel(file_path)
         if "vnd.openxmlformats-officedocument.presentationml.presentation" in file_type:
-            return self._extract_powerpoint(file_path)
-        return json.dumps({"error": f"Unsupported file type: {file_type}"})
+            return cast("str | list[str]", self._extract_powerpoint(file_path))
+        if "html" in file_type:
+            return self._extract_html(file_path)
+        if "rtf" in file_type:
+            return self._extract_rtf(file_path)
+        if "markdown" in file_type or file_path.endswith(".md"):
+            return self._extract_text(file_path)
+        if "plain" in file_type or "text" in file_type:
+            return self._extract_text(file_path)
+        raise DocumentExtractionError(f"Unsupported file type: {file_type}")
+
+    def _extract_text_from_file(self, file_path: str) -> Any:
+        """extract_text(), with a failure returned as a JSON ``{"error": ...}``
+        string, as this method always has."""
+        try:
+            return self.extract_text(file_path)
+        except DocumentExtractionError as e:
+            return json.dumps({"error": str(e)})
 
     def _extract_pdf(self, file_path: str) -> Any:
         """Extract text from PDF files"""
         if not pdfplumber:
-            return json.dumps({"error": "pdfplumber not available for PDF processing"})
+            raise DocumentExtractionError("pdfplumber not available for PDF processing")
 
         try:
             with pdfplumber.open(file_path) as pdf:
@@ -273,20 +314,20 @@ class DocumentProcessor:
                         pages.append(text)
                 return pages
         except Exception as e:
-            return json.dumps({"error": f"Error processing PDF: {e}"})
+            raise DocumentExtractionError(f"Error processing PDF: {e}") from e
 
     def _extract_docx(self, file_path: str) -> Any:
         """Extract text from DOCX files"""
         if DocxDocument is None:
-            return json.dumps(
-                {"error": "python-docx not available for DOCX processing"}
+            raise DocumentExtractionError(
+                "python-docx not available for DOCX processing"
             )
 
         try:
             doc = DocxDocument(file_path)
             return [para.text for para in doc.paragraphs if para.text.strip()]
         except Exception as e:
-            return json.dumps({"error": f"Error processing DOCX: {e}"})
+            raise DocumentExtractionError(f"Error processing DOCX: {e}") from e
 
     def _extract_text(self, file_path: str) -> str:
         """Extract text from plain text files"""
@@ -296,13 +337,13 @@ class DocumentProcessor:
             ) as file:
                 return file.read()
         except Exception as e:
-            return json.dumps({"error": f"Error processing TXT: {e}"})
+            raise DocumentExtractionError(f"Error processing TXT: {e}") from e
 
     def _extract_html(self, file_path: str) -> str:
         """Extract text from HTML files"""
         if BeautifulSoup is None:
-            return json.dumps(
-                {"error": "beautifulsoup4 not available for HTML processing"}
+            raise DocumentExtractionError(
+                "beautifulsoup4 not available for HTML processing"
             )
 
         try:
@@ -310,10 +351,13 @@ class DocumentProcessor:
                 file_path, encoding="utf-8"
             ) as file:
                 soup = BeautifulSoup(file, "html.parser")
+                # Their text is code and styling, not the page's content
+                for tag in soup(["script", "style", "noscript", "template"]):
+                    tag.decompose()
                 text: str = soup.get_text(separator="\n")
                 return text
         except Exception as e:
-            return json.dumps({"error": f"Error processing HTML: {e}"})
+            raise DocumentExtractionError(f"Error processing HTML: {e}") from e
 
     def _extract_markdown(self, file_path: str) -> str:
         """Extract text from Markdown files"""
@@ -330,12 +374,12 @@ class DocumentProcessor:
                 # Fallback to raw markdown
                 return content
         except Exception as e:
-            return json.dumps({"error": f"Error processing Markdown: {e}"})
+            raise DocumentExtractionError(f"Error processing Markdown: {e}") from e
 
     def _extract_rtf(self, file_path: str) -> str:
         """Extract text from RTF files"""
         if not rtf_to_text:
-            return json.dumps({"error": "striprtf not available for RTF processing"})
+            raise DocumentExtractionError("striprtf not available for RTF processing")
 
         try:
             with open(  # noqa: PTH123  # tests patch builtins.open; Path.open() would bypass the mock seam
@@ -344,7 +388,7 @@ class DocumentProcessor:
                 # striprtf is untyped; rtf_to_text() returns the extracted str.
                 return cast(str, rtf_to_text(file.read()))
         except Exception as e:
-            return json.dumps({"error": f"Error processing RTF: {e}"})
+            raise DocumentExtractionError(f"Error processing RTF: {e}") from e
 
     def _extract_excel(self, file_path: str) -> str:
         """Extract text from Excel files"""
@@ -353,7 +397,9 @@ class DocumentProcessor:
         try:
             from openpyxl import load_workbook
         except ImportError:
-            return json.dumps({"error": "openpyxl not available for Excel processing"})
+            raise DocumentExtractionError(
+                "openpyxl not available for Excel processing"
+            ) from None
 
         try:
             wb = load_workbook(file_path)
@@ -364,13 +410,13 @@ class DocumentProcessor:
                     sheets_text.append(row_text)
             return "\n".join(sheets_text)
         except Exception as e:
-            return json.dumps({"error": f"Error processing Excel: {e}"})
+            raise DocumentExtractionError(f"Error processing Excel: {e}") from e
 
     def _extract_powerpoint(self, file_path: str) -> Any:
         """Extract text from PowerPoint files"""
         if Presentation is None:
-            return json.dumps(
-                {"error": "python-pptx not available for PowerPoint processing"}
+            raise DocumentExtractionError(
+                "python-pptx not available for PowerPoint processing"
             )
 
         try:
@@ -383,7 +429,7 @@ class DocumentProcessor:
                 slides_text.append("\n".join(slide_text))
             return slides_text
         except Exception as e:
-            return json.dumps({"error": f"Error processing PowerPoint: {e}"})
+            raise DocumentExtractionError(f"Error processing PowerPoint: {e}") from e
 
     def _chunk_document_aware(
         self, content: Any, filename: str, file_type: str
@@ -1125,7 +1171,7 @@ class DocumentProcessor:
         return overlap_lines
 
     def _chunk_by_sentences(
-        self, content: str, filename: str, file_type: str
+        self, content: str | list[str], filename: str, file_type: str
     ) -> list[dict[str, Any]]:
         """Chunk content by sentences with specified max sentences per chunk"""
         if isinstance(content, list):
@@ -1156,7 +1202,7 @@ class DocumentProcessor:
         return chunks
 
     def _chunk_by_sliding_window(
-        self, content: str, filename: str, file_type: str
+        self, content: str | list[str], filename: str, file_type: str
     ) -> list[dict[str, Any]]:
         """Chunk content using sliding window approach with word-based chunks"""
         if isinstance(content, list):
@@ -1196,7 +1242,7 @@ class DocumentProcessor:
         return chunks
 
     def _chunk_by_paragraphs(
-        self, content: str, filename: str, file_type: str
+        self, content: str | list[str], filename: str, file_type: str
     ) -> list[dict[str, Any]]:
         """Chunk content by paragraphs (split on double newlines)"""
         if isinstance(content, list):
@@ -1225,7 +1271,7 @@ class DocumentProcessor:
         return chunks
 
     def _chunk_by_pages(
-        self, content: str, filename: str, file_type: str
+        self, content: str | list[str], filename: str, file_type: str
     ) -> list[dict[str, Any]]:
         """Chunk content by pages (for documents that have page boundaries)"""
         if isinstance(content, list):
@@ -1272,7 +1318,7 @@ class DocumentProcessor:
         return chunks
 
     def _chunk_by_semantic(
-        self, content: str, filename: str, file_type: str
+        self, content: str | list[str], filename: str, file_type: str
     ) -> list[dict[str, Any]]:
         """Chunk based on semantic similarity between sentences"""
         if isinstance(content, list):
@@ -1381,7 +1427,7 @@ class DocumentProcessor:
             return self._chunk_by_sentences(content, filename, file_type)
 
     def _chunk_by_topics(
-        self, content: str, filename: str, file_type: str
+        self, content: str | list[str], filename: str, file_type: str
     ) -> list[dict[str, Any]]:
         """Chunk based on topic changes using keyword analysis"""
         if isinstance(content, list):
@@ -1565,7 +1611,7 @@ class DocumentProcessor:
             return self._chunk_by_sentences(content, filename, file_type)
 
     def _chunk_by_qa_optimization(
-        self, content: str, filename: str, file_type: str
+        self, content: str | list[str], filename: str, file_type: str
     ) -> list[dict[str, Any]]:
         """Create chunks optimized for question-answering"""
         if isinstance(content, list):

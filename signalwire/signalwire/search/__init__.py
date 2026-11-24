@@ -59,6 +59,7 @@ def _check_search_dependencies() -> None:
 _LAZY_EXPORTS = {
     "preprocess_query": "query_processor",
     "preprocess_document_content": "query_processor",
+    "DocumentExtractionError": "document_processor",
     "DocumentProcessor": "document_processor",
     "IndexBuilder": "index_builder",
     "SearchEngine": "search_engine",
@@ -70,7 +71,7 @@ _LAZY_EXPORTS = {
 }
 
 if TYPE_CHECKING:
-    from .document_processor import DocumentProcessor
+    from .document_processor import DocumentExtractionError, DocumentProcessor
     from .index_builder import IndexBuilder
     from .migration import SearchIndexMigrator
     from .models import DEFAULT_MODEL, MODEL_ALIASES, resolve_model_alias
@@ -82,6 +83,7 @@ if _SEARCH_AVAILABLE:
     __all__ = [
         "DEFAULT_MODEL",
         "MODEL_ALIASES",
+        "DocumentExtractionError",
         "DocumentProcessor",
         "IndexBuilder",
         "SearchEngine",
@@ -101,6 +103,9 @@ else:
     def preprocess_document_content(*args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
         _check_search_dependencies()
 
+    class DocumentExtractionError(ValueError):  # type: ignore[no-redef]
+        """A file's text couldn't be extracted (search isn't installed)."""
+
     class DocumentProcessor:  # type: ignore[no-redef]
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             _check_search_dependencies()
@@ -118,6 +123,7 @@ else:
             _check_search_dependencies()
 
     __all__ = [
+        "DocumentExtractionError",
         "DocumentProcessor",
         "IndexBuilder",
         "SearchEngine",
