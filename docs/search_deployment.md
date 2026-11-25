@@ -189,6 +189,7 @@ The `metadata_text` field contains a searchable text representation of all metad
 
 When your chunks already live in your own database, behind your own access rules, pass `SearchEngine` an object instead of a backend name. It asks that object for candidates, then ranks them with the same scoring, boosting, deduplication and diversity as the sqlite and pgvector backends.
 
+<!-- snippet: no-run reads from your own database -->
 ```python
 from signalwire.search import SearchEngine
 
