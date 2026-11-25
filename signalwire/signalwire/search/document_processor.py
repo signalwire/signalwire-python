@@ -334,9 +334,9 @@ class DocumentProcessor:
 
         A PDF comes back as a list of pages, a Word document as a list of
         paragraphs, a PowerPoint deck as a list of slides and an Excel workbook
-        as a list of rows; anything else as one string. HTML loses its markup, scripts and styles. Markdown comes
-        back as written, so the markdown chunking strategy can read its
-        headers.
+        as a list of rows; anything else as one string. HTML loses its markup,
+        scripts and styles. Markdown comes back as written, so the markdown
+        chunking strategy can read its headers.
 
         Args:
             file_path: The file to read.
