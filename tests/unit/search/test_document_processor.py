@@ -740,19 +740,20 @@ class TestFileExtraction:
 
         result = self.processor._extract_pdf("/fake/doc.pdf")
         assert isinstance(result, list)
-        assert len(result) == 2  # page2 had None text, should be skipped
+        assert len(result) == 3  # one entry per page; page2 had no text
+        assert result[1] == ""
         assert "Page one text" in result[0]
 
     @patch('signalwire.search.document_processor.pdfplumber')
-    def test_extract_pdf_strips_leading_page_numbers(self, mock_pdfplumber: MagicMock) -> None:
-        """Leading page numbers like '1. ' should be stripped."""
+    def test_extract_pdf_keeps_a_leading_number(self, mock_pdfplumber: MagicMock) -> None:
+        """A page that opens with '1. ' (a numbered list) keeps it."""
         page = Mock(); page.extract_text.return_value = "1. Introduction paragraph"
         mock_pdf = MagicMock(); mock_pdf.pages = [page]
         mock_pdfplumber.open.return_value.__enter__ = Mock(return_value=mock_pdf)
         mock_pdfplumber.open.return_value.__exit__ = Mock(return_value=False)
 
         result = self.processor._extract_pdf("/fake/doc.pdf")
-        assert result == ["Introduction paragraph"]
+        assert result == ["1. Introduction paragraph"]
 
     @patch('signalwire.search.document_processor.pdfplumber', None)
     def test_extract_pdf_missing_dependency(self) -> None:
@@ -1725,3 +1726,33 @@ class TestChunkWindowSizes:
         long = " ".join(["word"] * 80) + ". " + " ".join(["more"] * 80) + "."
         chunks = DocumentProcessor()._chunk_text_enhanced(long, "t.txt")
         assert len(chunks) == 2
+
+
+class TestPdfPages:
+    """A PDF's pages keep their numbers, and their text as written."""
+
+    def _pdf(self, texts: list[str | None]) -> MagicMock:
+        pdf = MagicMock()
+        pdf.__enter__.return_value.pages = [Mock(**{"extract_text.return_value": t}) for t in texts]
+        return pdf
+
+    def test_each_page_has_an_entry_and_keeps_a_leading_number(self) -> None:
+        with patch('signalwire.search.document_processor.pdfplumber') as plumber:
+            plumber.open.return_value = self._pdf(["Intro", None, "1. Plug it in.\n2. Wait."])
+            pages = DocumentProcessor()._extract_pdf("manual.pdf")
+        assert pages == ["Intro", "", "1. Plug it in.\n2. Wait."]
+
+    def test_the_page_strategy_skips_an_empty_page_and_keeps_the_numbers(self) -> None:
+        chunks = DocumentProcessor(chunking_strategy="page").create_chunks(
+            ["Intro", "", "Setup"], "manual.pdf", "pdf"
+        )
+        assert [(c["section"], c["metadata"]["page_number"]) for c in chunks] == [
+            ("Page 1", 1),
+            ("Page 3", 3),
+        ]
+
+    def test_an_empty_page_adds_nothing_to_the_other_strategies(self) -> None:
+        processor = DocumentProcessor(chunking_strategy="sentence")
+        with_gap = processor.create_chunks(["Intro here.", "", "Setup here."], "m.pdf", "pdf")
+        without = processor.create_chunks(["Intro here.", "Setup here."], "m.pdf", "pdf")
+        assert [c["content"] for c in with_gap] == [c["content"] for c in without]

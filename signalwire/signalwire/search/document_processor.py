@@ -207,7 +207,7 @@ class DocumentProcessor:
         if self.chunking_strategy == "qa":
             return self._chunk_by_qa_optimization(content, filename, file_type)
         # The JSON and markdown strategies read one text
-        text = "\n\n".join(content) if isinstance(content, list) else content
+        text = self._joined(content, "\n\n")
         if self.chunking_strategy == "json":
             return self._chunk_from_json(text, filename, file_type)
         if self.chunking_strategy == "markdown":
@@ -319,14 +319,9 @@ class DocumentProcessor:
 
         try:
             with pdfplumber.open(file_path) as pdf:
-                pages = []
-                for page in pdf.pages:
-                    text = page.extract_text()
-                    if text:
-                        # Remove page number from the beginning
-                        text = re.sub(r"^\d+\.\s*", "", text.strip())
-                        pages.append(text)
-                return pages
+                # One entry per page, "" for a page without text (a scan), so
+                # an entry's index + 1 is its page number
+                return [(page.extract_text() or "").strip() for page in pdf.pages]
         except Exception as e:
             raise DocumentExtractionError(f"Error processing PDF: {e}") from e
 
@@ -444,6 +439,14 @@ class DocumentProcessor:
             return slides_text
         except Exception as e:
             raise DocumentExtractionError(f"Error processing PowerPoint: {e}") from e
+
+    @staticmethod
+    def _joined(content: str | list[str], separator: str = "\n") -> str:
+        """A list's entries as one text, leaving out empty ones (a PDF page or
+        a slide without text); a string as it is."""
+        if not isinstance(content, list):
+            return content
+        return separator.join(entry for entry in content if entry and entry.strip())
 
     def _chunk_document_aware(
         self, content: Any, filename: str, file_type: str
@@ -956,7 +959,7 @@ class DocumentProcessor:
     def _chunk_text_enhanced(self, content: str, filename: str) -> list[dict[str, Any]]:
         """Enhanced text chunking using sentence-based approach"""
         if isinstance(content, list):
-            content = "\n".join(content)
+            content = self._joined(content)
 
         # Use sentence-based chunking for better coherence
         max_sentences = self._calculate_sentences_per_chunk(content)
@@ -1193,7 +1196,7 @@ class DocumentProcessor:
     ) -> list[dict[str, Any]]:
         """Chunk content by sentences with specified max sentences per chunk"""
         if isinstance(content, list):
-            content = "\n".join(content)
+            content = self._joined(content)
 
         # Use sentence-based chunking
         split_newlines = self.split_newlines if self.split_newlines is not None else 2
@@ -1224,7 +1227,7 @@ class DocumentProcessor:
     ) -> list[dict[str, Any]]:
         """Chunk content using sliding window approach with word-based chunks"""
         if isinstance(content, list):
-            content = "\n".join(content)
+            content = self._joined(content)
 
         # Split content into words
         words = content.split()
@@ -1264,7 +1267,7 @@ class DocumentProcessor:
     ) -> list[dict[str, Any]]:
         """Chunk content by paragraphs (split on double newlines)"""
         if isinstance(content, list):
-            content = "\n".join(content)
+            content = self._joined(content)
 
         # Split on double newlines to get paragraphs
         paragraphs = re.split(r"\n\s*\n", content)
@@ -1293,8 +1296,8 @@ class DocumentProcessor:
     ) -> list[dict[str, Any]]:
         """Chunk content by pages (for documents that have page boundaries)"""
         if isinstance(content, list):
-            # If content is already a list (e.g., from PDF extraction), treat each item as a page
-            pages = [str(page).strip() for page in content if str(page).strip()]
+            # A list (e.g., from PDF extraction) has one item per page
+            pages = [str(page) for page in content]
         else:
             # For text content, try to detect page boundaries
             # Look for form feed characters or page break indicators
@@ -1315,10 +1318,12 @@ class DocumentProcessor:
                     if page_words:
                         pages.append(" ".join(page_words))
 
-        pages = [p.strip() for p in pages if p.strip()]
+        # A page without text gets no chunk, and the pages after it keep
+        # their own numbers
+        numbered = [(i, p.strip()) for i, p in enumerate(pages) if p.strip()]
 
         chunks = []
-        for i, page_content in enumerate(pages):
+        for i, page_content in numbered:
             if page_content:
                 chunks.append(
                     self._create_chunk(
@@ -1340,7 +1345,7 @@ class DocumentProcessor:
     ) -> list[dict[str, Any]]:
         """Chunk based on semantic similarity between sentences"""
         if isinstance(content, list):
-            content = "\n".join(content)
+            content = self._joined(content)
 
         # Get sentences
         if sent_tokenize:
@@ -1449,7 +1454,7 @@ class DocumentProcessor:
     ) -> list[dict[str, Any]]:
         """Chunk based on topic changes using keyword analysis"""
         if isinstance(content, list):
-            content = "\n".join(content)
+            content = self._joined(content)
 
         if sent_tokenize:
             sentences = sent_tokenize(content)
@@ -1633,7 +1638,7 @@ class DocumentProcessor:
     ) -> list[dict[str, Any]]:
         """Create chunks optimized for question-answering"""
         if isinstance(content, list):
-            content = "\n".join(content)
+            content = self._joined(content)
 
         if sent_tokenize:
             sentences = sent_tokenize(content)
