@@ -425,7 +425,7 @@ class TestDocumentProcessorSpecificExtractors:
     @patch('signalwire.search.document_processor.pdfplumber', None)
     def test_extract_pdf_no_library(self) -> None:
         """Test PDF extraction without pdfplumber"""
-        with pytest.raises(DocumentExtractionError, match="pdfplumber\ not\ available"):
+        with pytest.raises(DocumentExtractionError, match="pdfplumber not available"):
             self.processor._extract_pdf("test.pdf")
         
     
@@ -453,14 +453,14 @@ class TestDocumentProcessorSpecificExtractors:
         """Test PDF extraction with error"""
         mock_pdfplumber.open.side_effect = Exception("PDF error")
         
-        with pytest.raises(DocumentExtractionError, match="Error\ processing\ PDF"):
+        with pytest.raises(DocumentExtractionError, match="Error processing PDF"):
             self.processor._extract_pdf("test.pdf")
         
     
     @patch('signalwire.search.document_processor.DocxDocument', None)
     def test_extract_docx_no_library(self) -> None:
         """Test DOCX extraction without python-docx"""
-        with pytest.raises(DocumentExtractionError, match="python\-docx\ not\ available"):
+        with pytest.raises(DocumentExtractionError, match="python-docx not available"):
             self.processor._extract_docx("test.docx")
         
     
@@ -487,7 +487,7 @@ class TestDocumentProcessorSpecificExtractors:
         """Test DOCX extraction with error"""
         mock_docx.side_effect = Exception("DOCX error")
         
-        with pytest.raises(DocumentExtractionError, match="Error\ processing\ DOCX"):
+        with pytest.raises(DocumentExtractionError, match="Error processing DOCX"):
             self.processor._extract_docx("test.docx")
         
     
@@ -501,14 +501,14 @@ class TestDocumentProcessorSpecificExtractors:
     def test_extract_text_error(self) -> None:
         """Test text file extraction with error"""
         with patch('builtins.open', side_effect=Exception("File error")):
-            with pytest.raises(DocumentExtractionError, match="Error\ processing\ TXT"):
+            with pytest.raises(DocumentExtractionError, match="Error processing TXT"):
                 self.processor._extract_text("test.txt")
             
     
     @patch('signalwire.search.document_processor.BeautifulSoup', None)
     def test_extract_html_no_library(self) -> None:
         """Test HTML extraction without BeautifulSoup"""
-        with pytest.raises(DocumentExtractionError, match="beautifulsoup4\ not\ available"):
+        with pytest.raises(DocumentExtractionError, match="beautifulsoup4 not available"):
             self.processor._extract_html("test.html")
         
     
@@ -756,13 +756,13 @@ class TestFileExtraction:
 
     @patch('signalwire.search.document_processor.pdfplumber', None)
     def test_extract_pdf_missing_dependency(self) -> None:
-        with pytest.raises(DocumentExtractionError, match="pdfplumber\ not\ available"):
+        with pytest.raises(DocumentExtractionError, match="pdfplumber not available"):
             self.processor._extract_pdf("/fake/doc.pdf")
 
     @patch('signalwire.search.document_processor.pdfplumber')
     def test_extract_pdf_exception(self, mock_pdfplumber: MagicMock) -> None:
         mock_pdfplumber.open.side_effect = RuntimeError("corrupt file")
-        with pytest.raises(DocumentExtractionError, match="Error\ processing\ PDF"):
+        with pytest.raises(DocumentExtractionError, match="Error processing PDF"):
             self.processor._extract_pdf("/fake/doc.pdf")
 
     # ── DOCX ─────────────────────────────────────────────────────────
@@ -778,13 +778,13 @@ class TestFileExtraction:
 
     @patch('signalwire.search.document_processor.DocxDocument', None)
     def test_extract_docx_missing_dependency(self) -> None:
-        with pytest.raises(DocumentExtractionError, match="python\-docx\ not\ available"):
+        with pytest.raises(DocumentExtractionError, match="python-docx not available"):
             self.processor._extract_docx("/fake/doc.docx")
 
     @patch('signalwire.search.document_processor.DocxDocument')
     def test_extract_docx_exception(self, mock_docx_cls: MagicMock) -> None:
         mock_docx_cls.side_effect = ValueError("bad docx")
-        with pytest.raises(DocumentExtractionError, match="Error\ processing\ DOCX"):
+        with pytest.raises(DocumentExtractionError, match="Error processing DOCX"):
             self.processor._extract_docx("/fake/doc.docx")
 
     # ── XLSX (Excel) ─────────────────────────────────────────────────
@@ -809,13 +809,13 @@ class TestFileExtraction:
 
     def test_extract_excel_missing_dependency(self) -> None:
         with patch.dict(sys.modules, {"openpyxl": None}):
-            with pytest.raises(DocumentExtractionError, match="openpyxl\ not\ available"):
+            with pytest.raises(DocumentExtractionError, match="openpyxl not available"):
                 self.processor._extract_excel("/fake/data.xlsx")
 
     def test_extract_excel_exception(self) -> None:
         mock_lwb = MagicMock(side_effect=Exception("xlsx error"))
         with patch.dict(sys.modules, {"openpyxl": Mock(load_workbook=mock_lwb)}):
-            with pytest.raises(DocumentExtractionError, match="Error\ processing\ Excel"):
+            with pytest.raises(DocumentExtractionError, match="Error processing Excel"):
                 self.processor._extract_excel("/fake/data.xlsx")
 
     def test_importing_the_module_does_not_load_openpyxl(self) -> None:
@@ -849,13 +849,13 @@ class TestFileExtraction:
 
     @patch('signalwire.search.document_processor.Presentation', None)
     def test_extract_powerpoint_missing_dependency(self) -> None:
-        with pytest.raises(DocumentExtractionError, match="python\-pptx\ not\ available"):
+        with pytest.raises(DocumentExtractionError, match="python-pptx not available"):
             self.processor._extract_powerpoint("/fake/pres.pptx")
 
     @patch('signalwire.search.document_processor.Presentation')
     def test_extract_powerpoint_exception(self, mock_pres_cls: MagicMock) -> None:
         mock_pres_cls.side_effect = Exception("pptx error")
-        with pytest.raises(DocumentExtractionError, match="Error\ processing\ PowerPoint"):
+        with pytest.raises(DocumentExtractionError, match="Error processing PowerPoint"):
             self.processor._extract_powerpoint("/fake/pres.pptx")
 
     # ── HTML ─────────────────────────────────────────────────────────
@@ -870,13 +870,13 @@ class TestFileExtraction:
 
     @patch('signalwire.search.document_processor.BeautifulSoup', None)
     def test_extract_html_missing_dependency(self) -> None:
-        with pytest.raises(DocumentExtractionError, match="beautifulsoup4\ not\ available"):
+        with pytest.raises(DocumentExtractionError, match="beautifulsoup4 not available"):
             self.processor._extract_html("/fake/page.html")
 
     @patch('signalwire.search.document_processor.BeautifulSoup')
     def test_extract_html_exception(self, mock_bs: MagicMock) -> None:
         with patch('builtins.open', side_effect=IOError("disk")):
-            with pytest.raises(DocumentExtractionError, match="Error\ processing\ HTML"):
+            with pytest.raises(DocumentExtractionError, match="Error processing HTML"):
                 self.processor._extract_html("/fake/page.html")
 
     # ── Markdown ─────────────────────────────────────────────────────
@@ -901,7 +901,7 @@ class TestFileExtraction:
 
     def test_extract_markdown_io_error(self) -> None:
         with patch('builtins.open', side_effect=OSError("nope")):
-            with pytest.raises(DocumentExtractionError, match="Error\ processing\ Markdown"):
+            with pytest.raises(DocumentExtractionError, match="Error processing Markdown"):
                 self.processor._extract_markdown("/fake/doc.md")
 
     # ── RTF ───────────────────────────────────────────────────────────
@@ -915,13 +915,13 @@ class TestFileExtraction:
 
     @patch('signalwire.search.document_processor.rtf_to_text', None)
     def test_extract_rtf_missing_dependency(self) -> None:
-        with pytest.raises(DocumentExtractionError, match="striprtf\ not\ available"):
+        with pytest.raises(DocumentExtractionError, match="striprtf not available"):
             self.processor._extract_rtf("/fake/doc.rtf")
 
     @patch('signalwire.search.document_processor.rtf_to_text')
     def test_extract_rtf_exception(self, mock_rtf: MagicMock) -> None:
         with patch('builtins.open', side_effect=IOError("disk")):
-            with pytest.raises(DocumentExtractionError, match="Error\ processing\ RTF"):
+            with pytest.raises(DocumentExtractionError, match="Error processing RTF"):
                 self.processor._extract_rtf("/fake/doc.rtf")
 
     # ── Plain text ────────────────────────────────────────────────────
@@ -933,7 +933,7 @@ class TestFileExtraction:
 
     def test_extract_text_encoding_error(self) -> None:
         with patch('builtins.open', side_effect=UnicodeDecodeError('utf-8', b'', 0, 1, 'bad')):
-            with pytest.raises(DocumentExtractionError, match="Error\ processing\ TXT"):
+            with pytest.raises(DocumentExtractionError, match="Error processing TXT"):
                 self.processor._extract_text("/fake/file.txt")
 
     # ── _extract_text_from_file routing ──────────────────────────────
@@ -1693,3 +1693,35 @@ class TestExtractText:
         doc = tmp_path / "guide.md"
         doc.write_text("# Setup\n\nRun **it**.\n", encoding="utf-8")
         assert self.processor.extract_text(str(doc)) == "# Setup\n\nRun **it**.\n"
+
+
+class TestChunkWindowSizes:
+    """Every window size moves forward, and one that can't is refused."""
+
+    def test_one_sentence_per_chunk(self) -> None:
+        processor = DocumentProcessor(chunking_strategy="sentence", max_sentences_per_chunk=1)
+        chunks = processor.create_chunks("One. Two. Three.", "t.txt", "txt")
+        assert [c["content"] for c in chunks] == ["One.", "Two.", "Three."]
+
+    @pytest.mark.parametrize("n", [2, 3, 5, 8])
+    def test_larger_windows_overlap_as_before(self, n: int) -> None:
+        text = " ".join(f"Sentence {i}." for i in range(20))
+        processor = DocumentProcessor(chunking_strategy="sentence", max_sentences_per_chunk=n)
+        chunks = processor.create_chunks(text, "t.txt", "txt")
+        step = n - max(1, n // 4)
+        assert len(chunks) == len(range(0, 20, step))
+
+    def test_a_window_of_none_is_refused(self) -> None:
+        with pytest.raises(ValueError, match="max_sentences_per_chunk must be at least 1"):
+            DocumentProcessor(chunking_strategy="sentence", max_sentences_per_chunk=0)
+
+    @pytest.mark.parametrize("overlap", [-1, 50, 60])
+    def test_a_sliding_window_that_cant_move_is_refused(self, overlap: int) -> None:
+        with pytest.raises(ValueError, match="chunk_overlap must be"):
+            DocumentProcessor(chunking_strategy="sliding", chunk_size=50, chunk_overlap=overlap)
+
+    def test_long_sentences_in_the_document_aware_path(self) -> None:
+        # Sentences longer than chunk_size words give one sentence per chunk there
+        long = " ".join(["word"] * 80) + ". " + " ".join(["more"] * 80) + "."
+        chunks = DocumentProcessor()._chunk_text_enhanced(long, "t.txt")
+        assert len(chunks) == 2

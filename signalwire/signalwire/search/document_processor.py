@@ -148,7 +148,21 @@ class DocumentProcessor:
             verbose: Whether to enable verbose logging (default: False)
             semantic_threshold: Similarity threshold for semantic chunking (default: 0.5)
             topic_threshold: Similarity threshold for topic chunking (default: 0.3)
+
+        Raises:
+            ValueError: For the sentence strategy, when max_sentences_per_chunk
+                is less than 1; for the sliding strategy, when chunk_overlap is
+                negative or not less than chunk_size.
         """
+        if chunking_strategy == "sentence" and max_sentences_per_chunk < 1:
+            raise ValueError(
+                f"max_sentences_per_chunk must be at least 1, got {max_sentences_per_chunk}"
+            )
+        if chunking_strategy == "sliding" and not 0 <= chunk_overlap < chunk_size:
+            raise ValueError(
+                "chunk_overlap must be at least 0 and less than chunk_size, got "
+                f"chunk_size={chunk_size}, chunk_overlap={chunk_overlap}"
+            )
         self.chunking_strategy = chunking_strategy
         self.max_sentences_per_chunk = max_sentences_per_chunk
         self.chunk_size = chunk_size
@@ -990,9 +1004,13 @@ class DocumentProcessor:
                     if sentence.strip()
                 ]
 
-        # Create chunks of sentences with overlap
+        # Create chunks of sentences with overlap: a quarter of each chunk, at
+        # least one sentence, but never the whole chunk, so the window moves
+        max_sentences_per_chunk = max(1, max_sentences_per_chunk)
         chunks = []
-        overlap_sentences = max(1, max_sentences_per_chunk // 4)  # 25% overlap
+        overlap_sentences = min(
+            max(1, max_sentences_per_chunk // 4), max_sentences_per_chunk - 1
+        )
 
         for i in range(0, len(sentences), max_sentences_per_chunk - overlap_sentences):
             chunk_sentences = sentences[i : i + max_sentences_per_chunk]
