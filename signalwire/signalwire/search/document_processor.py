@@ -71,25 +71,16 @@ else:
     except ImportError:
         Presentation = None
 
+
 if TYPE_CHECKING:
     from nltk.tokenize import sent_tokenize
     import nltk
 else:
     try:
-        from nltk.tokenize import sent_tokenize as _nltk_sent_tokenize
         import nltk
+        import nltk.tokenize
 
-        def sent_tokenize(text: str) -> list[str]:
-            """NLTK's sentences, or, without its punkt_tab data, a split after
-            each sentence's closing punctuation. Search never downloads it."""
-            try:
-                return cast(list[str], _nltk_sent_tokenize(text))
-            except LookupError:
-                from signalwire.search.nltk_data import note_missing
-
-                note_missing("punkt_tab")
-                return [s for s in re.split(r"(?<=[.!?])\s+", text.strip()) if s]
-
+        sent_tokenize = None  # _punkt_sentences, once it's defined below
     except ImportError:
         sent_tokenize = None
         nltk = None
@@ -106,6 +97,24 @@ from signalwire.core.logging_config import get_logger
 from signalwire.search.models import document_key
 
 logger = get_logger(__name__)
+
+
+def _punkt_sentences(text: str) -> list[str]:
+    """NLTK's sentences, or, without its punkt_tab data, a split after each
+    sentence's closing punctuation. Search never downloads the data."""
+    from nltk.tokenize import sent_tokenize as nltk_sent_tokenize
+
+    try:
+        return cast("list[str]", nltk_sent_tokenize(text))
+    except LookupError:
+        from signalwire.search.nltk_data import note_missing
+
+        note_missing("punkt_tab")
+        return [s for s in re.split(r"(?<=[.!?])\s+", text.strip()) if s]
+
+
+if not TYPE_CHECKING and nltk is not None:
+    sent_tokenize = _punkt_sentences
 
 # Namespaces of a workbook's XML parts.
 _XLSX_MAIN = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
