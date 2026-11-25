@@ -1281,7 +1281,7 @@ sw-search [SOURCE_PATHS...] [OPTIONS]
 | `--exclude PATTERN1,...` | Glob patterns for files to exclude | -- |
 | `--max-sentences-per-chunk N` | Sentences per chunk (for sentence strategy) | `5` |
 | `--chunk-size N` | Words per chunk (for sliding strategy) | `50` |
-| `--min-chunk-size N` | Markdown strategy: minimum words before a heading starts a new chunk. Shorter sections merge into the next one instead of standing alone | `0` (split at every heading) |
+| `--min-chunk-size N` | Markdown and paragraph strategies: minimum words in a chunk. A shorter section or paragraph merges into the next one instead of standing alone | `0` (split at every heading or paragraph) |
 | `--overlap-size N` | Words of overlap between chunks (for sliding strategy) | `10` |
 | `--split-newlines N` | Minimum newlines to force a split (for sentence strategy) | `2` |
 | `--semantic-threshold FLOAT` | Similarity threshold for grouping (for semantic strategy) | `0.5` |

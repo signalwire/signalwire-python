@@ -136,11 +136,11 @@ class DocumentProcessor:
                 - 'json': JSON structure-aware chunking
                 - 'markdown': Markdown structure-aware chunking with code block detection
             max_sentences_per_chunk: For sentence strategy (default: 5)
-            min_chunk_size: For markdown strategy - minimum words before a
-                heading starts a new chunk. Sections shorter than this are
-                merged forward into the next one instead of being emitted
-                alone. Defaults to 0, which preserves the previous behaviour
-                of splitting at every heading.
+            min_chunk_size: For the markdown and paragraph strategies -
+                minimum words in a chunk. A section (markdown) or paragraph
+                shorter than this is merged forward into the next one instead
+                of being emitted alone. Defaults to 0, which splits at every
+                heading or paragraph.
             chunk_size: For sliding strategy - words per chunk (default: 50)
             chunk_overlap: For sliding strategy - overlap in words (default: 10)
             split_newlines: For sentence strategy - split on multiple newlines (optional)
@@ -1265,29 +1265,49 @@ class DocumentProcessor:
     def _chunk_by_paragraphs(
         self, content: str | list[str], filename: str, file_type: str
     ) -> list[dict[str, Any]]:
-        """Chunk content by paragraphs (split on double newlines)"""
-        if isinstance(content, list):
-            content = self._joined(content)
+        """Chunk content by paragraphs: blank lines split a text, and each of a
+        list's entries (a Word document's paragraphs, a PDF's pages) is at
+        least a paragraph of its own. With min_chunk_size, a paragraph of fewer
+        words merges forward into the next, so a bare heading isn't a chunk."""
+        content = self._joined(content, "\n\n")
 
-        # Split on double newlines to get paragraphs
+        # Split on blank lines to get paragraphs
         paragraphs = re.split(r"\n\s*\n", content)
         paragraphs = [p.strip() for p in paragraphs if p.strip()]
 
-        chunks = []
+        # (first paragraph's number, paragraphs) for each chunk
+        groups: list[tuple[int, list[str]]] = []
+        pending: list[str] = []
+        first = 0
         for i, paragraph in enumerate(paragraphs):
-            if paragraph:
-                chunks.append(
-                    self._create_chunk(
-                        content=paragraph,
-                        filename=filename,
-                        section=f"Paragraph {i + 1}",
-                        metadata={
-                            "chunk_method": "paragraph_based",
-                            "chunk_index": i,
-                            "paragraph_number": i + 1,
-                        },
-                    )
+            if not pending:
+                first = i
+            pending.append(paragraph)
+            if sum(len(p.split()) for p in pending) >= self.min_chunk_size:
+                groups.append((first, pending))
+                pending = []
+        if pending:
+            # What's left is short: it joins the chunk before it, if any
+            if groups:
+                groups[-1][1].extend(pending)
+            else:
+                groups.append((first, pending))
+
+        chunks = []
+        for chunk_index, (first, group) in enumerate(groups):
+            chunks.append(
+                self._create_chunk(
+                    content="\n\n".join(group),
+                    filename=filename,
+                    section=f"Paragraph {first + 1}",
+                    metadata={
+                        "chunk_method": "paragraph_based",
+                        "chunk_index": chunk_index,
+                        "paragraph_number": first + 1,
+                        "paragraph_count": len(group),
+                    },
                 )
+            )
 
         return chunks
 

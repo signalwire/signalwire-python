@@ -265,9 +265,10 @@ Documentation: sw-pydocs prints the SDK's installed docs, examples and API.
         type=int,
         default=0,
         help=(
-            "Markdown strategy: minimum words before a heading starts a new "
-            "chunk. Sections shorter than this merge into the next one instead "
-            "of being emitted alone (default: 0, split at every heading)"
+            "Markdown and paragraph strategies: minimum words in a chunk. A "
+            "section or paragraph shorter than this merges into the next one "
+            "instead of being emitted alone (default: 0, split at every "
+            "heading or paragraph)"
         ),
     )
 

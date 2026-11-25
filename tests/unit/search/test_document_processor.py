@@ -1756,3 +1756,39 @@ class TestPdfPages:
         with_gap = processor.create_chunks(["Intro here.", "", "Setup here."], "m.pdf", "pdf")
         without = processor.create_chunks(["Intro here.", "Setup here."], "m.pdf", "pdf")
         assert [c["content"] for c in with_gap] == [c["content"] for c in without]
+
+
+class TestParagraphsFromAList:
+    """A list's entries are paragraphs, and short ones can merge forward."""
+
+    DOCX = ["Installation guide.", "Plug the cable into the back port.", "Wait two minutes."]
+
+    def test_each_entry_is_a_paragraph(self) -> None:
+        chunks = DocumentProcessor(chunking_strategy="paragraph").create_chunks(self.DOCX, "g.docx", "docx")
+        assert [c["content"] for c in chunks] == self.DOCX
+        assert [c["metadata"]["paragraph_number"] for c in chunks] == [1, 2, 3]
+
+    def test_a_short_paragraph_merges_into_the_next(self) -> None:
+        doc = ["Installation guide.", "Plug the cable into the back port.",
+               "Then wait two minutes for the light to turn green."]
+        processor = DocumentProcessor(chunking_strategy="paragraph", min_chunk_size=6)
+        chunks = processor.create_chunks(doc, "g.docx", "docx")
+        assert [c["content"] for c in chunks] == [
+            "Installation guide.\n\nPlug the cable into the back port.",
+            "Then wait two minutes for the light to turn green.",
+        ]
+        assert [(c["section"], c["metadata"]["paragraph_count"]) for c in chunks] == [
+            ("Paragraph 1", 2),
+            ("Paragraph 3", 1),
+        ]
+
+    def test_a_short_last_paragraph_joins_the_one_before(self) -> None:
+        processor = DocumentProcessor(chunking_strategy="paragraph", min_chunk_size=6)
+        chunks = processor.create_chunks(self.DOCX, "g.docx", "docx")
+        assert len(chunks) == 1 and chunks[0]["content"].endswith("Wait two minutes.")
+        assert chunks[0]["metadata"]["paragraph_count"] == 3
+
+    def test_a_text_splits_on_blank_lines_as_before(self) -> None:
+        text = "First one.\n\nSecond one.\nStill second.\n\nThird."
+        chunks = DocumentProcessor(chunking_strategy="paragraph").create_chunks(text, "t.txt", "txt")
+        assert [c["content"] for c in chunks] == ["First one.", "Second one.\nStill second.", "Third."]
