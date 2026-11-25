@@ -152,6 +152,7 @@ class IndexBuilder:
             verbose=self.verbose,
             semantic_threshold=self.semantic_threshold,
             topic_threshold=self.topic_threshold,
+            model_name=self.model_name,
         )
 
     def _extract_metadata_from_json_content(

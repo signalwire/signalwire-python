@@ -203,7 +203,7 @@ Chunk 3:         G H I J
 
 **5. Semantic**
 
-Groups sentences with similar embeddings together.
+Groups sentences with similar embeddings together, compared with the index's own embedding model. Where the model can't be loaded (offline, or sentence-transformers not installed), it falls back to sentence chunks, with a warning, and their metadata says `chunk_method` `sentence_based`.
 
 ```bash
 sw-search ./docs \

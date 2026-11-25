@@ -120,6 +120,7 @@ class DocumentProcessor:
         verbose: bool = False,
         semantic_threshold: float = 0.5,
         topic_threshold: float = 0.3,
+        model_name: str | None = None,
     ):
         """
         Initialize document processor
@@ -148,6 +149,11 @@ class DocumentProcessor:
             verbose: Whether to enable verbose logging (default: False)
             semantic_threshold: Similarity threshold for semantic chunking (default: 0.5)
             topic_threshold: Similarity threshold for topic chunking (default: 0.3)
+            model_name: The sentence transformer the semantic strategy compares
+                sentences with; the index's own model, when an IndexBuilder
+                makes the processor. Defaults to all-mpnet-base-v2. Where it
+                can't be loaded, the semantic strategy falls back to sentence
+                chunks, whose metadata says ``chunk_method`` ``sentence_based``.
 
         Raises:
             ValueError: For the sentence strategy, when max_sentences_per_chunk
@@ -171,6 +177,7 @@ class DocumentProcessor:
         self.split_newlines = split_newlines
         self.semantic_threshold = semantic_threshold
         self.topic_threshold = topic_threshold
+        self.model_name = model_name
 
         # Legacy support for old character-based chunking
         self.chunk_overlap = chunk_overlap
@@ -1394,7 +1401,7 @@ class DocumentProcessor:
 
             from signalwire.search.query_processor import _get_cached_model
 
-            model = _get_cached_model("sentence-transformers/all-mpnet-base-v2")
+            model = _get_cached_model(self.model_name)
             if model is None:
                 # Model unavailable (sentence-transformers missing or load/download
                 # failed, e.g. offline). Degrade gracefully to sentence chunking

@@ -1792,3 +1792,32 @@ class TestParagraphsFromAList:
         text = "First one.\n\nSecond one.\nStill second.\n\nThird."
         chunks = DocumentProcessor(chunking_strategy="paragraph").create_chunks(text, "t.txt", "txt")
         assert [c["content"] for c in chunks] == ["First one.", "Second one.\nStill second.", "Third."]
+
+
+class TestSemanticModel:
+    """The semantic strategy compares sentences with the index's own model."""
+
+    TEXT = "Cats purr. Cats nap. Taxes are due in April. File them online."
+
+    def test_it_loads_the_model_its_given(self) -> None:
+        pytest.importorskip("sklearn")
+        model = Mock()
+        model.encode.return_value = [[1.0, 0.0], [1.0, 0.0], [0.0, 1.0], [0.0, 1.0]]
+        with patch("signalwire.search.query_processor._get_cached_model", return_value=model) as load:
+            chunks = DocumentProcessor(
+                chunking_strategy="semantic", model_name="sentence-transformers/all-MiniLM-L6-v2"
+            ).create_chunks(self.TEXT, "t.txt", "txt")
+        load.assert_called_once_with("sentence-transformers/all-MiniLM-L6-v2")
+        assert {c["metadata"]["chunk_method"] for c in chunks} == {"semantic"}
+
+    def test_a_model_that_wont_load_gives_sentence_chunks_that_say_so(self) -> None:
+        pytest.importorskip("sklearn")
+        with patch("signalwire.search.query_processor._get_cached_model", return_value=None):
+            chunks = DocumentProcessor(chunking_strategy="semantic").create_chunks(self.TEXT, "t.txt", "txt")
+        assert chunks and {c["metadata"]["chunk_method"] for c in chunks} == {"sentence_based"}
+
+    def test_the_index_builder_passes_its_model(self) -> None:
+        from signalwire.search.index_builder import IndexBuilder
+
+        builder = IndexBuilder(model_name="sentence-transformers/all-MiniLM-L6-v2", chunking_strategy="semantic")
+        assert builder.doc_processor.model_name == "sentence-transformers/all-MiniLM-L6-v2"
