@@ -62,6 +62,7 @@ _LAZY_EXPORTS = {
     "DocumentExtractionError": "document_processor",
     "DocumentProcessor": "document_processor",
     "IndexBuilder": "index_builder",
+    "SearchBackend": "search_engine",
     "SearchEngine": "search_engine",
     "SearchService": "search_service",
     "SearchIndexMigrator": "migration",
@@ -76,7 +77,7 @@ if TYPE_CHECKING:
     from .migration import SearchIndexMigrator
     from .models import DEFAULT_MODEL, MODEL_ALIASES, resolve_model_alias
     from .query_processor import preprocess_document_content, preprocess_query
-    from .search_engine import SearchEngine
+    from .search_engine import SearchBackend, SearchEngine
     from .search_service import SearchService
 
 if _SEARCH_AVAILABLE:
@@ -86,6 +87,7 @@ if _SEARCH_AVAILABLE:
         "DocumentExtractionError",
         "DocumentProcessor",
         "IndexBuilder",
+        "SearchBackend",
         "SearchEngine",
         "SearchIndexMigrator",
         "SearchService",

@@ -10,7 +10,7 @@ See LICENSE file in the project root for full license information.
 import sqlite3
 import json
 import warnings
-from typing import Any, TYPE_CHECKING
+from typing import Any, Protocol, TYPE_CHECKING, runtime_checkable
 
 from signalwire.core.logging_config import get_logger
 from signalwire.search.models import document_key
@@ -49,12 +49,58 @@ MIN_CANDIDATE_POOL = 30
 DIVERSITY_WINDOW = 10
 
 
+@runtime_checkable
+class SearchBackend(Protocol):
+    """Your own storage, ranked by SearchEngine's pipeline.
+
+    Pass an object with these members as ``SearchEngine(backend=obj)``.
+    SearchEngine asks it for candidates, then scores, boosts, dedupes,
+    diversifies and truncates them exactly as it does for the sqlite and
+    pgvector backends. The backend decides which rows a query may see, so
+    scoping, filtering and access control stay in your own storage layer.
+
+    ``config`` is the index's configuration. SearchEngine reads
+    ``embedding_dimensions``, and ``query_stopwords`` either at the top
+    level or under ``metadata``.
+
+    ``fetch_candidates()`` returns up to ``count`` raw candidates. Each one is
+    a dict with ``id``, ``content``, ``metadata`` (``filename``, ``section``,
+    ``tags`` and any custom keys), ``search_type``, ``sources`` (source name
+    to True) and ``source_scores`` (source name to raw score). A candidate the
+    vector search matched also has ``vector_score`` and ``vector_distance``.
+    Apply ``similarity_threshold`` to raw vector scores before merging
+    sources. SearchEngine then keeps only the candidates whose metadata
+    ``tags`` include at least one of ``tags``, so a backend may filter more
+    strictly, on all of them for example, but not more loosely.
+
+    ``get_stats()`` returns whatever statistics your storage reports.
+    """
+
+    config: dict[str, Any]
+
+    def fetch_candidates(
+        self,
+        query_vector: list[float],
+        enhanced_text: str,
+        count: int,
+        similarity_threshold: float = 0.0,
+        tags: list[str] | None = None,
+        original_query: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return up to ``count`` raw candidates for a query."""
+        ...
+
+    def get_stats(self) -> dict[str, Any]:
+        """Return statistics about the stored index."""
+        ...
+
+
 class SearchEngine:
     """Hybrid search engine for vector and keyword search"""
 
     def __init__(
         self,
-        backend: str = "sqlite",
+        backend: "str | SearchBackend" = "sqlite",
         index_path: str | None = None,
         connection_string: str | None = None,
         collection_name: str | None = None,
@@ -64,14 +110,40 @@ class SearchEngine:
         Initialize search engine
 
         Args:
-            backend: Storage backend ('sqlite' or 'pgvector')
+            backend: Storage backend: 'sqlite', 'pgvector', or an object with
+                the SearchBackend members, for your own storage
             index_path: Path to .swsearch file (for sqlite backend)
             connection_string: PostgreSQL connection string (for pgvector backend)
             collection_name: Collection name (for pgvector backend)
             model: Optional sentence transformer model
         """
-        self.backend = backend
         self.model = model
+        self._backend: SearchBackend | None
+
+        if not isinstance(backend, str):
+            if index_path or connection_string or collection_name:
+                raise ValueError(
+                    "index_path, connection_string and collection_name are for the "
+                    "sqlite and pgvector backends; a backend object has its own storage"
+                )
+            missing = [
+                name
+                for name in ("fetch_candidates", "get_stats")
+                if not callable(getattr(backend, name, None))
+            ]
+            if not isinstance(getattr(backend, "config", None), dict):
+                missing.append("config (a dict)")
+            if missing:
+                raise TypeError(
+                    f"A backend object needs {', '.join(missing)}; see SearchBackend"
+                )
+            self.backend = "custom"
+            self._backend = backend
+            self.config = backend.config
+            self.embedding_dim = int(self.config.get("embedding_dimensions", 768))
+            return
+
+        self.backend = backend
 
         if backend == "sqlite":
             if not index_path:
@@ -92,7 +164,8 @@ class SearchEngine:
             self.embedding_dim = int(self.config.get("embedding_dimensions", 768))
         else:
             raise ValueError(
-                f"Invalid backend '{backend}'. Must be 'sqlite' or 'pgvector'"
+                f"Invalid backend '{backend}'. Must be 'sqlite', 'pgvector' "
+                "or a SearchBackend object"
             )
 
     @property
@@ -244,9 +317,8 @@ class SearchEngine:
         source_scores. Candidates matched by vector also have vector_score
         and vector_distance.
         """
-        # pgvector backend: delegate to its own fetch
-        if self.backend == "pgvector":
-            assert self._backend is not None  # noqa: S101  # type-narrowing invariant: set whenever backend == "pgvector"
+        # pgvector and backend objects fetch their own candidates
+        if self._backend is not None:
             return self._backend.fetch_candidates(
                 query_vector=query_vector,
                 enhanced_text=enhanced_text,
@@ -1792,9 +1864,8 @@ class SearchEngine:
 
     def get_stats(self) -> dict[str, Any]:
         """Get statistics about the search index"""
-        # Use pgvector backend if available
-        if self.backend == "pgvector":
-            assert self._backend is not None  # noqa: S101  # type-narrowing invariant: set whenever backend == "pgvector"
+        # pgvector and backend objects report their own statistics
+        if self._backend is not None:
             return self._backend.get_stats()
 
         # Original SQLite implementation
