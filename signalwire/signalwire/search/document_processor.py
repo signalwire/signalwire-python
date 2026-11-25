@@ -76,14 +76,20 @@ if TYPE_CHECKING:
     import nltk
 else:
     try:
-        from nltk.tokenize import sent_tokenize
+        from nltk.tokenize import sent_tokenize as _nltk_sent_tokenize
         import nltk
 
-        # Ensure NLTK data is available
-        try:
-            nltk.data.find("tokenizers/punkt")
-        except LookupError:
-            nltk.download("punkt", quiet=True)
+        def sent_tokenize(text: str) -> list[str]:
+            """NLTK's sentences, or, without its punkt_tab data, a split after
+            each sentence's closing punctuation. Search never downloads it."""
+            try:
+                return cast(list[str], _nltk_sent_tokenize(text))
+            except LookupError:
+                from signalwire.search.nltk_data import note_missing
+
+                note_missing("punkt_tab")
+                return [s for s in re.split(r"(?<=[.!?])\s+", text.strip()) if s]
+
     except ImportError:
         sent_tokenize = None
         nltk = None

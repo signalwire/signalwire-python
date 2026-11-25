@@ -42,6 +42,9 @@ _MISSING_DEPS: list[str] = [
 ]
 _SEARCH_AVAILABLE = not _MISSING_DEPS
 
+# Light (it imports NLTK only when called), so it works without the search extras
+from .nltk_data import NLTK_DATA, download_nltk_data, missing_nltk_data  # noqa: E402
+
 
 def _check_search_dependencies() -> None:
     """Check if search dependencies are available and provide helpful error message"""
@@ -84,6 +87,7 @@ if _SEARCH_AVAILABLE:
     __all__ = [
         "DEFAULT_MODEL",
         "MODEL_ALIASES",
+        "NLTK_DATA",
         "DocumentExtractionError",
         "DocumentProcessor",
         "IndexBuilder",
@@ -91,6 +95,8 @@ if _SEARCH_AVAILABLE:
         "SearchEngine",
         "SearchIndexMigrator",
         "SearchService",
+        "download_nltk_data",
+        "missing_nltk_data",
         "preprocess_document_content",
         "preprocess_query",
         "resolve_model_alias",
@@ -125,11 +131,14 @@ else:
             _check_search_dependencies()
 
     __all__ = [
+        "NLTK_DATA",
         "DocumentExtractionError",
         "DocumentProcessor",
         "IndexBuilder",
         "SearchEngine",
         "SearchService",
+        "download_nltk_data",
+        "missing_nltk_data",
         "preprocess_document_content",
         "preprocess_query",
     ]

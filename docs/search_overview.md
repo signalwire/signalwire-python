@@ -210,7 +210,7 @@ Common installation issues:
 |-------|----------|
 | `No module named 'sentence_transformers'` | `pip install signalwire-sdk[search]` |
 | `No module named 'pdfplumber'` | `pip install signalwire-sdk[search-full]` |
-| NLTK data not found | `import nltk; nltk.download('punkt'); nltk.download('averaged_perceptron_tagger')` |
+| NLTK data isn't installed (logged once) | `sw-search download-nltk` |
 | spaCy model not found | `python -m spacy download en_core_web_sm` |
 
 Note: The sentence-transformers library downloads pre-trained models (~400MB) on first use. This is cached locally after the initial download.

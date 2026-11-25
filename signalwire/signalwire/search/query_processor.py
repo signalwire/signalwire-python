@@ -12,9 +12,11 @@ import re
 import threading
 from typing import Any
 from nltk.corpus import wordnet as wn
+from nltk.corpus.reader.wordnet import ADJ, ADV, NOUN, VERB
 from nltk.stem import PorterStemmer
 
 from signalwire.core.logging_config import get_logger
+from signalwire.search.nltk_data import missing_nltk_data, note_missing
 
 logger = get_logger(__name__)
 
@@ -462,55 +464,53 @@ def drop_corpus_terms(
     return stripped if len(content) >= 2 else query
 
 
-# Function to ensure NLTK resources are downloaded
 def ensure_nltk_resources() -> None:
-    """Download required NLTK resources if not already present"""
-    resources = [
-        "punkt",
-        "punkt_tab",
-        "wordnet",
-        "averaged_perceptron_tagger",
-        "stopwords",
-    ]
-    for resource in resources:
-        try:
-            # Try different paths for different resource types
-            if resource in ["punkt", "punkt_tab"]:
-                nltk.data.find(f"tokenizers/{resource}")
-            elif resource in ["wordnet"]:
-                nltk.data.find(f"corpora/{resource}")
-            elif resource in ["averaged_perceptron_tagger"]:
-                nltk.data.find(f"taggers/{resource}")
-            elif resource in ["stopwords"]:
-                nltk.data.find(f"corpora/{resource}")
-            else:
-                nltk.data.find(f"corpora/{resource}")
-        except LookupError:  # noqa: PERF203  # per-iteration error isolation: download each missing NLTK resource independently
-            try:
-                logger.info(f"Downloading NLTK resource '{resource}'...")
-                nltk.download(resource, quiet=True)
-                logger.info(f"Successfully downloaded NLTK resource '{resource}'")
-            except Exception as e:
-                logger.warning(f"Failed to download NLTK resource '{resource}': {e}")
-                # Continue without this resource - some functionality may be degraded
+    """Log, once, each piece of NLTK data search uses that isn't installed.
+
+    It doesn't download them: search never reaches the internet while it
+    runs. Fetch them once with ``sw-search download-nltk`` or
+    :func:`signalwire.search.download_nltk_data`.
+    """
+    for name in missing_nltk_data():
+        note_missing(name)
 
 
-# Initialize NLTK resources
-ensure_nltk_resources()
+def _words(text: str) -> list[str]:
+    """NLTK's word tokens, or, without its punkt_tab data, the text split on
+    whitespace."""
+    try:
+        return list(nltk.word_tokenize(text))
+    except LookupError:
+        note_missing("punkt_tab")
+        return text.split()
+
+
+def _stopwords(language_name: str) -> set[str]:
+    """NLTK's stopwords for a language (English where it has none for it), or a
+    small fixed list without its stopwords data."""
+    try:
+        languages = set(nltk.corpus.stopwords.fileids())
+    except LookupError:
+        note_missing("stopwords")
+        return set(_FALLBACK_STOPWORDS)
+    name = language_name if language_name in languages else "english"
+    return set(nltk.corpus.stopwords.words(name))
+
 
 # Mapping spaCy POS tags to WordNet POS tags
+# The constants come from WordNet's reader, so they don't load the corpus.
 pos_mapping = {
-    "NOUN": wn.NOUN,
-    "VERB": wn.VERB,
-    "ADJ": wn.ADJ,
-    "ADV": wn.ADV,
-    "PROPN": wn.NOUN,  # Proper nouns as nouns
+    "NOUN": NOUN,
+    "VERB": VERB,
+    "ADJ": ADJ,
+    "ADV": ADV,
+    "PROPN": NOUN,  # Proper nouns as nouns
 }
 
 
 def get_wordnet_pos(spacy_pos: Any) -> Any:
     """Map spaCy POS tags to WordNet POS tags."""
-    return pos_mapping.get(spacy_pos, wn.NOUN)
+    return pos_mapping.get(spacy_pos, NOUN)
 
 
 def get_synonyms(word: str, pos_tag: str, max_synonyms: int = 5) -> list[str]:
@@ -528,6 +528,9 @@ def get_synonyms(word: str, pos_tag: str, max_synonyms: int = 5) -> list[str]:
             if len(synonyms) >= max_synonyms:
                 break
         return list(synonyms)
+    except LookupError:
+        note_missing("wordnet")
+        return []
     except Exception as e:
         logger.warning(f"Error getting synonyms for '{word}': {e}")
         return []
@@ -661,35 +664,8 @@ def preprocess_query(
         query_nlp_backend = "nltk"
 
     # Tokenization and stop word removal
-    try:
-        tokens = nltk.word_tokenize(query)
-    except LookupError as e:
-        # If tokenization fails, try to download punkt resources
-        logger.warning(f"NLTK tokenization failed: {e}")
-        try:
-            nltk.download("punkt", quiet=True)
-            nltk.download("punkt_tab", quiet=True)
-            tokens = nltk.word_tokenize(query)
-        except Exception as fallback_error:
-            # If all else fails, use simple split as fallback
-            logger.warning(
-                f"NLTK tokenization fallback failed: {fallback_error}. Using simple word splitting."
-            )
-            tokens = query.split()
-
-    nltk_language = stopwords_language_map.get(language, "english")
-
-    try:
-        stop_words = set(nltk.corpus.stopwords.words(nltk_language))
-    except LookupError:
-        try:
-            nltk.download("stopwords", quiet=True)
-            stop_words = set(nltk.corpus.stopwords.words(nltk_language))
-        except Exception:
-            logger.warning(
-                f"Could not load stopwords for language '{nltk_language}', using English"
-            )
-            stop_words = set(nltk.corpus.stopwords.words("english"))
+    tokens = _words(query)
+    stop_words = _stopwords(stopwords_language_map.get(language, "english"))
 
     tokens = [word for word in tokens if word.lower() not in stop_words]
 
@@ -718,6 +694,9 @@ def preprocess_query(
                     lemma = lemmatizer.lemmatize(
                         token, get_wordnet_pos(pos_tag)
                     ).lower()
+                except LookupError:
+                    note_missing("wordnet")
+                    lemma = token.lower()
                 except Exception:
                     # Fallback if lemmatization fails
                     lemma = token.lower()
@@ -728,9 +707,12 @@ def preprocess_query(
                 logger.info(f"POS Tagging Results (NLTK): {pos_tags}")
         except Exception as pos_error:
             # Fallback if POS tagging fails completely
-            logger.warning(
-                f"NLTK POS tagging failed: {pos_error}. Using basic token processing."
-            )
+            if isinstance(pos_error, LookupError):
+                note_missing("averaged_perceptron_tagger_eng")
+            else:
+                logger.warning(
+                    f"NLTK POS tagging failed: {pos_error}. Using basic token processing."
+                )
             for token in tokens:
                 lemma = token.lower()
                 stemmed = stemmer.stem(lemma)
@@ -844,13 +826,8 @@ def preprocess_document_content(
 
     # Extract key terms for keyword search
     try:
-        tokens = nltk.word_tokenize(processed["input"])
-        nltk_language = stopwords_language_map.get(language, "english")
-
-        try:
-            stop_words = set(nltk.corpus.stopwords.words(nltk_language))
-        except Exception:
-            stop_words = set(nltk.corpus.stopwords.words("english"))
+        tokens = _words(processed["input"])
+        stop_words = _stopwords(stopwords_language_map.get(language, "english"))
 
         keywords = [
             word.lower()

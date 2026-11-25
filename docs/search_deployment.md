@@ -454,6 +454,9 @@ WORKDIR /app
 # Install query-only dependencies
 RUN pip install signalwire-sdk[search-queryonly]
 
+# The NLTK data search uses: it never downloads it while it runs
+RUN sw-search download-nltk
+
 # Copy pre-built index
 COPY knowledge.swsearch /app/
 
@@ -462,6 +465,8 @@ COPY agent.py /app/
 
 CMD ["python", "agent.py"]
 ```
+
+Search never downloads anything while it runs, so an agent or search service can run without internet access. Install the NLTK data it uses when you build the image, as above; `sw-search download-nltk` puts it in NLTK's data path, the `NLTK_DATA` directory if it's set. `signalwire.search.missing_nltk_data()` returns what's still missing, for a startup check. Without the data, search uses a simpler sentence split and query processing and logs which data is missing.
 
 **Container image size comparison:**
 

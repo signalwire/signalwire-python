@@ -48,21 +48,21 @@ search-queryonly = [
     "numpy>=1.24.0",
     "scikit-learn>=1.3.0",
     "sentence-transformers>=2.2.0",
-    "nltk>=3.8",
+    "nltk>=3.9",
 ]
 
 # Full search functionality (includes document processing and building)
 search = [
     "sentence-transformers>=2.2.0",
     "scikit-learn>=1.3.0",
-    "nltk>=3.8",
+    "nltk>=3.9",
     "numpy>=1.24.0",
 ]
 
 search-full = [
     "sentence-transformers>=2.2.0",
     "scikit-learn>=1.3.0",
-    "nltk>=3.8",
+    "nltk>=3.9",
     "numpy>=1.24.0",
     # Document processing dependencies
     "pdfplumber>=0.9.0",
@@ -79,7 +79,7 @@ search-full = [
 search-nlp = [
     "sentence-transformers>=2.2.0",
     "scikit-learn>=1.3.0",
-    "nltk>=3.8",
+    "nltk>=3.9",
     "numpy>=1.24.0",
     "spacy>=3.6.0",
 ]
@@ -88,7 +88,7 @@ search-nlp = [
 search-all = [
     "sentence-transformers>=2.2.0",
     "scikit-learn>=1.3.0",
-    "nltk>=3.8",
+    "nltk>=3.9",
     "numpy>=1.24.0",
     "spacy>=3.6.0",
     # Document processing dependencies
@@ -121,7 +121,7 @@ mcp-gateway = [
 all = [
     "sentence-transformers>=2.2.0",
     "scikit-learn>=1.3.0",
-    "nltk>=3.8",
+    "nltk>=3.9",
     "numpy>=1.24.0",
     "spacy>=3.6.0",
     # Document processing dependencies
