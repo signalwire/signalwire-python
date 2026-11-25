@@ -8,6 +8,8 @@ See LICENSE file in the project root for full license information.
 """
 
 import re
+import bisect
+import datetime
 import json
 from typing import Any, TYPE_CHECKING, cast
 from pathlib import Path
@@ -98,6 +100,62 @@ from signalwire.core.logging_config import get_logger
 from signalwire.search.models import document_key
 
 logger = get_logger(__name__)
+
+# Namespaces of a workbook's XML parts.
+_XLSX_MAIN = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
+_CELL_REFERENCE = re.compile(r"\$?([A-Za-z]{1,3})\$?(\d+)")
+
+# A merged range's value is repeated into each of its cells, so every row keeps
+# it. These limits stop a small file with huge merged ranges from producing an
+# enormous text: the cells a workbook's merges may visit while filling in, and
+# the characters of repeated text they may add.
+_MERGE_FILL_CELLS = 100_000
+_MERGE_FILL_CHARACTERS = 1_000_000
+
+# A header longer than this is cut to it as the label of each cell under it,
+# since every labelled cell repeats its header.
+_HEADER_LABEL_LIMIT = 100
+
+
+class _MergeBudget:
+    """What a workbook's merged ranges may still add."""
+
+    def __init__(self) -> None:
+        self.cells = _MERGE_FILL_CELLS
+        self.characters = _MERGE_FILL_CHARACTERS
+
+    @property
+    def spent(self) -> bool:
+        """Whether a limit was reached, so some merged cells stayed empty."""
+        return self.cells <= 0 or self.characters < 0
+
+
+class _Repeated:
+    """A merged range's value, repeated into one of the range's other cells."""
+
+    __slots__ = ("text",)
+
+    def __init__(self, text: str) -> None:
+        self.text = text
+
+
+def _column_number(letters: str) -> int:
+    """A column's number from its letters, counting from 1: A is 1, AA is 27."""
+    number = 0
+    for letter in letters.upper():
+        number = number * 26 + ord(letter) - ord("A") + 1
+    return number
+
+
+def _range_bounds(reference: str) -> tuple[int, int, int, int] | None:
+    """A range such as "A2:B3" as (first row, first column, last row, last
+    column), counting from 1; None for anything else."""
+    corners = [_CELL_REFERENCE.fullmatch(part) for part in reference.split(":")]
+    if len(corners) != 2 or not all(corners):
+        return None
+    rows = [int(corner.group(2)) for corner in corners if corner]
+    columns = [_column_number(corner.group(1)) for corner in corners if corner]
+    return min(rows), min(columns), max(rows), max(columns)
 
 
 class DocumentExtractionError(ValueError):
@@ -275,8 +333,8 @@ class DocumentProcessor:
         Extract a file's text, by its type, ready for create_chunks().
 
         A PDF comes back as a list of pages, a Word document as a list of
-        paragraphs and a PowerPoint deck as a list of slides; anything else as
-        one string. HTML loses its markup, scripts and styles. Markdown comes
+        paragraphs, a PowerPoint deck as a list of slides and an Excel workbook
+        as a list of rows; anything else as one string. HTML loses its markup, scripts and styles. Markdown comes
         back as written, so the markdown chunking strategy can read its
         headers.
 
@@ -406,8 +464,24 @@ class DocumentProcessor:
         except Exception as e:
             raise DocumentExtractionError(f"Error processing RTF: {e}") from e
 
-    def _extract_excel(self, file_path: str) -> str:
-        """Extract text from Excel files"""
+    def _extract_excel(self, file_path: str) -> list[str]:
+        """Extract an Excel workbook as one entry per row.
+
+        A sheet's first non-empty row is its header. Every row after it comes
+        back labelled with the sheet's name and the headers, as in
+        ``"Prices | Plan: Pro, Price: 40"``. A cell without a header is
+        labelled with its column letter, a header longer than 100 characters
+        is cut to them as a label, and empty cells are left out. A sheet with a
+        single row comes back as that row's cells.
+
+        A merged range's value applies to each of its cells, so a row keeps a
+        value merged across the rows of its group. A workbook's merges may
+        repeat a limited amount of text in all; past it, their other cells
+        stay empty, as they're stored. Values are the ones Excel
+        last calculated. A formula that was never calculated, as in a workbook
+        a script wrote, has no stored value, so its formula text stands in for
+        it.
+        """
         # Imported here rather than with the module: only Excel files need
         # openpyxl, and importing it loads numpy.
         try:
@@ -417,16 +491,254 @@ class DocumentProcessor:
                 "openpyxl not available for Excel processing"
             ) from None
 
+        workbooks: list[Any] = []
         try:
-            wb = load_workbook(file_path)
-            sheets_text = []
-            for sheet in wb.worksheets:
-                for row in sheet.iter_rows(values_only=True):
-                    row_text = " ".join([str(cell) for cell in row if cell is not None])
-                    sheets_text.append(row_text)
-            return "\n".join(sheets_text)
+            # Read-only workbooks stream their rows.
+            values = load_workbook(file_path, read_only=True, data_only=True)
+            workbooks.append(values)
+            layouts = self._sheet_layouts(file_path, values.worksheets)
+            formulas = None
+            if any(uncalculated for _, uncalculated in layouts):
+                # A second view of the workbook, with each cell's formula text.
+                formulas = load_workbook(file_path, read_only=True)
+                workbooks.append(formulas)
+            budget = _MergeBudget()
+            rows: list[str] = []
+            for index, value_sheet in enumerate(values.worksheets):
+                formula_sheet = formulas.worksheets[index] if formulas else None
+                rows.extend(
+                    self._sheet_rows(value_sheet, formula_sheet, layouts[index], budget)
+                )
+            if budget.spent:
+                logger.warning(
+                    f"{file_path}: its merged cells repeat more than the limit allows; "
+                    "the rest are left empty, as they are stored"
+                )
+            return rows
         except Exception as e:
             raise DocumentExtractionError(f"Error processing Excel: {e}") from e
+        finally:
+            for workbook in workbooks:
+                workbook.close()  # a read-only workbook keeps its file open until closed
+
+    @staticmethod
+    def _sheet_layouts(
+        file_path: str, sheets: list[Any]
+    ) -> list[tuple[list[tuple[int, int, int, int]], set[tuple[int, int]]]]:
+        """Each sheet's layout: its merged ranges, as (first row, first column,
+        last row, last column), and the cells, as (row, column), whose formula
+        has no stored value. Rows and columns count from 1.
+
+        Read-only workbooks load neither, so they're read from the part each
+        sheet was read from.
+        """
+        import zipfile
+
+        layouts: list[tuple[list[tuple[int, int, int, int]], set[tuple[int, int]]]] = []
+        with zipfile.ZipFile(file_path) as archive:
+            for sheet in sheets:
+                # openpyxl's own record of the sheet's part, so the parts read
+                # here are exactly the sheets it lists.
+                part = getattr(sheet, "_worksheet_path", None)
+                if not isinstance(part, str):
+                    logger.warning(
+                        f"{file_path}: this openpyxl doesn't say where sheet "
+                        f"{sheet.title!r} is stored, so its merged cells and "
+                        "uncalculated formulas are read as they're stored"
+                    )
+                    layouts.append(([], set()))
+                    continue
+                with archive.open(part) as source:
+                    layouts.append(DocumentProcessor._sheet_layout(source))
+        return layouts
+
+    @staticmethod
+    def _sheet_layout(
+        source: Any,
+    ) -> tuple[list[tuple[int, int, int, int]], set[tuple[int, int]]]:
+        """One sheet part's merged ranges and never-calculated formula cells.
+
+        A formula's stored value is its ``<v>``. A cell with a formula and no
+        ``<v>``, or an empty one that isn't a stored empty string
+        (``t="str"``), was never calculated: that's how openpyxl and other
+        scripts write formulas.
+        """
+        from openpyxl.xml.functions import iterparse  # defused, as openpyxl reads
+
+        merged: list[tuple[int, int, int, int]] = []
+        uncalculated: set[tuple[int, int]] = set()
+        row = column = 0
+        sheet_data = None
+        for event, element in iterparse(source, events=("start", "end")):
+            tag = element.tag
+            if event == "start":
+                if tag == f"{_XLSX_MAIN}sheetData":
+                    sheet_data = element
+                elif tag == f"{_XLSX_MAIN}row":
+                    row = int(element.get("r") or row + 1)
+                    column = 0
+                continue
+            if tag == f"{_XLSX_MAIN}c":
+                reference = _CELL_REFERENCE.fullmatch(element.get("r", ""))
+                column = _column_number(reference.group(1)) if reference else column + 1
+                stored = element.find(f"{_XLSX_MAIN}v")
+                if element.find(f"{_XLSX_MAIN}f") is not None and (
+                    stored is None or (not stored.text and element.get("t") != "str")
+                ):
+                    uncalculated.add((row, column))
+            elif tag == f"{_XLSX_MAIN}row" and sheet_data is not None:
+                sheet_data.clear()  # done with the row: memory stays flat
+            elif tag == f"{_XLSX_MAIN}mergeCell":
+                bounds = _range_bounds(element.get("ref", ""))
+                if bounds:
+                    merged.append(bounds)
+        return merged, uncalculated
+
+    @classmethod
+    def _sheet_rows(
+        cls,
+        value_sheet: Any,
+        formula_sheet: Any,
+        layout: tuple[list[tuple[int, int, int, int]], set[tuple[int, int]]],
+        budget: _MergeBudget,
+    ) -> list[str]:
+        """A sheet's rows, labelled with its name and headers."""
+        merged, uncalculated = layout
+        pending: dict[int, list[int]] = {}
+        for row_number, column_number in uncalculated:
+            pending.setdefault(row_number, []).append(column_number)
+        for sheet in (value_sheet, formula_sheet):
+            if sheet is not None:
+                # Read every row, whatever the file's recorded dimensions say:
+                # files written by other tools often record them wrongly.
+                sheet.reset_dimensions()
+
+        value_rows = value_sheet.iter_rows(values_only=True)
+        pairs: Any
+        if formula_sheet is not None and pending:
+            pairs = zip(
+                value_rows, formula_sheet.iter_rows(values_only=True), strict=True
+            )
+        else:
+            pairs = ((value_row, ()) for value_row in value_rows)
+
+        # Rows with content, by row number (counting from 1, as openpyxl
+        # yields an empty row for each one the file leaves out).
+        grid: dict[int, list[Any]] = {}
+        for row_number, (value_row, formula_row) in enumerate(pairs, start=1):
+            row = list(value_row)
+            for column_number in pending.get(row_number, ()):
+                if column_number <= len(formula_row):
+                    formula = formula_row[column_number - 1]
+                    text = getattr(
+                        formula, "text", formula
+                    )  # an array formula keeps its text there
+                    if isinstance(text, str) and text:
+                        row.extend([None] * (column_number - len(row)))
+                        if row[column_number - 1] is None:
+                            row[column_number - 1] = text
+            if any(value is not None for value in row):
+                grid[row_number] = row
+
+        numbers = sorted(grid)
+        cls._fill_merged(grid, numbers, merged, budget)
+
+        title = value_sheet.title
+        header: list[str] | None = None
+        rows: list[str] = []
+        for row_number in numbers:
+            cells = cls._row_texts(grid[row_number], budget)
+            if header is None:
+                if any(cells):
+                    header_cells = cells
+                    header = [cell[:_HEADER_LABEL_LIMIT] for cell in cells]
+                continue
+            labelled = [
+                f"{header[i] if i < len(header) and header[i] else cls._column_letter(i)}: {cell}"
+                for i, cell in enumerate(cells)
+                if cell
+            ]
+            if labelled:
+                rows.append(f"{title} | " + ", ".join(labelled))
+        if header is not None and not rows:
+            rows.append(
+                f"{title} | " + ", ".join(cell for cell in header_cells if cell)
+            )
+        return rows
+
+    @classmethod
+    def _fill_merged(
+        cls,
+        grid: dict[int, list[Any]],
+        numbers: list[int],
+        merged: list[tuple[int, int, int, int]],
+        budget: _MergeBudget,
+    ) -> None:
+        """Repeat each merged range's value into its other cells, in the rows
+        that have content of their own, while the budget's cells last."""
+        for first_row, first_column, last_row, last_column in merged:
+            if budget.cells <= 0:
+                return
+            top = grid.get(first_row)
+            if top is None or first_column > len(top) or top[first_column - 1] is None:
+                continue
+            first = top[first_column - 1]
+            repeated = _Repeated(
+                first.text if isinstance(first, _Repeated) else cls._cell_text(first)
+            )
+            # Positions, not a slice, so a tall range costs only the rows it visits.
+            for position in range(
+                bisect.bisect_left(numbers, first_row),
+                bisect.bisect_right(numbers, last_row),
+            ):
+                row = grid[numbers[position]]
+                for index in range(first_column - 1, last_column):
+                    # Each cell visited counts, as does padding a short row out to it.
+                    budget.cells -= max(index + 1 - len(row), 1)
+                    if budget.cells < 0:
+                        return
+                    if index >= len(row):
+                        row.extend([None] * (index + 1 - len(row)))
+                    if row[index] is None:
+                        row[index] = repeated
+
+    @classmethod
+    def _row_texts(cls, row: list[Any], budget: _MergeBudget) -> list[str]:
+        """A row's cells as text. A merged range's repeated value counts against
+        the budget's characters, and stays empty once they're spent."""
+        texts = []
+        for value in row:
+            if isinstance(value, _Repeated):
+                budget.characters -= len(value.text)
+                texts.append(value.text if budget.characters >= 0 else "")
+            else:
+                texts.append(cls._cell_text(value))
+        return texts
+
+    @staticmethod
+    def _cell_text(value: Any) -> str:
+        """A cell's value as text on one line: whole numbers without ".0", a
+        date without a midnight time, a formula as its text."""
+        if value is None:
+            return ""
+        value = getattr(value, "text", value)  # an array formula keeps its text there
+        if isinstance(value, float) and value.is_integer():
+            value = int(value)
+        elif isinstance(value, datetime.datetime):
+            value = value.isoformat(sep=" ").removesuffix(" 00:00:00")
+        elif isinstance(value, (datetime.date, datetime.time)):
+            value = value.isoformat()
+        return " ".join(str(value).split())
+
+    @staticmethod
+    def _column_letter(index: int) -> str:
+        """Excel's letter for a zero-based column index: 0 is A, 26 is AA."""
+        letters = ""
+        number = index + 1
+        while number:
+            number, remainder = divmod(number - 1, 26)
+            letters = chr(ord("A") + remainder) + letters
+        return letters
 
     def _extract_powerpoint(self, file_path: str) -> Any:
         """Extract text from PowerPoint files"""

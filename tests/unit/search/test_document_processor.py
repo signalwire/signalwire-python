@@ -790,23 +790,216 @@ class TestFileExtraction:
 
     # ── XLSX (Excel) ─────────────────────────────────────────────────
 
-    def test_extract_excel_success(self) -> None:
-        mock_lwb = MagicMock()
-        mock_sheet = Mock()
-        mock_sheet.iter_rows.return_value = [
-            ("Name", "Age"),
-            ("Alice", 30),
-            (None, "Bob"),
-        ]
-        mock_wb = Mock(); mock_wb.worksheets = [mock_sheet]
-        mock_lwb.return_value = mock_wb
+    @staticmethod
+    def _excel_mocks(value_rows: list[tuple[Any, ...]], formula_rows: list[tuple[Any, ...]]) -> tuple[MagicMock, Mock, Mock]:
+        """load_workbook returning a values workbook and a formulas workbook, one sheet each."""
+        def workbook(rows: list[tuple[Any, ...]]) -> Mock:
+            sheet = Mock()
+            sheet.title = "Prices"
+            sheet.iter_rows.return_value = rows
+            return Mock(worksheets=[sheet])
 
-        with patch.dict(sys.modules, {"openpyxl": Mock(load_workbook=mock_lwb)}):
+        values, formulas = workbook(value_rows), workbook(formula_rows)
+
+        def load_workbook(path: str, read_only: bool = False, data_only: bool = False) -> Mock:
+            assert read_only, "workbooks are read streaming"
+            return values if data_only else formulas
+
+        return MagicMock(side_effect=load_workbook), values, formulas
+
+    def test_extract_excel_labels_each_row_with_its_sheet_and_headers(self) -> None:
+        value_rows = [("Plan", "Price", None), ("Pro", 40.0, None), (None, None, None), ("Team", None, "yearly")]
+        formula_rows = [("Plan", "Price", None), ("Pro", 40.0, None), (None, None, None), ("Team", "=B2*2", "yearly")]
+        load_workbook, values, formulas = self._excel_mocks(value_rows, formula_rows)
+        # B4's formula was never calculated
+        layouts: list[tuple[list[tuple[int, int, int, int]], set[tuple[int, int]]]] = [([], {(4, 2)})]
+        with patch.dict(sys.modules, {"openpyxl": Mock(load_workbook=load_workbook)}), \
+                patch.object(DocumentProcessor, "_sheet_layouts", return_value=layouts):
             result = self.processor._extract_excel("/fake/data.xlsx")
-        assert "Name" in result
-        assert "Alice" in result
-        assert "30" in result  # integers become str
-        assert "Bob" in result
+        # A blank row is left out, the formula keeps its text, and a cell with
+        # no header is labelled with its column letter.
+        assert result == ["Prices | Plan: Pro, Price: 40", "Prices | Plan: Team, Price: =B2*2, C: yearly"]
+        for workbook in (values, formulas):
+            workbook.close.assert_called_once_with()
+            workbook.worksheets[0].reset_dimensions.assert_called_once_with()
+
+    def test_extract_excel_reads_formulas_only_when_one_was_never_calculated(self) -> None:
+        load_workbook, values, formulas = self._excel_mocks([("Plan",), ("Pro",)], [])
+        with patch.dict(sys.modules, {"openpyxl": Mock(load_workbook=load_workbook)}), \
+                patch.object(DocumentProcessor, "_sheet_layouts", return_value=[([], set())]):
+            assert self.processor._extract_excel("/fake/data.xlsx") == ["Prices | Plan: Pro"]
+        assert load_workbook.call_count == 1
+        values.close.assert_called_once_with()
+
+    def test_extract_excel_closes_its_workbooks_when_reading_fails(self) -> None:
+        load_workbook, values, formulas = self._excel_mocks([], [])
+        formulas.worksheets[0].iter_rows.side_effect = OSError("truncated archive")
+        with patch.dict(sys.modules, {"openpyxl": Mock(load_workbook=load_workbook)}), \
+                patch.object(DocumentProcessor, "_sheet_layouts", return_value=[([], {(1, 1)})]):
+            with pytest.raises(DocumentExtractionError, match="Error processing Excel"):
+                self.processor._extract_excel("/fake/data.xlsx")
+        values.close.assert_called_once_with()
+        formulas.close.assert_called_once_with()
+
+    @staticmethod
+    def _rewrite_sheet(path: Path, old: str, new: str, part: str = "xl/worksheets/sheet1.xml") -> None:
+        """Edit one XML part of a saved workbook, as another tool would have written it."""
+        import zipfile
+
+        with zipfile.ZipFile(path) as archive:
+            parts = {name: archive.read(name) for name in archive.namelist()}
+        text = parts[part].decode()
+        assert text.count(old) == 1, text
+        parts[part] = text.replace(old, new).encode()
+        with zipfile.ZipFile(path, "w") as archive:
+            for name, data in parts.items():
+                archive.writestr(name, data)
+
+    def test_extract_excel_reads_a_real_workbook(self, tmp_path: Path) -> None:
+        openpyxl = pytest.importorskip("openpyxl")
+        import datetime
+
+        workbook = openpyxl.Workbook()
+        prices = workbook.active
+        prices.title = "Prices"
+        prices.append(["Plan", "Billing", "Price", "Since"])
+        prices.append(["Pro", "monthly", 40, datetime.datetime(2026, 1, 5)])
+        prices.append([None, "yearly", "=C2*10", None])  # written by a script, so never calculated
+        prices.merge_cells("A2:A3")  # one plan, two billing rows
+        prices.append(["Note:\nexcludes tax", None, None, None])
+        workbook.create_sheet("Notes").append(["Prices exclude tax."])
+        path = tmp_path / "prices.xlsx"
+        workbook.save(path)
+
+        rows = self.processor.extract_text(str(path))
+        assert rows == [
+            "Prices | Plan: Pro, Billing: monthly, Price: 40, Since: 2026-01-05",
+            "Prices | Plan: Pro, Billing: yearly, Price: =C2*10",
+            "Prices | Plan: Note: excludes tax",
+            "Notes | Prices exclude tax.",
+        ]
+        chunks = DocumentProcessor(chunking_strategy="page").create_chunks(rows, "prices.xlsx", "xlsx")
+        assert [c["content"] for c in chunks] == rows
+
+    def test_extract_excel_uses_stored_formula_values(self, tmp_path: Path) -> None:
+        openpyxl = pytest.importorskip("openpyxl")
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = "Prices"
+        sheet.append(['=IF(TRUE,"","report")'])
+        sheet.append(["Plan", "Price"])
+        sheet.append(["Pro", "=20*2"])
+        path = tmp_path / "calculated.xlsx"
+        workbook.save(path)
+        # As Excel saves them: a stored empty string, and a stored number.
+        self._rewrite_sheet(path, '<c r="A1"><f>IF(TRUE,"","report")</f><v></v></c>',
+                            '<c r="A1" t="str"><f>IF(TRUE,"","report")</f><v></v></c>')
+        self._rewrite_sheet(path, "<f>20*2</f><v></v>", "<f>20*2</f><v>40</v>")
+
+        # The calculated blank stays blank, so the real headers label the row.
+        assert self.processor._extract_excel(str(path)) == ["Prices | Plan: Pro, Price: 40"]
+
+    def test_merged_cells_have_a_fill_limit(self, tmp_path: Path) -> None:
+        openpyxl = pytest.importorskip("openpyxl")
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = "Wide"
+        sheet.append(["Group", "Item"])
+        sheet.append(["All", "first"])
+        for n in range(3, 6):
+            sheet.cell(row=n, column=2, value=f"item {n}")
+        sheet.merge_cells("A2:XFD5")  # a tiny file whose merge spans every column
+        path = tmp_path / "wide.xlsx"
+        workbook.save(path)
+        with patch("signalwire.search.document_processor._MERGE_FILL_CELLS", 20):
+            rows = self.processor.extract_text(str(path))
+        assert len(" ".join(rows)) < 2000
+        assert rows[0].startswith("Wide | Group: All")
+
+    def test_a_long_merged_value_is_repeated_only_within_the_character_limit(self, tmp_path: Path) -> None:
+        openpyxl = pytest.importorskip("openpyxl")
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = "Notes"
+        sheet.append(["Group", "Item"])
+        sheet.append(["x" * 5000, "item 2"])
+        for n in range(3, 51):
+            sheet.cell(row=n, column=2, value=f"item {n}")
+        sheet.merge_cells("A2:A50")
+        path = tmp_path / "long.xlsx"
+        workbook.save(path)
+        with patch("signalwire.search.document_processor._MERGE_FILL_CHARACTERS", 20_000):
+            rows = self.processor.extract_text(str(path))
+        # The stored cell, then four repeats; after that the merged cells stay empty.
+        assert sum("x" * 5000 in row for row in rows) == 5
+        assert len(rows) == 49 and rows[-1] == "Notes | Item: item 50"
+
+    def test_sheets_with_the_same_name_keep_their_own_formulas(self, tmp_path: Path) -> None:
+        openpyxl = pytest.importorskip("openpyxl")
+        workbook = openpyxl.Workbook()
+        first = workbook.active
+        first.title = "Prices"
+        first.append(["Plan", "Price"])
+        first.append(["Pro", "=20*2"])  # never calculated
+        second = workbook.create_sheet("Other")
+        second.append(["Plan", "Price"])
+        second.append(["Team", 90])
+        path = tmp_path / "twins.xlsx"
+        workbook.save(path)
+        self._rewrite_sheet(path, 'name="Other"', 'name="Prices"', part="xl/workbook.xml")
+        assert self.processor._extract_excel(str(path)) == [
+            "Prices | Plan: Pro, Price: =20*2",
+            "Prices | Plan: Team, Price: 90",
+        ]
+
+    def test_a_dialog_sheet_is_listed_as_openpyxl_lists_it(self, tmp_path: Path) -> None:
+        openpyxl = pytest.importorskip("openpyxl")
+        import zipfile
+
+        workbook = openpyxl.Workbook()
+        workbook.active.title = "Prices"
+        workbook.active.append(["Plan", "Price"])
+        workbook.active.append(["Pro", 40])
+        path = tmp_path / "dialog.xlsx"
+        workbook.save(path)
+        dialog_type = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/dialogsheet"
+        relationships = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+        self._rewrite_sheet(path, "</sheets>",
+                            f'<sheet xmlns:r="{relationships}" name="Dialog1" sheetId="2" r:id="rIdDialog"/></sheets>',
+                            part="xl/workbook.xml")
+        self._rewrite_sheet(path, "</Relationships>",
+                            f'<Relationship Id="rIdDialog" Type="{dialog_type}" Target="dialogsheets/sheet1.xml"/>'
+                            "</Relationships>", part="xl/_rels/workbook.xml.rels")
+        with zipfile.ZipFile(path, "a") as archive:
+            archive.writestr("xl/dialogsheets/sheet1.xml",
+                             '<dialogsheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+                             "<sheetData/></dialogsheet>")
+        assert self.processor._extract_excel(str(path)) == ["Prices | Plan: Pro, Price: 40"]
+
+    def test_without_openpyxls_sheet_paths_rows_still_come_back(self, tmp_path: Path) -> None:
+        openpyxl = pytest.importorskip("openpyxl")
+        workbook = openpyxl.Workbook()
+        workbook.active.title = "Prices"
+        workbook.active.append(["Plan", "Price"])
+        path = tmp_path / "plain.xlsx"
+        workbook.save(path)
+        sheet = Mock(spec=["title"])
+        sheet.title = "Prices"
+        assert DocumentProcessor._sheet_layouts(str(path), [sheet]) == [([], set())]
+
+    def test_a_long_header_is_cut_as_a_label(self, tmp_path: Path) -> None:
+        openpyxl = pytest.importorskip("openpyxl")
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = "S"
+        sheet.append(["h" * 300])
+        sheet.append(["value"])
+        path = tmp_path / "header.xlsx"
+        workbook.save(path)
+        assert self.processor.extract_text(str(path)) == ["S | " + "h" * 100 + ": value"]
+
+    def test_column_letters(self) -> None:
+        assert [DocumentProcessor._column_letter(i) for i in (0, 25, 26, 701, 702)] == ["A", "Z", "AA", "ZZ", "AAA"]
 
     def test_extract_excel_missing_dependency(self) -> None:
         with patch.dict(sys.modules, {"openpyxl": None}):
