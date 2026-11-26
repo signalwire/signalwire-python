@@ -173,6 +173,173 @@ def _range_bounds(reference: str) -> tuple[int, int, int, int] | None:
     return min(rows), min(columns), max(rows), max(columns)
 
 
+_HTML_HEADINGS = {"h1", "h2", "h3", "h4", "h5", "h6"}
+# Elements whose text is a paragraph of its own in Markdown
+_HTML_BLOCKS = {
+    "p", "div", "li", "td", "th", "pre", "blockquote", "section", "article",
+    "main", "aside", "figure", "figcaption", "dd", "dt", "address", "body",
+    "ul", "ol", "dl", "table", "tr", "thead", "tbody", "tfoot", "form",
+}  # fmt: skip
+
+
+def _table_text(rows: list[list[str]], as_markdown: bool) -> str:
+    """A table's rows: a Markdown table (its first row the header), or a line
+    per row with its cells separated by " | "."""
+    if not as_markdown:
+        return "\n".join(" | ".join(cell for cell in row if cell) for row in rows)
+    width = max(len(row) for row in rows)
+    cells = [
+        [cell.replace("|", "\\|") for cell in row] + [""] * (width - len(row))
+        for row in rows
+    ]
+    lines = ["| " + " | ".join(cells[0]) + " |", "|" + " --- |" * width]
+    lines.extend("| " + " | ".join(row) + " |" for row in cells[1:])
+    return "\n".join(lines)
+
+
+def _docx_heading_level(paragraph: Any) -> int:
+    """A paragraph's heading level from its style (Title and Heading 1 are 1),
+    or 0 for a paragraph that isn't a heading."""
+    style = getattr(paragraph, "style", None)
+    name = getattr(style, "name", "") or ""
+    if name == "Title":
+        return 1
+    match = re.fullmatch(r"Heading ([1-9])", name)
+    return int(match.group(1)) if match else 0
+
+
+def _docx_markdown(paragraph: Any, text: str, level: int) -> str:
+    """A Word paragraph as Markdown: a heading, a list item, or as written."""
+    if level:
+        return "#" * min(level, 6) + " " + " ".join(text.split())
+    name = getattr(getattr(paragraph, "style", None), "name", "") or ""
+    properties = getattr(paragraph._p, "pPr", None)
+    numbered = properties is not None and getattr(properties, "numPr", None) is not None
+    if name.startswith("List Number"):
+        return "1. " + text.strip()
+    if name.startswith("List") or numbered:
+        return "- " + text.strip()
+    return text
+
+
+def _docx_table_rows(table: Any) -> list[list[str]]:
+    """A Word table's rows of cell text; a merged cell counts once, and an
+    empty row is left out."""
+    rows = []
+    for row in table.rows:
+        cells: list[str] = []
+        previous = None
+        for cell in row.cells:
+            if cell._tc is previous:  # a merged cell repeats across its span
+                continue
+            previous = cell._tc
+            cells.append(" ".join(cell.text.split()))
+        if any(cells):
+            rows.append(cells)
+    return rows
+
+
+def _pptx_shape_texts(shape: Any, as_markdown: bool) -> list[str]:
+    """A slide shape's texts: a group's shapes in turn, a table's rows, or the
+    shape's own text."""
+    if hasattr(shape, "shapes"):  # a group
+        texts: list[str] = []
+        for inner in shape.shapes:
+            texts.extend(_pptx_shape_texts(inner, as_markdown))
+        return texts
+    if getattr(shape, "has_table", False):
+        rows = []
+        for row in shape.table.rows:
+            cells = [" ".join(cell.text.split()) for cell in row.cells]
+            if any(cells):
+                rows.append(cells)
+        return [_table_text(rows, as_markdown)] if rows else []
+    if hasattr(shape, "text"):
+        return [shape.text]
+    return []
+
+
+def _html_text_sections(soup: Any) -> list[tuple[list[str], list[str]]]:
+    """An HTML page's strings, as get_text() gives them, in sections that
+    start at each heading: (heading path, strings) pairs."""
+    from bs4.element import CData, NavigableString, Tag
+
+    sections: list[tuple[list[str], list[str]]] = [([], [])]
+    headings: list[str] = []
+    for node in soup.descendants:
+        if isinstance(node, Tag) and node.name in _HTML_HEADINGS:
+            level = int(node.name[1])
+            headings = [*headings[: level - 1], " ".join(node.get_text(" ").split())]
+            sections.append((list(headings), []))
+        elif type(node) in (NavigableString, CData):
+            sections[-1][1].append(str(node))
+    return sections
+
+
+def _html_markdown_sections(soup: Any) -> list[tuple[list[str], list[str]]]:
+    """An HTML page as Markdown blocks, in sections that start at each
+    heading: (heading path, blocks) pairs."""
+    from bs4.element import NavigableString, Tag
+
+    sections: list[tuple[list[str], list[str]]] = [([], [])]
+    headings: list[str] = []
+
+    def words(node: Any) -> str:
+        return " ".join(node.get_text(" ").split())
+
+    def walk(node: Any) -> None:
+        inline: list[str] = []
+
+        def flush() -> None:
+            text = " ".join(" ".join(inline).split())
+            if text:
+                sections[-1][1].append(text)
+            inline.clear()
+
+        for child in node.children:
+            if isinstance(child, Tag):
+                name = child.name
+                if name in _HTML_HEADINGS:
+                    flush()
+                    nonlocal headings
+                    level = int(name[1])
+                    headings = [*headings[: level - 1], words(child)]
+                    sections.append(
+                        (list(headings), ["#" * level + " " + words(child)])
+                    )
+                elif name == "table":
+                    flush()
+                    rows = [
+                        [words(cell) for cell in row.find_all(["th", "td"])]
+                        for row in child.find_all("tr")
+                    ]
+                    rows = [row for row in rows if any(row)]
+                    if rows:
+                        sections[-1][1].append(_table_text(rows, True))
+                elif name == "li":
+                    flush()
+                    marker = (
+                        "1."
+                        if child.parent is not None and child.parent.name == "ol"
+                        else "-"
+                    )
+                    if words(child):
+                        sections[-1][1].append(f"{marker} {words(child)}")
+                elif name in _HTML_BLOCKS or child.find(
+                    list(_HTML_BLOCKS | _HTML_HEADINGS)
+                ):
+                    flush()
+                    walk(child)
+                else:
+                    inline.append(child.get_text(" "))
+            elif type(child) is NavigableString:
+                inline.append(str(child))
+        flush()
+
+    walk(soup)
+    return sections
+
+
 class DocumentExtractionError(ValueError):
     """A file's text couldn't be extracted: its type isn't supported, the
     library its type needs isn't installed, or reading it failed."""
@@ -347,11 +514,14 @@ class DocumentProcessor:
         """
         Extract a file's text, by its type, ready for create_chunks().
 
-        A PDF comes back as a list of pages, a Word document as a list of
-        paragraphs, a PowerPoint deck as a list of slides and an Excel workbook
-        as a list of rows; anything else as one string. HTML loses its markup,
-        scripts and styles. Markdown comes back as written, so the markdown
-        chunking strategy can read its headers.
+        A PDF comes back as a list of pages, a Word document as a list of its
+        paragraphs and tables, a PowerPoint deck as a list of slides (with
+        grouped shapes, tables and speaker notes) and an Excel workbook as a
+        list of rows; anything else as one string. HTML loses its markup,
+        scripts, styles, navigation, headers and footers. Under the markdown
+        strategy, a Word document, a slide and an HTML page come back as
+        Markdown: headings, lists and tables. A Markdown file comes back as
+        written, so the markdown chunking strategy can read its headers.
 
         Args:
             file_path: The file to read.
@@ -405,16 +575,68 @@ class DocumentProcessor:
         except Exception as e:
             raise DocumentExtractionError(f"Error processing PDF: {e}") from e
 
-    def _extract_docx(self, file_path: str) -> Any:
-        """Extract text from DOCX files"""
+    def _extract_docx(self, file_path: str) -> list[str]:
+        """A Word document's paragraphs and tables, in order; see _docx_units."""
+        return [unit["text"] for unit in self._docx_units(file_path)]
+
+    def _docx_units(self, file_path: str) -> list[dict[str, Any]]:
+        """A Word document's paragraphs and tables in document order, each with
+        its anchor: ``{"paragraph": n, "headings": [...]}``, where n counts the
+        body's paragraphs from 1, or ``{"table": n, "headings": [...]}``, with
+        the path of the Heading-styled paragraphs above it.
+
+        A paragraph comes back as written and a table as one line per row,
+        its cells separated by " | ". Under the markdown strategy, headings
+        come back as Markdown headings, list items as list items and tables as
+        Markdown tables, so the strategy splits on them.
+        """
         if DocxDocument is None:
             raise DocumentExtractionError(
                 "python-docx not available for DOCX processing"
             )
 
         try:
+            from docx.table import Table
+            from docx.text.paragraph import Paragraph
+
             doc = DocxDocument(file_path)
-            return [para.text for para in doc.paragraphs if para.text.strip()]
+            as_markdown = self.chunking_strategy == "markdown"
+            units: list[dict[str, Any]] = []
+            headings: list[str] = []
+            paragraphs = tables = 0
+            for child in doc.element.body.iterchildren():
+                kind = str(child.tag).rsplit("}", 1)[-1]
+                if kind == "p":
+                    paragraphs += 1
+                    paragraph = Paragraph(child, doc)
+                    text = paragraph.text
+                    if not text.strip():
+                        continue
+                    level = _docx_heading_level(paragraph)
+                    if level:
+                        headings = [*headings[: level - 1], " ".join(text.split())]
+                    if as_markdown:
+                        text = _docx_markdown(paragraph, text, level)
+                    units.append(
+                        {
+                            "text": text,
+                            "anchor": {
+                                "paragraph": paragraphs,
+                                "headings": list(headings),
+                            },
+                        }
+                    )
+                elif kind == "tbl":
+                    tables += 1
+                    rows = _docx_table_rows(Table(child, doc))
+                    if rows:
+                        units.append(
+                            {
+                                "text": _table_text(rows, as_markdown),
+                                "anchor": {"table": tables, "headings": list(headings)},
+                            }
+                        )
+            return units
         except Exception as e:
             raise DocumentExtractionError(f"Error processing DOCX: {e}") from e
 
@@ -429,7 +651,21 @@ class DocumentProcessor:
             raise DocumentExtractionError(f"Error processing TXT: {e}") from e
 
     def _extract_html(self, file_path: str) -> str:
-        """Extract text from HTML files"""
+        """An HTML page's text, its sections joined; see _html_units."""
+        separator = "\n\n" if self.chunking_strategy == "markdown" else "\n"
+        return separator.join(unit["text"] for unit in self._html_units(file_path))
+
+    def _html_units(self, file_path: str) -> list[dict[str, Any]]:
+        """An HTML page's sections, split at its headings, each with its
+        anchor ``{"section": n, "headings": [...]}``: n counts the sections
+        with text from 1, and headings is the path of h1-h6 headings above.
+
+        Scripts, styles, navigation, headers and footers are left out. A
+        section's text is its strings, one per line, as BeautifulSoup's
+        get_text() gives them. Under the markdown strategy, headings come back
+        as Markdown headings, list items as list items, tables as Markdown
+        tables and each block as a paragraph.
+        """
         if BeautifulSoup is None:
             raise DocumentExtractionError(
                 "beautifulsoup4 not available for HTML processing"
@@ -440,11 +676,28 @@ class DocumentProcessor:
                 file_path, encoding="utf-8"
             ) as file:
                 soup = BeautifulSoup(file, "html.parser")
-                # Their text is code and styling, not the page's content
-                for tag in soup(["script", "style", "noscript", "template"]):
-                    tag.decompose()
-                text: str = soup.get_text(separator="\n")
-                return text
+            # Code, styling and the site's own navigation, not the page's content
+            for tag in soup(
+                ["script", "style", "noscript", "template", "nav", "header", "footer"]
+            ):
+                tag.decompose()
+            if self.chunking_strategy == "markdown":
+                sections = _html_markdown_sections(soup)
+            else:
+                sections = _html_text_sections(soup)
+            units: list[dict[str, Any]] = []
+            for headings, pieces in sections:
+                text = ("\n\n" if self.chunking_strategy == "markdown" else "\n").join(
+                    pieces
+                )
+                if text.strip():
+                    units.append(
+                        {
+                            "text": text,
+                            "anchor": {"section": len(units) + 1, "headings": headings},
+                        }
+                    )
+            return units
         except Exception as e:
             raise DocumentExtractionError(f"Error processing HTML: {e}") from e
 
@@ -755,22 +1008,51 @@ class DocumentProcessor:
             letters = chr(ord("A") + remainder) + letters
         return letters
 
-    def _extract_powerpoint(self, file_path: str) -> Any:
-        """Extract text from PowerPoint files"""
+    def _extract_powerpoint(self, file_path: str) -> list[str]:
+        """A PowerPoint deck's slides, one entry each; see _pptx_units."""
+        return [unit["text"] for unit in self._pptx_units(file_path)]
+
+    def _pptx_units(self, file_path: str) -> list[dict[str, Any]]:
+        """A PowerPoint deck's slides, one unit each (``""`` for a slide
+        without text), with the anchor ``{"slide": n}``.
+
+        A slide's text is each shape's, one per line, in the slide's order,
+        including the shapes inside groups and tables (a row per line, its
+        cells separated by " | "), then its speaker notes after "Notes: ".
+        Under the markdown strategy, the slide's title comes first as a
+        heading, tables come back as Markdown tables, and each shape's text
+        is a paragraph.
+        """
         if Presentation is None:
             raise DocumentExtractionError(
                 "python-pptx not available for PowerPoint processing"
             )
 
         try:
-            prs = Presentation(file_path)
-            slides_text = []
-            for slide in prs.slides:
-                slide_text = [
-                    shape.text for shape in slide.shapes if hasattr(shape, "text")
-                ]
-                slides_text.append("\n".join(slide_text))
-            return slides_text
+            as_markdown = self.chunking_strategy == "markdown"
+            units: list[dict[str, Any]] = []
+            for number, slide in enumerate(Presentation(file_path).slides, start=1):
+                parts: list[str] = []
+                title = slide.shapes.title
+                title_id = None
+                if as_markdown and title is not None and title.text.strip():
+                    parts.append("# " + " ".join(title.text.split()))
+                    title_id = title.shape_id
+                for shape in slide.shapes:
+                    if title_id is not None and shape.shape_id == title_id:
+                        continue
+                    parts.extend(_pptx_shape_texts(shape, as_markdown))
+                if slide.has_notes_slide:
+                    frame = slide.notes_slide.notes_text_frame
+                    notes = frame.text.strip() if frame is not None else ""
+                    if notes:
+                        parts.append(f"Notes: {notes}")
+                if as_markdown:
+                    text = "\n\n".join(part for part in parts if part.strip())
+                else:
+                    text = "\n".join(parts)
+                units.append({"text": text, "anchor": {"slide": number}})
+            return units
         except Exception as e:
             raise DocumentExtractionError(f"Error processing PowerPoint: {e}") from e
 

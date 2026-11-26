@@ -464,24 +464,15 @@ class TestDocumentProcessorSpecificExtractors:
             self.processor._extract_docx("test.docx")
         
     
-    @patch('signalwire.search.document_processor.DocxDocument')
-    def test_extract_docx_success(self, mock_docx: MagicMock) -> None:
-        """Test successful DOCX extraction"""
-        mock_para1 = Mock()
-        mock_para1.text = "Paragraph 1"
-        mock_para2 = Mock()
-        mock_para2.text = "Paragraph 2"
-        mock_para3 = Mock()
-        mock_para3.text = ""  # Empty paragraph should be filtered
-        
-        mock_doc = Mock()
-        mock_doc.paragraphs = [mock_para1, mock_para2, mock_para3]
-        mock_docx.return_value = mock_doc
-        
-        result = self.processor._extract_docx("test.docx")
-        
-        assert result == ["Paragraph 1", "Paragraph 2"]
-    
+    def test_extract_docx_success(self, tmp_path: Path) -> None:
+        """Paragraphs come back as written, and empty ones are left out"""
+        docx = pytest.importorskip("docx")
+        document = docx.Document()
+        for text in ("Paragraph 1", "", "Paragraph 2"):
+            document.add_paragraph(text)
+        document.save(str(tmp_path / "test.docx"))
+        assert self.processor._extract_docx(str(tmp_path / "test.docx")) == ["Paragraph 1", "Paragraph 2"]
+
     @patch('signalwire.search.document_processor.DocxDocument')
     def test_extract_docx_error(self, mock_docx: MagicMock) -> None:
         """Test DOCX extraction with error"""
@@ -512,18 +503,13 @@ class TestDocumentProcessorSpecificExtractors:
             self.processor._extract_html("test.html")
         
     
-    @patch('signalwire.search.document_processor.BeautifulSoup')
-    def test_extract_html_success(self, mock_bs: MagicMock) -> None:
-        """Test successful HTML extraction"""
-        mock_soup = Mock(return_value=[])
-        mock_soup.get_text.return_value = "HTML content"
-        mock_bs.return_value = mock_soup
-        
-        with patch('builtins.open', mock_open(read_data="<html><body>HTML content</body></html>")):
-            result = self.processor._extract_html("test.html")
-            
-            assert result == "HTML content"
-    
+    def test_extract_html_success(self, tmp_path: Path) -> None:
+        """An HTML page's text, without its markup"""
+        pytest.importorskip("bs4")
+        page = tmp_path / "page.html"
+        page.write_text("<html><body><p>Hello World</p></body></html>", encoding="utf-8")
+        assert self.processor._extract_html(str(page)) == "Hello World"
+
     @patch('signalwire.search.document_processor.markdown', None)
     def test_extract_markdown_no_library(self) -> None:
         """Test Markdown extraction without markdown library"""
@@ -768,14 +754,14 @@ class TestFileExtraction:
 
     # ── DOCX ─────────────────────────────────────────────────────────
 
-    @patch('signalwire.search.document_processor.DocxDocument')
-    def test_extract_docx_filters_empty_paragraphs(self, mock_docx_cls: MagicMock) -> None:
-        p1 = Mock(text="Hello"); p2 = Mock(text=""); p3 = Mock(text="World")
-        mock_doc = Mock(); mock_doc.paragraphs = [p1, p2, p3]
-        mock_docx_cls.return_value = mock_doc
-
-        result = self.processor._extract_docx("/fake/doc.docx")
-        assert result == ["Hello", "World"]
+    def test_extract_docx_filters_empty_paragraphs(self, tmp_path: Path) -> None:
+        """Paragraphs come back as written, and empty ones are left out"""
+        docx = pytest.importorskip("docx")
+        document = docx.Document()
+        for text in ("Paragraph 1", "", "Paragraph 2"):
+            document.add_paragraph(text)
+        document.save(str(tmp_path / "test.docx"))
+        assert self.processor._extract_docx(str(tmp_path / "test.docx")) == ["Paragraph 1", "Paragraph 2"]
 
     @patch('signalwire.search.document_processor.DocxDocument', None)
     def test_extract_docx_missing_dependency(self) -> None:
@@ -1025,21 +1011,18 @@ class TestFileExtraction:
 
     # ── PPTX (PowerPoint) ────────────────────────────────────────────
 
-    @patch('signalwire.search.document_processor.Presentation')
-    def test_extract_powerpoint_success(self, mock_pres_cls: MagicMock) -> None:
-        shape1 = Mock(text="Title Slide"); shape1.__class__ = type('S', (), {'text': 'Title Slide'})
-        shape2 = Mock(text="Bullet 1")
-        shape_no_text = Mock(spec=[])  # no 'text' attribute
-        slide1 = Mock(); slide1.shapes = [shape1, shape_no_text]
-        slide2 = Mock(); slide2.shapes = [shape2]
-        mock_pres = Mock(); mock_pres.slides = [slide1, slide2]
-        mock_pres_cls.return_value = mock_pres
-
-        result = self.processor._extract_powerpoint("/fake/pres.pptx")
-        assert isinstance(result, list)
-        assert len(result) == 2
-        assert "Title Slide" in result[0]
-        assert "Bullet 1" in result[1]
+    def test_extract_powerpoint_success(self, tmp_path: Path) -> None:
+        """One entry per slide, with each text shape's text"""
+        pptx = pytest.importorskip("pptx")
+        deck = pptx.Presentation()
+        first = deck.slides.add_slide(deck.slide_layouts[5])
+        first.shapes.title.text = "Title Slide"
+        second = deck.slides.add_slide(deck.slide_layouts[1])
+        second.shapes.title.text = "Bullets"
+        second.placeholders[1].text_frame.text = "Bullet 1"
+        deck.save(str(tmp_path / "pres.pptx"))
+        result = self.processor._extract_powerpoint(str(tmp_path / "pres.pptx"))
+        assert result == ["Title Slide", "Bullets\nBullet 1"]
 
     @patch('signalwire.search.document_processor.Presentation', None)
     def test_extract_powerpoint_missing_dependency(self) -> None:
@@ -1054,13 +1037,12 @@ class TestFileExtraction:
 
     # ── HTML ─────────────────────────────────────────────────────────
 
-    @patch('signalwire.search.document_processor.BeautifulSoup')
-    def test_extract_html_success(self, mock_bs: MagicMock) -> None:
-        mock_soup = Mock(return_value=[]); mock_soup.get_text.return_value = "Hello World"
-        mock_bs.return_value = mock_soup
-        with patch('builtins.open', mock_open(read_data="<p>Hello World</p>")):
-            result = self.processor._extract_html("/fake/page.html")
-        assert result == "Hello World"
+    def test_extract_html_success(self, tmp_path: Path) -> None:
+        """An HTML page's text, without its markup"""
+        pytest.importorskip("bs4")
+        page = tmp_path / "page.html"
+        page.write_text("<html><body><p>Hello World</p></body></html>", encoding="utf-8")
+        assert self.processor._extract_html(str(page)) == "Hello World"
 
     @patch('signalwire.search.document_processor.BeautifulSoup', None)
     def test_extract_html_missing_dependency(self) -> None:
@@ -2014,3 +1996,110 @@ class TestSemanticModel:
 
         builder = IndexBuilder(model_name="sentence-transformers/all-MiniLM-L6-v2", chunking_strategy="semantic")
         assert builder.doc_processor.model_name == "sentence-transformers/all-MiniLM-L6-v2"
+
+
+class TestStructuredDocuments:
+    """Word, PowerPoint and HTML keep all their text, and their structure
+    under the markdown strategy."""
+
+    def _docx(self, tmp_path: Path) -> str:
+        docx = pytest.importorskip("docx")
+        document = docx.Document()
+        document.add_heading("Setup", 1)
+        document.add_paragraph("Plug it in.")
+        document.add_heading("Linux", 2)
+        document.add_paragraph("Install the package.", style="List Bullet")
+        table = document.add_table(rows=2, cols=2)
+        for (row, column), text in {(0, 0): "Plan", (0, 1): "Price", (1, 0): "Pro", (1, 1): "40"}.items():
+            table.cell(row, column).text = text
+        document.add_paragraph("After the table.")
+        path = str(tmp_path / "guide.docx")
+        document.save(path)
+        return path
+
+    def test_a_word_table_is_kept_in_place(self, tmp_path: Path) -> None:
+        units = DocumentProcessor()._docx_units(self._docx(tmp_path))
+        assert [u["text"] for u in units] == [
+            "Setup", "Plug it in.", "Linux", "Install the package.",
+            "Plan | Price\nPro | 40", "After the table.",
+        ]
+        assert units[4]["anchor"] == {"table": 1, "headings": ["Setup", "Linux"]}
+        assert units[5]["anchor"] == {"paragraph": 5, "headings": ["Setup", "Linux"]}
+
+    def test_a_word_document_of_only_a_table(self, tmp_path: Path) -> None:
+        docx = pytest.importorskip("docx")
+        document = docx.Document()
+        table = document.add_table(rows=2, cols=2)
+        table.cell(0, 0).text, table.cell(1, 1).text = "a", "d"
+        document.save(str(tmp_path / "t.docx"))
+        assert DocumentProcessor().extract_text(str(tmp_path / "t.docx")) == ["a\nd"]
+
+    def test_word_structure_as_markdown(self, tmp_path: Path) -> None:
+        texts = DocumentProcessor(chunking_strategy="markdown")._extract_docx(self._docx(tmp_path))
+        assert texts == [
+            "# Setup", "Plug it in.", "## Linux", "- Install the package.",
+            "| Plan | Price |\n| --- | --- |\n| Pro | 40 |", "After the table.",
+        ]
+
+    def _pptx(self, tmp_path: Path) -> str:
+        pptx = pytest.importorskip("pptx")
+        from pptx.util import Inches
+
+        deck = pptx.Presentation()
+        slide = deck.slides.add_slide(deck.slide_layouts[5])
+        slide.shapes.title.text = "Pricing"
+        group = slide.shapes.add_group_shape()
+        group.shapes.add_textbox(Inches(1), Inches(1), Inches(2), Inches(1)).text_frame.text = "Grouped words"
+        table = slide.shapes.add_table(2, 2, Inches(1), Inches(3), Inches(4), Inches(1)).table
+        for (row, column), text in {(0, 0): "Plan", (0, 1): "Price", (1, 0): "Pro", (1, 1): "40"}.items():
+            table.cell(row, column).text = text
+        slide.notes_slide.notes_text_frame.text = "Mention the discount."
+        deck.slides.add_slide(deck.slide_layouts[6])
+        path = str(tmp_path / "deck.pptx")
+        deck.save(path)
+        return path
+
+    def test_a_slide_keeps_groups_tables_and_notes(self, tmp_path: Path) -> None:
+        units = DocumentProcessor()._pptx_units(self._pptx(tmp_path))
+        assert units == [
+            {"text": "Pricing\nGrouped words\nPlan | Price\nPro | 40\nNotes: Mention the discount.",
+             "anchor": {"slide": 1}},
+            {"text": "", "anchor": {"slide": 2}},
+        ]
+
+    def test_a_slide_as_markdown(self, tmp_path: Path) -> None:
+        texts = DocumentProcessor(chunking_strategy="markdown")._extract_powerpoint(self._pptx(tmp_path))
+        assert texts[0] == (
+            "# Pricing\n\nGrouped words\n\n| Plan | Price |\n| --- | --- |\n| Pro | 40 |"
+            "\n\nNotes: Mention the discount."
+        )
+
+    PAGE = (
+        "<html><body><nav>Home | About</nav><header>Site</header><h1>Hours</h1>"
+        "<p>Open <b>9</b> to 5.</p><h2>Holidays</h2><ul><li>Closed Monday</li></ul>"
+        "<table><tr><th>Day</th><th>Hours</th></tr><tr><td>Sat</td><td>10-2</td></tr></table>"
+        "<footer>(c) us</footer></body></html>"
+    )
+
+    def test_html_leaves_out_navigation_headers_and_footers(self, tmp_path: Path) -> None:
+        pytest.importorskip("bs4")
+        page = tmp_path / "hours.html"
+        page.write_text(self.PAGE, encoding="utf-8")
+        processor = DocumentProcessor()
+        text = processor.extract_text(str(page))
+        assert isinstance(text, str) and "Open" in text and "Sat" in text
+        for left_out in ("Home", "Site", "(c) us"):
+            assert left_out not in text
+        assert [u["anchor"] for u in processor._html_units(str(page))] == [
+            {"section": 1, "headings": ["Hours"]},
+            {"section": 2, "headings": ["Hours", "Holidays"]},
+        ]
+
+    def test_html_as_markdown(self, tmp_path: Path) -> None:
+        pytest.importorskip("bs4")
+        page = tmp_path / "hours.html"
+        page.write_text(self.PAGE, encoding="utf-8")
+        assert DocumentProcessor(chunking_strategy="markdown").extract_text(str(page)) == (
+            "# Hours\n\nOpen 9 to 5.\n\n## Holidays\n\n- Closed Monday\n\n"
+            "| Day | Hours |\n| --- | --- |\n| Sat | 10-2 |"
+        )

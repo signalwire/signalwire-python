@@ -96,7 +96,7 @@ builder.build_index(
 
 ### Extracting a File's Text (DocumentProcessor)
 
-`DocumentProcessor.extract_text(path)` reads a file by its type, the way the index builder does, for chunking with `create_chunks()`. A PDF comes back as a list of pages, a Word document as a list of paragraphs and a PowerPoint deck as a list of slides; anything else as one string. HTML loses its markup, scripts and styles, and Markdown comes back as written, so the `markdown` strategy can read its headers. A file it can't read raises `DocumentExtractionError`: a type it doesn't support (an image, or a legacy `.doc`, `.xls` or `.ppt`), a library the type needs that isn't installed, or a read that fails.
+`DocumentProcessor.extract_text(path)` reads a file by its type, the way the index builder does, for chunking with `create_chunks()`. A PDF comes back as a list of pages, a Word document as a list of its paragraphs and tables, a PowerPoint deck as a list of slides (with grouped shapes, tables and speaker notes) and an Excel workbook as a list of rows; anything else as one string. HTML loses its markup, scripts, styles, navigation, headers and footers. With the `markdown` strategy, a Word document, a slide and an HTML page come back as Markdown, with their headings, lists and tables, so the strategy splits on their headings. A Markdown file comes back as written. A file it can't read raises `DocumentExtractionError`: a type it doesn't support (an image, or a legacy `.doc`, `.xls` or `.ppt`), a library the type needs that isn't installed, or a read that fails.
 
 <!-- snippet: no-run reads a file of yours -->
 ```python
