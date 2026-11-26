@@ -306,6 +306,31 @@ class TestIndexBuilderFileProcessing:
         assert "Opening hours" in text and "nine" in text
         assert "<" not in text and "track()" not in text
 
+    def test_process_file_reads_json_raw_for_the_json_strategy(self, tmp_path: Path) -> None:
+        """A .json file reaches the json strategy as written, not as extract_text()'s units"""
+        builder = IndexBuilder(chunking_strategy="json")
+        good = tmp_path / "chunks.json"
+        good.write_text(json.dumps({"chunks": [{"content": "Refunds take five days.",
+                                                "metadata": {"section": "Refunds"}}]}), encoding="utf-8")
+        chunks = builder._process_file(good, str(tmp_path))
+        assert [(c["content"], c["section"]) for c in chunks] == [("Refunds take five days.", "Refunds")]
+
+    def test_process_file_skips_a_malformed_json_chunk_file(self, tmp_path: Path) -> None:
+        """A file out of the chunk format is skipped, not indexed as text"""
+        from signalwire.search import ChunkFormatError
+
+        builder = IndexBuilder(chunking_strategy="json")
+        bad = tmp_path / "chunks.json"
+        bad.write_text(json.dumps({"data": ["not", "chunks"]}), encoding="utf-8")
+        # Skipped because the chunker refuses it, and for no other reason
+        with pytest.raises(ChunkFormatError, match='"chunks" list'):
+            builder.doc_processor.create_chunks(bad.read_text(encoding="utf-8"), "chunks.json", "json")
+        refused = MagicMock(side_effect=ChunkFormatError("refused"))
+        with patch.object(builder.doc_processor, "create_chunks", refused):
+            assert builder._process_file(bad, str(tmp_path)) == []
+        refused.assert_called_once()
+        assert builder._process_file(bad, str(tmp_path)) == []
+
     @patch('pathlib.Path.read_text')
     def test_process_file_unicode_error(self, mock_read_text: MagicMock) -> None:
         """Test file processing with unicode error"""

@@ -19,7 +19,7 @@ from typing import Any
 from unittest.mock import Mock, patch, MagicMock, mock_open
 from pathlib import Path
 
-from signalwire.search.document_processor import DocumentExtractionError, DocumentProcessor
+from signalwire.search.document_processor import ChunkFormatError, DocumentExtractionError, DocumentProcessor
 
 
 class TestDocumentProcessorInit:
@@ -1447,16 +1447,15 @@ class TestChunkingStrategies:
 
     def test_json_chunking_invalid_json(self) -> None:
         proc = DocumentProcessor(chunking_strategy='json')
-        chunks = proc.create_chunks("not valid json {{{", "f.json", "json")
-        # Should fall back to sentence-based
-        assert len(chunks) >= 1
+        # Not chunked as text instead: a malformed file is an error
+        with pytest.raises(ChunkFormatError, match="not valid JSON"):
+            proc.create_chunks("not valid json {{{", "f.json", "json")
 
     def test_json_chunking_missing_chunks_key(self) -> None:
         proc = DocumentProcessor(chunking_strategy='json')
         data = {"data": [1, 2, 3]}
-        chunks = proc.create_chunks(json.dumps(data), "f.json", "json")
-        # Should fall back to sentence-based
-        assert len(chunks) >= 1
+        with pytest.raises(ChunkFormatError, match='"chunks" list'):
+            proc.create_chunks(json.dumps(data), "f.json", "json")
 
     def test_json_chunking_skip_invalid_chunk(self) -> None:
         proc = DocumentProcessor(chunking_strategy='json')
@@ -1467,9 +1466,9 @@ class TestChunkingStrategies:
                 {"chunk_id": "no_content"},  # missing 'content'
             ]
         }
-        chunks = proc.create_chunks(json.dumps(data), "f.json", "json")
-        assert len(chunks) == 1
-        assert "Valid" in chunks[0]['content']
+        # A bad entry fails the file, naming it, rather than vanishing
+        with pytest.raises(ChunkFormatError, match='chunk 1 needs a string "content"'):
+            proc.create_chunks(json.dumps(data), "f.json", "json")
 
     def test_json_chunking_empty_chunks_list(self) -> None:
         proc = DocumentProcessor(chunking_strategy='json')
@@ -2103,3 +2102,359 @@ class TestStructuredDocuments:
             "# Hours\n\nOpen 9 to 5.\n\n## Holidays\n\n- Closed Monday\n\n"
             "| Day | Hours |\n| --- | --- |\n| Sat | 10-2 |"
         )
+
+
+class TestExtractUnits:
+    """extract_units(): each unit's text with where in the file it came from."""
+
+    def setup_method(self) -> None:
+        self.processor = DocumentProcessor()
+
+    @patch('signalwire.search.document_processor.magic', None)
+    def test_pdf_units_number_every_page_and_keep_empty_ones(self) -> None:
+        with patch.object(DocumentProcessor, "_extract_pdf", return_value=["one", "", "three"]):
+            units = self.processor.extract_units("/fake/report.pdf")
+        assert units == [
+            {"text": "one", "anchor": {"page": 1}},
+            {"text": "", "anchor": {"page": 2}},
+            {"text": "three", "anchor": {"page": 3}},
+        ]
+
+    def test_excel_units_carry_their_sheet_and_the_row_excel_shows(self, tmp_path: Path) -> None:
+        openpyxl = pytest.importorskip("openpyxl")
+        workbook = openpyxl.Workbook()
+        prices = workbook.active
+        prices.title = "Prices"
+        prices.append(["Plan", "Price"])
+        prices.append(["Pro", 40])
+        prices.append([])  # a blank row: the next one is still row 4
+        prices.append(["Team", 90])
+        workbook.create_sheet("Notes").append(["Prices exclude tax."])
+        path = tmp_path / "prices.xlsx"
+        workbook.save(path)
+
+        units = self.processor.extract_units(str(path))
+        assert units == [
+            {"text": "Prices | Plan: Pro, Price: 40", "anchor": {"sheet": "Prices", "row": 2}},
+            {"text": "Prices | Plan: Team, Price: 90", "anchor": {"sheet": "Prices", "row": 4}},
+            {"text": "Notes | Prices exclude tax.", "anchor": {"sheet": "Notes", "row": 1}},
+        ]
+        assert self.processor.extract_text(str(path)) == [u["text"] for u in units]
+
+    def test_a_text_file_is_one_unit_for_the_whole_file(self, tmp_path: Path) -> None:
+        path = tmp_path / "notes.txt"
+        path.write_text("Line one.\nLine two.", encoding="utf-8")
+        assert self.processor.extract_units(str(path)) == [{"text": "Line one.\nLine two.", "anchor": {}}]
+
+    @pytest.mark.parametrize("container", ["application/octet-stream", "application/zip"])
+    def test_an_office_file_libmagic_names_by_its_container_is_read_by_its_extension(
+        self, tmp_path: Path, container: str
+    ) -> None:
+        docx = pytest.importorskip("docx")
+        document = docx.Document()
+        document.add_paragraph("Plug it in.")
+        path = tmp_path / "setup.docx"
+        document.save(str(path))
+        detector = MagicMock()
+        detector.Magic.return_value.from_file.return_value = container
+        with patch('signalwire.search.document_processor.magic', detector):
+            assert self.processor.extract_text(str(path)) == ["Plug it in."]
+        # A container type and no extension that says more: still refused
+        with patch('signalwire.search.document_processor.magic', detector), \
+                pytest.raises(DocumentExtractionError, match="Unsupported file type"):
+            self.processor.extract_text(str(tmp_path / "archive.bin"))
+
+    def test_unsupported_types_raise_as_extract_text_does(self, tmp_path: Path) -> None:
+        with patch.object(DocumentProcessor, "_file_type", return_value="image/png"), \
+                pytest.raises(DocumentExtractionError, match="Unsupported file type"):
+            self.processor.extract_units(str(tmp_path / "logo.png"))
+
+
+class TestDelimitedRows:
+    """CSV and TSV: one unit per row, labelled with the header row."""
+
+    def setup_method(self) -> None:
+        self.processor = DocumentProcessor()
+
+    def _write(self, tmp_path: Path, name: str, text: str, encoding: str = "utf-8") -> str:
+        path = tmp_path / name
+        path.write_bytes(text.encode(encoding))
+        return str(path)
+
+    def test_csv_rows_are_labelled_with_their_headers(self, tmp_path: Path) -> None:
+        path = self._write(
+            tmp_path, "plans.csv",
+            "﻿Plan,Price,Note\n"  # a byte-order mark, as Excel writes
+            "Pro,40,\n"  # an empty cell is left out
+            "\n"  # a blank line still counts as a row
+            '"Team, annual",90,"two\nlines",extra\n',  # a quoted comma and newline; a cell past the headers
+        )
+        units = self.processor.extract_units(path)
+        assert units == [
+            {"text": "Plan: Pro, Price: 40", "anchor": {"row": 2}},
+            {"text": "Plan: Team, annual, Price: 90, Note: two lines, D: extra", "anchor": {"row": 4}},
+        ]
+        assert self.processor.extract_text(path) == [u["text"] for u in units]
+
+    def test_a_csv_with_only_a_header_is_that_row(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "empty.csv", "\n\nPlan,Price\n")
+        assert self.processor.extract_units(path) == [{"text": "Plan, Price", "anchor": {"row": 3}}]
+
+    def test_a_tsv_is_read_as_tsv_whatever_libmagic_guesses(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "cities.tsv", "Name,full\tLocation,code\nPro,annual\tParis,FR\n")
+        detector = MagicMock()
+        detector.Magic.return_value.from_file.return_value = "application/csv"
+        with patch('signalwire.search.document_processor.magic', detector):
+            assert self.processor.extract_text(path) == ["Name,full: Pro,annual, Location,code: Paris,FR"]
+
+    @pytest.mark.parametrize("text", [
+        'Plan,Price\nPro,40\n"Team,90\nEnterprise,100\n',  # a quote never closed
+        'Plan,Price\n"Pro"extra,40\n',  # text after a closing quote
+    ])
+    def test_malformed_csv_fails_rather_than_merging_rows(self, tmp_path: Path, text: str) -> None:
+        with pytest.raises(DocumentExtractionError, match="Error processing CSV"):
+            self.processor.extract_units(self._write(tmp_path, "plans.csv", text))
+
+    def test_tsv_has_no_quoting(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "plans.tsv", 'Plan\tSize\nPro\t15" screen\n')
+        assert self.processor.extract_units(path) == [{"text": 'Plan: Pro, Size: 15" screen', "anchor": {"row": 2}}]
+
+    def test_a_csv_that_isnt_utf8_fails(self, tmp_path: Path) -> None:
+        path = tmp_path / "latin.csv"
+        path.write_bytes(b"Plan,Price\nCaf\xe9,4\n")
+        with pytest.raises(DocumentExtractionError, match="Error processing CSV"):
+            self.processor.extract_units(str(path))
+
+
+class TestJsonDocuments:
+    """JSON and JSON Lines: one unit per value, as key-path lines."""
+
+    def setup_method(self) -> None:
+        self.processor = DocumentProcessor()
+
+    def _write(self, tmp_path: Path, name: str, data: Any) -> str:
+        path = tmp_path / name
+        path.write_text(data if isinstance(data, str) else json.dumps(data), encoding="utf-8")
+        return str(path)
+
+    def test_a_top_level_array_is_a_unit_per_element(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "people.json", [
+            {"name": "Ann", "address": {"city": "Paris"}, "tags": ["vip", "fr"], "fax": None},
+            "a plain string",
+            {},  # nothing to say: left out
+            {"orders": [{"id": 7, "paid": True}, {"id": 8, "paid": False}]},
+        ])
+        assert self.processor.extract_units(path) == [
+            {"text": "name: Ann\naddress.city: Paris\ntags: vip, fr", "anchor": {"path": "/0"}},
+            {"text": "a plain string", "anchor": {"path": "/1"}},
+            {"text": "orders[0].id: 7\norders[0].paid: true\norders[1].id: 8\norders[1].paid: false",
+             "anchor": {"path": "/3"}},
+        ]
+
+    def test_a_top_level_object_is_a_unit_per_member(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "guide.json", {"title": "Guide", "a/b": {"x": 1.5}, "c~d": 2, "empty": ""})
+        assert self.processor.extract_units(path) == [
+            {"text": "title: Guide", "anchor": {"path": "/title"}},
+            {"text": "a/b.x: 1.5", "anchor": {"path": "/a~1b"}},  # the pointer escapes /
+            {"text": "c~d: 2", "anchor": {"path": "/c~0d"}},  # and ~
+        ]
+
+    def test_a_long_key_path_is_cut_from_the_front(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "keys.json", [{"K" * 32_768: {str(i): i for i in range(1000)}}])
+        lines = self.processor.extract_text(path)[0].split("\n")
+        assert len(lines) == 1000
+        label, value = lines[999].rsplit(": ", 1)
+        assert value == "999" and len(label) == 200 and label.startswith("\u2026") and label.endswith("K.999")
+
+    def test_a_long_top_level_key_is_cut_too(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "keys.json", {"K" * 1_000_000: {str(i): i for i in range(20_000)}, "x": 1})
+        units = self.processor.extract_units(path)
+        assert units[0]["anchor"] == {"path": "/" + "K" * 1_000_000}  # the pointer stays whole
+        lines = units[0]["text"].split("\n")
+        assert len(lines) == 20_000 and all(len(line.rsplit(": ", 1)[0]) <= 200 for line in lines)
+        scalar = self._write(tmp_path, "scalar.json", {"K" * 5000: "value"})
+        label, value = self.processor.extract_text(scalar)[0].rsplit(": ", 1)
+        assert value == "value" and len(label) == 200
+
+    def test_key_paths_cant_repeat_without_limit(self, tmp_path: Path) -> None:
+        # 50,000 values under a 190-character key: half a megabyte making ten
+        path = self._write(tmp_path, "many.json", {"k" * 190: {str(i): 0 for i in range(50_000)}})
+        with pytest.raises(DocumentExtractionError, match="repeat more text than the limit"):
+            self.processor.extract_units(path)
+        lines = "\n".join(json.dumps({"k" * 190: {str(i): 0 for i in range(2_000)}}) for _ in range(30))
+        with pytest.raises(DocumentExtractionError, match="repeat more text than the limit"):
+            self.processor.extract_units(self._write(tmp_path, "many.jsonl", lines))
+
+    def test_markdown_holding_json_stays_markdown(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "example.md", '{"Plan": "Pro", "Price": 40}\n')
+        detector = MagicMock()
+        detector.Magic.return_value.from_file.return_value = "application/json"
+        with patch('signalwire.search.document_processor.magic', detector):
+            assert self.processor.extract_text(path) == '{"Plan": "Pro", "Price": 40}\n'
+
+    def test_a_scalar_document_is_one_unit(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "note.json", '"just a note"')
+        assert self.processor.extract_units(path) == [{"text": "just a note", "anchor": {"path": ""}}]
+
+    def test_malformed_and_deeply_nested_json_fail(self, tmp_path: Path) -> None:
+        with pytest.raises(DocumentExtractionError, match="Error processing JSON"):
+            self.processor.extract_units(self._write(tmp_path, "bad.json", '{"a": '))
+        with pytest.raises(DocumentExtractionError, match="nested too deeply"):
+            self.processor.extract_units(self._write(tmp_path, "deep.json", "[" * 100_000 + "]" * 100_000))
+
+    def test_json_lines_are_a_unit_per_line(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "events.jsonl", '{"event": "call", "minutes": 3}\n\n{"event": "sms"}\n')
+        assert self.processor.extract_units(path) == [
+            {"text": "event: call\nminutes: 3", "anchor": {"line": 1}},
+            {"text": "event: sms", "anchor": {"line": 3}},
+        ]
+
+    def test_a_json_line_that_isnt_json_fails_the_file(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "events.ndjson", '{"event": "call"}\nnot json\n')
+        with pytest.raises(DocumentExtractionError, match="line 2 isn't JSON"):
+            self.processor.extract_units(path)
+
+    def test_json_is_read_as_json_with_or_without_python_magic(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "people.json", [{"name": "Ann"}])
+        detector = MagicMock()
+        detector.Magic.return_value.from_file.return_value = "application/json"
+        with patch('signalwire.search.document_processor.magic', detector):
+            assert self.processor.extract_text(path) == ["name: Ann"]
+        detector.Magic.return_value.from_file.return_value = "text/plain"  # an older libmagic
+        with patch('signalwire.search.document_processor.magic', detector):
+            assert self.processor.extract_text(path) == ["name: Ann"]
+        with patch('signalwire.search.document_processor.magic', None):
+            assert self.processor.extract_text(path) == ["name: Ann"]
+
+    def test_json_lines_are_told_apart_by_their_extension(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "events.jsonl", '{"event": "call"}\n{"event": "sms"}\n')
+        detector = MagicMock()
+        detector.Magic.return_value.from_file.return_value = "application/json"
+        with patch('signalwire.search.document_processor.magic', detector):
+            assert self.processor.extract_text(path) == ["event: call", "event: sms"]
+
+
+class TestJsonChunkFormat:
+    """The json strategy takes the JSON chunk format, and nothing else."""
+
+    def setup_method(self) -> None:
+        self.processor = DocumentProcessor(chunking_strategy="json")
+
+    def _chunks(self, data: Any) -> list[dict[str, Any]]:
+        return self.processor.create_chunks(json.dumps(data), "chunks.json", "json")
+
+    @pytest.mark.parametrize(("chunks", "message"), [
+        ([{"content": 7}], 'chunk 0 needs a string "content"'),
+        ([{"content": "ok"}, {"content": "ok", "metadata": "x"}], 'chunk 1: "metadata" must be an object'),
+        ([{"content": "ok", "metadata": {"section": 3}}], '"section" must be a string'),
+        ([{"content": "ok", "section": ["a"]}], '"section" must be a string'),
+        ([{"content": "ok", "tags": "billing"}], '"tags" must be a list of strings'),
+        ([{"content": "ok", "metadata": {"tags": [1]}}], '"tags" must be a list of strings'),
+        ([{"content": "ok", "metadata": None}], '"metadata" must be an object'),
+        ([{"content": "ok", "tags": None}], '"tags" must be a list of strings'),
+        ([{"content": "ok", "metadata": {"tags": None}}], '"tags" must be a list of strings'),
+    ])
+    def test_an_entry_out_of_format_fails_the_file(self, chunks: list[Any], message: str) -> None:
+        with pytest.raises(ChunkFormatError, match=re.escape(message)):
+            self._chunks({"chunks": chunks})
+
+    def test_the_error_is_a_value_error_exported_from_search(self) -> None:
+        import signalwire.search
+
+        assert signalwire.search.ChunkFormatError is ChunkFormatError
+        assert issubclass(ChunkFormatError, ValueError)
+
+    def test_deep_nesting_is_a_format_error(self) -> None:
+        with pytest.raises(ChunkFormatError, match="nested too deeply"):
+            self.processor.create_chunks("[" * 100_000 + "]" * 100_000, "chunks.json", "json")
+
+    def test_a_null_section_is_no_section(self) -> None:
+        chunks = self._chunks({"chunks": [
+            {"content": "ok", "section": None, "metadata": {"section": None}},
+            {"content": "Refunds take five days.", "section": "Refunds", "metadata": {"section": None}},
+        ]})
+        assert [c["section"] for c in chunks] == ["Section 1", "Refunds"]
+
+    def test_files_that_arent_json_are_chunked_by_sentences(self) -> None:
+        # A build mixing curated JSON with other documents: sw-search --chunking-strategy json --file-types json,md
+        chunks = self.processor.create_chunks("# Setup\n\nConnect the power cable.", "setup.md", "md")
+        assert "Connect the power cable." in " ".join(c["content"] for c in chunks)
+        assert chunks[0]["metadata"]["chunk_method"] == "sentence_based"
+        with pytest.raises(ChunkFormatError):
+            self.processor.create_chunks("# Setup", "setup.json", ".json")
+
+    def test_no_chunks_is_no_chunks(self) -> None:
+        assert self._chunks({"chunks": []}) == []
+        assert self.processor.create_chunks("  \n", "chunks.json", "json") == []
+
+    def test_sw_search_json_output_reads_back_with_its_sections(self) -> None:
+        source = (
+            "# Billing\n\nWe bill monthly, on the first.\n\n"
+            "## Refunds\n\nRefunds take five days.\n\n"
+            "# Support\n\nCall us any time.\n"
+        )
+        chunks = DocumentProcessor(chunking_strategy="markdown").create_chunks(source, "guide.md", "md")
+        # What sw-search --output-format json writes
+        exported = json.dumps({"chunks": chunks, "metadata": {"total_chunks": len(chunks)}})
+        back = self.processor.create_chunks(exported, "guide.json", "json")
+        assert [c["section"] for c in back] == [c["section"] for c in chunks]
+        assert all(c["section"] for c in back)
+        # And once more: a second round trip changes nothing
+        again = self.processor.create_chunks(json.dumps({"chunks": back}), "guide.json", "json")
+        assert [(c["content"], c["section"]) for c in again] == [(c["content"], c["section"]) for c in back]
+
+
+class TestSemanticWithAModel:
+    """A caller that holds the index's model passes it, and it's the one used."""
+
+    TEXT = (
+        "The router has four ports. Plug the modem into the WAN port. The light turns green. "
+        "Refunds take fourteen days. Keep the receipt. Refunds go to the original card."
+    )
+
+    def _model(self, side_effect: Any = None) -> MagicMock:
+        np = pytest.importorskip("numpy")
+        pytest.importorskip("sklearn")
+        model = MagicMock()
+        # Two topics: the first three sentences point one way, the last three another
+        model.encode.side_effect = side_effect or (
+            lambda sentences, **_: np.array([[1.0, 0.0]] * 3 + [[0.0, 1.0]] * (len(sentences) - 3))
+        )
+        return model
+
+    def test_a_passed_model_is_used_and_no_other_is_loaded(self) -> None:
+        model = self._model()
+        processor = DocumentProcessor(chunking_strategy="semantic", model=model, model_name="some/other-model")
+        with patch("signalwire.search.query_processor._get_cached_model") as by_name:
+            chunks = processor.create_chunks(self.TEXT, "notes.txt", "txt")
+        by_name.assert_not_called()
+        model.encode.assert_called_once()
+        assert [c["metadata"]["chunk_method"] for c in chunks] == ["semantic", "semantic"]
+        assert "fourteen days" in chunks[1]["content"] and "four ports" in chunks[0]["content"]
+
+    @pytest.mark.parametrize("error", [
+        OSError("the caller's model broke"),
+        ImportError("the caller's model broke"),
+        ModuleNotFoundError("the caller's model broke"),
+        RuntimeError("the caller's model broke"),
+    ])
+    def test_a_passed_models_failure_is_raised_not_hidden(self, error: Exception) -> None:
+        model = self._model(side_effect=error)
+        processor = DocumentProcessor(chunking_strategy="semantic", model=model)
+        with pytest.raises(type(error), match="caller's model broke"):
+            processor.create_chunks(self.TEXT, "notes.txt", "txt")
+
+    def test_without_a_model_one_that_wont_load_falls_back_to_sentences(self) -> None:
+        pytest.importorskip("sklearn")
+        processor = DocumentProcessor(chunking_strategy="semantic", model_name="missing/model")
+        with patch("signalwire.search.query_processor._get_cached_model", return_value=None):
+            chunks = processor.create_chunks(self.TEXT, "notes.txt", "txt")
+        assert chunks and {c["metadata"]["chunk_method"] for c in chunks} == {"sentence_based"}
+
+    @pytest.mark.parametrize("passed", [True, False])
+    def test_a_missing_dependency_still_falls_back_to_sentences(self, passed: bool) -> None:
+        model = self._model() if passed else None
+        processor = DocumentProcessor(chunking_strategy="semantic", model=model)
+        with patch.dict(sys.modules, {"sklearn.metrics.pairwise": None}):  # importing it raises ImportError
+            chunks = processor.create_chunks(self.TEXT, "notes.txt", "txt")
+        assert chunks and {c["metadata"]["chunk_method"] for c in chunks} == {"sentence_based"}

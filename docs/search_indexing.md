@@ -96,7 +96,7 @@ builder.build_index(
 
 ### Extracting a File's Text (DocumentProcessor)
 
-`DocumentProcessor.extract_text(path)` reads a file by its type, the way the index builder does, for chunking with `create_chunks()`. A PDF comes back as a list of pages, a Word document as a list of its paragraphs and tables, a PowerPoint deck as a list of slides (with grouped shapes, tables and speaker notes) and an Excel workbook as a list of rows; anything else as one string. HTML loses its markup, scripts, styles, navigation, headers and footers. With the `markdown` strategy, a Word document, a slide and an HTML page come back as Markdown, with their headings, lists and tables, so the strategy splits on their headings. A Markdown file comes back as written. A file it can't read raises `DocumentExtractionError`: a type it doesn't support (an image, or a legacy `.doc`, `.xls` or `.ppt`), a library the type needs that isn't installed, or a read that fails.
+`DocumentProcessor.extract_text(path)` reads a file by its type, the way the index builder does, for chunking with `create_chunks()`. A PDF comes back as a list of pages, a Word document as a list of its paragraphs and tables, a PowerPoint deck as a list of slides (with grouped shapes, tables and speaker notes) an Excel workbook, a CSV file or a TSV file as a list of rows, each labelled with its headers (`"Prices | Plan: Pro, Price: 40"`), a JSON document as one entry per element of a top-level array or member of a top-level object, and a JSON Lines file as one entry per line, both as `key.path: value` lines; anything else as one string. HTML loses its markup, scripts, styles, navigation, headers and footers. With the `markdown` strategy, a Word document, a slide and an HTML page come back as Markdown, with their headings, lists and tables, so the strategy splits on their headings. A Markdown file comes back as written. A file it can't read raises `DocumentExtractionError`: a type it doesn't support (an image, or a legacy `.doc`, `.xls` or `.ppt`), a library the type needs that isn't installed, or a read that fails.
 
 <!-- snippet: no-run reads a file of yours -->
 ```python
@@ -110,6 +110,8 @@ except DocumentExtractionError as e:
 else:
     chunks = processor.create_chunks(text, "handbook.pdf", "pdf")
 ```
+
+`DocumentProcessor.extract_units(path)` gives the same text as units that say where each came from, as `{"text": ..., "anchor": {...}}`: a PDF's `{"page": n}`, a Word document's `{"paragraph": n, "headings": [...]}` or `{"table": n, "headings": [...]}`, a slide's `{"slide": n}`, an HTML section's `{"section": n, "headings": [...]}`, a spreadsheet row's `{"sheet": name, "row": n}` (or `{"row": n}` in a CSV or TSV file), a JSON value's `{"path": pointer}` (a JSON Pointer) and a JSON line's `{"line": n}`. A type that comes back as one string is one unit, with the anchor `{}`. Use it to show where a search result came from.
 
 ### Output Formats (.swsearch)
 
@@ -564,6 +566,8 @@ sw-search ./critical_chunks.json ./docs/other/ \
   --file-types json,md \
   --output combined.swsearch
 ```
+
+A file the `json` strategy can't read as this format raises `ChunkFormatError` (a `ValueError`, exported from `signalwire.search`), naming the first entry that's wrong: JSON that doesn't parse, no `chunks` list, an entry without a string `content`, a `metadata` that isn't an object, a `section` that isn't a string, or `tags` that aren't a list of strings. `sw-search` logs the error and skips the file; it never indexes such a file as plain text. An empty `chunks` list gives no chunks. A file that isn't `.json`, in a build that mixes curated JSON with other documents (`--file-types json,md`), is chunked by sentences. A chunk's `section` is read from its `metadata`, or from the chunk itself, where `--output-format json` writes it.
 
 #### JSON Schema (Required/Optional Fields)
 

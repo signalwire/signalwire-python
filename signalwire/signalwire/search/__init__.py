@@ -62,6 +62,7 @@ def _check_search_dependencies() -> None:
 _LAZY_EXPORTS = {
     "preprocess_query": "query_processor",
     "preprocess_document_content": "query_processor",
+    "ChunkFormatError": "document_processor",
     "DocumentExtractionError": "document_processor",
     "DocumentProcessor": "document_processor",
     "IndexBuilder": "index_builder",
@@ -75,7 +76,11 @@ _LAZY_EXPORTS = {
 }
 
 if TYPE_CHECKING:
-    from .document_processor import DocumentExtractionError, DocumentProcessor
+    from .document_processor import (
+        ChunkFormatError,
+        DocumentExtractionError,
+        DocumentProcessor,
+    )
     from .index_builder import IndexBuilder
     from .migration import SearchIndexMigrator
     from .models import DEFAULT_MODEL, MODEL_ALIASES, resolve_model_alias
@@ -88,6 +93,7 @@ if _SEARCH_AVAILABLE:
         "DEFAULT_MODEL",
         "MODEL_ALIASES",
         "NLTK_DATA",
+        "ChunkFormatError",
         "DocumentExtractionError",
         "DocumentProcessor",
         "IndexBuilder",
@@ -114,6 +120,9 @@ else:
     class DocumentExtractionError(ValueError):  # type: ignore[no-redef]
         """A file's text couldn't be extracted (search isn't installed)."""
 
+    class ChunkFormatError(ValueError):  # type: ignore[no-redef]
+        """The json strategy's input isn't the JSON chunk format (search isn't installed)."""
+
     class DocumentProcessor:  # type: ignore[no-redef]
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             _check_search_dependencies()
@@ -132,6 +141,7 @@ else:
 
     __all__ = [
         "NLTK_DATA",
+        "ChunkFormatError",
         "DocumentExtractionError",
         "DocumentProcessor",
         "IndexBuilder",
