@@ -5444,6 +5444,8 @@
       
         
       
+        
+      
     
     
     
@@ -5596,6 +5598,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.search.document_processor.ChunkFormatError" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ChunkFormatError
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.search.document_processor.DocumentProcessor" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5685,6 +5698,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.search.document_processor.DocumentProcessor.model_name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        model_name
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signalwire.search.document_processor.DocumentProcessor.model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.search.document_processor.DocumentProcessor.chunk_overlap" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5722,6 +5757,28 @@
     <span class="md-ellipsis">
       
         extract_text
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signalwire.search.document_processor.DocumentProcessor.extract_units" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        extract_units
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signalwire.search.document_processor.DocumentProcessor.parse_json_chunks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        parse_json_chunks
       
     </span>
   </a>
@@ -5818,6 +5875,34 @@
     
   
     models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="nltk_data.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nltk_data
   
 
     
@@ -8507,6 +8592,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.search.document_processor.ChunkFormatError" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ChunkFormatError
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.search.document_processor.DocumentProcessor" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -8596,6 +8692,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#signalwire.search.document_processor.DocumentProcessor.model_name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        model_name
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signalwire.search.document_processor.DocumentProcessor.model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.search.document_processor.DocumentProcessor.chunk_overlap" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -8633,6 +8751,28 @@
     <span class="md-ellipsis">
       
         extract_text
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signalwire.search.document_processor.DocumentProcessor.extract_units" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        extract_units
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signalwire.search.document_processor.DocumentProcessor.parse_json_chunks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        parse_json_chunks
       
     </span>
   </a>
@@ -8744,6 +8884,40 @@ See LICENSE file in the project root for full license information.</p>
 
         <p>A file's text couldn't be extracted: its type isn't supported, the
 library its type needs isn't installed, or reading it failed.</p>
+
+
+
+
+
+
+
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="signalwire.search.document_processor.ChunkFormatError" class="doc doc-heading">
+            <code>ChunkFormatError</code>
+
+
+<a href="#signalwire.search.document_processor.ChunkFormatError" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="ValueError">ValueError</span></code></p>
+
+
+
+        <p>The <code>json</code> chunking strategy's input isn't the JSON chunk format: an
+object whose <code>chunks</code> is a list of objects, each with a string
+<code>content</code>, where any <code>metadata</code> is an object, any <code>section</code> a string
+and any <code>tags</code> a list of strings.</p>
 
 
 
@@ -8936,6 +9110,46 @@ library its type needs isn't installed, or reading it failed.</p>
 
 
 
+<h4 id="signalwire.search.document_processor.DocumentProcessor.model_name" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">model_name</span> <span class="o">=</span> <span class="n">model_name</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#signalwire.search.document_processor.DocumentProcessor.model_name" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="signalwire.search.document_processor.DocumentProcessor.model" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">model</span> <span class="o">=</span> <span class="n">model</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#signalwire.search.document_processor.DocumentProcessor.model" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
 <h4 id="signalwire.search.document_processor.DocumentProcessor.chunk_overlap" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">chunk_overlap</span> <span class="o">=</span> <span class="n">chunk_overlap</span></code>
 
@@ -8959,7 +9173,7 @@ library its type needs isn't installed, or reading it failed.</p>
 
 
 <h4 id="signalwire.search.document_processor.DocumentProcessor.__init__" class="doc doc-heading">
-            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">chunking_strategy</span><span class="o">=</span><span class="s1">'sentence'</span><span class="p">,</span> <span class="n">max_sentences_per_chunk</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">chunk_overlap</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">min_chunk_size</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">split_newlines</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">index_nlp_backend</span><span class="o">=</span><span class="s1">'nltk'</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">semantic_threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">topic_threshold</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">chunking_strategy</span><span class="o">=</span><span class="s1">'sentence'</span><span class="p">,</span> <span class="n">max_sentences_per_chunk</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">chunk_overlap</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">min_chunk_size</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">split_newlines</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">index_nlp_backend</span><span class="o">=</span><span class="s1">'nltk'</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">semantic_threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">topic_threshold</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">model_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 <a href="#signalwire.search.document_processor.DocumentProcessor.__init__" class="headerlink" title="Permanent link">&para;</a></h4>
 
@@ -9030,11 +9244,11 @@ library its type needs isn't installed, or reading it failed.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>For markdown strategy - minimum words before a
-heading starts a new chunk. Sections shorter than this are
-merged forward into the next one instead of being emitted
-alone. Defaults to 0, which preserves the previous behaviour
-of splitting at every heading.</p>
+                <p>For the markdown and paragraph strategies -
+minimum words in a chunk. A section (markdown) or paragraph
+shorter than this is merged forward into the next one instead
+of being emitted alone. Defaults to 0, which splits at every
+heading or paragraph.</p>
               </div>
             </td>
             <td>
@@ -9151,6 +9365,71 @@ of splitting at every heading.</p>
             </td>
             <td>
                   <code>0.3</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>model_name</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The sentence transformer the semantic strategy compares
+sentences with; the index's own model, when an IndexBuilder
+makes the processor. Defaults to all-mpnet-base-v2. Where it
+can't be loaded, the semantic strategy falls back to sentence
+chunks, whose metadata says <code>chunk_method</code> <code>sentence_based</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>model</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>An already-loaded model for the semantic strategy: anything
+with SentenceTransformer's <code>encode()</code>. It's used in place of
+model_name, so a caller that already holds the index's model
+doesn't load it a second time. An error its <code>encode()</code>
+raises is the caller's to handle: there's no fallback for it.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>For the sentence strategy, when max_sentences_per_chunk
+is less than 1; for the sliding strategy, when chunk_overlap is
+negative or not less than chunk_size.</p>
+              </div>
             </td>
           </tr>
       </tbody>
@@ -9278,11 +9557,14 @@ of pages, paragraphs or slides extract_text() gives</p>
     <div class="doc doc-contents ">
 
         <p>Extract a file's text, by its type, ready for create_chunks().</p>
-<p>A PDF comes back as a list of pages, a Word document as a list of
-paragraphs and a PowerPoint deck as a list of slides; anything else as
-one string. HTML loses its markup, scripts and styles. Markdown comes
-back as written, so the markdown chunking strategy can read its
-headers.</p>
+<p>A PDF comes back as a list of pages, a Word document as a list of its
+paragraphs and tables, a PowerPoint deck as a list of slides (with
+grouped shapes, tables and speaker notes) and an Excel workbook as a
+list of rows; anything else as one string. HTML loses its markup,
+scripts, styles, navigation, headers and footers. Under the markdown
+strategy, a Word document, a slide and an HTML page come back as
+Markdown: headings, lists and tables. A Markdown file comes back as
+written, so the markdown chunking strategy can read its headers.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -9356,6 +9638,245 @@ headers.</p>
               <div class="doc-md-description">
                 <p>When the file's type isn't supported, the
 library its type needs isn't installed, or reading it fails.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="signalwire.search.document_processor.DocumentProcessor.extract_units" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">extract_units</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span></code>
+
+<a href="#signalwire.search.document_processor.DocumentProcessor.extract_units" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Extract a file's text as units, each saying where in the file it came
+from: <code>{"text": ..., "anchor": {...}}</code>.</p>
+<p>The units' texts are what extract_text() gives, in the same order. For
+HTML, extract_text() joins its sections' texts into one string; for
+another type it returns as one string, that string is the only unit.
+The anchors are:</p>
+<ul>
+<li>PDF: <code>{"page": n}</code>, one unit per page, <code>""</code> for a page without
+  text (a scan);</li>
+<li>Word: <code>{"paragraph": n, "headings": [...]}</code>, n as the document
+  numbers its paragraphs, or <code>{"table": n, "headings": [...]}</code>, with
+  the path of headings above it;</li>
+<li>PowerPoint: <code>{"slide": n}</code>, one unit per slide, <code>""</code> for a slide
+  without text;</li>
+<li>HTML: <code>{"section": n, "headings": [...]}</code>, a section per heading;</li>
+<li>Excel: <code>{"sheet": name, "row": n}</code>, the row as Excel numbers it;</li>
+<li>CSV and TSV: <code>{"row": n}</code>, counting the file's rows from 1, its
+  header included;</li>
+<li>JSON: <code>{"path": pointer}</code>, the JSON Pointer of the unit's value:
+  each element of a top-level array, or each member of a top-level
+  object;</li>
+<li>JSON Lines: <code>{"line": n}</code>, counting the file's lines from 1;</li>
+<li>anything else: <code>{}</code>, the whole file.</li>
+</ul>
+<p>Numbers count from 1.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>file_path</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The file to read.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="list">list</span>[<span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The file's units, in order.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="DocumentExtractionError (signalwire.search.document_processor.DocumentExtractionError)" href="#signalwire.search.document_processor.DocumentExtractionError">DocumentExtractionError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>When the file's type isn't supported, the
+library its type needs isn't installed, or reading it fails.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="signalwire.search.document_processor.DocumentProcessor.parse_json_chunks" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">parse_json_chunks</span><span class="p">(</span><span class="n">content</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="s1">'chunks.json'</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-staticmethod"><code>staticmethod</code></small>
+  </span>
+
+<a href="#signalwire.search.document_processor.DocumentProcessor.parse_json_chunks" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>The entries of a document in the JSON chunk format, each checked
+against it, as the json strategy reads them, without chunking them.</p>
+<p>Use it to read a caller's own chunks as written: the json strategy
+also gives a subsection the heading above it.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>content</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The document's text.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>filename</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Its name, for the error's message.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;chunks.json&#39;</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="list">list</span>[<span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The document's <code>chunks</code>, in order, as they're written.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="ChunkFormatError (signalwire.search.document_processor.ChunkFormatError)" href="#signalwire.search.document_processor.ChunkFormatError">ChunkFormatError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>When content isn't JSON in that format, naming
+the first entry that's wrong.</p>
               </div>
             </td>
           </tr>

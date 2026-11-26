@@ -5444,6 +5444,8 @@
       
         
       
+        
+      
     
     
     
@@ -5594,6 +5596,34 @@
     
   
     models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="nltk_data.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nltk_data
   
 
     
@@ -8736,7 +8766,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h3 id="signalwire.search.query_processor.pos_mapping" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">pos_mapping</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'NOUN'</span><span class="p">:</span> <span class="n">wn</span><span class="o">.</span><span class="n">NOUN</span><span class="p">,</span> <span class="s1">'VERB'</span><span class="p">:</span> <span class="n">wn</span><span class="o">.</span><span class="n">VERB</span><span class="p">,</span> <span class="s1">'ADJ'</span><span class="p">:</span> <span class="n">wn</span><span class="o">.</span><span class="n">ADJ</span><span class="p">,</span> <span class="s1">'ADV'</span><span class="p">:</span> <span class="n">wn</span><span class="o">.</span><span class="n">ADV</span><span class="p">,</span> <span class="s1">'PROPN'</span><span class="p">:</span> <span class="n">wn</span><span class="o">.</span><span class="n">NOUN</span><span class="p">}</span></code>
+            <code class="highlight language-python"><span class="n">pos_mapping</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'NOUN'</span><span class="p">:</span> <span class="n">NOUN</span><span class="p">,</span> <span class="s1">'VERB'</span><span class="p">:</span> <span class="n">VERB</span><span class="p">,</span> <span class="s1">'ADJ'</span><span class="p">:</span> <span class="n">ADJ</span><span class="p">,</span> <span class="s1">'ADV'</span><span class="p">:</span> <span class="n">ADV</span><span class="p">,</span> <span class="s1">'PROPN'</span><span class="p">:</span> <span class="n">NOUN</span><span class="p">}</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
@@ -8935,7 +8965,10 @@ with it. Terms may be phrases.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Download required NLTK resources if not already present</p>
+        <p>Log, once, each piece of NLTK data search uses that isn't installed.</p>
+<p>It doesn't download them: search never reaches the internet while it
+runs. Fetch them once with <code>sw-search download-nltk</code> or
+:func:<code>signalwire.search.download_nltk_data</code>.</p>
 
 
     </div>
