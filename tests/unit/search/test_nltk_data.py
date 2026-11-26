@@ -103,3 +103,17 @@ def test_sw_search_download_nltk(capsys: pytest.CaptureFixture[str]) -> None:
         build_search.download_nltk_command()
     download.assert_called_once_with(quiet=False)
     assert "NLTK data installed" in capsys.readouterr().out
+
+
+def test_data_installed_as_a_zip_counts(tmp_path: Path) -> None:
+    """nltk.download() leaves WordNet as corpora/wordnet.zip, which NLTK reads"""
+    import zipfile
+
+    import nltk
+
+    (tmp_path / "corpora").mkdir()
+    with zipfile.ZipFile(tmp_path / "corpora" / "wordnet.zip", "w") as archive:
+        archive.writestr("wordnet/lexnames", "00\tadj.all\t3\n")  # no directory entries
+    with patch.object(nltk.data, "path", [str(tmp_path)]):
+        assert "wordnet" not in missing_nltk_data()
+        assert "stopwords" in missing_nltk_data()

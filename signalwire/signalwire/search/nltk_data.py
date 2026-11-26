@@ -18,6 +18,7 @@ sentence splitting and query processing, and logs once which data is missing.
 from __future__ import annotations
 
 import threading
+from typing import Any
 
 from signalwire.core.logging_config import get_logger
 
@@ -44,13 +45,19 @@ def missing_nltk_data() -> list[str]:
         import nltk
     except ImportError:
         return list(NLTK_DATA)
-    missing = []
-    for name, path in NLTK_DATA.items():
+    return [name for name, path in NLTK_DATA.items() if not _installed(nltk, path)]
+
+
+def _installed(nltk: Any, path: str) -> bool:
+    """Whether a piece of NLTK data is installed, unzipped or as the zip
+    nltk.download() leaves (WordNet's), which NLTK reads as it is."""
+    for candidate in (path, f"{path}.zip"):
         try:
-            nltk.data.find(path)
-        except LookupError:  # noqa: PERF203  # each resource is looked up on its own
-            missing.append(name)
-    return missing
+            nltk.data.find(candidate)
+        except LookupError:  # each form is looked up on its own
+            continue
+        return True
+    return False
 
 
 def download_nltk_data(quiet: bool = True) -> list[str]:
