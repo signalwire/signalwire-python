@@ -185,6 +185,43 @@ The `metadata_text` field contains a searchable text representation of all metad
 - **Network latency**: A remote database adds a network round trip to each query.
 - **Operational complexity**: Needs connection pooling, monitoring, and backup procedures.
 
+### Your Own Storage
+
+When your chunks already live in your own database, behind your own access rules, pass `SearchEngine` an object instead of a backend name. It asks that object for candidates, then ranks them with the same scoring, boosting, deduplication and diversity as the sqlite and pgvector backends.
+
+<!-- snippet: no-run reads from your own database -->
+```python
+from signalwire.search import SearchEngine
+
+
+class MyBackend:
+    """Candidates from your own storage, already scoped to what this caller may see."""
+
+    def __init__(self, db, model_name):
+        self.db = db
+        self.config = {"model_name": model_name, "embedding_dimensions": 384}
+
+    def fetch_candidates(self, query_vector, enhanced_text, count,
+                         similarity_threshold=0.0, tags=None, original_query=None):
+        return self.db.candidates(query_vector, enhanced_text, count,
+                                  similarity_threshold, tags)
+
+    def get_stats(self):
+        return {"total_chunks": self.db.count()}
+
+
+engine = SearchEngine(backend=MyBackend(db, "sentence-transformers/all-MiniLM-L6-v2"))
+results = engine.search(query_vector, enhanced_text, count=5)
+```
+
+The object needs three members, listed by the `SearchBackend` protocol:
+
+- `config`, a dict: `SearchEngine` reads `embedding_dimensions`, and `query_stopwords` either at the top level or under `metadata`.
+- `fetch_candidates()`: returns up to `count` raw candidates. Each one is a dict with `id`, `content`, `metadata` (`filename`, `section`, `tags` and any custom keys), `search_type`, `sources` and `source_scores`; a vector match also has `vector_score` and `vector_distance`. Apply `similarity_threshold` to raw vector scores before merging sources. `count` is the candidate pool, never less than 30, so return that many when you have them. `SearchEngine` then keeps only candidates whose metadata `tags` include at least one of the query's `tags`, so the object may filter more strictly (on all of them, say) but not more loosely.
+- `get_stats()`: whatever statistics your storage reports.
+
+The object decides which rows a query can see, so scoping, filtering and access control stay in your storage layer, and the engine never opens a connection of its own.
+
 ### When to Use Which
 
 **Use SQLite (.swsearch) when:**
@@ -417,6 +454,9 @@ WORKDIR /app
 # Install query-only dependencies
 RUN pip install signalwire-sdk[search-queryonly]
 
+# The NLTK data search uses: it never downloads it while it runs
+RUN sw-search download-nltk
+
 # Copy pre-built index
 COPY knowledge.swsearch /app/
 
@@ -425,6 +465,8 @@ COPY agent.py /app/
 
 CMD ["python", "agent.py"]
 ```
+
+Search never downloads anything while it runs, so an agent or search service can run without internet access. Install the NLTK data it uses when you build the image, as above; `sw-search download-nltk` puts it in NLTK's data path, the `NLTK_DATA` directory if it's set. `signalwire.search.missing_nltk_data()` returns what's still missing, for a startup check. Without the data, search uses a simpler sentence split and query processing and logs which data is missing.
 
 **Container image size comparison:**
 

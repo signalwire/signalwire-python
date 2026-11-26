@@ -107,6 +107,14 @@ class TestRankWeight:
         ]
         assert self._ranked(candidates) == ["better", "weak"]
 
+    def test_weight_cannot_promote_a_negative_score(self) -> None:
+        # With no similarity threshold, a vector match can score below 0
+        candidates = [
+            {"content": "weighted, worse", "vector_score": -0.20, "metadata": {"document": "weighted", "rank_weight": 0.5}},
+            {"content": "unweighted, better", "vector_score": -0.15, "metadata": {"document": "unweighted"}},
+        ]
+        assert self._ranked(candidates) == ["unweighted", "weighted"]
+
     def test_unweighted_order_is_unchanged(self) -> None:
         candidates = [
             {"content": "second", "vector_score": 0.60, "metadata": {"document": "b"}},

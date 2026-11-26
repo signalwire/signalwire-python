@@ -210,7 +210,7 @@ Common installation issues:
 |-------|----------|
 | `No module named 'sentence_transformers'` | `pip install signalwire-sdk[search]` |
 | `No module named 'pdfplumber'` | `pip install signalwire-sdk[search-full]` |
-| NLTK data not found | `import nltk; nltk.download('punkt'); nltk.download('averaged_perceptron_tagger')` |
+| NLTK data isn't installed (logged once) | `sw-search download-nltk` |
 | spaCy model not found | `python -m spacy download en_core_web_sm` |
 
 Note: The sentence-transformers library downloads pre-trained models (~400MB) on first use. This is cached locally after the initial download.
@@ -327,7 +327,7 @@ The algorithm proceeds in these steps:
 2. Keyword matching, weighted metadata field matching (category, product, tags, source, section, and description each carry a different weight), and filename matching run against that same pool.
 3. Each candidate is scored. If it has a vector similarity score, that score is the base, and every additional agreeing signal adds a small boost, capped at a fixed maximum. Agreement can reorder near-ties; it cannot let a weak vector match outrank a stronger one.
 4. A candidate found only through keyword or metadata matching, with no vector score, is scaled below the pool's strongest vector match. A non-semantic match can never outrank a genuine semantic one.
-5. A chunk with a `rank_weight` in its metadata has its score multiplied by it. Only a number greater than 0 and at most 1 counts, so a weight can demote a chunk but never promote it. Use it to mark secondary sources, such as commentary indexed next to reference material, so the reference wins when both match.
+5. A chunk with a `rank_weight` in its metadata has its score multiplied by it (a negative score, from a vector match below 0, is divided by it instead, so it still moves down). Only a number greater than 0 and at most 1 counts, so a weight can demote a chunk but never promote it. Use it to mark secondary sources, such as commentary indexed next to reference material, so the reference wins when both match.
 6. Near-duplicate chunks are removed, keeping the highest-scoring copy of each.
 7. Results are penalized when several chunks come from the same document, so one document cannot dominate the result list. The second chunk of a document keeps 85% of its computed score, the third 70%, the fourth 50%, and the fifth or later 40%. A chunk's document is its `document` metadata if set, otherwise its `url`, then its `source`, then the file it was read from. Set `document` or `url` on chunks in a JSON file that holds many documents, or the whole file is treated as one.
 8. The top N results are returned.

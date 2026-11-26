@@ -1,5 +1,78 @@
 # Changelog
 
+## [3.17.0] - 2026-11-25
+
+### Added
+- `SearchEngine(backend=obj)` ranks candidates from your own storage, with
+  the same scoring as the sqlite and pgvector backends: any object with the
+  members of the `SearchBackend` protocol (`config`, `fetch_candidates()`,
+  `get_stats()`), exported from `signalwire.search`.
+- `DocumentProcessor.extract_units(path)` gives a file's text as units, each
+  with an anchor saying where it came from: a PDF page, a Word paragraph or
+  table with its headings, a slide, an HTML section with its headings, an
+  Excel sheet and row, a CSV or TSV row, a JSON Pointer, a JSON Lines line.
+- `extract_text()` reads CSV and TSV files as rows labelled with their
+  headers, and JSON and JSON Lines files as `key.path: value` lines.
+- `DocumentProcessor.parse_json_chunks(content)` reads a JSON chunk file's
+  entries as written, checked against the format, without chunking them.
+- `DocumentProcessor(model_name=...)` and `DocumentProcessor(model=...)`: the
+  semantic strategy compares sentences with that model, or with one you
+  already hold. `IndexBuilder` passes its own model's name.
+- `signalwire.search.download_nltk_data()`, `missing_nltk_data()` and
+  `sw-search download-nltk` fetch, or list, the NLTK data search uses.
+
+### Changed
+- Search never downloads NLTK data while it runs. Importing the query or
+  document processor used to download whatever was missing. Fetch it once,
+  when you set up a machine or build an image, with `sw-search download-nltk`;
+  `sw-search` building and searching fetch what's missing, and say so.
+  Without the data, search falls back to simpler sentence splitting and query
+  processing and logs once what's missing. Only NLTK 3.9's formats are used
+  (`punkt_tab`, `averaged_perceptron_tagger_eng`, `wordnet`, `stopwords`),
+  not the pickled `punkt` and `averaged_perceptron_tagger`, and the search
+  extras need `nltk>=3.9`.
+- The `json` strategy raises `ChunkFormatError` (a `ValueError`, exported
+  from `signalwire.search`) for a `.json` file outside the chunk format,
+  naming the first entry that's wrong, and `sw-search` skips the file. It
+  used to skip bad entries, or chunk the whole file as plain text. In a build
+  that mixes other files with JSON, those are chunked by sentences. A
+  subsection's inherited heading is cut to 200 characters, and their total
+  is limited.
+- Text extraction changes the text of existing indexes:
+  - A PDF has one entry per page, `""` for a page without text, so pages keep
+    their numbers, and a page that opens with "1. " keeps it.
+  - A Word document includes its tables, in place, a line per row.
+  - A slide includes grouped shapes, tables and its speaker notes.
+  - HTML leaves out navigation, headers and footers.
+  - An Excel workbook comes back as a row per entry, labelled with its sheet
+    and headers, instead of one string of cells; merged values repeat into
+    their rows, and a formula that was never calculated keeps its text.
+  - Under the `markdown` strategy, a Word document, a slide and an HTML page
+    come back as Markdown, with headings, lists and tables.
+- Chunking:
+  - The paragraph strategy splits a list into its entries; a Word document
+    used to be one chunk. `min_chunk_size` merges short paragraphs forward,
+    as it does markdown sections.
+  - The page strategy keeps each page's own number.
+  - Every other strategy leaves an empty page or slide out of the text it
+    joins, still with newlines.
+  - The semantic strategy uses the index's model; it always used
+    all-mpnet-base-v2. Where no model loads, it still falls back to sentence
+    chunks, whose metadata's `chunk_method` says `sentence_based`.
+
+### Fixed
+- `max_sentences_per_chunk=1` raised, as did the document-aware path on text
+  with sentences longer than `chunk_size` words. The constructor refuses a
+  sentence window under 1 and a sliding overlap that isn't less than the
+  chunk size.
+- A JSON chunk's top-level `section`, where `sw-search --output-format json`
+  writes it, is read back; it was replaced with "Section N".
+- Word and PowerPoint files that libmagic reports only as a zip container
+  are read by their extension.
+- A `rank_weight` below 1 promoted a chunk whose score was negative (a
+  vector match below 0, with no similarity threshold), since multiplying
+  moved it toward 0. A negative score is now divided by the weight.
+
 ## [3.16.0] - 2026-11-24
 
 ### Added

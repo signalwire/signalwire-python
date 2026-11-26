@@ -184,39 +184,21 @@ class TestQueryVectorization:
 
 
 class TestNLTKResources:
-    """Test NLTK resource management"""
-    
-    @patch('signalwire.search.query_processor.nltk')
-    def test_ensure_nltk_resources_already_present(self, mock_nltk: MagicMock) -> None:
-        """Test when NLTK resources are already present"""
-        mock_nltk.data.find.return_value = True
-        
-        ensure_nltk_resources()
-        
-        # Should not call download if resources are found
-        mock_nltk.download.assert_not_called()
-    
-    @patch('signalwire.search.query_processor.nltk')
-    def test_ensure_nltk_resources_download_needed(self, mock_nltk: MagicMock) -> None:
-        """Test when NLTK resources need to be downloaded"""
-        mock_nltk.data.find.side_effect = LookupError("Resource not found")
-        
-        ensure_nltk_resources()
-        
-        # Should call download for each missing resource
-        assert mock_nltk.download.call_count == 5  # punkt, punkt_tab, wordnet, averaged_perceptron_tagger, stopwords
-    
-    @patch('signalwire.search.query_processor.nltk')
-    def test_ensure_nltk_resources_download_error(self, mock_nltk: MagicMock) -> None:
-        """Test when NLTK resource download fails"""
-        mock_nltk.data.find.side_effect = LookupError("Resource not found")
-        mock_nltk.download.side_effect = Exception("Download failed")
-        
-        with patch('signalwire.search.query_processor.logger') as mock_logger:
+    """Search never downloads NLTK data; it says what's missing, once."""
+
+    def test_ensure_nltk_resources_notes_whats_missing_and_downloads_nothing(self) -> None:
+        with patch('signalwire.search.query_processor.missing_nltk_data', return_value=["wordnet"]), \
+             patch('signalwire.search.query_processor.note_missing') as note, \
+             patch('nltk.download') as download:
             ensure_nltk_resources()
-            
-            # Should log warnings for failed downloads
-            assert mock_logger.warning.call_count == 5
+        note.assert_called_once_with("wordnet")
+        download.assert_not_called()
+
+    def test_ensure_nltk_resources_with_everything_installed(self) -> None:
+        with patch('signalwire.search.query_processor.missing_nltk_data', return_value=[]), \
+             patch('signalwire.search.query_processor.note_missing') as note:
+            ensure_nltk_resources()
+        note.assert_not_called()
 
 
 class TestWordNetUtilities:

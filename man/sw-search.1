@@ -58,6 +58,12 @@ Search via a remote search API server.
 .TP
 .BI "sw-search migrate " "index_file"
 Migrate an index between storage backends.
+.TP
+.B sw-search download-nltk
+Download the NLTK data search uses (punkt_tab, averaged_perceptron_tagger_eng,
+wordnet, stopwords) into NLTK's data path, the NLTK_DATA directory if it's set.
+Search never downloads it while it runs; building and searching with sw-search
+fetch what's missing.
 .SH BUILD OPTIONS
 .SS "Output Options"
 .TP

@@ -2331,6 +2331,16 @@ sw-search <source> [<source> ...] [options]
 - `--split-newlines N` - Split on N or more consecutive newlines, in addition to sentence boundaries
 - `--languages LANGS` - Comma-separated language codes (default: en)
 
+### Downloading NLTK Data
+
+Search splits sentences and processes queries with NLTK data (`punkt_tab`, `averaged_perceptron_tagger_eng`, `wordnet` and `stopwords`), and never downloads it while it runs. Fetch it once, when you set up a machine or build an image, into NLTK's data path (the `NLTK_DATA` directory if it's set):
+
+```bash
+sw-search download-nltk
+```
+
+Building and searching with `sw-search` fetch any that's missing, and say so. Without it, search still works, with a simpler sentence split and query processing, and logs which data is missing.
+
 ### Validating Indexes
 
 Check that a built index loads and reports its chunk count:

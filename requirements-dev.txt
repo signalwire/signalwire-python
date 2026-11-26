@@ -26,8 +26,11 @@ flask-limiter>=3.5.0  # Cloud Functions tests need them, and mypy checks against
 # search test modules can collect (query_processor.py imports nltk
 # at module scope) and patch real attributes (test_vectorize_query_success
 # patches sentence_transformers.SentenceTransformer).
-nltk>=3.8
+nltk>=3.9
 numpy>=1.24.0
 scikit-learn>=1.3.0
 sentence-transformers>=2.2.0
+openpyxl>=3.1.0       # Excel extraction tests build real workbooks
+python-docx>=0.8.11   # Word and PowerPoint extraction tests build real files
+python-pptx>=0.6.21
 mypy>=1.8

@@ -42,6 +42,9 @@ _MISSING_DEPS: list[str] = [
 ]
 _SEARCH_AVAILABLE = not _MISSING_DEPS
 
+# Light (it imports NLTK only when called), so it works without the search extras
+from .nltk_data import NLTK_DATA, download_nltk_data, missing_nltk_data  # noqa: E402
+
 
 def _check_search_dependencies() -> None:
     """Check if search dependencies are available and provide helpful error message"""
@@ -59,9 +62,11 @@ def _check_search_dependencies() -> None:
 _LAZY_EXPORTS = {
     "preprocess_query": "query_processor",
     "preprocess_document_content": "query_processor",
+    "ChunkFormatError": "document_processor",
     "DocumentExtractionError": "document_processor",
     "DocumentProcessor": "document_processor",
     "IndexBuilder": "index_builder",
+    "SearchBackend": "search_engine",
     "SearchEngine": "search_engine",
     "SearchService": "search_service",
     "SearchIndexMigrator": "migration",
@@ -71,24 +76,33 @@ _LAZY_EXPORTS = {
 }
 
 if TYPE_CHECKING:
-    from .document_processor import DocumentExtractionError, DocumentProcessor
+    from .document_processor import (
+        ChunkFormatError,
+        DocumentExtractionError,
+        DocumentProcessor,
+    )
     from .index_builder import IndexBuilder
     from .migration import SearchIndexMigrator
     from .models import DEFAULT_MODEL, MODEL_ALIASES, resolve_model_alias
     from .query_processor import preprocess_document_content, preprocess_query
-    from .search_engine import SearchEngine
+    from .search_engine import SearchBackend, SearchEngine
     from .search_service import SearchService
 
 if _SEARCH_AVAILABLE:
     __all__ = [
         "DEFAULT_MODEL",
         "MODEL_ALIASES",
+        "NLTK_DATA",
+        "ChunkFormatError",
         "DocumentExtractionError",
         "DocumentProcessor",
         "IndexBuilder",
+        "SearchBackend",
         "SearchEngine",
         "SearchIndexMigrator",
         "SearchService",
+        "download_nltk_data",
+        "missing_nltk_data",
         "preprocess_document_content",
         "preprocess_query",
         "resolve_model_alias",
@@ -105,6 +119,9 @@ else:
 
     class DocumentExtractionError(ValueError):  # type: ignore[no-redef]
         """A file's text couldn't be extracted (search isn't installed)."""
+
+    class ChunkFormatError(ValueError):  # type: ignore[no-redef]
+        """The json strategy's input isn't the JSON chunk format (search isn't installed)."""
 
     class DocumentProcessor:  # type: ignore[no-redef]
         def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -123,11 +140,15 @@ else:
             _check_search_dependencies()
 
     __all__ = [
+        "NLTK_DATA",
+        "ChunkFormatError",
         "DocumentExtractionError",
         "DocumentProcessor",
         "IndexBuilder",
         "SearchEngine",
         "SearchService",
+        "download_nltk_data",
+        "missing_nltk_data",
         "preprocess_document_content",
         "preprocess_query",
     ]
