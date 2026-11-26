@@ -2458,3 +2458,45 @@ class TestSemanticWithAModel:
         with patch.dict(sys.modules, {"sklearn.metrics.pairwise": None}):  # importing it raises ImportError
             chunks = processor.create_chunks(self.TEXT, "notes.txt", "txt")
         assert chunks and {c["metadata"]["chunk_method"] for c in chunks} == {"sentence_based"}
+
+
+class TestParseJsonChunks:
+    """parse_json_chunks(): a chunk file's entries, checked, as written."""
+
+    def test_entries_come_back_as_written(self) -> None:
+        text = json.dumps({"chunks": [{"content": "# Router\nPlug it in."}, {"content": "## Returns\nTen days."}]})
+        entries = DocumentProcessor.parse_json_chunks(text)
+        assert [e["content"] for e in entries] == ["# Router\nPlug it in.", "## Returns\nTen days."]
+        # create_chunks() gives the subsection its heading; parse_json_chunks() doesn't
+        chunks = DocumentProcessor(chunking_strategy="json").create_chunks(text, "c.json", "json")
+        assert chunks[1]["content"].startswith("# Router")
+
+    def test_out_of_format_raises_naming_the_file(self) -> None:
+        with pytest.raises(ChunkFormatError, match=r'^mine\.json: chunk 0 needs a string "content"'):
+            DocumentProcessor.parse_json_chunks('{"chunks": [{"content": 1}]}', "mine.json")
+
+
+class TestInheritedHeadings:
+    """The json strategy gives a subsection its topic's heading, within bounds."""
+
+    def test_a_subsection_gets_its_topics_heading(self) -> None:
+        text = json.dumps({"chunks": [{"content": "# send_fax"}, {"content": "## Parameters\nto, from"}]})
+        chunks = DocumentProcessor(chunking_strategy="json").create_chunks(text, "c.json", "json")
+        assert chunks[1]["content"] == "# send_fax\n\n## Parameters\nto, from"
+        assert chunks[1]["metadata"]["heading_context"] == "# send_fax"
+
+    def test_a_long_heading_over_many_subsections_is_bounded(self) -> None:
+        text = json.dumps({"chunks": [{"content": "# " + "H" * 65_536}, *[{"content": "## Subsection"}] * 511]})
+        chunks = DocumentProcessor(chunking_strategy="json").create_chunks(text, "large.json", "json")
+        assert len(chunks) == 512 and len(chunks[0]["content"]) == 65_538  # the topic's own chunk is whole
+        heading = chunks[1]["metadata"]["heading_context"]
+        assert len(heading) == 200 and heading.endswith("\u2026")
+        assert sum(len(c["content"]) for c in chunks) <= 65_538 + 511 * (len("## Subsection") + 202)
+
+    def test_past_the_budget_subsections_go_as_written(self) -> None:
+        heading = "# " + "H" * 150
+        text = json.dumps({"chunks": [{"content": heading}, *[{"content": "## S"}] * 20_000]})
+        chunks = DocumentProcessor(chunking_strategy="json").create_chunks(text, "many.json", "json")
+        given = [c for c in chunks[1:] if "heading_context" in c["metadata"]]
+        assert 0 < len(given) < 20_000
+        assert all(c["content"] == "## S" for c in chunks[1 + len(given):])

@@ -426,6 +426,9 @@ def _json_lines(value: Any, label: str, lines: list[str], budget: _TextBudget) -
 # What a JSON document's lines may add beyond four times its own text.
 _JSON_TEXT_ALLOWANCE = 1_000_000
 
+# The json strategy gives a subsection the heading above it, cut to this.
+_HEADING_CONTEXT_LIMIT = 200
+
 
 # libmagic names some valid files only by their container: a Word document or
 # PowerPoint deck whose zip doesn't list [Content_Types].xml first, as
@@ -2802,7 +2805,7 @@ class DocumentProcessor:
         """
         if not content.strip():
             return []  # nothing to chunk, as for every other strategy
-        entries = self._json_chunk_entries(content, filename)
+        entries = self.parse_json_chunks(content, filename)
         chunks = []
         # Heading carried down to the chunks beneath it. A reference doc
         # splits as "# send_fax" then "## Parameters", "## Returns",
@@ -2827,6 +2830,10 @@ class DocumentProcessor:
         # chunk_index still addresses the same source chunk.
         current_heading = ""
         current_doc = None
+        # The heading text the loop may add in all: each subsection repeats
+        # its topic's heading, so a long one over many subsections could
+        # otherwise make an enormous text. Past it, subsections go as written.
+        inherited_budget = 4 * len(content) + _JSON_TEXT_ALLOWANCE
         for idx, json_chunk in enumerate(entries):
             # Extract metadata from JSON chunk
             json_metadata = json_chunk.get("metadata") or {}
@@ -2891,12 +2898,18 @@ class DocumentProcessor:
                 # A new topic: remember its heading, and leave it alone -
                 # it already names itself.
                 current_heading = stripped.split("\n", 1)[0].strip()
+                if len(current_heading) > _HEADING_CONTEXT_LIMIT:
+                    current_heading = (
+                        current_heading[: _HEADING_CONTEXT_LIMIT - 1] + "\u2026"
+                    )
             elif (
                 current_heading
                 and stripped.startswith("#")
+                and len(current_heading) + 2 <= inherited_budget
                 and current_heading.lower() not in chunk_text.lower()
             ):
                 # A subsection of that topic: give it the subject back.
+                inherited_budget -= len(current_heading) + 2
                 chunk_text = f"{current_heading}\n\n{chunk_text}"
                 metadata["heading_context"] = current_heading
 
@@ -2924,9 +2937,26 @@ class DocumentProcessor:
         return chunks
 
     @staticmethod
-    def _json_chunk_entries(content: str, filename: str) -> list[dict[str, Any]]:
-        """The chunks of a JSON chunk document, each checked against the
-        format. Raises ChunkFormatError, naming the first entry that's wrong."""
+    def parse_json_chunks(
+        content: str, filename: str = "chunks.json"
+    ) -> list[dict[str, Any]]:
+        """The entries of a document in the JSON chunk format, each checked
+        against it, as the json strategy reads them, without chunking them.
+
+        Use it to read a caller's own chunks as written: the json strategy
+        also gives a subsection the heading above it.
+
+        Args:
+            content: The document's text.
+            filename: Its name, for the error's message.
+
+        Returns:
+            The document's ``chunks``, in order, as they're written.
+
+        Raises:
+            ChunkFormatError: When content isn't JSON in that format, naming
+                the first entry that's wrong.
+        """
         try:
             data = json.loads(content)
         except RecursionError:
