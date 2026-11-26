@@ -110,6 +110,7 @@ create_chunks: real DocumentProcessor.create_chunks (signalwire/search/document_
 candidates: user-defined method on the example's own database in docs/search_deployment.md (Your Own Storage)
 missing_nltk_data: real signalwire.search.missing_nltk_data (signalwire/search/nltk_data.py) — Python-only search skill, absent from the cross-port surface
 extract_units: real DocumentProcessor.extract_units (signalwire/search/document_processor.py) — Python-only search skill, absent from the cross-port surface
+parse_json_chunks: real DocumentProcessor.parse_json_chunks (signalwire/search/document_processor.py) — Python-only search skill, absent from the cross-port surface
 download_nltk_data: real signalwire.search.download_nltk_data (signalwire/search/nltk_data.py) — Python-only search skill, absent from the cross-port surface
 argsort: numpy.argsort — DIY search example in docs/search_overview.md
 md: filename-extension regex false positive (matches `file.md (…`) in docs/search_overview.md processing listing
