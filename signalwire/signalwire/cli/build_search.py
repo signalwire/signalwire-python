@@ -144,6 +144,9 @@ Examples:
     --tags documentation,api \\
     --verbose
 
+  # Download the NLTK data search uses (once, e.g. when building an image)
+  sw-search download-nltk
+
   # Validate an existing index
   sw-search validate ./docs.swsearch
 
@@ -265,9 +268,10 @@ Documentation: sw-pydocs prints the SDK's installed docs, examples and API.
         type=int,
         default=0,
         help=(
-            "Markdown strategy: minimum words before a heading starts a new "
-            "chunk. Sections shorter than this merge into the next one instead "
-            "of being emitted alone (default: 0, split at every heading)"
+            "Markdown and paragraph strategies: minimum words in a chunk. A "
+            "section or paragraph shorter than this merges into the next one "
+            "instead of being emitted alone (default: 0, split at every "
+            "heading or paragraph)"
         ),
     )
 
@@ -373,6 +377,61 @@ def _split_terms(value: str | None) -> list[str] | None:
     return [t.strip() for t in value.split(",") if t.strip()]
 
 
+def _fetch_nltk_data() -> None:
+    """Download the NLTK data search uses that isn't installed yet, saying so.
+
+    The sw-search commands a person runs fetch it; the library never does.
+    """
+    from signalwire.search.nltk_data import download_nltk_data, missing_nltk_data
+
+    missing = missing_nltk_data()
+    if not missing:
+        return
+    try:
+        import nltk  # noqa: F401  # only to know it's installed
+    except ImportError:
+        return
+    print(f"Downloading NLTK data: {', '.join(missing)}", file=sys.stderr)
+    still = download_nltk_data()
+    if still:
+        print(
+            f"Warning: couldn't download NLTK data {', '.join(still)}; "
+            "search uses simpler fallbacks without it",
+            file=sys.stderr,
+        )
+
+
+def download_nltk_command() -> None:
+    """Download the NLTK data search uses (sw-search download-nltk)."""
+    parser = argparse.ArgumentParser(
+        prog="sw-search download-nltk",
+        description=(
+            "Download the NLTK data search uses (punkt_tab, "
+            "averaged_perceptron_tagger_eng, wordnet, stopwords) into NLTK's "
+            "data path, the NLTK_DATA directory if it's set. Run it once when "
+            "you set up a machine or build an image: search never downloads "
+            "while it runs."
+        ),
+    )
+    parser.parse_args()
+    from signalwire.search.nltk_data import download_nltk_data, missing_nltk_data
+
+    try:
+        missing = missing_nltk_data()
+        still = download_nltk_data(quiet=False) if missing else []
+    except ImportError:
+        print(
+            "Error: NLTK isn't installed. Install with: pip install signalwire-sdk[search]"
+        )
+        sys.exit(1)
+    if still:
+        print(f"Error: couldn't download NLTK data: {', '.join(still)}")
+        sys.exit(1)
+    print(
+        "NLTK data installed: punkt_tab, averaged_perceptron_tagger_eng, wordnet, stopwords"
+    )
+
+
 def main() -> None:
     """Main entry point for the build-search command"""
     args = _build_parser().parse_args()
@@ -399,6 +458,8 @@ def main() -> None:
     if args.backend == "pgvector" and not args.connection_string:
         print("Error: --connection-string is required for pgvector backend")
         sys.exit(1)
+
+    _fetch_nltk_data()
 
     # Validate output options
     if args.output and args.output_dir:
@@ -844,6 +905,8 @@ def search_command() -> None:
     if not args.shell and not args.query:
         print("Error: Query is required unless using --shell mode")
         sys.exit(1)
+
+    _fetch_nltk_data()
 
     # Resolve model aliases
     if args.model == "large":
@@ -1570,6 +1633,10 @@ def console_entry_point() -> None:
             # Remove 'migrate' from argv and call migrate_command
             sys.argv.pop(1)
             migrate_command()
+            return
+        if sys.argv[1] == "download-nltk":
+            sys.argv.pop(1)
+            download_nltk_command()
             return
 
     # Regular build command

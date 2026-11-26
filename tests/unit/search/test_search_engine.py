@@ -1971,3 +1971,76 @@ class TestKeywordWeightDeprecated:
             weighted = engine.search([0.9, 0.1, 0.0, 0.0], 'python tutorial', count=3, keyword_weight=0.9)
 
         assert [(r['id'], r['score']) for r in weighted] == [(r['id'], r['score']) for r in baseline]
+
+
+class _ListBackend:
+    """Your own storage: hands SearchEngine fixed candidates and records each call."""
+
+    def __init__(self, candidates: list[dict[str, Any]], config: dict[str, Any] | None = None) -> None:
+        self.candidates = candidates
+        self.config = config if config is not None else {"embedding_dimensions": 3}
+        self.calls: list[dict[str, Any]] = []
+
+    def fetch_candidates(self, query_vector: list[float], enhanced_text: str, count: int,
+                         similarity_threshold: float = 0.0, tags: list[str] | None = None,
+                         original_query: str | None = None) -> list[dict[str, Any]]:
+        self.calls.append({"count": count, "tags": tags, "similarity_threshold": similarity_threshold,
+                           "original_query": original_query})
+        return [dict(c) for c in self.candidates]
+
+    def get_stats(self) -> dict[str, Any]:
+        return {"total_chunks": len(self.candidates)}
+
+
+def _candidate(cid: str, content: str, filename: str, vector_score: float) -> dict[str, Any]:
+    return {
+        "id": cid, "content": content, "search_type": "vector",
+        "metadata": {"filename": filename, "section": None, "tags": ["policy"]},
+        "vector_score": vector_score, "vector_distance": 1 - vector_score,
+        "sources": {"vector": True}, "source_scores": {"vector": vector_score},
+    }
+
+
+class TestBackendObject:
+    """SearchEngine(backend=obj) ranks your own storage's candidates."""
+
+    def test_candidates_go_through_the_same_pipeline(self) -> None:
+        from signalwire.search import SearchBackend
+
+        backend = _ListBackend([
+            _candidate("a", "Refunds are issued within fourteen days.", "refunds.md", 0.62),
+            _candidate("b", "Coverage lasts two years from purchase.", "warranty.md", 0.81),
+        ])
+        assert isinstance(backend, SearchBackend)
+        engine = SearchEngine(backend=backend)
+        assert engine.backend == "custom" and engine.embedding_dim == 3
+
+        results = engine.search([0.1, 0.2, 0.3], "warranty coverage", count=2, tags=["policy"],
+                                original_query="warranty coverage")
+        assert [r["metadata"]["filename"] for r in results] == ["warranty.md", "refunds.md"]
+        assert results[0]["score"] >= results[1]["score"]
+        # The pool floor applies to every backend, and the query's filters reach it unchanged.
+        assert backend.calls == [{"count": 30, "tags": ["policy"], "similarity_threshold": 0.0,
+                                  "original_query": "warranty coverage"}]
+
+    def test_stats_and_query_stopwords_come_from_the_backend(self) -> None:
+        backend = _ListBackend([], {"embedding_dimensions": 384, "metadata": {"query_stopwords": ["acme"]}})
+        engine = SearchEngine(backend=backend)
+        assert engine.get_stats() == {"total_chunks": 0}
+        assert engine.query_stopwords == ["acme"] and engine.embedding_dim == 384
+
+    def test_an_object_missing_members_is_refused(self) -> None:
+        class NoStats:
+            config: dict[str, Any] = {}
+
+            def fetch_candidates(self, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:
+                return []
+
+        with pytest.raises(TypeError, match="get_stats"):
+            SearchEngine(backend=NoStats())  # type: ignore[arg-type]
+        with pytest.raises(TypeError, match="config"):
+            SearchEngine(backend=Mock(spec=["fetch_candidates", "get_stats"]))
+
+    def test_storage_arguments_are_refused_with_an_object(self) -> None:
+        with pytest.raises(ValueError, match="has its own storage"):
+            SearchEngine(backend=_ListBackend([]), index_path="knowledge.swsearch")

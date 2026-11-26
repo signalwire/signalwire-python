@@ -19,7 +19,7 @@ from typing import Any
 from unittest.mock import Mock, patch, MagicMock, mock_open
 from pathlib import Path
 
-from signalwire.search.document_processor import DocumentExtractionError, DocumentProcessor
+from signalwire.search.document_processor import ChunkFormatError, DocumentExtractionError, DocumentProcessor
 
 
 class TestDocumentProcessorInit:
@@ -425,7 +425,7 @@ class TestDocumentProcessorSpecificExtractors:
     @patch('signalwire.search.document_processor.pdfplumber', None)
     def test_extract_pdf_no_library(self) -> None:
         """Test PDF extraction without pdfplumber"""
-        with pytest.raises(DocumentExtractionError, match="pdfplumber\ not\ available"):
+        with pytest.raises(DocumentExtractionError, match="pdfplumber not available"):
             self.processor._extract_pdf("test.pdf")
         
     
@@ -453,41 +453,32 @@ class TestDocumentProcessorSpecificExtractors:
         """Test PDF extraction with error"""
         mock_pdfplumber.open.side_effect = Exception("PDF error")
         
-        with pytest.raises(DocumentExtractionError, match="Error\ processing\ PDF"):
+        with pytest.raises(DocumentExtractionError, match="Error processing PDF"):
             self.processor._extract_pdf("test.pdf")
         
     
     @patch('signalwire.search.document_processor.DocxDocument', None)
     def test_extract_docx_no_library(self) -> None:
         """Test DOCX extraction without python-docx"""
-        with pytest.raises(DocumentExtractionError, match="python\-docx\ not\ available"):
+        with pytest.raises(DocumentExtractionError, match="python-docx not available"):
             self.processor._extract_docx("test.docx")
         
     
-    @patch('signalwire.search.document_processor.DocxDocument')
-    def test_extract_docx_success(self, mock_docx: MagicMock) -> None:
-        """Test successful DOCX extraction"""
-        mock_para1 = Mock()
-        mock_para1.text = "Paragraph 1"
-        mock_para2 = Mock()
-        mock_para2.text = "Paragraph 2"
-        mock_para3 = Mock()
-        mock_para3.text = ""  # Empty paragraph should be filtered
-        
-        mock_doc = Mock()
-        mock_doc.paragraphs = [mock_para1, mock_para2, mock_para3]
-        mock_docx.return_value = mock_doc
-        
-        result = self.processor._extract_docx("test.docx")
-        
-        assert result == ["Paragraph 1", "Paragraph 2"]
-    
+    def test_extract_docx_success(self, tmp_path: Path) -> None:
+        """Paragraphs come back as written, and empty ones are left out"""
+        docx = pytest.importorskip("docx")
+        document = docx.Document()
+        for text in ("Paragraph 1", "", "Paragraph 2"):
+            document.add_paragraph(text)
+        document.save(str(tmp_path / "test.docx"))
+        assert self.processor._extract_docx(str(tmp_path / "test.docx")) == ["Paragraph 1", "Paragraph 2"]
+
     @patch('signalwire.search.document_processor.DocxDocument')
     def test_extract_docx_error(self, mock_docx: MagicMock) -> None:
         """Test DOCX extraction with error"""
         mock_docx.side_effect = Exception("DOCX error")
         
-        with pytest.raises(DocumentExtractionError, match="Error\ processing\ DOCX"):
+        with pytest.raises(DocumentExtractionError, match="Error processing DOCX"):
             self.processor._extract_docx("test.docx")
         
     
@@ -501,29 +492,24 @@ class TestDocumentProcessorSpecificExtractors:
     def test_extract_text_error(self) -> None:
         """Test text file extraction with error"""
         with patch('builtins.open', side_effect=Exception("File error")):
-            with pytest.raises(DocumentExtractionError, match="Error\ processing\ TXT"):
+            with pytest.raises(DocumentExtractionError, match="Error processing TXT"):
                 self.processor._extract_text("test.txt")
             
     
     @patch('signalwire.search.document_processor.BeautifulSoup', None)
     def test_extract_html_no_library(self) -> None:
         """Test HTML extraction without BeautifulSoup"""
-        with pytest.raises(DocumentExtractionError, match="beautifulsoup4\ not\ available"):
+        with pytest.raises(DocumentExtractionError, match="beautifulsoup4 not available"):
             self.processor._extract_html("test.html")
         
     
-    @patch('signalwire.search.document_processor.BeautifulSoup')
-    def test_extract_html_success(self, mock_bs: MagicMock) -> None:
-        """Test successful HTML extraction"""
-        mock_soup = Mock(return_value=[])
-        mock_soup.get_text.return_value = "HTML content"
-        mock_bs.return_value = mock_soup
-        
-        with patch('builtins.open', mock_open(read_data="<html><body>HTML content</body></html>")):
-            result = self.processor._extract_html("test.html")
-            
-            assert result == "HTML content"
-    
+    def test_extract_html_success(self, tmp_path: Path) -> None:
+        """An HTML page's text, without its markup"""
+        pytest.importorskip("bs4")
+        page = tmp_path / "page.html"
+        page.write_text("<html><body><p>Hello World</p></body></html>", encoding="utf-8")
+        assert self.processor._extract_html(str(page)) == "Hello World"
+
     @patch('signalwire.search.document_processor.markdown', None)
     def test_extract_markdown_no_library(self) -> None:
         """Test Markdown extraction without markdown library"""
@@ -740,82 +726,276 @@ class TestFileExtraction:
 
         result = self.processor._extract_pdf("/fake/doc.pdf")
         assert isinstance(result, list)
-        assert len(result) == 2  # page2 had None text, should be skipped
+        assert len(result) == 3  # one entry per page; page2 had no text
+        assert result[1] == ""
         assert "Page one text" in result[0]
 
     @patch('signalwire.search.document_processor.pdfplumber')
-    def test_extract_pdf_strips_leading_page_numbers(self, mock_pdfplumber: MagicMock) -> None:
-        """Leading page numbers like '1. ' should be stripped."""
+    def test_extract_pdf_keeps_a_leading_number(self, mock_pdfplumber: MagicMock) -> None:
+        """A page that opens with '1. ' (a numbered list) keeps it."""
         page = Mock(); page.extract_text.return_value = "1. Introduction paragraph"
         mock_pdf = MagicMock(); mock_pdf.pages = [page]
         mock_pdfplumber.open.return_value.__enter__ = Mock(return_value=mock_pdf)
         mock_pdfplumber.open.return_value.__exit__ = Mock(return_value=False)
 
         result = self.processor._extract_pdf("/fake/doc.pdf")
-        assert result == ["Introduction paragraph"]
+        assert result == ["1. Introduction paragraph"]
 
     @patch('signalwire.search.document_processor.pdfplumber', None)
     def test_extract_pdf_missing_dependency(self) -> None:
-        with pytest.raises(DocumentExtractionError, match="pdfplumber\ not\ available"):
+        with pytest.raises(DocumentExtractionError, match="pdfplumber not available"):
             self.processor._extract_pdf("/fake/doc.pdf")
 
     @patch('signalwire.search.document_processor.pdfplumber')
     def test_extract_pdf_exception(self, mock_pdfplumber: MagicMock) -> None:
         mock_pdfplumber.open.side_effect = RuntimeError("corrupt file")
-        with pytest.raises(DocumentExtractionError, match="Error\ processing\ PDF"):
+        with pytest.raises(DocumentExtractionError, match="Error processing PDF"):
             self.processor._extract_pdf("/fake/doc.pdf")
 
     # ── DOCX ─────────────────────────────────────────────────────────
 
-    @patch('signalwire.search.document_processor.DocxDocument')
-    def test_extract_docx_filters_empty_paragraphs(self, mock_docx_cls: MagicMock) -> None:
-        p1 = Mock(text="Hello"); p2 = Mock(text=""); p3 = Mock(text="World")
-        mock_doc = Mock(); mock_doc.paragraphs = [p1, p2, p3]
-        mock_docx_cls.return_value = mock_doc
-
-        result = self.processor._extract_docx("/fake/doc.docx")
-        assert result == ["Hello", "World"]
+    def test_extract_docx_filters_empty_paragraphs(self, tmp_path: Path) -> None:
+        """Paragraphs come back as written, and empty ones are left out"""
+        docx = pytest.importorskip("docx")
+        document = docx.Document()
+        for text in ("Paragraph 1", "", "Paragraph 2"):
+            document.add_paragraph(text)
+        document.save(str(tmp_path / "test.docx"))
+        assert self.processor._extract_docx(str(tmp_path / "test.docx")) == ["Paragraph 1", "Paragraph 2"]
 
     @patch('signalwire.search.document_processor.DocxDocument', None)
     def test_extract_docx_missing_dependency(self) -> None:
-        with pytest.raises(DocumentExtractionError, match="python\-docx\ not\ available"):
+        with pytest.raises(DocumentExtractionError, match="python-docx not available"):
             self.processor._extract_docx("/fake/doc.docx")
 
     @patch('signalwire.search.document_processor.DocxDocument')
     def test_extract_docx_exception(self, mock_docx_cls: MagicMock) -> None:
         mock_docx_cls.side_effect = ValueError("bad docx")
-        with pytest.raises(DocumentExtractionError, match="Error\ processing\ DOCX"):
+        with pytest.raises(DocumentExtractionError, match="Error processing DOCX"):
             self.processor._extract_docx("/fake/doc.docx")
 
     # ── XLSX (Excel) ─────────────────────────────────────────────────
 
-    def test_extract_excel_success(self) -> None:
-        mock_lwb = MagicMock()
-        mock_sheet = Mock()
-        mock_sheet.iter_rows.return_value = [
-            ("Name", "Age"),
-            ("Alice", 30),
-            (None, "Bob"),
-        ]
-        mock_wb = Mock(); mock_wb.worksheets = [mock_sheet]
-        mock_lwb.return_value = mock_wb
+    @staticmethod
+    def _excel_mocks(value_rows: list[tuple[Any, ...]], formula_rows: list[tuple[Any, ...]]) -> tuple[MagicMock, Mock, Mock]:
+        """load_workbook returning a values workbook and a formulas workbook, one sheet each."""
+        def workbook(rows: list[tuple[Any, ...]]) -> Mock:
+            sheet = Mock()
+            sheet.title = "Prices"
+            sheet.iter_rows.return_value = rows
+            return Mock(worksheets=[sheet])
 
-        with patch.dict(sys.modules, {"openpyxl": Mock(load_workbook=mock_lwb)}):
+        values, formulas = workbook(value_rows), workbook(formula_rows)
+
+        def load_workbook(path: str, read_only: bool = False, data_only: bool = False) -> Mock:
+            assert read_only, "workbooks are read streaming"
+            return values if data_only else formulas
+
+        return MagicMock(side_effect=load_workbook), values, formulas
+
+    def test_extract_excel_labels_each_row_with_its_sheet_and_headers(self) -> None:
+        value_rows = [("Plan", "Price", None), ("Pro", 40.0, None), (None, None, None), ("Team", None, "yearly")]
+        formula_rows = [("Plan", "Price", None), ("Pro", 40.0, None), (None, None, None), ("Team", "=B2*2", "yearly")]
+        load_workbook, values, formulas = self._excel_mocks(value_rows, formula_rows)
+        # B4's formula was never calculated
+        layouts: list[tuple[list[tuple[int, int, int, int]], set[tuple[int, int]]]] = [([], {(4, 2)})]
+        with patch.dict(sys.modules, {"openpyxl": Mock(load_workbook=load_workbook)}), \
+                patch.object(DocumentProcessor, "_sheet_layouts", return_value=layouts):
             result = self.processor._extract_excel("/fake/data.xlsx")
-        assert "Name" in result
-        assert "Alice" in result
-        assert "30" in result  # integers become str
-        assert "Bob" in result
+        # A blank row is left out, the formula keeps its text, and a cell with
+        # no header is labelled with its column letter.
+        assert result == ["Prices | Plan: Pro, Price: 40", "Prices | Plan: Team, Price: =B2*2, C: yearly"]
+        for workbook in (values, formulas):
+            workbook.close.assert_called_once_with()
+            workbook.worksheets[0].reset_dimensions.assert_called_once_with()
+
+    def test_extract_excel_reads_formulas_only_when_one_was_never_calculated(self) -> None:
+        load_workbook, values, formulas = self._excel_mocks([("Plan",), ("Pro",)], [])
+        with patch.dict(sys.modules, {"openpyxl": Mock(load_workbook=load_workbook)}), \
+                patch.object(DocumentProcessor, "_sheet_layouts", return_value=[([], set())]):
+            assert self.processor._extract_excel("/fake/data.xlsx") == ["Prices | Plan: Pro"]
+        assert load_workbook.call_count == 1
+        values.close.assert_called_once_with()
+
+    def test_extract_excel_closes_its_workbooks_when_reading_fails(self) -> None:
+        load_workbook, values, formulas = self._excel_mocks([], [])
+        formulas.worksheets[0].iter_rows.side_effect = OSError("truncated archive")
+        with patch.dict(sys.modules, {"openpyxl": Mock(load_workbook=load_workbook)}), \
+                patch.object(DocumentProcessor, "_sheet_layouts", return_value=[([], {(1, 1)})]):
+            with pytest.raises(DocumentExtractionError, match="Error processing Excel"):
+                self.processor._extract_excel("/fake/data.xlsx")
+        values.close.assert_called_once_with()
+        formulas.close.assert_called_once_with()
+
+    @staticmethod
+    def _rewrite_sheet(path: Path, old: str, new: str, part: str = "xl/worksheets/sheet1.xml") -> None:
+        """Edit one XML part of a saved workbook, as another tool would have written it."""
+        import zipfile
+
+        with zipfile.ZipFile(path) as archive:
+            parts = {name: archive.read(name) for name in archive.namelist()}
+        text = parts[part].decode()
+        assert text.count(old) == 1, text
+        parts[part] = text.replace(old, new).encode()
+        with zipfile.ZipFile(path, "w") as archive:
+            for name, data in parts.items():
+                archive.writestr(name, data)
+
+    def test_extract_excel_reads_a_real_workbook(self, tmp_path: Path) -> None:
+        openpyxl = pytest.importorskip("openpyxl")
+        import datetime
+
+        workbook = openpyxl.Workbook()
+        prices = workbook.active
+        prices.title = "Prices"
+        prices.append(["Plan", "Billing", "Price", "Since"])
+        prices.append(["Pro", "monthly", 40, datetime.datetime(2026, 1, 5)])
+        prices.append([None, "yearly", "=C2*10", None])  # written by a script, so never calculated
+        prices.merge_cells("A2:A3")  # one plan, two billing rows
+        prices.append(["Note:\nexcludes tax", None, None, None])
+        workbook.create_sheet("Notes").append(["Prices exclude tax."])
+        path = tmp_path / "prices.xlsx"
+        workbook.save(path)
+
+        rows = self.processor.extract_text(str(path))
+        assert rows == [
+            "Prices | Plan: Pro, Billing: monthly, Price: 40, Since: 2026-01-05",
+            "Prices | Plan: Pro, Billing: yearly, Price: =C2*10",
+            "Prices | Plan: Note: excludes tax",
+            "Notes | Prices exclude tax.",
+        ]
+        chunks = DocumentProcessor(chunking_strategy="page").create_chunks(rows, "prices.xlsx", "xlsx")
+        assert [c["content"] for c in chunks] == rows
+
+    def test_extract_excel_uses_stored_formula_values(self, tmp_path: Path) -> None:
+        openpyxl = pytest.importorskip("openpyxl")
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = "Prices"
+        sheet.append(['=IF(TRUE,"","report")'])
+        sheet.append(["Plan", "Price"])
+        sheet.append(["Pro", "=20*2"])
+        path = tmp_path / "calculated.xlsx"
+        workbook.save(path)
+        # As Excel saves them: a stored empty string, and a stored number.
+        self._rewrite_sheet(path, '<c r="A1"><f>IF(TRUE,"","report")</f><v></v></c>',
+                            '<c r="A1" t="str"><f>IF(TRUE,"","report")</f><v></v></c>')
+        self._rewrite_sheet(path, "<f>20*2</f><v></v>", "<f>20*2</f><v>40</v>")
+
+        # The calculated blank stays blank, so the real headers label the row.
+        assert self.processor._extract_excel(str(path)) == ["Prices | Plan: Pro, Price: 40"]
+
+    def test_merged_cells_have_a_fill_limit(self, tmp_path: Path) -> None:
+        openpyxl = pytest.importorskip("openpyxl")
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = "Wide"
+        sheet.append(["Group", "Item"])
+        sheet.append(["All", "first"])
+        for n in range(3, 6):
+            sheet.cell(row=n, column=2, value=f"item {n}")
+        sheet.merge_cells("A2:XFD5")  # a tiny file whose merge spans every column
+        path = tmp_path / "wide.xlsx"
+        workbook.save(path)
+        with patch("signalwire.search.document_processor._MERGE_FILL_CELLS", 20):
+            rows = self.processor.extract_text(str(path))
+        assert len(" ".join(rows)) < 2000
+        assert rows[0].startswith("Wide | Group: All")
+
+    def test_a_long_merged_value_is_repeated_only_within_the_character_limit(self, tmp_path: Path) -> None:
+        openpyxl = pytest.importorskip("openpyxl")
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = "Notes"
+        sheet.append(["Group", "Item"])
+        sheet.append(["x" * 5000, "item 2"])
+        for n in range(3, 51):
+            sheet.cell(row=n, column=2, value=f"item {n}")
+        sheet.merge_cells("A2:A50")
+        path = tmp_path / "long.xlsx"
+        workbook.save(path)
+        with patch("signalwire.search.document_processor._MERGE_FILL_CHARACTERS", 20_000):
+            rows = self.processor.extract_text(str(path))
+        # The stored cell, then four repeats; after that the merged cells stay empty.
+        assert sum("x" * 5000 in row for row in rows) == 5
+        assert len(rows) == 49 and rows[-1] == "Notes | Item: item 50"
+
+    def test_sheets_with_the_same_name_keep_their_own_formulas(self, tmp_path: Path) -> None:
+        openpyxl = pytest.importorskip("openpyxl")
+        workbook = openpyxl.Workbook()
+        first = workbook.active
+        first.title = "Prices"
+        first.append(["Plan", "Price"])
+        first.append(["Pro", "=20*2"])  # never calculated
+        second = workbook.create_sheet("Other")
+        second.append(["Plan", "Price"])
+        second.append(["Team", 90])
+        path = tmp_path / "twins.xlsx"
+        workbook.save(path)
+        self._rewrite_sheet(path, 'name="Other"', 'name="Prices"', part="xl/workbook.xml")
+        assert self.processor._extract_excel(str(path)) == [
+            "Prices | Plan: Pro, Price: =20*2",
+            "Prices | Plan: Team, Price: 90",
+        ]
+
+    def test_a_dialog_sheet_is_listed_as_openpyxl_lists_it(self, tmp_path: Path) -> None:
+        openpyxl = pytest.importorskip("openpyxl")
+        import zipfile
+
+        workbook = openpyxl.Workbook()
+        workbook.active.title = "Prices"
+        workbook.active.append(["Plan", "Price"])
+        workbook.active.append(["Pro", 40])
+        path = tmp_path / "dialog.xlsx"
+        workbook.save(path)
+        dialog_type = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/dialogsheet"
+        relationships = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+        self._rewrite_sheet(path, "</sheets>",
+                            f'<sheet xmlns:r="{relationships}" name="Dialog1" sheetId="2" r:id="rIdDialog"/></sheets>',
+                            part="xl/workbook.xml")
+        self._rewrite_sheet(path, "</Relationships>",
+                            f'<Relationship Id="rIdDialog" Type="{dialog_type}" Target="dialogsheets/sheet1.xml"/>'
+                            "</Relationships>", part="xl/_rels/workbook.xml.rels")
+        with zipfile.ZipFile(path, "a") as archive:
+            archive.writestr("xl/dialogsheets/sheet1.xml",
+                             '<dialogsheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+                             "<sheetData/></dialogsheet>")
+        assert self.processor._extract_excel(str(path)) == ["Prices | Plan: Pro, Price: 40"]
+
+    def test_without_openpyxls_sheet_paths_rows_still_come_back(self, tmp_path: Path) -> None:
+        openpyxl = pytest.importorskip("openpyxl")
+        workbook = openpyxl.Workbook()
+        workbook.active.title = "Prices"
+        workbook.active.append(["Plan", "Price"])
+        path = tmp_path / "plain.xlsx"
+        workbook.save(path)
+        sheet = Mock(spec=["title"])
+        sheet.title = "Prices"
+        assert DocumentProcessor._sheet_layouts(str(path), [sheet]) == [([], set())]
+
+    def test_a_long_header_is_cut_as_a_label(self, tmp_path: Path) -> None:
+        openpyxl = pytest.importorskip("openpyxl")
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = "S"
+        sheet.append(["h" * 300])
+        sheet.append(["value"])
+        path = tmp_path / "header.xlsx"
+        workbook.save(path)
+        assert self.processor.extract_text(str(path)) == ["S | " + "h" * 100 + ": value"]
+
+    def test_column_letters(self) -> None:
+        assert [DocumentProcessor._column_letter(i) for i in (0, 25, 26, 701, 702)] == ["A", "Z", "AA", "ZZ", "AAA"]
 
     def test_extract_excel_missing_dependency(self) -> None:
         with patch.dict(sys.modules, {"openpyxl": None}):
-            with pytest.raises(DocumentExtractionError, match="openpyxl\ not\ available"):
+            with pytest.raises(DocumentExtractionError, match="openpyxl not available"):
                 self.processor._extract_excel("/fake/data.xlsx")
 
     def test_extract_excel_exception(self) -> None:
         mock_lwb = MagicMock(side_effect=Exception("xlsx error"))
         with patch.dict(sys.modules, {"openpyxl": Mock(load_workbook=mock_lwb)}):
-            with pytest.raises(DocumentExtractionError, match="Error\ processing\ Excel"):
+            with pytest.raises(DocumentExtractionError, match="Error processing Excel"):
                 self.processor._extract_excel("/fake/data.xlsx")
 
     def test_importing_the_module_does_not_load_openpyxl(self) -> None:
@@ -831,52 +1011,48 @@ class TestFileExtraction:
 
     # ── PPTX (PowerPoint) ────────────────────────────────────────────
 
-    @patch('signalwire.search.document_processor.Presentation')
-    def test_extract_powerpoint_success(self, mock_pres_cls: MagicMock) -> None:
-        shape1 = Mock(text="Title Slide"); shape1.__class__ = type('S', (), {'text': 'Title Slide'})
-        shape2 = Mock(text="Bullet 1")
-        shape_no_text = Mock(spec=[])  # no 'text' attribute
-        slide1 = Mock(); slide1.shapes = [shape1, shape_no_text]
-        slide2 = Mock(); slide2.shapes = [shape2]
-        mock_pres = Mock(); mock_pres.slides = [slide1, slide2]
-        mock_pres_cls.return_value = mock_pres
-
-        result = self.processor._extract_powerpoint("/fake/pres.pptx")
-        assert isinstance(result, list)
-        assert len(result) == 2
-        assert "Title Slide" in result[0]
-        assert "Bullet 1" in result[1]
+    def test_extract_powerpoint_success(self, tmp_path: Path) -> None:
+        """One entry per slide, with each text shape's text"""
+        pptx = pytest.importorskip("pptx")
+        deck = pptx.Presentation()
+        first = deck.slides.add_slide(deck.slide_layouts[5])
+        first.shapes.title.text = "Title Slide"
+        second = deck.slides.add_slide(deck.slide_layouts[1])
+        second.shapes.title.text = "Bullets"
+        second.placeholders[1].text_frame.text = "Bullet 1"
+        deck.save(str(tmp_path / "pres.pptx"))
+        result = self.processor._extract_powerpoint(str(tmp_path / "pres.pptx"))
+        assert result == ["Title Slide", "Bullets\nBullet 1"]
 
     @patch('signalwire.search.document_processor.Presentation', None)
     def test_extract_powerpoint_missing_dependency(self) -> None:
-        with pytest.raises(DocumentExtractionError, match="python\-pptx\ not\ available"):
+        with pytest.raises(DocumentExtractionError, match="python-pptx not available"):
             self.processor._extract_powerpoint("/fake/pres.pptx")
 
     @patch('signalwire.search.document_processor.Presentation')
     def test_extract_powerpoint_exception(self, mock_pres_cls: MagicMock) -> None:
         mock_pres_cls.side_effect = Exception("pptx error")
-        with pytest.raises(DocumentExtractionError, match="Error\ processing\ PowerPoint"):
+        with pytest.raises(DocumentExtractionError, match="Error processing PowerPoint"):
             self.processor._extract_powerpoint("/fake/pres.pptx")
 
     # ── HTML ─────────────────────────────────────────────────────────
 
-    @patch('signalwire.search.document_processor.BeautifulSoup')
-    def test_extract_html_success(self, mock_bs: MagicMock) -> None:
-        mock_soup = Mock(return_value=[]); mock_soup.get_text.return_value = "Hello World"
-        mock_bs.return_value = mock_soup
-        with patch('builtins.open', mock_open(read_data="<p>Hello World</p>")):
-            result = self.processor._extract_html("/fake/page.html")
-        assert result == "Hello World"
+    def test_extract_html_success(self, tmp_path: Path) -> None:
+        """An HTML page's text, without its markup"""
+        pytest.importorskip("bs4")
+        page = tmp_path / "page.html"
+        page.write_text("<html><body><p>Hello World</p></body></html>", encoding="utf-8")
+        assert self.processor._extract_html(str(page)) == "Hello World"
 
     @patch('signalwire.search.document_processor.BeautifulSoup', None)
     def test_extract_html_missing_dependency(self) -> None:
-        with pytest.raises(DocumentExtractionError, match="beautifulsoup4\ not\ available"):
+        with pytest.raises(DocumentExtractionError, match="beautifulsoup4 not available"):
             self.processor._extract_html("/fake/page.html")
 
     @patch('signalwire.search.document_processor.BeautifulSoup')
     def test_extract_html_exception(self, mock_bs: MagicMock) -> None:
         with patch('builtins.open', side_effect=IOError("disk")):
-            with pytest.raises(DocumentExtractionError, match="Error\ processing\ HTML"):
+            with pytest.raises(DocumentExtractionError, match="Error processing HTML"):
                 self.processor._extract_html("/fake/page.html")
 
     # ── Markdown ─────────────────────────────────────────────────────
@@ -901,7 +1077,7 @@ class TestFileExtraction:
 
     def test_extract_markdown_io_error(self) -> None:
         with patch('builtins.open', side_effect=OSError("nope")):
-            with pytest.raises(DocumentExtractionError, match="Error\ processing\ Markdown"):
+            with pytest.raises(DocumentExtractionError, match="Error processing Markdown"):
                 self.processor._extract_markdown("/fake/doc.md")
 
     # ── RTF ───────────────────────────────────────────────────────────
@@ -915,13 +1091,13 @@ class TestFileExtraction:
 
     @patch('signalwire.search.document_processor.rtf_to_text', None)
     def test_extract_rtf_missing_dependency(self) -> None:
-        with pytest.raises(DocumentExtractionError, match="striprtf\ not\ available"):
+        with pytest.raises(DocumentExtractionError, match="striprtf not available"):
             self.processor._extract_rtf("/fake/doc.rtf")
 
     @patch('signalwire.search.document_processor.rtf_to_text')
     def test_extract_rtf_exception(self, mock_rtf: MagicMock) -> None:
         with patch('builtins.open', side_effect=IOError("disk")):
-            with pytest.raises(DocumentExtractionError, match="Error\ processing\ RTF"):
+            with pytest.raises(DocumentExtractionError, match="Error processing RTF"):
                 self.processor._extract_rtf("/fake/doc.rtf")
 
     # ── Plain text ────────────────────────────────────────────────────
@@ -933,7 +1109,7 @@ class TestFileExtraction:
 
     def test_extract_text_encoding_error(self) -> None:
         with patch('builtins.open', side_effect=UnicodeDecodeError('utf-8', b'', 0, 1, 'bad')):
-            with pytest.raises(DocumentExtractionError, match="Error\ processing\ TXT"):
+            with pytest.raises(DocumentExtractionError, match="Error processing TXT"):
                 self.processor._extract_text("/fake/file.txt")
 
     # ── _extract_text_from_file routing ──────────────────────────────
@@ -1271,16 +1447,15 @@ class TestChunkingStrategies:
 
     def test_json_chunking_invalid_json(self) -> None:
         proc = DocumentProcessor(chunking_strategy='json')
-        chunks = proc.create_chunks("not valid json {{{", "f.json", "json")
-        # Should fall back to sentence-based
-        assert len(chunks) >= 1
+        # Not chunked as text instead: a malformed file is an error
+        with pytest.raises(ChunkFormatError, match="not valid JSON"):
+            proc.create_chunks("not valid json {{{", "f.json", "json")
 
     def test_json_chunking_missing_chunks_key(self) -> None:
         proc = DocumentProcessor(chunking_strategy='json')
         data = {"data": [1, 2, 3]}
-        chunks = proc.create_chunks(json.dumps(data), "f.json", "json")
-        # Should fall back to sentence-based
-        assert len(chunks) >= 1
+        with pytest.raises(ChunkFormatError, match='"chunks" list'):
+            proc.create_chunks(json.dumps(data), "f.json", "json")
 
     def test_json_chunking_skip_invalid_chunk(self) -> None:
         proc = DocumentProcessor(chunking_strategy='json')
@@ -1291,9 +1466,9 @@ class TestChunkingStrategies:
                 {"chunk_id": "no_content"},  # missing 'content'
             ]
         }
-        chunks = proc.create_chunks(json.dumps(data), "f.json", "json")
-        assert len(chunks) == 1
-        assert "Valid" in chunks[0]['content']
+        # A bad entry fails the file, naming it, rather than vanishing
+        with pytest.raises(ChunkFormatError, match='chunk 1 needs a string "content"'):
+            proc.create_chunks(json.dumps(data), "f.json", "json")
 
     def test_json_chunking_empty_chunks_list(self) -> None:
         proc = DocumentProcessor(chunking_strategy='json')
@@ -1693,3 +1868,635 @@ class TestExtractText:
         doc = tmp_path / "guide.md"
         doc.write_text("# Setup\n\nRun **it**.\n", encoding="utf-8")
         assert self.processor.extract_text(str(doc)) == "# Setup\n\nRun **it**.\n"
+
+
+class TestChunkWindowSizes:
+    """Every window size moves forward, and one that can't is refused."""
+
+    def test_one_sentence_per_chunk(self) -> None:
+        processor = DocumentProcessor(chunking_strategy="sentence", max_sentences_per_chunk=1)
+        chunks = processor.create_chunks("One. Two. Three.", "t.txt", "txt")
+        assert [c["content"] for c in chunks] == ["One.", "Two.", "Three."]
+
+    @pytest.mark.parametrize("n", [2, 3, 5, 8])
+    def test_larger_windows_overlap_as_before(self, n: int) -> None:
+        text = " ".join(f"Sentence {i}." for i in range(20))
+        processor = DocumentProcessor(chunking_strategy="sentence", max_sentences_per_chunk=n)
+        chunks = processor.create_chunks(text, "t.txt", "txt")
+        step = n - max(1, n // 4)
+        assert len(chunks) == len(range(0, 20, step))
+
+    def test_a_window_of_none_is_refused(self) -> None:
+        with pytest.raises(ValueError, match="max_sentences_per_chunk must be at least 1"):
+            DocumentProcessor(chunking_strategy="sentence", max_sentences_per_chunk=0)
+
+    @pytest.mark.parametrize("overlap", [-1, 50, 60])
+    def test_a_sliding_window_that_cant_move_is_refused(self, overlap: int) -> None:
+        with pytest.raises(ValueError, match="chunk_overlap must be"):
+            DocumentProcessor(chunking_strategy="sliding", chunk_size=50, chunk_overlap=overlap)
+
+    def test_long_sentences_in_the_document_aware_path(self) -> None:
+        # Sentences longer than chunk_size words give one sentence per chunk there
+        long = " ".join(["word"] * 80) + ". " + " ".join(["more"] * 80) + "."
+        chunks = DocumentProcessor()._chunk_text_enhanced(long, "t.txt")
+        assert len(chunks) == 2
+
+
+class TestPdfPages:
+    """A PDF's pages keep their numbers, and their text as written."""
+
+    def _pdf(self, texts: list[str | None]) -> MagicMock:
+        pdf = MagicMock()
+        pdf.__enter__.return_value.pages = [Mock(**{"extract_text.return_value": t}) for t in texts]
+        return pdf
+
+    def test_each_page_has_an_entry_and_keeps_a_leading_number(self) -> None:
+        with patch('signalwire.search.document_processor.pdfplumber') as plumber:
+            plumber.open.return_value = self._pdf(["Intro", None, "1. Plug it in.\n2. Wait."])
+            pages = DocumentProcessor()._extract_pdf("manual.pdf")
+        assert pages == ["Intro", "", "1. Plug it in.\n2. Wait."]
+
+    def test_the_page_strategy_skips_an_empty_page_and_keeps_the_numbers(self) -> None:
+        chunks = DocumentProcessor(chunking_strategy="page").create_chunks(
+            ["Intro", "", "Setup"], "manual.pdf", "pdf"
+        )
+        assert [(c["section"], c["metadata"]["page_number"]) for c in chunks] == [
+            ("Page 1", 1),
+            ("Page 3", 3),
+        ]
+
+    def test_an_empty_page_adds_nothing_to_the_other_strategies(self) -> None:
+        processor = DocumentProcessor(chunking_strategy="sentence")
+        with_gap = processor.create_chunks(["Intro here.", "", "Setup here."], "m.pdf", "pdf")
+        without = processor.create_chunks(["Intro here.", "Setup here."], "m.pdf", "pdf")
+        assert [c["content"] for c in with_gap] == [c["content"] for c in without]
+
+
+class TestParagraphsFromAList:
+    """A list's entries are paragraphs, and short ones can merge forward."""
+
+    DOCX = ["Installation guide.", "Plug the cable into the back port.", "Wait two minutes."]
+
+    def test_each_entry_is_a_paragraph(self) -> None:
+        chunks = DocumentProcessor(chunking_strategy="paragraph").create_chunks(self.DOCX, "g.docx", "docx")
+        assert [c["content"] for c in chunks] == self.DOCX
+        assert [c["metadata"]["paragraph_number"] for c in chunks] == [1, 2, 3]
+
+    def test_a_short_paragraph_merges_into_the_next(self) -> None:
+        doc = ["Installation guide.", "Plug the cable into the back port.",
+               "Then wait two minutes for the light to turn green."]
+        processor = DocumentProcessor(chunking_strategy="paragraph", min_chunk_size=6)
+        chunks = processor.create_chunks(doc, "g.docx", "docx")
+        assert [c["content"] for c in chunks] == [
+            "Installation guide.\n\nPlug the cable into the back port.",
+            "Then wait two minutes for the light to turn green.",
+        ]
+        assert [(c["section"], c["metadata"]["paragraph_count"]) for c in chunks] == [
+            ("Paragraph 1", 2),
+            ("Paragraph 3", 1),
+        ]
+
+    def test_a_short_last_paragraph_joins_the_one_before(self) -> None:
+        processor = DocumentProcessor(chunking_strategy="paragraph", min_chunk_size=6)
+        chunks = processor.create_chunks(self.DOCX, "g.docx", "docx")
+        assert len(chunks) == 1 and chunks[0]["content"].endswith("Wait two minutes.")
+        assert chunks[0]["metadata"]["paragraph_count"] == 3
+
+    def test_a_text_splits_on_blank_lines_as_before(self) -> None:
+        text = "First one.\n\nSecond one.\nStill second.\n\nThird."
+        chunks = DocumentProcessor(chunking_strategy="paragraph").create_chunks(text, "t.txt", "txt")
+        assert [c["content"] for c in chunks] == ["First one.", "Second one.\nStill second.", "Third."]
+
+
+class TestSemanticModel:
+    """The semantic strategy compares sentences with the index's own model."""
+
+    TEXT = "Cats purr. Cats nap. Taxes are due in April. File them online."
+
+    def test_it_loads_the_model_its_given(self) -> None:
+        pytest.importorskip("sklearn")
+        model = Mock()
+        model.encode.return_value = [[1.0, 0.0], [1.0, 0.0], [0.0, 1.0], [0.0, 1.0]]
+        with patch("signalwire.search.query_processor._get_cached_model", return_value=model) as load:
+            chunks = DocumentProcessor(
+                chunking_strategy="semantic", model_name="sentence-transformers/all-MiniLM-L6-v2"
+            ).create_chunks(self.TEXT, "t.txt", "txt")
+        load.assert_called_once_with("sentence-transformers/all-MiniLM-L6-v2")
+        assert {c["metadata"]["chunk_method"] for c in chunks} == {"semantic"}
+
+    def test_a_model_that_wont_load_gives_sentence_chunks_that_say_so(self) -> None:
+        pytest.importorskip("sklearn")
+        with patch("signalwire.search.query_processor._get_cached_model", return_value=None):
+            chunks = DocumentProcessor(chunking_strategy="semantic").create_chunks(self.TEXT, "t.txt", "txt")
+        assert chunks and {c["metadata"]["chunk_method"] for c in chunks} == {"sentence_based"}
+
+    def test_the_index_builder_passes_its_model(self) -> None:
+        from signalwire.search.index_builder import IndexBuilder
+
+        builder = IndexBuilder(model_name="sentence-transformers/all-MiniLM-L6-v2", chunking_strategy="semantic")
+        assert builder.doc_processor.model_name == "sentence-transformers/all-MiniLM-L6-v2"
+
+
+class TestStructuredDocuments:
+    """Word, PowerPoint and HTML keep all their text, and their structure
+    under the markdown strategy."""
+
+    def _docx(self, tmp_path: Path) -> str:
+        docx = pytest.importorskip("docx")
+        document = docx.Document()
+        document.add_heading("Setup", 1)
+        document.add_paragraph("Plug it in.")
+        document.add_heading("Linux", 2)
+        document.add_paragraph("Install the package.", style="List Bullet")
+        table = document.add_table(rows=2, cols=2)
+        for (row, column), text in {(0, 0): "Plan", (0, 1): "Price", (1, 0): "Pro", (1, 1): "40"}.items():
+            table.cell(row, column).text = text
+        document.add_paragraph("After the table.")
+        path = str(tmp_path / "guide.docx")
+        document.save(path)
+        return path
+
+    def test_a_word_table_is_kept_in_place(self, tmp_path: Path) -> None:
+        units = DocumentProcessor()._docx_units(self._docx(tmp_path))
+        assert [u["text"] for u in units] == [
+            "Setup", "Plug it in.", "Linux", "Install the package.",
+            "Plan | Price\nPro | 40", "After the table.",
+        ]
+        assert units[4]["anchor"] == {"table": 1, "headings": ["Setup", "Linux"]}
+        assert units[5]["anchor"] == {"paragraph": 5, "headings": ["Setup", "Linux"]}
+
+    def test_a_word_document_of_only_a_table(self, tmp_path: Path) -> None:
+        docx = pytest.importorskip("docx")
+        document = docx.Document()
+        table = document.add_table(rows=2, cols=2)
+        table.cell(0, 0).text, table.cell(1, 1).text = "a", "d"
+        document.save(str(tmp_path / "t.docx"))
+        assert DocumentProcessor().extract_text(str(tmp_path / "t.docx")) == ["a\nd"]
+
+    def test_word_structure_as_markdown(self, tmp_path: Path) -> None:
+        texts = DocumentProcessor(chunking_strategy="markdown")._extract_docx(self._docx(tmp_path))
+        assert texts == [
+            "# Setup", "Plug it in.", "## Linux", "- Install the package.",
+            "| Plan | Price |\n| --- | --- |\n| Pro | 40 |", "After the table.",
+        ]
+
+    def _pptx(self, tmp_path: Path) -> str:
+        pptx = pytest.importorskip("pptx")
+        from pptx.util import Inches
+
+        deck = pptx.Presentation()
+        slide = deck.slides.add_slide(deck.slide_layouts[5])
+        slide.shapes.title.text = "Pricing"
+        group = slide.shapes.add_group_shape()
+        group.shapes.add_textbox(Inches(1), Inches(1), Inches(2), Inches(1)).text_frame.text = "Grouped words"
+        table = slide.shapes.add_table(2, 2, Inches(1), Inches(3), Inches(4), Inches(1)).table
+        for (row, column), text in {(0, 0): "Plan", (0, 1): "Price", (1, 0): "Pro", (1, 1): "40"}.items():
+            table.cell(row, column).text = text
+        slide.notes_slide.notes_text_frame.text = "Mention the discount."
+        deck.slides.add_slide(deck.slide_layouts[6])
+        path = str(tmp_path / "deck.pptx")
+        deck.save(path)
+        return path
+
+    def test_a_slide_keeps_groups_tables_and_notes(self, tmp_path: Path) -> None:
+        units = DocumentProcessor()._pptx_units(self._pptx(tmp_path))
+        assert units == [
+            {"text": "Pricing\nGrouped words\nPlan | Price\nPro | 40\nNotes: Mention the discount.",
+             "anchor": {"slide": 1}},
+            {"text": "", "anchor": {"slide": 2}},
+        ]
+
+    def test_a_slide_as_markdown(self, tmp_path: Path) -> None:
+        texts = DocumentProcessor(chunking_strategy="markdown")._extract_powerpoint(self._pptx(tmp_path))
+        assert texts[0] == (
+            "# Pricing\n\nGrouped words\n\n| Plan | Price |\n| --- | --- |\n| Pro | 40 |"
+            "\n\nNotes: Mention the discount."
+        )
+
+    PAGE = (
+        "<html><body><nav>Home | About</nav><header>Site</header><h1>Hours</h1>"
+        "<p>Open <b>9</b> to 5.</p><h2>Holidays</h2><ul><li>Closed Monday</li></ul>"
+        "<table><tr><th>Day</th><th>Hours</th></tr><tr><td>Sat</td><td>10-2</td></tr></table>"
+        "<footer>(c) us</footer></body></html>"
+    )
+
+    def test_html_leaves_out_navigation_headers_and_footers(self, tmp_path: Path) -> None:
+        pytest.importorskip("bs4")
+        page = tmp_path / "hours.html"
+        page.write_text(self.PAGE, encoding="utf-8")
+        processor = DocumentProcessor()
+        text = processor.extract_text(str(page))
+        assert isinstance(text, str) and "Open" in text and "Sat" in text
+        for left_out in ("Home", "Site", "(c) us"):
+            assert left_out not in text
+        assert [u["anchor"] for u in processor._html_units(str(page))] == [
+            {"section": 1, "headings": ["Hours"]},
+            {"section": 2, "headings": ["Hours", "Holidays"]},
+        ]
+
+    def test_html_as_markdown(self, tmp_path: Path) -> None:
+        pytest.importorskip("bs4")
+        page = tmp_path / "hours.html"
+        page.write_text(self.PAGE, encoding="utf-8")
+        assert DocumentProcessor(chunking_strategy="markdown").extract_text(str(page)) == (
+            "# Hours\n\nOpen 9 to 5.\n\n## Holidays\n\n- Closed Monday\n\n"
+            "| Day | Hours |\n| --- | --- |\n| Sat | 10-2 |"
+        )
+
+
+class TestExtractUnits:
+    """extract_units(): each unit's text with where in the file it came from."""
+
+    def setup_method(self) -> None:
+        self.processor = DocumentProcessor()
+
+    @patch('signalwire.search.document_processor.magic', None)
+    def test_pdf_units_number_every_page_and_keep_empty_ones(self) -> None:
+        with patch.object(DocumentProcessor, "_extract_pdf", return_value=["one", "", "three"]):
+            units = self.processor.extract_units("/fake/report.pdf")
+        assert units == [
+            {"text": "one", "anchor": {"page": 1}},
+            {"text": "", "anchor": {"page": 2}},
+            {"text": "three", "anchor": {"page": 3}},
+        ]
+
+    def test_excel_units_carry_their_sheet_and_the_row_excel_shows(self, tmp_path: Path) -> None:
+        openpyxl = pytest.importorskip("openpyxl")
+        workbook = openpyxl.Workbook()
+        prices = workbook.active
+        prices.title = "Prices"
+        prices.append(["Plan", "Price"])
+        prices.append(["Pro", 40])
+        prices.append([])  # a blank row: the next one is still row 4
+        prices.append(["Team", 90])
+        workbook.create_sheet("Notes").append(["Prices exclude tax."])
+        path = tmp_path / "prices.xlsx"
+        workbook.save(path)
+
+        units = self.processor.extract_units(str(path))
+        assert units == [
+            {"text": "Prices | Plan: Pro, Price: 40", "anchor": {"sheet": "Prices", "row": 2}},
+            {"text": "Prices | Plan: Team, Price: 90", "anchor": {"sheet": "Prices", "row": 4}},
+            {"text": "Notes | Prices exclude tax.", "anchor": {"sheet": "Notes", "row": 1}},
+        ]
+        assert self.processor.extract_text(str(path)) == [u["text"] for u in units]
+
+    def test_a_text_file_is_one_unit_for_the_whole_file(self, tmp_path: Path) -> None:
+        path = tmp_path / "notes.txt"
+        path.write_text("Line one.\nLine two.", encoding="utf-8")
+        assert self.processor.extract_units(str(path)) == [{"text": "Line one.\nLine two.", "anchor": {}}]
+
+    @pytest.mark.parametrize("container", ["application/octet-stream", "application/zip"])
+    def test_an_office_file_libmagic_names_by_its_container_is_read_by_its_extension(
+        self, tmp_path: Path, container: str
+    ) -> None:
+        docx = pytest.importorskip("docx")
+        document = docx.Document()
+        document.add_paragraph("Plug it in.")
+        path = tmp_path / "setup.docx"
+        document.save(str(path))
+        detector = MagicMock()
+        detector.Magic.return_value.from_file.return_value = container
+        with patch('signalwire.search.document_processor.magic', detector):
+            assert self.processor.extract_text(str(path)) == ["Plug it in."]
+        # A container type and no extension that says more: still refused
+        with patch('signalwire.search.document_processor.magic', detector), \
+                pytest.raises(DocumentExtractionError, match="Unsupported file type"):
+            self.processor.extract_text(str(tmp_path / "archive.bin"))
+
+    def test_unsupported_types_raise_as_extract_text_does(self, tmp_path: Path) -> None:
+        with patch.object(DocumentProcessor, "_file_type", return_value="image/png"), \
+                pytest.raises(DocumentExtractionError, match="Unsupported file type"):
+            self.processor.extract_units(str(tmp_path / "logo.png"))
+
+
+class TestDelimitedRows:
+    """CSV and TSV: one unit per row, labelled with the header row."""
+
+    def setup_method(self) -> None:
+        self.processor = DocumentProcessor()
+
+    def _write(self, tmp_path: Path, name: str, text: str, encoding: str = "utf-8") -> str:
+        path = tmp_path / name
+        path.write_bytes(text.encode(encoding))
+        return str(path)
+
+    def test_csv_rows_are_labelled_with_their_headers(self, tmp_path: Path) -> None:
+        path = self._write(
+            tmp_path, "plans.csv",
+            "﻿Plan,Price,Note\n"  # a byte-order mark, as Excel writes
+            "Pro,40,\n"  # an empty cell is left out
+            "\n"  # a blank line still counts as a row
+            '"Team, annual",90,"two\nlines",extra\n',  # a quoted comma and newline; a cell past the headers
+        )
+        units = self.processor.extract_units(path)
+        assert units == [
+            {"text": "Plan: Pro, Price: 40", "anchor": {"row": 2}},
+            {"text": "Plan: Team, annual, Price: 90, Note: two lines, D: extra", "anchor": {"row": 4}},
+        ]
+        assert self.processor.extract_text(path) == [u["text"] for u in units]
+
+    def test_a_csv_with_only_a_header_is_that_row(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "empty.csv", "\n\nPlan,Price\n")
+        assert self.processor.extract_units(path) == [{"text": "Plan, Price", "anchor": {"row": 3}}]
+
+    def test_a_tsv_is_read_as_tsv_whatever_libmagic_guesses(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "cities.tsv", "Name,full\tLocation,code\nPro,annual\tParis,FR\n")
+        detector = MagicMock()
+        detector.Magic.return_value.from_file.return_value = "application/csv"
+        with patch('signalwire.search.document_processor.magic', detector):
+            assert self.processor.extract_text(path) == ["Name,full: Pro,annual, Location,code: Paris,FR"]
+
+    @pytest.mark.parametrize("text", [
+        'Plan,Price\nPro,40\n"Team,90\nEnterprise,100\n',  # a quote never closed
+        'Plan,Price\n"Pro"extra,40\n',  # text after a closing quote
+    ])
+    def test_malformed_csv_fails_rather_than_merging_rows(self, tmp_path: Path, text: str) -> None:
+        with pytest.raises(DocumentExtractionError, match="Error processing CSV"):
+            self.processor.extract_units(self._write(tmp_path, "plans.csv", text))
+
+    def test_tsv_has_no_quoting(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "plans.tsv", 'Plan\tSize\nPro\t15" screen\n')
+        assert self.processor.extract_units(path) == [{"text": 'Plan: Pro, Size: 15" screen', "anchor": {"row": 2}}]
+
+    def test_a_csv_that_isnt_utf8_fails(self, tmp_path: Path) -> None:
+        path = tmp_path / "latin.csv"
+        path.write_bytes(b"Plan,Price\nCaf\xe9,4\n")
+        with pytest.raises(DocumentExtractionError, match="Error processing CSV"):
+            self.processor.extract_units(str(path))
+
+
+class TestJsonDocuments:
+    """JSON and JSON Lines: one unit per value, as key-path lines."""
+
+    def setup_method(self) -> None:
+        self.processor = DocumentProcessor()
+
+    def _write(self, tmp_path: Path, name: str, data: Any) -> str:
+        path = tmp_path / name
+        path.write_text(data if isinstance(data, str) else json.dumps(data), encoding="utf-8")
+        return str(path)
+
+    def test_a_top_level_array_is_a_unit_per_element(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "people.json", [
+            {"name": "Ann", "address": {"city": "Paris"}, "tags": ["vip", "fr"], "fax": None},
+            "a plain string",
+            {},  # nothing to say: left out
+            {"orders": [{"id": 7, "paid": True}, {"id": 8, "paid": False}]},
+        ])
+        assert self.processor.extract_units(path) == [
+            {"text": "name: Ann\naddress.city: Paris\ntags: vip, fr", "anchor": {"path": "/0"}},
+            {"text": "a plain string", "anchor": {"path": "/1"}},
+            {"text": "orders[0].id: 7\norders[0].paid: true\norders[1].id: 8\norders[1].paid: false",
+             "anchor": {"path": "/3"}},
+        ]
+
+    def test_a_top_level_object_is_a_unit_per_member(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "guide.json", {"title": "Guide", "a/b": {"x": 1.5}, "c~d": 2, "empty": ""})
+        assert self.processor.extract_units(path) == [
+            {"text": "title: Guide", "anchor": {"path": "/title"}},
+            {"text": "a/b.x: 1.5", "anchor": {"path": "/a~1b"}},  # the pointer escapes /
+            {"text": "c~d: 2", "anchor": {"path": "/c~0d"}},  # and ~
+        ]
+
+    def test_a_long_key_path_is_cut_from_the_front(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "keys.json", [{"K" * 32_768: {str(i): i for i in range(1000)}}])
+        lines = self.processor.extract_text(path)[0].split("\n")
+        assert len(lines) == 1000
+        label, value = lines[999].rsplit(": ", 1)
+        assert value == "999" and len(label) == 200 and label.startswith("\u2026") and label.endswith("K.999")
+
+    def test_a_long_top_level_key_is_cut_too(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "keys.json", {"K" * 1_000_000: {str(i): i for i in range(20_000)}, "x": 1})
+        units = self.processor.extract_units(path)
+        assert units[0]["anchor"] == {"path": "/" + "K" * 1_000_000}  # the pointer stays whole
+        lines = units[0]["text"].split("\n")
+        assert len(lines) == 20_000 and all(len(line.rsplit(": ", 1)[0]) <= 200 for line in lines)
+        scalar = self._write(tmp_path, "scalar.json", {"K" * 5000: "value"})
+        label, value = self.processor.extract_text(scalar)[0].rsplit(": ", 1)
+        assert value == "value" and len(label) == 200
+
+    def test_key_paths_cant_repeat_without_limit(self, tmp_path: Path) -> None:
+        # 50,000 values under a 190-character key: half a megabyte making ten
+        path = self._write(tmp_path, "many.json", {"k" * 190: {str(i): 0 for i in range(50_000)}})
+        with pytest.raises(DocumentExtractionError, match="repeat more text than the limit"):
+            self.processor.extract_units(path)
+        lines = "\n".join(json.dumps({"k" * 190: {str(i): 0 for i in range(2_000)}}) for _ in range(30))
+        with pytest.raises(DocumentExtractionError, match="repeat more text than the limit"):
+            self.processor.extract_units(self._write(tmp_path, "many.jsonl", lines))
+
+    def test_markdown_holding_json_stays_markdown(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "example.md", '{"Plan": "Pro", "Price": 40}\n')
+        detector = MagicMock()
+        detector.Magic.return_value.from_file.return_value = "application/json"
+        with patch('signalwire.search.document_processor.magic', detector):
+            assert self.processor.extract_text(path) == '{"Plan": "Pro", "Price": 40}\n'
+
+    def test_a_scalar_document_is_one_unit(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "note.json", '"just a note"')
+        assert self.processor.extract_units(path) == [{"text": "just a note", "anchor": {"path": ""}}]
+
+    def test_malformed_and_deeply_nested_json_fail(self, tmp_path: Path) -> None:
+        with pytest.raises(DocumentExtractionError, match="Error processing JSON"):
+            self.processor.extract_units(self._write(tmp_path, "bad.json", '{"a": '))
+        with pytest.raises(DocumentExtractionError, match="nested too deeply"):
+            self.processor.extract_units(self._write(tmp_path, "deep.json", "[" * 100_000 + "]" * 100_000))
+
+    def test_json_lines_are_a_unit_per_line(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "events.jsonl", '{"event": "call", "minutes": 3}\n\n{"event": "sms"}\n')
+        assert self.processor.extract_units(path) == [
+            {"text": "event: call\nminutes: 3", "anchor": {"line": 1}},
+            {"text": "event: sms", "anchor": {"line": 3}},
+        ]
+
+    def test_a_json_line_that_isnt_json_fails_the_file(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "events.ndjson", '{"event": "call"}\nnot json\n')
+        with pytest.raises(DocumentExtractionError, match="line 2 isn't JSON"):
+            self.processor.extract_units(path)
+
+    def test_json_is_read_as_json_with_or_without_python_magic(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "people.json", [{"name": "Ann"}])
+        detector = MagicMock()
+        detector.Magic.return_value.from_file.return_value = "application/json"
+        with patch('signalwire.search.document_processor.magic', detector):
+            assert self.processor.extract_text(path) == ["name: Ann"]
+        detector.Magic.return_value.from_file.return_value = "text/plain"  # an older libmagic
+        with patch('signalwire.search.document_processor.magic', detector):
+            assert self.processor.extract_text(path) == ["name: Ann"]
+        with patch('signalwire.search.document_processor.magic', None):
+            assert self.processor.extract_text(path) == ["name: Ann"]
+
+    def test_json_lines_are_told_apart_by_their_extension(self, tmp_path: Path) -> None:
+        path = self._write(tmp_path, "events.jsonl", '{"event": "call"}\n{"event": "sms"}\n')
+        detector = MagicMock()
+        detector.Magic.return_value.from_file.return_value = "application/json"
+        with patch('signalwire.search.document_processor.magic', detector):
+            assert self.processor.extract_text(path) == ["event: call", "event: sms"]
+
+
+class TestJsonChunkFormat:
+    """The json strategy takes the JSON chunk format, and nothing else."""
+
+    def setup_method(self) -> None:
+        self.processor = DocumentProcessor(chunking_strategy="json")
+
+    def _chunks(self, data: Any) -> list[dict[str, Any]]:
+        return self.processor.create_chunks(json.dumps(data), "chunks.json", "json")
+
+    @pytest.mark.parametrize(("chunks", "message"), [
+        ([{"content": 7}], 'chunk 0 needs a string "content"'),
+        ([{"content": "ok"}, {"content": "ok", "metadata": "x"}], 'chunk 1: "metadata" must be an object'),
+        ([{"content": "ok", "metadata": {"section": 3}}], '"section" must be a string'),
+        ([{"content": "ok", "section": ["a"]}], '"section" must be a string'),
+        ([{"content": "ok", "tags": "billing"}], '"tags" must be a list of strings'),
+        ([{"content": "ok", "metadata": {"tags": [1]}}], '"tags" must be a list of strings'),
+        ([{"content": "ok", "metadata": None}], '"metadata" must be an object'),
+        ([{"content": "ok", "tags": None}], '"tags" must be a list of strings'),
+        ([{"content": "ok", "metadata": {"tags": None}}], '"tags" must be a list of strings'),
+    ])
+    def test_an_entry_out_of_format_fails_the_file(self, chunks: list[Any], message: str) -> None:
+        with pytest.raises(ChunkFormatError, match=re.escape(message)):
+            self._chunks({"chunks": chunks})
+
+    def test_the_error_is_a_value_error_exported_from_search(self) -> None:
+        import signalwire.search
+
+        assert signalwire.search.ChunkFormatError is ChunkFormatError
+        assert issubclass(ChunkFormatError, ValueError)
+
+    def test_deep_nesting_is_a_format_error(self) -> None:
+        with pytest.raises(ChunkFormatError, match="nested too deeply"):
+            self.processor.create_chunks("[" * 100_000 + "]" * 100_000, "chunks.json", "json")
+
+    def test_a_null_section_is_no_section(self) -> None:
+        chunks = self._chunks({"chunks": [
+            {"content": "ok", "section": None, "metadata": {"section": None}},
+            {"content": "Refunds take five days.", "section": "Refunds", "metadata": {"section": None}},
+        ]})
+        assert [c["section"] for c in chunks] == ["Section 1", "Refunds"]
+
+    def test_files_that_arent_json_are_chunked_by_sentences(self) -> None:
+        # A build mixing curated JSON with other documents: sw-search --chunking-strategy json --file-types json,md
+        chunks = self.processor.create_chunks("# Setup\n\nConnect the power cable.", "setup.md", "md")
+        assert "Connect the power cable." in " ".join(c["content"] for c in chunks)
+        assert chunks[0]["metadata"]["chunk_method"] == "sentence_based"
+        with pytest.raises(ChunkFormatError):
+            self.processor.create_chunks("# Setup", "setup.json", ".json")
+
+    def test_no_chunks_is_no_chunks(self) -> None:
+        assert self._chunks({"chunks": []}) == []
+        assert self.processor.create_chunks("  \n", "chunks.json", "json") == []
+
+    def test_sw_search_json_output_reads_back_with_its_sections(self) -> None:
+        source = (
+            "# Billing\n\nWe bill monthly, on the first.\n\n"
+            "## Refunds\n\nRefunds take five days.\n\n"
+            "# Support\n\nCall us any time.\n"
+        )
+        chunks = DocumentProcessor(chunking_strategy="markdown").create_chunks(source, "guide.md", "md")
+        # What sw-search --output-format json writes
+        exported = json.dumps({"chunks": chunks, "metadata": {"total_chunks": len(chunks)}})
+        back = self.processor.create_chunks(exported, "guide.json", "json")
+        assert [c["section"] for c in back] == [c["section"] for c in chunks]
+        assert all(c["section"] for c in back)
+        # And once more: a second round trip changes nothing
+        again = self.processor.create_chunks(json.dumps({"chunks": back}), "guide.json", "json")
+        assert [(c["content"], c["section"]) for c in again] == [(c["content"], c["section"]) for c in back]
+
+
+class TestSemanticWithAModel:
+    """A caller that holds the index's model passes it, and it's the one used."""
+
+    TEXT = (
+        "The router has four ports. Plug the modem into the WAN port. The light turns green. "
+        "Refunds take fourteen days. Keep the receipt. Refunds go to the original card."
+    )
+
+    def _model(self, side_effect: Any = None) -> MagicMock:
+        np = pytest.importorskip("numpy")
+        pytest.importorskip("sklearn")
+        model = MagicMock()
+        # Two topics: the first three sentences point one way, the last three another
+        model.encode.side_effect = side_effect or (
+            lambda sentences, **_: np.array([[1.0, 0.0]] * 3 + [[0.0, 1.0]] * (len(sentences) - 3))
+        )
+        return model
+
+    def test_a_passed_model_is_used_and_no_other_is_loaded(self) -> None:
+        model = self._model()
+        processor = DocumentProcessor(chunking_strategy="semantic", model=model, model_name="some/other-model")
+        with patch("signalwire.search.query_processor._get_cached_model") as by_name:
+            chunks = processor.create_chunks(self.TEXT, "notes.txt", "txt")
+        by_name.assert_not_called()
+        model.encode.assert_called_once()
+        assert [c["metadata"]["chunk_method"] for c in chunks] == ["semantic", "semantic"]
+        assert "fourteen days" in chunks[1]["content"] and "four ports" in chunks[0]["content"]
+
+    @pytest.mark.parametrize("error", [
+        OSError("the caller's model broke"),
+        ImportError("the caller's model broke"),
+        ModuleNotFoundError("the caller's model broke"),
+        RuntimeError("the caller's model broke"),
+    ])
+    def test_a_passed_models_failure_is_raised_not_hidden(self, error: Exception) -> None:
+        model = self._model(side_effect=error)
+        processor = DocumentProcessor(chunking_strategy="semantic", model=model)
+        with pytest.raises(type(error), match="caller's model broke"):
+            processor.create_chunks(self.TEXT, "notes.txt", "txt")
+
+    def test_without_a_model_one_that_wont_load_falls_back_to_sentences(self) -> None:
+        pytest.importorskip("sklearn")
+        processor = DocumentProcessor(chunking_strategy="semantic", model_name="missing/model")
+        with patch("signalwire.search.query_processor._get_cached_model", return_value=None):
+            chunks = processor.create_chunks(self.TEXT, "notes.txt", "txt")
+        assert chunks and {c["metadata"]["chunk_method"] for c in chunks} == {"sentence_based"}
+
+    @pytest.mark.parametrize("passed", [True, False])
+    def test_a_missing_dependency_still_falls_back_to_sentences(self, passed: bool) -> None:
+        model = self._model() if passed else None
+        processor = DocumentProcessor(chunking_strategy="semantic", model=model)
+        with patch.dict(sys.modules, {"sklearn.metrics.pairwise": None}):  # importing it raises ImportError
+            chunks = processor.create_chunks(self.TEXT, "notes.txt", "txt")
+        assert chunks and {c["metadata"]["chunk_method"] for c in chunks} == {"sentence_based"}
+
+
+class TestParseJsonChunks:
+    """parse_json_chunks(): a chunk file's entries, checked, as written."""
+
+    def test_entries_come_back_as_written(self) -> None:
+        text = json.dumps({"chunks": [{"content": "# Router\nPlug it in."}, {"content": "## Returns\nTen days."}]})
+        entries = DocumentProcessor.parse_json_chunks(text)
+        assert [e["content"] for e in entries] == ["# Router\nPlug it in.", "## Returns\nTen days."]
+        # create_chunks() gives the subsection its heading; parse_json_chunks() doesn't
+        chunks = DocumentProcessor(chunking_strategy="json").create_chunks(text, "c.json", "json")
+        assert chunks[1]["content"].startswith("# Router")
+
+    def test_out_of_format_raises_naming_the_file(self) -> None:
+        with pytest.raises(ChunkFormatError, match=r'^mine\.json: chunk 0 needs a string "content"'):
+            DocumentProcessor.parse_json_chunks('{"chunks": [{"content": 1}]}', "mine.json")
+
+
+class TestInheritedHeadings:
+    """The json strategy gives a subsection its topic's heading, within bounds."""
+
+    def test_a_subsection_gets_its_topics_heading(self) -> None:
+        text = json.dumps({"chunks": [{"content": "# send_fax"}, {"content": "## Parameters\nto, from"}]})
+        chunks = DocumentProcessor(chunking_strategy="json").create_chunks(text, "c.json", "json")
+        assert chunks[1]["content"] == "# send_fax\n\n## Parameters\nto, from"
+        assert chunks[1]["metadata"]["heading_context"] == "# send_fax"
+
+    def test_a_long_heading_over_many_subsections_is_bounded(self) -> None:
+        text = json.dumps({"chunks": [{"content": "# " + "H" * 65_536}, *[{"content": "## Subsection"}] * 511]})
+        chunks = DocumentProcessor(chunking_strategy="json").create_chunks(text, "large.json", "json")
+        assert len(chunks) == 512 and len(chunks[0]["content"]) == 65_538  # the topic's own chunk is whole
+        heading = chunks[1]["metadata"]["heading_context"]
+        assert len(heading) == 200 and heading.endswith("\u2026")
+        assert sum(len(c["content"]) for c in chunks) <= 65_538 + 511 * (len("## Subsection") + 202)
+
+    def test_past_the_budget_subsections_go_as_written(self) -> None:
+        heading = "# " + "H" * 150
+        text = json.dumps({"chunks": [{"content": heading}, *[{"content": "## S"}] * 20_000]})
+        chunks = DocumentProcessor(chunking_strategy="json").create_chunks(text, "many.json", "json")
+        given = [c for c in chunks[1:] if "heading_context" in c["metadata"]]
+        assert 0 < len(given) < 20_000
+        assert all(c["content"] == "## S" for c in chunks[1 + len(given):])
