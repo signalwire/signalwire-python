@@ -477,7 +477,10 @@ class SearchEngine:
         for r in final_results:
             w = self._rank_weight(r.get("metadata"))
             if w != 1.0:
-                r["final_score"] *= w
+                # Moves the score down either way: a negative score (a vector
+                # match below 0, with no threshold) shrinking toward 0 would rise
+                score = r["final_score"]
+                r["final_score"] = score * w if score >= 0 else score / w
                 weighted = True
         if weighted:
             final_results.sort(key=lambda x: x["final_score"], reverse=True)
@@ -1695,8 +1698,9 @@ class SearchEngine:
 
         Lets an index say some chunks are secondary sources -- commentary next
         to reference, say -- so that when both match, the reference wins,
-        without the query having to say which kind it wants. It multiplies the
-        final score, so it only ever demotes: nothing can be weighted above
+        without the query having to say which kind it wants. It multiplies a
+        positive final score and divides a negative one, so it only ever
+        demotes: nothing can be weighted above
         what its relevance earned, which keeps the rule that non-semantic
         signals may reorder results but not choose them. Values outside
         (0, 1], booleans and non-numbers are ignored rather than trusted.
