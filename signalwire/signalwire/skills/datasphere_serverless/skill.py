@@ -204,9 +204,11 @@ class DataSphereServerlessSkill(SkillBase):
         no_results = self.no_results_message.replace("{query}", "${args.query}")
         webhook_no_results = re.sub(
             r"[$%]\{(?:[a-z_]+:)*",
-            lambda m: m.group(0)
-            if no_results.startswith("input.", m.end())
-            else m.group(0) + "input.",
+            lambda m: (
+                m.group(0)
+                if no_results.startswith("input.", m.end())
+                else m.group(0) + "input."
+            ),
             no_results,
         )
 
