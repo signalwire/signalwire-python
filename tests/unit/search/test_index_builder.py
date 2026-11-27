@@ -895,3 +895,28 @@ class TestIndexBuilderEmbeddingText:
             finally:
                 conn.close()
         assert row == ("processed",)
+
+
+class TestEmbeddingDimension:
+    """The embedding width, under either sentence-transformers method name."""
+
+    def test_the_current_name_is_used_where_it_exists(self) -> None:
+        from signalwire.search.index_builder import _embedding_dimension
+
+        class Current:
+            def get_embedding_dimension(self) -> int:
+                return 384
+
+            def get_sentence_embedding_dimension(self) -> int:
+                raise AssertionError("the old name warns in sentence-transformers 6")
+
+        assert _embedding_dimension(Current()) == 384
+
+    def test_the_older_name_before_it(self) -> None:
+        from signalwire.search.index_builder import _embedding_dimension
+
+        class Older:
+            def get_sentence_embedding_dimension(self) -> int:
+                return 768
+
+        assert _embedding_dimension(Older()) == 768
