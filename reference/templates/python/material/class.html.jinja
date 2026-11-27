@@ -1,0 +1,163 @@
+{#- Class template override: a TypedDict renders its fields as one table.
+
+The stock template gives every field its own heading and table-of-contents
+entry. The generated REST, SWML and RELAY type modules declare over a thousand
+TypedDict fields between them, which made a single page megabytes long.
+Here a TypedDict lists its fields in one Field / Type table instead. Every
+other class renders exactly as before.
+
+- A TypedDict is a class with a `typing.TypedDict` or
+  `typing_extensions.TypedDict` base, however it was imported, or a subclass
+  of one. A subclass's table lists its inherited fields first, as the type does.
+- A Description column appears only when a field has a description: the
+  field's own docstring, or its entry in the class docstring's `Attributes:`
+  section. That section is then not rendered as well, so a field never shows
+  twice. It is kept when it names something that isn't a field.
+- A sentence above the table says when every field is optional (or every
+  field required). When they differ, a Required column says which.
+- A type name in the Type column links to its heading. A public class or alias
+  of the page's own module gets a plain fragment link: autorefs adds a
+  full-path tooltip to every link, and across ~1,500 fields that tooltip alone
+  was hundreds of kilobytes. Any other name from the same package gets an
+  autorefs link (PostPrompt.post_data: SwaigRequest, from another module).
+  Everything else (str, Any, Literal, ...) renders as text.
+-#}
+{% extends "_base/class.html.jinja" %}
+
+{#- Appends `cls` and its resolvable ancestors to `acc`, ancestors first.
+`seen` guards against cycles: griffe resolves some mixins' typing-only bases
+back to the class that uses them (AuthMixin -> AgentBase -> AuthMixin). -#}
+{%- macro collect_classes(cls, acc, seen) -%}
+  {%- if cls.path not in seen -%}
+    {%- set _ = seen.append(cls.path) -%}
+    {%- for parent in cls.resolved_bases -%}{{ collect_classes(parent, acc, seen) }}{%- endfor -%}
+    {%- set _ = acc.append(cls) -%}
+  {%- endif -%}
+{%- endmacro -%}
+
+{#- Outputs "1" when one of `classes` has a `TypedDict` base. -#}
+{%- macro typeddict_marker(classes) -%}
+  {%- for cls in classes -%}
+    {%- for base in cls.bases -%}
+      {%- if base.canonical_path is defined and base.canonical_path in ["typing.TypedDict", "typing_extensions.TypedDict"] -%}1{%- endif -%}
+    {%- endfor -%}
+  {%- endfor -%}
+{%- endmacro -%}
+
+{#- A field's type, linked where the target has a heading. `scope` is the
+class that declares the field; `page_module` is the TypedDict's module, whose page
+this is. -#}
+{%- macro field_type(expression, scope, page_module) -%}
+  {#- griffe gives a plain string for a constant annotation such as `None`. -#}
+  {%- for element in ([expression] if expression is string else expression.iterate(flat=True)) -%}
+    {%- if element is string -%}
+      {{ element }}
+    {%- else -%}
+      {%- set path = element.canonical_path -%}
+      {#- griffe resolves a bare name that matches a field to the field itself
+      (`SWAIG: SWAIG`). Python resolves TypedDict annotations in module scope. -#}
+      {%- if path.startswith(scope.path ~ ".") -%}
+        {%- set path = scope.module.path ~ "." ~ element.name -%}
+      {%- endif -%}
+      {%- set parent_path, _, short = path.rpartition(".") -%}
+      {%- set local = page_module.members.get(short) if parent_path == page_module.path else none -%}
+      {%- if local and not local.is_alias and not short.startswith("_") -%}
+        <a href="#{{ path }}">{{ element.name }}</a>
+      {%- elif path.startswith(page_module.package.path ~ ".") -%}
+        <autoref identifier="{{ path }}" optional>{{ element.name }}</autoref>
+      {%- else -%}
+        {{ element.name }}
+      {%- endif -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- endmacro -%}
+
+{#- "required" or "optional", from the declaring class's `total` and any
+Required[...] / NotRequired[...] wrapper (also under ReadOnly[...]). -#}
+{%- macro requiredness(field) -%}
+  {%- set ann = field.annotation -%}
+  {%- set wrapper = ann.left.canonical_path if ann.left is defined and ann.left.canonical_path is defined else "" -%}
+  {%- if wrapper.endswith(".ReadOnly") and ann.slice.left is defined and ann.slice.left.canonical_path is defined -%}
+    {%- set wrapper = ann.slice.left.canonical_path -%}
+  {%- endif -%}
+  {%- if wrapper.endswith(".NotRequired") -%}optional
+  {%- elif wrapper.endswith(".Required") -%}required
+  {%- elif (field.parent.keywords.get("total")|string) == "False" -%}optional
+  {%- else -%}required
+  {%- endif -%}
+{%- endmacro -%}
+
+{% block docstring scoped %}
+  {%- set lineage = [] -%}{%- set _ = collect_classes(class, lineage, []) -%}
+  {%- if typeddict_marker(lineage) -%}
+    {#- Drop an `Attributes:` section whose names are all fields: the table shows them. -#}
+    {%- set names = class.all_members.values()|selectattr("is_attribute")|map(attribute="name")|list -%}
+    {%- set sections = [] -%}
+    {%- for section in (class.docstring.parsed if class.docstring else []) -%}
+      {%- if section.kind.value != "attributes" or section.value|map(attribute="name")|reject("in", names)|list -%}
+        {%- set _ = sections.append(section) -%}
+      {%- endif -%}
+    {%- endfor -%}
+    {% with docstring_sections = sections %}
+      {% include "docstring.html.jinja" with context %}
+    {% endwith %}
+  {%- else -%}
+    {{ super() }}
+  {%- endif -%}
+{% endblock docstring %}
+
+{% block children scoped %}
+  {%- set lineage = [] -%}{%- set _ = collect_classes(class, lineage, []) -%}
+  {%- if typeddict_marker(lineage) -%}
+    {#- Inherited fields come first in all_members, as in the TypedDict. -#}
+    {%- set fields = [] -%}
+    {%- for member in class.all_members.values() if member.is_attribute -%}
+      {%- set _ = fields.append(member.final_target if member.is_alias else member) -%}
+    {%- endfor -%}
+    {%- if fields -%}
+      {#- `Attributes:` descriptions, base-most class first so a subclass wins. -#}
+      {%- set from_sections = {} -%}
+      {%- for cls in lineage -%}
+        {%- for section in (cls.docstring.parsed if cls.docstring else []) if section.kind.value == "attributes" -%}
+          {%- for item in section.value if item.description -%}
+            {%- set _ = from_sections.update({item.name: item.description}) -%}
+          {%- endfor -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {%- set descriptions = {} -%}
+      {%- set required = {} -%}
+      {%- for field in fields -%}
+        {%- set text = field.docstring.value if field.docstring else from_sections.get(field.name, "") -%}
+        {%- if text -%}{%- set _ = descriptions.update({field.name: text}) -%}{%- endif -%}
+        {%- set _ = required.update({field.name: requiredness(field)|trim}) -%}
+      {%- endfor -%}
+      {%- set kinds = required.values()|unique|list -%}
+      {%- if kinds|length == 1 -%}
+        <p>All fields are {{ kinds[0] }}.</p>
+      {%- endif -%}
+      <table class="doc-typeddict-fields"><thead><tr><th>Field</th><th>Type</th>
+      {%- if kinds|length > 1 %}<th>Required</th>{% endif -%}
+      {%- if descriptions %}<th>Description</th>{% endif -%}
+      </tr></thead><tbody>
+      {%- for field in fields -%}
+        <tr><td><code>{{ field.name }}</code></td><td>
+        {%- if field.annotation -%}
+          <code>{{ field_type(field.annotation, field.parent, class.module) }}</code>
+        {%- endif -%}
+        </td>
+        {%- if kinds|length > 1 -%}<td>{{ "yes" if required[field.name] == "required" else "no" }}</td>{%- endif -%}
+        {%- if descriptions -%}
+          <td>
+          {%- if field.name in descriptions -%}
+            {{ descriptions[field.name]|convert_markdown(heading_level, field.path) }}
+          {%- endif -%}
+          </td>
+        {%- endif -%}
+        </tr>
+      {%- endfor -%}
+      </tbody></table>
+    {%- endif -%}
+  {%- else -%}
+    {{ super() }}
+  {%- endif -%}
+{% endblock children %}
