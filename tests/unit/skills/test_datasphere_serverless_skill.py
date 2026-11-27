@@ -649,7 +649,19 @@ class TestDataSphereServerlessSkillRegisterTools:
             ("Nothing on {query}", "Nothing on ${input.args.query}"),
             (
                 "Nothing on ${args.query} (${global_data.topic})",
-                "Nothing on ${input.args.query} (${global_data.topic})",
+                "Nothing on ${input.args.query} (${input.global_data.topic})",
+            ),
+            # Every template reads the call's data under input, after its helpers
+            (
+                "%{args.query} ${lc:enc:args.query} ${caller_id_num} "
+                "${time_of_day} ${meta_data.x}",
+                "%{input.args.query} ${lc:enc:input.args.query} "
+                "${input.caller_id_num} ${input.time_of_day} ${input.meta_data.x}",
+            ),
+            # A template that already reads under input is kept
+            (
+                "${input.args.query} ${lc:input.args.query}",
+                "${input.args.query} ${lc:input.args.query}",
             ),
         ],
     )

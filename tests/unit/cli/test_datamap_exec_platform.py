@@ -104,7 +104,7 @@ def test_prompt_vars_are_merged_into_the_call_data() -> None:
 
 
 def test_top_level_output_reads_arguments_at_the_root(capsys: pytest.CaptureFixture[str]) -> None:
-    # input is a copy of the call data in every stage (mod_openai PR 408)
+    # input is a copy of the call data in every stage
     config = _function({"output": {"response": "Sorry about ${args.city}.${input.args.city}"}})
     result = execute_datamap_function(config, {"city": "Paris"})
     assert result == {"response": "Sorry about Paris.Paris"}
@@ -129,6 +129,30 @@ def test_response_input_field_does_not_hide_the_call_data() -> None:
         }],
     })
     with _http(get=_response({"input": {"args": {"city": "Rome"}}, "temp": 20})):
+        result = execute_datamap_function(config, {"city": "Paris"})
+    assert result == {"response": "Paris 20"}
+
+
+def test_call_data_input_replaces_an_input_in_any_case() -> None:
+    # Lookups ignore case and find the first match, so an Input key that
+    # stays in the call data would hide the copy
+    config = _function({"output": {"response": "${input.args.city}"}})
+    result = execute_datamap_function(config, {"city": "Paris"}, call_data={"Input": {"args": {"city": "Rome"}}})
+    assert result == {"response": "Paris"}
+
+
+def test_response_input_fields_in_any_case_do_not_hide_the_call_data() -> None:
+    # A JSON response can have more than one case variant of input; the
+    # platform deletes all of them
+    config = _function({
+        "webhooks": [{
+            "url": "https://api.example.com/w",
+            "method": "GET",
+            "output": {"response": "${input.args.city} ${temp}"},
+        }],
+    })
+    payload = {"Input": {"args": {"city": "Rome"}}, "INPUT": {"args": {"city": "Oslo"}}, "temp": 20}
+    with _http(get=_response(payload)):
         result = execute_datamap_function(config, {"city": "Paris"})
     assert result == {"response": "Paris 20"}
 

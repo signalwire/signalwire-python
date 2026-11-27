@@ -8,6 +8,7 @@ See LICENSE file in the project root for full license information.
 """
 
 import base64
+import re
 from typing import Any, ClassVar
 
 from signalwire.core.skill_base import SkillBase
@@ -198,9 +199,16 @@ class DataSphereServerlessSkill(SkillBase):
 
         # The fallback output reads the call's data, where the query is
         # ${args.query}. The webhook's expressions read the API response, with
-        # the call's data under "input", so their copy reads ${input.args.query}.
+        # the call's data under "input", so each template in their copy reads
+        # under input, after its helpers: ${lc:args.x} becomes ${lc:input.args.x}.
         no_results = self.no_results_message.replace("{query}", "${args.query}")
-        webhook_no_results = no_results.replace("${args.", "${input.args.")
+        webhook_no_results = re.sub(
+            r"[$%]\{(?:[a-z_]+:)*",
+            lambda m: m.group(0)
+            if no_results.startswith("input.", m.end())
+            else m.group(0) + "input.",
+            no_results,
+        )
 
         # Create DataMap tool for DataSphere search
         datasphere_tool = (

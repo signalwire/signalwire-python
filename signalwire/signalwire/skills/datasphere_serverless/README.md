@@ -196,7 +196,7 @@ A webhook's output expands against the API response, with the call's data under 
 
 ### 5. **No Results and Error Handling**
 
-When the search finds no chunks, `formatted_results` is empty. A webhook expression then gives the no-results message instead of the output above. It expands against the API response too, so its copy of the message reads the query as `${input.args.query}`:
+When the search finds no chunks, `formatted_results` is empty. A webhook expression then gives the no-results message instead of the output above. It expands against the API response too, so each template in its copy of the message reads the call's data under `input`, after any helpers: the query is `${input.args.query}`, and `${lc:caller_id_num}` becomes `${lc:input.caller_id_num}`:
 
 <!-- snippet: no-compile fluent-chain-excerpt (leading-dot method call lifted from a builder chain) -->
 ```python

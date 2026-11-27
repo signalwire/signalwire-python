@@ -912,8 +912,8 @@ def _call_data(
         _delete_item(data, key)
         data[key] = deepcopy(value)
     _add_item(data, "args", deepcopy(args))
-    # input is the call data in every stage (mod_openai PR 408). The name is
-    # reserved: every existing input goes before the copy is taken.
+    # input is the call data in every stage. The name is reserved: every
+    # existing input goes before the copy is taken.
     while _has_item(data, "input"):
         _delete_item(data, "input")
     data["input"] = deepcopy(data)

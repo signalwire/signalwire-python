@@ -82,7 +82,7 @@ class JokeAgent(AgentBase):
                                 }
                             ],
                         },
-                        "error_keys": "error",
+                        "error_keys": ["error", "http_code"],
                         "method": "GET",
                     }
                 ],

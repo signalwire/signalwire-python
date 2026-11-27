@@ -1,5 +1,5 @@
 """
-Guard the DataMap template corrections of cloud-product issues 21197 and 22588.
+Guard the DataMap template corrections.
 
 Scans docs/*.md, the examples and the package sources (not the tests) for
 templates that the platform doesn't expand as written:
