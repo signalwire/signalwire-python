@@ -38,6 +38,16 @@ from signalwire.core.logging_config import get_logger
 logger = get_logger(__name__)
 
 
+def _embedding_dimension(model: Any) -> int:
+    """The width of a sentence-transformers model's embeddings. Version 6 names
+    the method get_embedding_dimension() and warns on the older
+    get_sentence_embedding_dimension(), which earlier versions have alone."""
+    method = getattr(type(model), "get_embedding_dimension", None)
+    if method is not None:
+        return int(model.get_embedding_dimension())
+    return int(model.get_sentence_embedding_dimension())
+
+
 class IndexBuilder:
     """Build searchable indexes from document directories"""
 
@@ -343,7 +353,7 @@ class IndexBuilder:
                     fallback_dim = 768
                     try:
                         if self.model is not None:
-                            fallback_dim = self.model.get_sentence_embedding_dimension()
+                            fallback_dim = _embedding_dimension(self.model)
                     except Exception:  # noqa: S110  # fall back to 768 if the model cannot report its dimension
                         pass
                     embedding = np.zeros(fallback_dim, dtype=np.float32)
@@ -891,11 +901,8 @@ class IndexBuilder:
         backend = PgVectorBackend(self.connection_string)
 
         try:
-            # Get embedding dimensions from model
-            if self.model:
-                embedding_dim = self.model.get_sentence_embedding_dimension()
-            else:
-                embedding_dim = 768  # Default for all-mpnet-base-v2
+            # Get embedding dimensions from model; 768 is all-mpnet-base-v2's
+            embedding_dim = _embedding_dimension(self.model) if self.model else 768
 
             # Delete existing collection if overwrite is requested
             if overwrite:

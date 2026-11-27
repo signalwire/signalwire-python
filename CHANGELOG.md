@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.17.1] - 2026-11-27
+
+### Fixed
+- Building an index with sentence-transformers 6 warned that
+  `get_sentence_embedding_dimension()` has been renamed, and would break once
+  the old name is removed. The index builder asks for the embedding width
+  with `get_embedding_dimension()` where the model has it, and the older
+  name otherwise.
+
 ## [3.17.0] - 2026-11-25
 
 ### Added
