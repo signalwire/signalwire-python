@@ -190,15 +190,17 @@ class ApiNinjasTriviaSkill(SkillBase):
             "data_map": {
                 "webhooks": [
                     {
-                        "url": "https://api.api-ninjas.com/v1/trivia?category=%{args.category}",
+                        "url": "https://api.api-ninjas.com/v1/trivia?category=%{enc:args.category}",
                         "method": "GET",
                         "headers": {"X-Api-Key": self.api_key},
                         "output": FunctionResult(
                             "Category %{array[0].category} question: %{array[0].question} Answer: %{array[0].answer}, be sure to give the user time to answer before saying the answer."
                         ).to_dict(),
+                        # The platform reads error_keys on the webhook only. It
+                        # adds http_code to the response when the status isn't 2xx.
+                        "error_keys": ["error", "http_code"],
                     }
                 ],
-                "error_keys": ["error"],
                 "output": FunctionResult(
                     "Sorry, I cannot get trivia questions right now. Please try again later."
                 ).to_dict(),

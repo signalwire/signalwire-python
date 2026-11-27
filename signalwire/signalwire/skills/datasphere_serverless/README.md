@@ -194,14 +194,27 @@ References:
 
 A webhook's output expands against the API response, with the call's data under `input`, so the query is `${input.args.query}` there. `${args.query}` in a webhook output reads the response and expands to nothing. The webhook `params` and the fallback output expand against the call's data, so they use `${args.query}`.
 
-### 5. **Error Handling**
+### 5. **No Results and Error Handling**
 
-The tool falls back to a custom message when the request fails or the API's response has an `error` key:
+When the search finds no chunks, `formatted_results` is empty. A webhook expression then gives the no-results message instead of the output above. It expands against the API response too, so each template in its copy of the message reads the call's data under `input`, after any helpers: the query is `${input.args.query}`, and `${lc:caller_id_num}` becomes `${lc:input.caller_id_num}`:
+
+<!-- snippet: no-compile fluent-chain-excerpt (leading-dot method call lifted from a builder chain) -->
+```python
+.webhook_expressions([
+    {
+        "string": "${formatted_results}",
+        "pattern": r"^\s*$",
+        "output": FunctionResult(webhook_no_results).to_dict(),
+    }
+])
+```
+
+The tool falls back to the same message when the request fails: the response has an `error` key, or a status that isn't 2xx, for which the platform adds `http_code`. The platform reads `error_keys` only on the webhook:
 
 <!-- snippet: no-compile fluent-chain-excerpt (leading-dot method calls lifted from a builder chain) -->
 ```python
-.error_keys(["error"])
-.fallback_output(FunctionResult(self.no_results_message.replace("{query}", "${args.query}")))
+.error_keys(["error", "http_code"])
+.fallback_output(FunctionResult(no_results))
 ```
 
 ## Comparison: Standard vs Serverless
@@ -275,8 +288,8 @@ Like the standard datasphere skill, this supports multiple instances:
 
 The skill covers four failure cases:
 
-- **API Errors**: Handled by `error_keys` configuration
-- **No Results**: Uses `fallback_output` with custom message
+- **API Errors**: `error_keys` on the webhook (`error`, and `http_code` for a status that isn't 2xx) makes the fallback output run
+- **No Results**: A webhook expression gives the custom message when `formatted_results` is empty
 - **Invalid Parameters**: Validated during skill setup
 - **Timeout/Network**: Handled by SignalWire infrastructure
 

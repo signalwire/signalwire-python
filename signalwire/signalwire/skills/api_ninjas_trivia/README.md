@@ -139,17 +139,17 @@ For the Science & Math Only example, the skill generates:
     "data_map": {
         "webhooks": [
             {
-                "url": "https://api.api-ninjas.com/v1/trivia?category=%{args.category}",
+                "url": "https://api.api-ninjas.com/v1/trivia?category=%{enc:args.category}",
                 "method": "GET",
                 "headers": {
                     "X-Api-Key": "your_api_key"
                 },
                 "output": {
                     "response": "Category %{array[0].category} question: %{array[0].question} Answer: %{array[0].answer}, be sure to give the user time to answer before saying the answer."
-                }
+                },
+                "error_keys": ["error", "http_code"]
             }
         ],
-        "error_keys": ["error"],
         "output": {
             "response": "Sorry, I cannot get trivia questions right now. Please try again later."
         }

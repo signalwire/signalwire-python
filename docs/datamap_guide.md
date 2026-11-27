@@ -372,7 +372,7 @@ Every template reads from one JSON object, the template data, and names a path f
 - `meta_data`: the metadata store the function shares with the others that have the same metadata token. As each function loads, the platform merges its `meta_data` over the AI's `global_data`, key by key, and adds the result to the store, so a later function's key replaces an earlier one's. The SDK sets no token, so the platform derives one from the function's webhook URL and credentials; a DataMap function has no URL of its own, so all of an agent's DataMap functions share one store. Example: `${meta_data.table.sales}`.
 - Details of the call: `call_id`, `ai_session_id`, `conversation_id`, `function` (the function's name), `caller_id_name`, `caller_id_num`, `project_id`, `space_id` and `app_name`.
 - The prompt variables, built-in variables describing the call and the AI session, merged into the root: `${time_of_day}`. The top-level `output` can also read them as `${prompt_vars.time_of_day}`.
-- `input`, which is empty here.
+- `input`: on current platform builds, a copy of the call data, as in a webhook's response below. `${input.args.query}` gives the same value as `${args.query}` here. Write `${args.x}` in a webhook's `url` and `params` and in the top-level `output`, as the examples in this guide do.
 
 **The webhook's response.** A webhook's `foreach`, `expressions` and `output` read the JSON its API returned, and nothing else from the call data at the root. If the response is an object, its fields are read directly: a response of `{"total": 25, "results": [...]}` gives `${total}` and `${results[0].title}`. There is no `response.` prefix. If the response is an array, it's under `array`: `${array[0].joke}`. The platform adds three fields to it:
 
@@ -380,7 +380,7 @@ Every template reads from one JSON object, the template data, and names a path f
 - `global_data`: `${global_data.api_token}`, as in the call data.
 - `prompt_vars`: `${prompt_vars.time_of_day}`.
 
-A response field with the same name as one of these hides it. During a `foreach`, `this` is the current element of the array it walks, as in `${this.title}`, and the text it builds is stored under its `output_key`, as in `${formatted_results}`.
+A response field named `global_data` or `prompt_vars` hides the one the platform adds. A response field named `input` doesn't: the platform removes it and puts the call data there. During a `foreach`, `this` is the current element of the array it walks, as in `${this.title}`, and the text it builds is stored under its `output_key`, as in `${formatted_results}`.
 
 **Context evolution:**
 ```javascript
@@ -390,7 +390,7 @@ A response field with the same name as one of these hides it. During a `foreach`
   "global_data": {...},
   "meta_data": {...},
   "call_id": "...",
-  "input": {}
+  "input": {"args": {"query": "SignalWire", "count": 3}, "call_id": "...", ...}
 }
 
 // After a webhook returns the object {"results": [...], "total": 25}
@@ -630,16 +630,11 @@ DataMap configurations can include nested objects and complex data structures fo
           "query": {
             "text": "${args.query}",
             "filters": {
-              "category": "${args.category}",
-              "date_range": {
-                "start": "${args.start_date}",
-                "end": "${args.end_date}"
-              },
-              "tags": "${args.tags}"
+              "category": "${args.category}"
             },
             "options": {
               "highlight": true,
-              "max_results": "${args.limit}",
+              "max_results": 10,
               "include_metadata": true
             }
           }
@@ -795,7 +790,7 @@ https://api.weatherapi.com/v1/current.json?key=KEY&q=${lc:enc:args.location}
 
 `enc` encodes as FreeSWITCH's `switch_url_encode` function does. It encodes spaces, control characters, bytes outside ASCII, and `#`, `%`, `&`, `+`, `:`, `;`, `<`, `=`, `>`, `?`, `@`, `[`, `\`, `]`, `^`, `{`, `|`, `}`, `"` and the backtick. It leaves letters, digits and `/ , $ ! ' ( ) * - . _ ~` as they are, so an encoded value can still contain `/` and `,`. A `%` followed by two uppercase hex digits is left alone too, so an already-encoded value isn't encoded twice.
 
-SignalWire's template reference also writes the encoder as `${enc:url:args.query}`. The platform doesn't read `url:` as part of the helper: it reads the path `url:args.query`, which doesn't exist, so that template expands to an empty string. Write `${enc:args.query}`.
+SignalWire's template reference also writes the encoder as `${enc:url:args.query}`. The platform doesn't read `url:` as part of the helper: it reads the path `url:args.query`, which doesn't exist, so that template expands to an empty string. Write `${enc:args.query}`. <!-- datamap-audit: warning -->
 
 **Nested templates** expand from the inside out. In `${meta_data.contacts.${lc:args.department}}`, the inner template turns "Sales" into `sales`, and the outer one then reads `meta_data.contacts.sales`. Nesting works one level deep, and the inner template's value always becomes part of the outer path: `${lc:${args.department}}` reads a field named after the department, not the department lowercased.
 
@@ -837,7 +832,7 @@ ${args.filters.category}
 
 ### 4.4 Context-Specific Variables
 
-- In the top-level `expressions`, and a webhook's `url` and `params`: the call data, with `args`, `global_data`, `meta_data`, the call details and the prompt variables at the root. The response doesn't exist yet, and `input` is empty.
+- In the top-level `expressions`, and a webhook's `url` and `params`: the call data, with `args`, `global_data`, `meta_data`, the call details and the prompt variables at the root. The response doesn't exist yet. `input` is a copy of the call data on current platform builds, but write the arguments as `${args.x}` here.
 - In a webhook's `foreach`, `expressions` and `output`: the response's fields (or `array`), `global_data`, `prompt_vars`, and the call data under `input`. Write an argument as `${input.args.query}`; `${args.query}` is empty here.
 - In a `foreach` `append` template: also `this`, the current element.
 - In the top-level `output`, which runs when no expression or webhook produced an output: the call data, as in a webhook's `url`, plus `prompt_vars`.
@@ -902,16 +897,11 @@ ${args.filters.category}
           "query": {
             "text": "${args.query}",
             "filters": {
-              "category": "${args.category}",
-              "date_range": {
-                "start": "${args.start_date}",
-                "end": "${args.end_date}"
-              },
-              "tags": "${args.tags}"
+              "category": "${args.category}"
             },
             "options": {
               "highlight": true,
-              "max_results": "${args.limit}",
+              "max_results": 10,
               "include_metadata": true
             }
           }
@@ -1241,16 +1231,11 @@ DataMap functions can be integrated with the skills system:
           "query": {
             "text": "${args.query}",
             "filters": {
-              "category": "${args.category}",
-              "date_range": {
-                "start": "${args.start_date}",
-                "end": "${args.end_date}"
-              },
-              "tags": "${args.tags}"
+              "category": "${args.category}"
             },
             "options": {
               "highlight": true,
-              "max_results": "${args.limit}",
+              "max_results": 10,
               "include_metadata": true
             }
           }
@@ -1340,7 +1325,7 @@ Read a secret from `os.environ` when you build the DataMap in Python, and write 
 
 `--verbose` traces the call data, the HTTP request and response, which webhook ran and why, and the output. See [Troubleshooting](cli_guide.md#troubleshooting) in the CLI guide, and the worked example in [9.1](#91-datamap-skills-vs-raw-configuration) for the configuration shape.
 
-The simulation follows the platform's processing order and template rules, as sections 2 to 8 describe: the two sets of template data, the `lc`, `enc` and `fmt_ph` helpers, nested templates, one webhook request per call, and failure detection. A template that doesn't resolve expands to an empty string, as on the platform, and `swaig-test` names it on stderr, with a hint when it's `${args.x}` in a webhook's output or `${response.x}`. It follows up to 15 redirects, from any 3xx response with a `Location`, and sends a POST again, with its body, after one, as the platform does for a request it doesn't sign. A failed request reports the last status it received as `http_code`. The simulation refuses a request or redirect to a private or internal address unless `SWML_ALLOW_PRIVATE_URLS` is set. The simulation leaves `@{...}` functions as they are, doesn't evaluate an expression's `expr`, and, unless the `phonenumbers` package is installed, formats only North American numbers with `fmt_ph`, noting any other value on stderr. Its call data holds the arguments, the function's name, and its `meta_data` merged over the global data, and under `swaig-test` the agent's global data. It doesn't model the store the platform shares between functions, so another function's `meta_data` keys aren't there; `execute_datamap_function()` in `signalwire.cli.execution.datamap_exec` also takes `call_data`, for the global data, prompt variables and call details the platform adds, and `swaig-test --custom-data` supplies it.
+The simulation follows the platform's processing order and template rules, as sections 2 to 8 describe: the two sets of template data, the `lc`, `enc` and `fmt_ph` helpers, nested templates, one webhook request per call, and failure detection. A template that doesn't resolve expands to an empty string, as on the platform, and `swaig-test` names it on stderr, with a hint when it's `${args.x}` in a webhook's output or `${response.x}`. It follows up to 15 redirects, from any 3xx response with a `Location`, and sends a POST again, with its body, after one, as the platform does for a request it doesn't sign. A failed request reports the last status it received as `http_code`. The simulation refuses a request or redirect to a private or internal address unless `SWML_ALLOW_PRIVATE_URLS` is set. The simulation leaves `@{...}` functions as they are, doesn't evaluate an expression's `expr`, and, unless the `phonenumbers` package is installed, formats only North American numbers with `fmt_ph`, noting any other value on stderr. Its call data holds the arguments, the function's name, and its `meta_data` merged over the global data, and under `swaig-test` the agent's global data. It doesn't model the store the platform shares between functions, so another function's `meta_data` keys aren't there; `execute_datamap_function()` in `signalwire.cli.execution.datamap_exec` also takes `call_data`, for the global data, prompt variables and call details the platform adds, and `swaig-test --custom-data` supplies it. <!-- datamap-audit: warning -->
 
 ## 12. Advanced Patterns and Techniques
 

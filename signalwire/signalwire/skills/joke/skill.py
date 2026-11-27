@@ -90,7 +90,8 @@ class JokeSkill(SkillBase):
             # direct, not narrate. "Here's a joke: X" reads as the tool telling
             # the model a joke, and the model answers it instead of relaying it.
             .output(FunctionResult("Tell this joke to the user: ${array[0].joke}"))
-            .error_keys(["error"])
+            # The platform adds http_code to the response when the status isn't 2xx
+            .error_keys(["error", "http_code"])
             .fallback_output(
                 FunctionResult(
                     "Sorry, there is a problem with the joke service right now. Please try again later."

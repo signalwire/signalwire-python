@@ -105,10 +105,10 @@ For the Fahrenheit Weather (Default) example, the skill generates:
                 "method": "GET",
                 "output": {
                     "response": "Tell the user the current weather conditions. Express all temperatures in Fahrenheit using natural language numbers without abbreviations or symbols for clear text-to-speech pronunciation. For example, say 'seventy two degrees Fahrenheit' instead of '72F' or '72°F'. Include the condition, current temperature, wind direction and speed, cloud coverage percentage, and what the temperature feels like. Current conditions: ${current.condition.text}. Temperature: ${current.temp_f} degrees Fahrenheit. Wind: ${current.wind_dir} at ${current.wind_mph} miles per hour. Cloud coverage: ${current.cloud} percent. Feels like: ${current.feelslike_f} degrees Fahrenheit."
-                }
+                },
+                "error_keys": ["error", "http_code"]
             }
         ],
-        "error_keys": ["error"],
         "output": {
             "response": "Sorry, I cannot get weather information right now. Please try again later or check if the location name is correct."
         }

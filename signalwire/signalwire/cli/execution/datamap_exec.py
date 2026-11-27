@@ -488,17 +488,12 @@ class _Run:
             if lowered.startswith("response."):
                 note += (
                     " The platform reads a webhook's JSON response from the root: "
-                    "write ${<field>}, not ${response.<field>}."
+                    "write ${<field>}, not ${response.<field>}."  # datamap-audit: warning
                 )
             elif stage in _RESPONSE_STAGES and lowered.startswith("args."):
                 note += (
                     " In a webhook's foreach, expressions and output, the arguments are "
                     "under input: write ${input." + path + "}."
-                )
-            elif stage not in _RESPONSE_STAGES and lowered.startswith("input."):
-                note += (
-                    " input is empty until a webhook responds; read the call data "
-                    "directly here, as ${" + path[len("input.") :] + "}."
                 )
             print(note, file=sys.stderr)
 
@@ -890,7 +885,7 @@ def _call_data(
 
     Returns the call data, the prompt variables, and the global data (or
     _MISSING). As on the platform, the prompt variables are merged into the
-    root of the call data, and ``input`` is empty.
+    root of the call data, and ``input`` is a copy of the call data.
     """
     extra = deepcopy(call_data) if call_data else {}
     prompt_vars = extra.pop("prompt_vars", {})
@@ -917,7 +912,11 @@ def _call_data(
         _delete_item(data, key)
         data[key] = deepcopy(value)
     _add_item(data, "args", deepcopy(args))
-    _add_item(data, "input", {})
+    # input is the call data in every stage. The name is reserved: every
+    # existing input goes before the copy is taken.
+    while _has_item(data, "input"):
+        _delete_item(data, "input")
+    data["input"] = deepcopy(data)
     return data, prompt_vars, _object_item(data, "global_data")
 
 
@@ -984,7 +983,12 @@ def _execute(
             _add_item(rdata, "prompt_vars", deepcopy(prompt_vars))
             if global_data is not _MISSING:
                 _add_item(rdata, "global_data", deepcopy(global_data))
-            _add_item(rdata, "input", deepcopy(data))
+            # The call data's input, as in the stages before. A field named
+            # input in the response goes first, so it can't hide it.
+            while _has_item(rdata, "input"):
+                _delete_item(rdata, "input")
+            call_input = _object_item(data, "input")
+            rdata["input"] = deepcopy(data if call_input is _MISSING else call_input)
 
             foreach = _object_item(match, "foreach")
             if foreach is not _MISSING:

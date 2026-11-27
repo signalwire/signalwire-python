@@ -2617,7 +2617,7 @@ The platform requests the first webhook whose `require_args` are met, and no oth
 **Usage:**
 ```python
 # Simple GET request with parameter substitution
-data_map.webhook('GET', 'https://api.weather.com/v1/current?key=API_KEY&q=${args.location}')
+data_map.webhook('GET', 'https://api.weather.com/v1/current?key=API_KEY&q=${enc:args.location}')
 
 # POST request with authentication headers
 data_map.webhook(
@@ -2632,7 +2632,7 @@ data_map.webhook(
 # Webhook that requires specific arguments
 data_map.webhook(
     'GET',
-    'https://api.service.com/data?id=${args.customer_id}',
+    'https://api.service.com/data?id=${enc:args.customer_id}',
     require_args=['customer_id']
 )
 
@@ -2774,7 +2774,7 @@ Process array responses by iterating over elements.
 ```python
 # Process array of search results
 data_map = (DataMap('search_docs')
-    .webhook('GET', 'https://api.docs.com/search?q=${args.query}')
+    .webhook('GET', 'https://api.docs.com/search?q=${enc:args.query}')
     .foreach({
         'input_key': 'results',              # Key in the response holding the array
         'output_key': 'formatted_results',   # Name of the built string variable
@@ -2909,7 +2909,7 @@ Attach expressions to the most recently added webhook, storing them under its `e
 **Usage:**
 ```python
 # Evaluate the webhook's response and pick a reply based on its status field
-data_map.webhook('GET', 'https://api.example.com/status?id=${args.id}')
+data_map.webhook('GET', 'https://api.example.com/status?id=${enc:args.id}')
 data_map.webhook_expressions([
     {
         'string': '${status}',

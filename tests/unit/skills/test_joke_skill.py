@@ -306,8 +306,8 @@ class TestRegisterTools:
         skill.register_tools()
         swaig_func = skill.agent.register_swaig_function.call_args[0][0]
         webhook = swaig_func["data_map"]["webhooks"][0]
-        assert "error_keys" in webhook
-        assert "error" in webhook["error_keys"]
+        # The platform adds http_code to the response when the status isn't 2xx
+        assert webhook["error_keys"] == ["error", "http_code"]
 
     def test_register_tools_has_fallback_output(self) -> None:
         skill = _make_skill()

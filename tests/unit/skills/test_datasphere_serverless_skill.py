@@ -10,8 +10,11 @@ Unit tests for DataSphereServerlessSkill
 """
 
 import base64
+import re
 from unittest.mock import Mock, patch
 from typing import Any, TYPE_CHECKING
+
+import pytest
 
 if TYPE_CHECKING:
     from signalwire.skills.datasphere_serverless.skill import DataSphereServerlessSkill
@@ -619,6 +622,71 @@ class TestDataSphereServerlessSkillRegisterTools:
         swaig_func = mock_agent.register_swaig_function.call_args[0][0]
         webhook = swaig_func["data_map"]["webhooks"][0]
         assert webhook["headers"]["Content-Type"] == "application/json"
+
+    def test_register_tools_webhook_error_keys(self) -> None:
+        """Test that error_keys is on the webhook, the only place the platform reads it
+
+        http_code is there because the platform adds it to the response when
+        the status isn't 2xx.
+        """
+        skill, mock_agent = _create_skill()
+        skill.setup()
+        skill.register_tools()
+
+        swaig_func = mock_agent.register_swaig_function.call_args[0][0]
+        assert swaig_func["data_map"]["webhooks"][0]["error_keys"] == ["error", "http_code"]
+        assert "error_keys" not in swaig_func["data_map"]
+
+    @pytest.mark.parametrize(
+        ("message", "expected"),
+        [
+            (
+                None,
+                "I couldn't find any relevant information for '${input.args.query}' "
+                "in the knowledge base. Try rephrasing your question or asking about "
+                "a different topic.",
+            ),
+            ("Nothing on {query}", "Nothing on ${input.args.query}"),
+            (
+                "Nothing on ${args.query} (${global_data.topic})",
+                "Nothing on ${input.args.query} (${input.global_data.topic})",
+            ),
+            # Every template reads the call's data under input, after its helpers
+            (
+                "%{args.query} ${lc:enc:args.query} ${caller_id_num} "
+                "${time_of_day} ${meta_data.x}",
+                "%{input.args.query} ${lc:enc:input.args.query} "
+                "${input.caller_id_num} ${input.time_of_day} ${input.meta_data.x}",
+            ),
+            # A template that already reads under input is kept
+            (
+                "${input.args.query} ${lc:input.args.query}",
+                "${input.args.query} ${lc:input.args.query}",
+            ),
+        ],
+    )
+    def test_register_tools_no_results_expression(
+        self, message: str | None, expected: str
+    ) -> None:
+        """Test that a search with no chunks gives the no-results message
+
+        No chunks leaves formatted_results empty, and the webhook expression
+        then replaces the webhook's output. It expands against the response,
+        so it reads the query under input.
+        """
+        params = {} if message is None else {"no_results_message": message}
+        skill, mock_agent = _create_skill(params=params)
+        skill.setup()
+        skill.register_tools()
+
+        swaig_func = mock_agent.register_swaig_function.call_args[0][0]
+        expressions = swaig_func["data_map"]["webhooks"][0]["expressions"]
+        assert len(expressions) == 1
+        expression = expressions[0]
+        assert expression["string"] == "${formatted_results}"
+        assert re.search(expression["pattern"], "")
+        assert not re.search(expression["pattern"], "=== RESULT ===\nsome text\n")
+        assert expression["output"]["response"] == expected
 
     def test_register_tools_webhook_params(self) -> None:
         """Test that webhook has correct params"""

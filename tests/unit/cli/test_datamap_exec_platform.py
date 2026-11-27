@@ -100,14 +100,76 @@ def test_webhook_output_reads_global_data_and_prompt_vars_from_the_root() -> Non
 def test_prompt_vars_are_merged_into_the_call_data() -> None:
     config = _function({"output": {"response": "${time_of_day}|${prompt_vars.time_of_day}|${input.args.x}"}})
     result = execute_datamap_function(config, {"x": "1"}, call_data={"prompt_vars": {"time_of_day": "evening"}})
-    assert result == {"response": "evening|evening|"}
+    assert result == {"response": "evening|evening|1"}
 
 
 def test_top_level_output_reads_arguments_at_the_root(capsys: pytest.CaptureFixture[str]) -> None:
+    # input is a copy of the call data in every stage
     config = _function({"output": {"response": "Sorry about ${args.city}.${input.args.city}"}})
     result = execute_datamap_function(config, {"city": "Paris"})
-    assert result == {"response": "Sorry about Paris."}
-    assert "input is empty until a webhook responds" in capsys.readouterr().err
+    assert result == {"response": "Sorry about Paris.Paris"}
+    assert capsys.readouterr().err == ""
+
+
+def test_call_data_input_replaces_an_existing_input() -> None:
+    # The platform deletes every input before it adds the copy, so a call
+    # data key named input (from global data or SWML) can't hide it
+    config = _function({"output": {"response": "${input.args.city} ${input.function}"}})
+    result = execute_datamap_function(config, {"city": "Paris"}, call_data={"input": {"args": {"city": "Rome"}}})
+    assert result == {"response": "Paris lookup"}
+
+
+def test_response_input_field_does_not_hide_the_call_data() -> None:
+    # The platform deletes a response's own input and adds the call data's
+    config = _function({
+        "webhooks": [{
+            "url": "https://api.example.com/w",
+            "method": "GET",
+            "output": {"response": "${input.args.city} ${temp}"},
+        }],
+    })
+    with _http(get=_response({"input": {"args": {"city": "Rome"}}, "temp": 20})):
+        result = execute_datamap_function(config, {"city": "Paris"})
+    assert result == {"response": "Paris 20"}
+
+
+def test_call_data_input_replaces_an_input_in_any_case() -> None:
+    # Lookups ignore case and find the first match, so an Input key that
+    # stays in the call data would hide the copy
+    config = _function({"output": {"response": "${input.args.city}"}})
+    result = execute_datamap_function(config, {"city": "Paris"}, call_data={"Input": {"args": {"city": "Rome"}}})
+    assert result == {"response": "Paris"}
+
+
+def test_response_input_fields_in_any_case_do_not_hide_the_call_data() -> None:
+    # A JSON response can have more than one case variant of input; the
+    # platform deletes all of them
+    config = _function({
+        "webhooks": [{
+            "url": "https://api.example.com/w",
+            "method": "GET",
+            "output": {"response": "${input.args.city} ${temp}"},
+        }],
+    })
+    payload = {"Input": {"args": {"city": "Rome"}}, "INPUT": {"args": {"city": "Oslo"}}, "temp": 20}
+    with _http(get=_response(payload)):
+        result = execute_datamap_function(config, {"city": "Paris"})
+    assert result == {"response": "Paris 20"}
+
+
+def test_response_input_has_no_second_level() -> None:
+    # The response scope gets a copy of the call data's input, not of the
+    # call data itself, so input.input doesn't exist
+    config = _function({
+        "webhooks": [{
+            "url": "https://api.example.com/w",
+            "method": "GET",
+            "output": {"response": "[${input.input.args.city}]"},
+        }],
+    })
+    with _http(get=_response({"temp": 20})):
+        result = execute_datamap_function(config, {"city": "Paris"})
+    assert result == {"response": "[]"}
 
 
 def test_meta_data_comes_from_the_function_definition() -> None:

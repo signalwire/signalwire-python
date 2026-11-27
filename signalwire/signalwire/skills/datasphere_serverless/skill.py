@@ -8,6 +8,7 @@ See LICENSE file in the project root for full license information.
 """
 
 import base64
+import re
 from typing import Any, ClassVar
 
 from signalwire.core.skill_base import SkillBase
@@ -196,6 +197,21 @@ class DataSphereServerlessSkill(SkillBase):
         if self.max_synonyms is not None:
             webhook_params["max_synonyms"] = self.max_synonyms
 
+        # The fallback output reads the call's data, where the query is
+        # ${args.query}. The webhook's expressions read the API response, with
+        # the call's data under "input", so each template in their copy reads
+        # under input, after its helpers: ${lc:args.x} becomes ${lc:input.args.x}.
+        no_results = self.no_results_message.replace("{query}", "${args.query}")
+        webhook_no_results = re.sub(
+            r"[$%]\{(?:[a-z_]+:)*",
+            lambda m: (
+                m.group(0)
+                if no_results.startswith("input.", m.end())
+                else m.group(0) + "input."
+            ),
+            no_results,
+        )
+
         # Create DataMap tool for DataSphere search
         datasphere_tool = (
             DataMap(self.tool_name)
@@ -234,12 +250,20 @@ class DataSphereServerlessSkill(SkillBase):
                     'I found results for "${input.args.query}":\n\n${formatted_results}'
                 )
             )
-            .error_keys(["error"])
-            .fallback_output(
-                FunctionResult(
-                    self.no_results_message.replace("{query}", "${args.query}")
-                )
+            # No chunks leaves formatted_results empty: this expression then
+            # gives the no-results message instead of the output above
+            .webhook_expressions(
+                [
+                    {
+                        "string": "${formatted_results}",
+                        "pattern": r"^\s*$",
+                        "output": FunctionResult(webhook_no_results).to_dict(),
+                    }
+                ]
             )
+            # The platform adds http_code to the response when the status isn't 2xx
+            .error_keys(["error", "http_code"])
+            .fallback_output(FunctionResult(no_results))
         )
 
         # Convert DataMap to SWAIG function and apply swaig_fields

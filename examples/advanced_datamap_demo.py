@@ -100,7 +100,7 @@ def create_advanced_webhook_demo():
         )
         # Used when neither expression matches
         .output(FunctionResult("The API returned ${status} for ${input.args.action}"))
-        .error_keys(["fault", "exception"])
+        .error_keys(["fault", "exception", "http_code"])
         # Requested when there's no data: the action goes in the URL
         .webhook(
             "GET",
@@ -108,7 +108,7 @@ def create_advanced_webhook_demo():
             headers={"Accept": "application/json"},
         )
         .output(FunctionResult("Result: ${data}"))
-        .error_keys(["error", "fault", "exception"])
+        .error_keys(["error", "fault", "exception", "http_code"])
         # Used when the webhook that ran fails
         .fallback_output(FunctionResult("The API is unavailable right now"))
     )
@@ -138,7 +138,7 @@ def create_form_encoding_demo():
             }
         )
         .output(FunctionResult("Form submitted successfully for ${input.args.name}"))
-        .error_keys(["error", "validation_errors"])
+        .error_keys(["error", "validation_errors", "http_code"])
     )
 
 
@@ -169,7 +169,7 @@ def create_array_processing_demo():
                 'Found ${total} results for "${input.args.query}":\n\n${formatted_results}'
             )
         )
-        .error_keys(["error"])
+        .error_keys(["error", "http_code"])
     )
 
 
